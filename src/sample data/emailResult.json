@@ -1,0 +1,51 @@
+{
+	"Blake Meadows" : 
+	{
+		"message" : "simulated sending email for testing purposes",
+		"result" : "sim"
+	},
+	"DENESSA MULLINS" : 
+	{
+		"message" : "simulated sending email for testing purposes",
+		"result" : "sim"
+	},
+	"Kirk McKinley" : 
+	{
+		"message" : "simulated sending email for testing purposes",
+		"result" : "sim"
+	},
+	"Martin Horton" : 
+	{
+		"message" : "simulated sending email for testing purposes",
+		"result" : "sim"
+	},
+	"Nicholas Klimenko" : 
+	{
+		"message" : "simulated sending email for testing purposes",
+		"result" : "sim"
+	},
+	"Richard Holland" : 
+	{
+		"message" : "simulated sending email for testing purposes",
+		"result" : "sim"
+	},
+	"Steven Haggard" : 
+	{
+		"message" : "An email was sent, with attached certificate, to selected participants.",
+		"result" : "Success"
+	},
+	"Tony Hayes" : 
+	{
+		"message" : "simulated sending email for testing purposes",
+		"result" : "sim"
+	},
+	"William McDonald" : 
+	{
+		"message" : "simulated sending email for testing purposes",
+		"result" : "sim"
+	},
+	"error" : 
+	{
+		"code" : "0"
+	}
+}

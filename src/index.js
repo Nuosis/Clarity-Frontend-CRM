@@ -1,16 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from "react-dom/client";
-import ProgressBar from './components/ProgressBar';
-import { progressBarManager } from './classes/ProgressBarManager';
+import EmailResults from './components/EmailResults';
 
 // Function to fetch data from FileMaker
-function wakeUpFileMaker(callback, attempt = 0) {
-  console.log("Attempting to wake up FileMaker, attempt:", attempt);
+function getDataFromFileMaker(callback, attempt = 0) {
+  console.log("Attempting to connect to FileMaker, attempt:", attempt);
   if (typeof FileMaker !== "undefined" && FileMaker.PerformScript) {
       console.log("FileMaker object found. waking up...");
-      FileMaker.PerformScriptWithOption("app*js*callback", null, 3);
+      const param = {
+        action: "getEmailResult"
+      }
+      FileMaker.PerformScriptWithOption("app*js*callback", JSON.stringify(param), 3);
   } else if (attempt < 10) {
-      setTimeout(() => wakeUpFileMaker(callback, attempt + 1), 100);
+      setTimeout(() => getDataFromFileMaker(callback, attempt + 1), 100);
   } else {
       console.error("Error: FileMaker object is unavailable.");
       callback({ error: true, message: "FileMaker object is unavailable." });
@@ -19,36 +21,29 @@ function wakeUpFileMaker(callback, attempt = 0) {
 
 // Main App Component
 function App() {
-    useEffect(() => {
-        // Subscribe to config changes to keep window.progressConfig updated
-        const unsubscribe = progressBarManager.subscribe(newConfig => {
-            window.progressConfig = newConfig;
-        });
+    const [emailData, setEmailData] = useState({});
 
-        // wakeUpFileMaker();
+    useEffect(() => {
+        // Set up FileMaker callback
+        window.fmCallback = (data) => {
+            try {
+                const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+                setEmailData(parsedData);
+            } catch (error) {
+                console.error('Error parsing data:', error);
+            }
+        };
+
+        getDataFromFileMaker();
 
         return () => unsubscribe();
     }, []);
-
-    // Global function to update progress configuration, callable by FileMaker
-    window.updateProgress = (configJson) => {
-        try {
-            const config = typeof configJson === 'string' ? JSON.parse(configJson) : configJson;
-            progressBarManager.updateConfig(config);
-            console.log('Progress updated:', progressBarManager.getConfig());
-        } catch (error) {
-            console.error("Error updating progress configuration:", error);
-        }
-    };
-
-    // Initialize window.progressConfig
-    window.progressConfig = progressBarManager.getConfig();
 
     return (
         <div className="min-h-screen flex flex-col">
             <div className="flex-1 flex items-center justify-center p-4">
                 <div className="w-full max-w-2xl">
-                    <ProgressBar />
+                    <EmailResults data={emailData} />
                 </div>
             </div>
         </div>
@@ -56,7 +51,7 @@ function App() {
 }
 
 // Render the App to the root element
-console.log("progressBar v1.1")
+console.log("emailresults v1.0")
 const container = document.getElementById("root");
 const root = createRoot(container);
 root.render(<App />)
