@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FileMaker Progress Bar Widget</title>
+    <style>
+        .progress-container {
+            width: 100%;
+            background-color: #f3f4f6;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            height: 1.5rem;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 0.5rem;
+            transition: width 0.3s ease-in-out;
+            background-color: #0891b2; /* cyan-600 default */
+        }
+
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1f2937;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="widget-container"></div>
+
+    <script>
+        // Global configuration variables
+        window.progressConfig = {
+            start: 0,
+            stop: 100,
+            currentValue: 0,
+            color: '#0891b2'
+        };
+
+        class ProgressBar {
+            constructor(container, config = window.progressConfig) {
+                this.container = container;
+                this.start = config.start;
+                this.stop = config.stop;
+                this.color = config.color;
+                this.currentValue = config.currentValue;
+                this.progressBar = null;
+                this.progressText = null;
+            }
+
+            render() {
+                // Clear existing content
+                this.container.innerHTML = '';
+
+                // Create progress container
+                const progressContainer = document.createElement('div');
+                progressContainer.className = 'progress-container';
+
+                // Create progress bar
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                progressBar.style.backgroundColor = this.color;
+
+                // Create progress text
+                const progressText = document.createElement('div');
+                progressText.className = 'progress-text';
+
+                // Append elements
+                progressContainer.appendChild(progressBar);
+                progressContainer.appendChild(progressText);
+                this.container.appendChild(progressContainer);
+
+                // Store references
+                this.progressBar = progressBar;
+                this.progressText = progressText;
+
+                // Initial update
+                this.updateProgress(this.currentValue);
+            }
+
+            updateProgress(value) {
+                this.currentValue = Math.min(Math.max(value, this.start), this.stop);
+                const range = this.stop - this.start;
+                const progress = ((this.currentValue - this.start) / range) * 100;
+                
+                this.progressBar.style.width = `${progress}%`;
+                this.progressText.textContent = `${Math.round(this.currentValue)}`;
+            }
+        }
+
+        // Global instance
+        let progressBarInstance;
+
+        // Function to initialize and render the progress bar
+        window.renderProgressBar = function() {
+            const container = document.getElementById('widget-container');
+            progressBarInstance = new ProgressBar(container, window.progressConfig);
+            progressBarInstance.render();
+        }
+
+        // Function to update progress
+        window.updateProgress = function(value) {
+            if (progressBarInstance) {
+                progressBarInstance.updateProgress(value);
+            }
+        }
+
+        // Function to update configuration
+        window.updateConfig = function(json) {
+          newConfig=JSON.parse(json)
+          window.progressConfig = { ...window.progressConfig, ...newConfig };
+          if (progressBarInstance) {
+              progressBarInstance = new ProgressBar(
+                  document.getElementById('widget-container'), 
+                  window.progressConfig
+              );
+              progressBarInstance.render();
+          }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log("version 1.0")
+            const container = document.getElementById('widget-container');
+            progressBarInstance = new ProgressBar(container, window.progressConfig);
+            progressBarInstance.render();
+        });
+    </script>
+</body>
+</html>
