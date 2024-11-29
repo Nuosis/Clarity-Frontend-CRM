@@ -1,0 +1,52 @@
+{
+	"messages" : 
+	[
+		{
+			"code" : "0",
+			"message" : "OK"
+		}
+	],
+	"response" : 
+	{
+		"data" : 
+		[
+			{
+				"fieldData" : 
+				{
+					"Billable_Time_Rounded" : 0,
+					"Customers::Name" : "BCCFU",
+					"Customers::chargeRate" : 100,
+					"Customers::f_EUR" : "",
+					"Customers::f_USD" : "",
+					"DateStart" : "2021-06-14",
+					"TimeEnd" : "21:00:00",
+					"TimeStart" : "20:00:00",
+					"Work Performed" : "",
+					"__ID" : "A2AC9F21-2570-485D-BB63-B958E8855FDE",
+					"_staffID" : "AFBE7D6F-C707-4C34-943D-70D7DF68B48F",
+					"_projectID" : "D8565CE8-D972-438A-84C9-16B9F3FDCBF4",
+					"customers_Projects::_custID" : "704DDF90-DCAA-428D-962D-C8FF40BA68F4",
+					"customers_Projects::projectName" : "Discovery",
+					"f_billed" : "1",
+					"f_dnb" : "1",
+					"f_omit" : "0",
+					"month" : 6,
+					"weekNo" : 25,
+					"year" : 2021
+				},
+				"modId" : "31",
+				"portalData" : {},
+				"recordId" : "79"
+			}
+		],
+		"dataInfo" : 
+		{
+			"database" : "clarityCRM",
+			"foundCount" : 1263,
+			"layout" : "dapiRecords",
+			"returnedCount" : 1,
+			"table" : "PRC332",
+			"totalRecordCount" : 1273
+		}
+	}
+}

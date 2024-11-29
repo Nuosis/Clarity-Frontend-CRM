@@ -1,0 +1,44 @@
+{
+	"messages" : 
+	[
+		{
+			"code" : "0",
+			"message" : "OK"
+		}
+	],
+	"response" : 
+	{
+		"data" : 
+		[
+			{
+				"fieldData" : 
+				{
+					"Customers::Name" : "PRC",
+					"__ID" : "519252DF-BCEE-4982-A47D-B98F60846D6A",
+					"_custID" : "17C87CC6-AF98-4487-81C8-02AF424E9358",
+					"_teamID" : "9F53CA35-AA1D-4496-B103-BFF88075ED25",
+					"estOfTime" : "",
+					"projectName" : "PRC Support",
+					"status" : "Open",
+					"~createdBy" : "Marcus Swift",
+					"~creationTimestamp" : "2022-11-15 08:05:36",
+					"~modificationTimestamp" : "2024-11-14 22:43:27",
+					"~modifiedBy" : "Marcus Swift"
+				},
+				"modId" : "4",
+				"portalData" : {},
+				"recordId" : "30"
+			}
+		],
+		"dataInfo" : 
+		{
+			"database" : "clarityCRM",
+			"foundCount" : 20,
+			"layout" : "devProjects",
+			"returnedCount" : 1,
+			"table" : "customers_Projects",
+			"totalRecordCount" : 86
+		}
+	},
+	"staffID" : "AFBE7D6F-C707-4C34-943D-70D7DF68B48F"
+}

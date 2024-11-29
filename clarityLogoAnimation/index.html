@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celtic Knot Animation</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #1a1a1a;
+        }
+
+        svg {
+            width: 400px;
+            height: 400px;
+        }
+
+        .segment-1-part-1 {
+            fill: none;
+            stroke: #00f5ff;
+            stroke-width: 15;
+            stroke-linecap: round;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw 2s ease forwards;
+        }
+
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <svg viewBox="0 0 300 300">
+        <!-- First segment, part 1 - more vertical, gentler curve -->
+        <path class="segment-1-part-1" 
+              d="M 160,80 C 150,120 150,180 160,220"
+        />
+    </svg>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+	"messages" : 
+	[
+		{
+			"code" : "0",
+			"message" : "OK"
+		}
+	],
+	"response" : 
+	{
+		"data" : 
+		[
+			{
+				"fieldData" : 
+				{
+					"__ID" : "3372CC52-8110-46A2-86B5-CB849E3DC9BD",
+					"_projectID" : "1234",
+					"_staffID" : "5678",
+					"f_completed" : 0,
+					"f_priority" : "low",
+					"f_status" : "incomplete",
+					"task" : "Create Task Slice",
+					"~CreatedBy" : "Marcus Swift",
+					"~CreationTimestamp" : "2024-11-21 21:56:10",
+					"~ModificationTimestamp" : "2024-11-21 21:56:50",
+					"~ModifiedBy" : "Marcus Swift"
+				},
+				"modId" : "1",
+				"portalData" : {},
+				"recordId" : "1"
+			}
+		],
+		"dataInfo" : 
+		{
+			"database" : "clarityCRM",
+			"foundCount" : 1,
+			"layout" : "dapiTasks",
+			"returnedCount" : 1,
+			"table" : "Tasks",
+			"totalRecordCount" : 1
+		}
+	}
+}

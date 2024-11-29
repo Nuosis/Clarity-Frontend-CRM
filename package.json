@@ -5,9 +5,9 @@
   "license": "MIT",
   "description": "Solving a client problem",
   "scripts": {
-    "start": "parcel index.html  --no-source-maps",
+    "start": "rm -rf .parcel-cache dist && parcel serve index.html",
     "browserslist": "> 0.5%, last 2 versions, not dead",
-    "build": "parcel build index.html",
+    "build": "rm -rf .parcel-cache dist && parcel build index.html",
     "upload": "node ./scripts/upload",
     "build:upload": "npm run build && npm run upload",
     "deploy-to-fm": "npm run build && npm run upload",
@@ -25,8 +25,14 @@
     "tailwindcss": "^3.1.8"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.3.0",
+    "chart.js": "^4.4.6",
+    "fm-gofer": "^1.10.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-beautiful-dnd": "^13.1.1",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-redux": "^9.1.2"
   },
   "widgetType": "React"
 }
