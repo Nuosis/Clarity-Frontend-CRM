@@ -209,7 +209,7 @@ const Stats = ({ onClose }) => {
         <h1 className="text-xl font-bold">Stats Dashboard</h1>
         <button
           onClick={onClose}
-          className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 flex items-center"
+          className="px-2 py-2 bg-white text-gray-700 rounded-full hover:bg-gray-100 flex items-center"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

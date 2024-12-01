@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { DragDropContext } from 'react-beautiful-dnd';
+import { DragDropContext } from '@hello-pangea/dnd';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchTaskData, setSelectedTask } from '../store/taskSlice';
-import { fetchBillablesData, setCurrentBill } from '../store/billablesSlice';
+import { setCurrentBill, updateBillablesData } from '../store/billablesSlice';
 import Loading from './Loading';
 import AddTask from './AddTask';
 import EditTask from './EditTask';
 import TaskSection from './TaskSection';
 import EmptyState from './EmptyState';
 
-export default function TaskTable({ projectId }) {
+export default function TaskTable({ projectId, loadCustomer }) {
   const dispatch = useDispatch();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [updateBillables, setUpdateBillables] = useState(true);
   const tasks = useSelector(state => state.task.tasks);
   const selectedTask = useSelector(state => state.task.selectedTask);
   const loading = useSelector(state => state.task.loading);
@@ -22,7 +23,7 @@ export default function TaskTable({ projectId }) {
   const projectData = useSelector(state => state.project.projectData);
   const billablesData = useSelector(state => state.billables.billablesData);
 
-  const fetchTasks = () => {
+  const fetchTasks = async () => {
     if (currentStaffId) {
       let query;
       if (selectedProject) {
@@ -57,18 +58,27 @@ export default function TaskTable({ projectId }) {
     }
   };
 
+  // Fetch tasks when component mounts or when selection changes
+  useEffect(() => {
+    fetchTasks();
+  }, [projectId, currentStaffId, selectedCustomer, selectedProject]);
+
+  // Update billables when updateBillables is true
+  useEffect(() => {
+    if (updateBillables && billablesData?.length > 0) {
+      dispatch(updateBillablesData({ response: { data: billablesData } }));
+      setUpdateBillables(false);
+    }
+  }, [updateBillables, billablesData]);
+
   // Check for open billables and mount task if found
   useEffect(() => {
-    const checkOpenBillables = async () => {
-      if (currentStaffId) {
-        // Fetch billables for this staff member with no endTime
-        const billablesResponse = await dispatch(fetchBillablesData({
-          action: "read",
-          query: `[{"_staffID":"${currentStaffId}","TimeEnd":"="}]`
-        }));
-
-        // Check the response data for open billables
-        const openBillables = billablesResponse.payload?.response?.data || [];
+    const checkOpenBillables = () => {
+      if (currentStaffId && billablesData?.length > 0) {
+        // Filter billables for this staff member with no endTime
+        const openBillables = billablesData.filter(b => 
+          b.fieldData._staffID === currentStaffId && !b.fieldData.TimeEnd
+        );
 
         if (openBillables.length > 0) {
           // Sort by most recent start time
@@ -94,28 +104,8 @@ export default function TaskTable({ projectId }) {
         }
       }
     };
-
-    // First fetch tasks, then check billables
-    const initializeData = async () => {
-      if (currentStaffId) {
-        await fetchTasks();
-        await checkOpenBillables();
-      }
-    };
-
-    initializeData();
-  }, [currentStaffId, dispatch]); // Removed tasks dependency to prevent re-runs
-
-  // Debug log for projectData
-  useEffect(() => {
-    console.log('ProjectData:', projectData);
-    console.log('Selected Customer:', selectedCustomer);
-  }, [projectData, selectedCustomer]);
-
-  // Fetch tasks when component mounts or when selection changes
-  useEffect(() => {
-    fetchTasks();
-  }, [projectId, currentStaffId, selectedCustomer, selectedProject]);
+    checkOpenBillables();
+  }, [currentStaffId, billablesData, tasks]);
 
   // Open EditTask modal when selectedTask changes
   useEffect(() => {
@@ -249,7 +239,18 @@ export default function TaskTable({ projectId }) {
             {getHeaderText()}
           </h1>
         </div>
-        <div className="mt-4 sm:ml-16 sm:mt-0">
+        <div className="mt-4 sm:ml-16 sm:mt-0 flex gap-2">
+          {selectedCustomer && (
+            <button
+              onClick={() => loadCustomer()}
+              className="px-4 py-2 text-cyan-800 border border-cyan-800 rounded hover:bg-gray-100 flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Info
+            </button>
+          )}
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="px-4 py-2 bg-cyan-800 text-white rounded hover:bg-cyan-950 flex items-center gap-2"

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import Timer from './Timer';
 import UserInput from './UserInput';
-import { createBillableRecord, fetchBillablesData, clearCurrentBill } from '../store/billablesSlice';
+import { fetchBillablesData, clearCurrentBill } from '../store/billablesSlice';
 import { fetchTaskData } from '../store/taskSlice';
 
 const EditTask = ({ isOpen, onClose, onSubmit, task, defaultProjectId }) => {
@@ -116,15 +116,16 @@ const EditTask = ({ isOpen, onClose, onSubmit, task, defaultProjectId }) => {
     }
 
     // Create initial billable record with start time
-    const billableData = {
-      projectId: selectedProject,
-      dateStart: formatDate(startTime),
-      timeStart: formatTime(startTime),
-      workPerformed: taskDescription,
-      staffId: currentStaffId
-    };
-
-    await dispatch(createBillableRecord(billableData));
+    await dispatch(fetchBillablesData({
+      action: 'create',
+      fieldData: {
+        _projectID: selectedProject,
+        _staffID: currentStaffId,
+        DateStart: formatDate(startTime),
+        TimeStart: formatTime(startTime),
+        ["Work Performed"]: taskDescription
+      }
+    }));
 
     const paramObject = {
       ...task,
@@ -339,7 +340,7 @@ const EditTask = ({ isOpen, onClose, onSubmit, task, defaultProjectId }) => {
             <div className="flex justify-end gap-2">
               <button
                 onClick={handleCancel}
-                className="px-4 py-2 text-cyan-800 border border-cyan-800 rounded hover:bg-cyan-50"
+                className="px-4 py-2 text-cyan-800 border border-cyan-800 rounded hover:bg-gray-100"
               >
                 {isModified ? 'Cancel' : 'Close'}
               </button>

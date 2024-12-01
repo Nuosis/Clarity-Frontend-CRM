@@ -3,105 +3,131 @@ import { createRoot } from "react-dom/client";
 import { Provider, useSelector, useDispatch } from 'react-redux';
 import { store } from './store';
 import Stats from './components/Stats';
+import Customers from './components/Customers';
+import CustomerDetails from './components/CustomerDetails';
 import Loading from './components/Loading';
 import Project from './components/Project';
 import Menu from './components/Menu';
 import { transformJsonForAccordionMenu } from './utils';
-import { setBillablesData } from './store/billablesSlice';
-import { setProjectData, setLoading, setError } from './store/projectSlice';
+import { setBillablesData, fetchBillablesData } from './store/billablesSlice';
+import { refreshProjects, setError } from './store/projectSlice';
 import { setCurrentStaffId } from './store/staffSlice';
 import { fetchTaskData } from './store/taskSlice';
+import FMGofer from 'fm-gofer';
 import './style.css';
-
-// Function to fetch data from FileMaker
-function fetchDataFromFileMaker(callback, attempt = 0) {
-    console.log("Attempting to fetch data from FileMaker, attempt:", attempt);
-    
-    if (typeof FileMaker !== "undefined" && FileMaker.PerformScript) {
-        console.log("FileMaker object found. Requesting data...");
-        FileMaker.PerformScript("staff * JS * Project Data");
-    } else if (attempt < 10) {
-        setTimeout(() => fetchDataFromFileMaker(callback, attempt + 1), 100);
-    } else {
-        console.error("Error: FileMaker object is unavailable.");
-        callback({ error: true, message: "FileMaker object is unavailable." });
-    }
-}
+import { stringify } from 'postcss';
 
 function App() {
     const dispatch = useDispatch();
     const { projectData, error } = useSelector(state => state.project);
-    const { billablesData } = useSelector(state => state.billables);
+    const { billablesData, lastFetched } = useSelector(state => state.billables);
     const currentStaffId = useSelector(state => state.staff.currentStaffId);
     const [data, setData] = React.useState(null);
-    const [update, setUpdate] = React.useState("[]");
-    const [displayStats, setDisplayStats] = React.useState(false);
+    const [displayComponent, setDisplayComponent] = React.useState(null);
 
-    // loadData
+    // Initial data load
     useEffect(() => {
-        window.loadData = (fileMakerData) => {
+        const initializeData = async () => {
             try {
-                const parsedData = JSON.parse(fileMakerData);
-                // Set staff ID if available
-                if (parsedData.staffID) {
-                    dispatch(setCurrentStaffId(parsedData.staffID));
-                    // Fetch tasks for the current staff
-                    dispatch(fetchTaskData({
-                        query: `[{"_staffID":"${parsedData.staffID}"}]`,
-                        action: "read"
+                // Get staff ID
+                const staffResponse = await FMGofer.PerformScript('staff * JS * Staff ID');
+                const staffData = typeof staffResponse === 'string' ? JSON.parse(staffResponse) : await staffResponse.json();
+                const staffId = staffData.staffID;
+
+                if (staffId) {
+                    // Set staff ID in Redux
+                    dispatch(setCurrentStaffId(staffId));
+                    
+                    // Load tasks and projects concurrently
+                    await Promise.all([
+                        // Fetch tasks for the current staff
+                        dispatch(fetchTaskData({
+                            query: `[{"_staffID":"${staffId}"}]`,
+                            action: "read"
+                        })),
+
+                        // Fetch and process projects
+                        (async () => {
+                            const projectsResponse = await dispatch(refreshProjects(staffId));
+                            if (projectsResponse.payload) {
+                                const dataForTransform = {
+                                    response: {
+                                        data: projectsResponse.payload
+                                    }
+                                };
+                                const transformedData = transformJsonForAccordionMenu(dataForTransform);
+                                console.log('Transformed menu data:', transformedData);
+                                setData(transformedData);
+                            }
+                        })()
+                    ]);
+
+                    // After tasks and projects are loaded, initialize billables
+                    FileMaker.PerformScript('staff * JS * Billables Data', JSON.stringify({
+                        type: "all",
+                        scope: "5years",
+                        lastFetched: lastFetched
                     }));
-                } 
-
-                dispatch(setProjectData(parsedData.response.data));
-
-                const transformedData = transformJsonForAccordionMenu(parsedData);
-                console.log({transformedData});
-                setData(transformedData);
+                }
             } catch (error) {
-                console.error("Error parsing data from FileMaker:", error);
-                setData({ error: true, message: "Failed to parse data from FileMaker." });
+                console.error("Error initializing data:", error);
+                setData({ error: true, message: "Failed to initialize data." });
             }
         };
 
-        // Fetch data only once on mount
-        fetchDataFromFileMaker((result) => {
-            setData(result);
-        });
+        initializeData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-        // Cleanup global function to avoid memory leaks
-        return () => {
-            window.loadData = undefined;
-        };
-    }, [dispatch]);
+    // Update window.billables whenever billablesData changes
+    useEffect(() => {
+        window.billables = billablesData;
+    }, [billablesData]);
 
     // loadBillables
     window.loadBillables = (fileMakerData) => {
         try {
             const parsedData = JSON.parse(fileMakerData);
-            console.log("billablesData: ", {parsedData});
+            console.log("billablesData: ", parsedData.response.data);
             // Pass the array of records directly to setBillablesData
             dispatch(setBillablesData(parsedData.response.data));
-            setDisplayStats(true);
         } catch (error) {
             console.error("Error parsing data from FileMaker:", error);
             dispatch(setError("Failed to parse billable data from FileMaker."));
         }
     };
 
-    // processUpdate
-    useEffect(() => {
-        if (update !== "[]") {
-            FileMaker.PerformScript("staff * JS * Callback", JSON.stringify(update));
-            setUpdate("[]");
-        }
-    }, [update]);
+    window.loadCustomers = () => {
+      setDisplayComponent('customers');
+    };
 
-    // Force hard reload to bypass cache
-    useEffect(() => {
-        window.onload = () => {
-            window.location.reload(true); 
-        };
-    }, []);
+    window.loadStats = () => {
+      setDisplayComponent('stats');
+    };
+
+    // loadCustomer
+    const handleLoadCustomer = () => {
+        if (!billablesData || billablesData.length === 0) {
+            dispatch(fetchBillablesData({
+                action: "read",
+                query: `[{"_staffID":"${currentStaffId}"}]`
+            }));
+        }
+        setDisplayComponent('customerDetails');
+    };
+
+    const renderComponent = () => {
+        switch(displayComponent) {
+            case 'customers':
+                return <Customers onClose={() => setDisplayComponent(null)} />;
+            case 'customerDetails':
+                return <CustomerDetails onClose={() => setDisplayComponent(null)} />;
+            case 'stats':
+                return <Stats onClose={() => setDisplayComponent(null)} />;
+            default:
+                return <Project loadCustomer={handleLoadCustomer} />;
+        }
+    };
 
     return (
         <div className="">
@@ -112,14 +138,10 @@ function App() {
             ) : (
                 <div id='layout-container' className="flex h-screen">
                     <div id='menu-container' className="w-[211] h-screen bg-gray-100 shadow-md pr-[5px]">
-                        <Menu items={data} />
+                        <Menu items={data} onSelect={() => {setDisplayComponent(null)}} />
                     </div>
                     <div id='project-container' className="flex-grow bg-white py-2">
-                        {displayStats ? (
-                            <Stats onClose={() => setDisplayStats(false)} />
-                        ) : (
-                            <Project setUpdate={setUpdate} />
-                        )}
+                        {renderComponent()}
                     </div>
                 </div>
             )}

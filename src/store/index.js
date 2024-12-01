@@ -3,13 +3,15 @@ import projectReducer from './projectSlice';
 import billablesReducer from './billablesSlice';
 import taskReducer from './taskSlice';
 import staffReducer from './staffSlice';
+import teamsReducer from './teamsSlice';
 
 export const store = configureStore({
   reducer: {
     project: projectReducer,
     billables: billablesReducer,
     task: taskReducer,
-    staff: staffReducer
+    staff: staffReducer,
+    teams: teamsReducer
   }
 });
 

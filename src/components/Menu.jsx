@@ -26,11 +26,11 @@ function SubMenu({ items, onSubItemClick, selectedSubItemId }) {
       {items.map((subItem, index) => (
         <li
           key={index}
-          className={`submenu-item pl-4 pr-12 border-b py-1 text-gray-600 hover:text-slate-800 hover:bg-gray-50 cursor-pointer
+          className={`submenu-item pl-4 pr-12 border-b py-1 text-gray-400 hover:text-slate-800 hover:bg-gray-100 cursor-pointer
             ${
               subItem.id === selectedSubItemId
                 ? 'bg-gray-200 font-semibold'
-                : 'hover:bg-gray-50'
+                : 'hover:bg-gray-100'
             }`}
           onClick={() => onSubItemClick(subItem)}
           style={{ 
@@ -45,7 +45,7 @@ function SubMenu({ items, onSubItemClick, selectedSubItemId }) {
   );
 }
 
-function Menu({ items }) {
+function Menu({ items, onSelect }) {
   const dispatch = useDispatch();
   const selectedCustomer = useSelector(state => state.project.selectedCustomer);
   const selectedProject = useSelector(state => state.project.selectedProject);
@@ -83,6 +83,7 @@ function Menu({ items }) {
         }));
       }
     }
+    onSelect()
   };
 
   const handleSubItemClick = (subItem) => {

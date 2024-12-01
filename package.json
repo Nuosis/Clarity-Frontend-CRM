@@ -15,6 +15,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
+    "buffer": "^6.0.3",
     "eslint": "^8.16.0",
     "eslint-config-prettier": "^8.5.0",
     "open": "^8.2.1",
@@ -25,11 +26,11 @@
     "tailwindcss": "^3.1.8"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^17.0.0",
     "@reduxjs/toolkit": "^2.3.0",
     "chart.js": "^4.4.6",
     "fm-gofer": "^1.10.0",
     "react": "^18.2.0",
-    "react-beautiful-dnd": "^13.1.1",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.2.0",
     "react-redux": "^9.1.2"

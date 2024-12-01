@@ -13,12 +13,31 @@ export const fetchProjectData = createAsyncThunk(
     */
     try {
       // Call the FileMaker script using FMGofer
-      const response = await FMGofer.PerformScript('staff * JS * Project Data', JSON.stringify(param));
+      param.layout = "devProjects"
+      const response = await FMGofer.PerformScript('staff * JS * Fetch Data', JSON.stringify(param));
       // Parse the JSON response
       const data = typeof response === 'string' ? JSON.parse(response) : await response.json();
-      return data;
+      // Ensure we return the data array from the response
+      return data?.response?.data || [];
     } catch (error) {
       // Handle errors appropriately
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const refreshProjects = createAsyncThunk(
+  'project/refreshProjects',
+  async (staffId, { rejectWithValue }) => {
+    try {
+      // Call the FileMaker script with the staff ID
+      const response = await FMGofer.PerformScript('staff * JS * Project Data', staffId )
+      // Parse the JSON response
+      const data = typeof response === 'string' ? JSON.parse(response) : await response.json();
+      // console.log("projectData",data)
+      // Return the data array from the response
+      return data?.response?.data || [];
+    } catch (error) {
       return rejectWithValue(error.message);
     }
   }
@@ -27,7 +46,7 @@ export const fetchProjectData = createAsyncThunk(
 const initialState = {
   selectedProject: null,
   selectedCustomer: null,
-  projectData: null,
+  projectData: [],
   loading: false,
   error: null
 };
@@ -47,7 +66,8 @@ export const projectSlice = createSlice({
       }
     },
     setProjectData: (state, action) => {
-      state.projectData = action.payload;
+      // Ensure projectData is always an array
+      state.projectData = Array.isArray(action.payload) ? action.payload : [];
       state.loading = false;
       state.error = null;
     },
@@ -66,10 +86,23 @@ export const projectSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchProjectData.fulfilled, (state, action) => {
-        state.projectData = action.payload;
+        // Ensure projectData is always an array
+        state.projectData = Array.isArray(action.payload) ? action.payload : [];
         state.loading = false;
       })
       .addCase(fetchProjectData.rejected, (state, action) => {
+        state.error = action.payload;
+        state.loading = false;
+      })
+      .addCase(refreshProjects.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(refreshProjects.fulfilled, (state, action) => {
+        state.projectData = Array.isArray(action.payload) ? action.payload : [];
+        state.loading = false;
+      })
+      .addCase(refreshProjects.rejected, (state, action) => {
         state.error = action.payload;
         state.loading = false;
       });

@@ -3,9 +3,17 @@ import FMGofer from 'fm-gofer';
 
 export const fetchBillablesData = createAsyncThunk(
   'billables/fetchBillablesData',
+  /* 
+  * param {
+      query: "[{}] ([n]<fieldName>:<fieldValue>)", 
+      action: "string (read, metaData, create, update, delete, and duplicate)",
+      recordId: "string (required for update, delete and duplicate)"
+    }.
+  */
   async (param, { rejectWithValue }) => {
     try {
-      const response = await FMGofer.PerformScript('staff * JS * Billables Data', JSON.stringify(param));
+      param.layout = "dapiRecords";
+      const response = await FMGofer.PerformScript('staff * JS * Fetch Data', JSON.stringify(param));
       const data = typeof response === 'string' ? JSON.parse(response) : await response.json();
       console.log({data});
       
@@ -22,36 +30,12 @@ export const fetchBillablesData = createAsyncThunk(
   }
 );
 
-export const createBillableRecord = createAsyncThunk(
-  'billables/createBillableRecord',
-  async (billableData, { rejectWithValue }) => {
-    try {
-      const param = {
-        action: 'create',
-        fieldData: {
-          _projectID: billableData.projectId,
-          _staffID: billableData.staffId,
-          DateStart: billableData.dateStart,
-          TimeStart: billableData.timeStart,
-          TimeEnd: billableData.timeEnd,
-          ["Work Performed"]: billableData.workPerformed
-        }
-      };
-
-      const response = await FMGofer.PerformScript('staff * JS * Billables Data', JSON.stringify(param));
-      const data = typeof response === 'string' ? JSON.parse(response) : await response.json();
-      return data;
-    } catch (error) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-
 const initialState = {
   billablesData: [],
   currentBill: null,
   loading: false,
-  error: null
+  error: null,
+  lastFetched: null
 };
 
 export const billablesSlice = createSlice({
@@ -59,19 +43,40 @@ export const billablesSlice = createSlice({
   initialState,
   reducers: {
     setBillablesData: (state, action) => {
-      state.billablesData = action.payload?.map(record => record.fieldData) || [];
+      // Directly use the data array if it's already in the correct format
+      const data = Array.isArray(action.payload) ? action.payload : 
+                  action.payload?.response?.data || [];
+      state.billablesData = data;
+      state.lastFetched = new Date().toISOString();
       state.loading = false;
       state.error = null;
+      console.log("Redux state updated with billables:", state.billablesData);
     },
     setCurrentBill: (state, action) => {
-      state.currentBill = action.payload;
+      state.currentBill = action.payload?.response?.data?.[0] || action.payload;
     },
-    clearCurrentBill: (state) => {
-      state.currentBill = null;
-    },
-    clearBillablesData: (state) => {
-      state.billablesData = [];
-      state.currentBill = null;
+    updateBillablesData: (state, action) => {
+      const newRecords = action.payload?.response?.data || [];
+      
+      // Update existing records and add new ones based on ModificationTimestamp
+      newRecords.forEach(newRecord => {
+        const existingIndex = state.billablesData.findIndex(
+          existing => existing.__ID === newRecord.__ID
+        );
+        
+        if (existingIndex !== -1) {
+          const newModTime = new Date(newRecord['~ModificationTimestamp']);
+          const existingModTime = new Date(state.billablesData[existingIndex]['~ModificationTimestamp']);
+          
+          if (newModTime > existingModTime) {
+            state.billablesData[existingIndex] = newRecord;
+          }
+        } else {
+          state.billablesData.push(newRecord);
+        }
+      });
+      
+      state.lastFetched = new Date().toISOString();
       state.loading = false;
       state.error = null;
     },
@@ -81,6 +86,16 @@ export const billablesSlice = createSlice({
     setError: (state, action) => {
       state.error = action.payload;
       state.loading = false;
+    },
+    clearCurrentBill: (state) => {
+      state.currentBill = null;
+    },
+    clearBillablesData: (state) => {
+      state.billablesData = [];
+      state.currentBill = null;
+      state.loading = false;
+      state.error = null;
+      state.lastFetched = null;
     }
   },
   extraReducers: (builder) => {
@@ -90,26 +105,30 @@ export const billablesSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchBillablesData.fulfilled, (state, action) => {
-        state.billablesData = action.payload?.response?.data?.map(record => record.fieldData) || [];
+        const newRecords = action.payload?.response?.data || [];
+        
+        // Update existing records and add new ones based on ModificationTimestamp
+        newRecords.forEach(newRecord => {
+          const existingIndex = state.billablesData.findIndex(
+            existing => existing.__ID === newRecord.__ID
+          );
+          
+          if (existingIndex !== -1) {
+            const newModTime = new Date(newRecord['~ModificationTimestamp']);
+            const existingModTime = new Date(state.billablesData[existingIndex]['~ModificationTimestamp']);
+            
+            if (newModTime > existingModTime) {
+              state.billablesData[existingIndex] = newRecord;
+            }
+          } else {
+            state.billablesData.push(newRecord);
+          }
+        });
+        
+        state.lastFetched = new Date().toISOString();
         state.loading = false;
       })
       .addCase(fetchBillablesData.rejected, (state, action) => {
-        state.error = action.payload;
-        state.loading = false;
-        state.billablesData = [];
-      })
-      .addCase(createBillableRecord.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(createBillableRecord.fulfilled, (state, action) => {
-        // Store the created billable as current
-        if (action.payload?.response?.data?.[0]) {
-          state.currentBill = action.payload.response.data[0];
-        }
-        state.loading = false;
-      })
-      .addCase(createBillableRecord.rejected, (state, action) => {
         state.error = action.payload;
         state.loading = false;
       });
@@ -119,6 +138,7 @@ export const billablesSlice = createSlice({
 export const { 
   setBillablesData, 
   setCurrentBill,
+  updateBillablesData,
   clearCurrentBill,
   clearBillablesData,
   setLoading, 
