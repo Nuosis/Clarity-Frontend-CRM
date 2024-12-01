@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from "react-dom/client";
-import Table from './components/Table';
-import Loading from './components/Loading';
+import Loading from './components/loading/Loading';
 
 // Function to fetch data from FileMaker
 function fetchDataFromFileMaker(callback, attempt = 0) {
