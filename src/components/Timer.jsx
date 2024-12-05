@@ -11,7 +11,6 @@ const Timer = ({
   initialMinutes = 0
 }) => {
   const [minutes, setMinutes] = useState(initialMinutes);
-  const [isRunning, setIsRunning] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [isAltPressed, setIsAltPressed] = useState(false);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
@@ -44,48 +43,75 @@ const Timer = ({
     };
   }, []);
 
+  // Initialize or update timer state when running state or initialMinutes changes
   useEffect(() => {
-    setIsRunning(externalIsRunning);
+    console.log('Timer props changed:', { externalIsRunning, initialMinutes }); // Debug log
+    
     if (externalIsRunning) {
-      setStartTime(Date.now() - minutes * 60000);
+      // Calculate start time based on current time minus elapsed minutes
+      const calculatedStartTime = Date.now() - (initialMinutes * 60000);
+      console.log('Setting start time:', new Date(calculatedStartTime).toISOString()); // Debug log
+      setStartTime(calculatedStartTime);
+      setMinutes(initialMinutes);
+    } else if (!externalIsRunning && startTime) {
+      // If timer stops, preserve the current minutes but clear start time
+      setStartTime(null);
     }
-  }, [externalIsRunning]);
+  }, [externalIsRunning, initialMinutes]);
 
-  useEffect(() => {
-    setMinutes(initialMinutes);
-  }, [initialMinutes]);
-
+  // Timer update interval
   useEffect(() => {
     let intervalId;
-    if (isRunning) {
+    
+    if (externalIsRunning && startTime) {
+      console.log('Starting timer interval with startTime:', new Date(startTime).toISOString()); // Debug log
+      
       intervalId = setInterval(() => {
         const now = Date.now();
         const elapsedMinutes = Math.floor((now - startTime) / 60000);
-        setMinutes(elapsedMinutes);
-        if (onMinutesChange) {
-          onMinutesChange(elapsedMinutes);
+        
+        // Only update if the elapsed minutes have actually changed
+        if (elapsedMinutes !== minutes) {
+          console.log('Updating minutes:', elapsedMinutes); // Debug log
+          setMinutes(elapsedMinutes);
+          if (onMinutesChange) {
+            onMinutesChange(elapsedMinutes);
+          }
         }
       }, 1000);
     }
-    return () => clearInterval(intervalId);
-  }, [isRunning, startTime, onMinutesChange]);
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [externalIsRunning, startTime, minutes, onMinutesChange]);
 
   const adjustTime = (increment) => {
-    if (!startTime) return;
+    console.log('Adjusting time:', { increment, currentStartTime: startTime ? new Date(startTime).toISOString() : null }); // Debug log
+    if (!startTime) {
+      console.log('No start time available for adjustment'); // Debug log
+      return;
+    }
 
     const newMinutes = minutes + increment;
     if (newMinutes >= 0) {
-      // When adding time, we move the start time backward
-      // When removing time, we move the start time forward
+      // Calculate new start time based on current time minus new minutes
       const now = Date.now();
       const newStartTime = now - (newMinutes * 60000);
+      
+      console.log('New start time calculated:', new Date(newStartTime).toISOString()); // Debug log
       setStartTime(newStartTime);
       setMinutes(newMinutes);
+      
       if (onMinutesChange) {
         onMinutesChange(newMinutes);
       }
-      // Call onTimeAdjust with the new start time when manually adjusting
+      
+      // Call onTimeAdjust with the new start time
       if (onTimeAdjust) {
+        console.log('Calling onTimeAdjust with:', new Date(newStartTime).toISOString()); // Debug log
         onTimeAdjust(newStartTime);
       }
     }
@@ -107,7 +133,7 @@ const Timer = ({
     return (
       <span className="font-mono">
         {hours}
-        <span className={`${isRunning && animationStyle === 'pulse' ? 'timer-colon' : ''}`}>:</span>
+        <span className={`${externalIsRunning && animationStyle === 'pulse' ? 'timer-colon' : ''}`}>:</span>
         {mins.toString().padStart(2, '0')}
       </span>
     );
@@ -115,7 +141,7 @@ const Timer = ({
 
   // Animation classes based on style prop
   const getAnimationClass = () => {
-    if (!isRunning) return '';
+    if (!externalIsRunning) return '';
     switch (animationStyle) {
       case 'pulse':
         return ''; // We're not using the container pulse anymore
@@ -155,7 +181,7 @@ const Timer = ({
       <div 
         className={`
           relative px-3 py-1.5 rounded-md 
-          ${isRunning ? 'bg-white shadow-sm' : 'hover:bg-white'}
+          ${externalIsRunning ? 'bg-white shadow-sm' : 'hover:bg-white'}
           ${getAnimationClass()}
           cursor-pointer
           transition-all duration-150
@@ -164,11 +190,11 @@ const Timer = ({
       >
         <span className={`
           text-lg tracking-wider
-          ${isRunning ? 'text-cyan-800 font-medium' : 'text-gray-600'}
+          ${externalIsRunning ? 'text-cyan-800 font-medium' : 'text-gray-600'}
         `}>
           {formatTime(minutes)}
         </span>
-        {isRunning && animationStyle === 'dot' && (
+        {externalIsRunning && animationStyle === 'dot' && (
           <span className="absolute top-1/2 -right-1 w-1.5 h-1.5 rounded-full bg-cyan-500 transform -translate-y-1/2 animate-ping" />
         )}
       </div>
@@ -186,7 +212,7 @@ const Timer = ({
         </svg>
       </button>
 
-      {!isRunning && (onSave || onSaveAndClose || onSaveAndDone) && (
+      {!externalIsRunning && (onSave || onSaveAndClose || onSaveAndDone) && (
         <button
           onClick={handleSaveClick}
           className="px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700 ml-2"

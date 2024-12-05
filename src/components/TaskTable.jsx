@@ -5,7 +5,7 @@ import { fetchTaskData, setSelectedTask } from '../store/taskSlice';
 import { setCurrentBill, updateBillablesData } from '../store/billablesSlice';
 import Loading from './Loading';
 import AddTask from './AddTask';
-import EditTask from './EditTask';
+import EditTask from './EditTask/index';
 import TaskSection from './TaskSection';
 import EmptyState from './EmptyState';
 
@@ -73,11 +73,13 @@ export default function TaskTable({ projectId, loadCustomer }) {
 
   // Check for open billables and mount task if found
   useEffect(() => {
-    const checkOpenBillables = () => {
+    const checkOpenBillables = async () => {
       if (currentStaffId && billablesData?.length > 0) {
         // Filter billables for this staff member with no endTime
         const openBillables = billablesData.filter(b => 
-          b.fieldData._staffID === currentStaffId && !b.fieldData.TimeEnd
+          b.fieldData._staffID === currentStaffId && 
+          b.fieldData.TimeStart && 
+          !b.fieldData.TimeEnd
         );
 
         if (openBillables.length > 0) {
@@ -94,18 +96,25 @@ export default function TaskTable({ projectId, loadCustomer }) {
           // Set the current bill to activate the timer
           dispatch(setCurrentBill(mostRecentBillable));
           
-          if (mostRecentBillable.fieldData._projectID && tasks) {
-            // Find corresponding task
-            const openTask = tasks.find(t => t.fieldData._projectID === mostRecentBillable.fieldData._projectID);
-            if (openTask) {
-              dispatch(setSelectedTask(openTask));
+          // If billable has a taskID, fetch that specific task
+          if (mostRecentBillable.fieldData._taskID) {
+            // Fetch the specific task using taskID
+            const taskResponse = await dispatch(fetchTaskData({
+              action: 'read',
+              query: `[{"__ID":"${mostRecentBillable.fieldData._taskID}"}]`
+            }));
+            
+            // If task is found, set it as selected and open edit modal
+            if (taskResponse.payload?.response?.data?.[0]) {
+              dispatch(setSelectedTask(taskResponse.payload.response.data[0]));
+              setIsEditModalOpen(true);
             }
           }
         }
       }
     };
     checkOpenBillables();
-  }, [currentStaffId, billablesData, tasks]);
+  }, [currentStaffId, billablesData]);
 
   // Open EditTask modal when selectedTask changes
   useEffect(() => {
