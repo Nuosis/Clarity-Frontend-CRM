@@ -24,10 +24,12 @@ async function fetchDataFromFileMaker(callback, attempt = 0) {
         
         try {
             const result = await FMGofer.PerformScript("js * getData");
+            console.log("returned data", result);
             
-            if (result.errorCode === 0) {
+            if (result !== null) {
                 try {
-                    const parsedData = JSON.parse(result.response);
+                    // Parse the result directly since it's already the data we need
+                    const parsedData = JSON.parse(result);
                     callback(parsedData);
                 } catch (parseError) {
                     console.error("Error parsing FileMaker response:", parseError);
@@ -38,7 +40,7 @@ async function fetchDataFromFileMaker(callback, attempt = 0) {
                     });
                 }
             } else {
-                throw new Error(`FileMaker script error: ${result.errorMessage}`);
+                throw new Error("FileMaker returned null result");
             }
         } catch (error) {
             console.error("Error with FMgofer:", error);
@@ -60,10 +62,35 @@ function App() {
 
     // Load data from FileMaker on mount
     useEffect(() => {
-        fetchDataFromFileMaker((result) => {
-            setData(result);
-        });
-    }, []);
+        let isMounted = true;
+        let timeoutId = null;
+        
+        console.log("Effect running - starting data fetch");
+        
+        const fetchData = async () => {
+            const handleData = (result) => {
+                if (isMounted) {
+                    console.log("Setting data with result");
+                    setData(result);
+                }
+            };
+
+            fetchDataFromFileMaker(handleData);
+        };
+
+        fetchData();
+
+        // Cleanup function
+        return () => {
+            console.log("Effect cleanup - cancelling any pending operations");
+            isMounted = false;
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
+    }, []); // Empty dependency array means this effect runs once on mount
+
+    window.data = data;
 
     // Render Loading or data display based on data availability
     return (
@@ -85,7 +112,7 @@ function App() {
 }
 
 // Render the App to the root element
-console.log("version 1.0.5")
+console.log("version 1.0.6")
 const container = document.getElementById("root");
 const root = createRoot(container);
 root.render(<App />)
