@@ -1,32 +1,66 @@
-import React, { useState, useMemo } from "react";
-import { useSelector } from "react-redux";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchBillablesData } from "../store/billablesSlice";
 import Charts from "./Chart";
 
 const Stats = ({ onClose }) => {
-  const billables = useSelector(state => state.billables.billablesData);
+  const dispatch = useDispatch();
+  // Use shallowEqual to prevent unnecessary re-renders
+  const billables = useSelector(state => state.billables.billablesData, 
+    (prev, next) => prev === next || (prev?.length === next?.length && prev?.every((item, i) => item.recordId === next[i].recordId))
+  );
+  const loading = useSelector(state => state.billables.loading);
+  const lastFetched = useSelector(state => state.billables.lastFetched);
   
   const [hrsFilter, setHrsFilter] = useState("Today");
   const [billablesFilter, setBillablesFilter] = useState("Rolling Last Year");
   const [selectedCustomer, setSelectedCustomer] = useState("All");
 
+  // Only fetch if we haven't fetched before and aren't currently loading
+  useEffect(() => {
+    if (!lastFetched && !loading && billables.length === 0) {
+      dispatch(fetchBillablesData({ action: 'read' }));
+    }
+  }, [dispatch, lastFetched, loading, billables.length]);
+
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const handleHrsFilterChange = useCallback((e) => {
+    setHrsFilter(e.target.value);
+  }, []);
+
+  const handleBillablesFilterChange = useCallback((e) => {
+    setBillablesFilter(e.target.value);
+  }, []);
+
+  const handleCustomerChange = useCallback((e) => {
+    setSelectedCustomer(e.target.value);
+  }, []);
+
   let pieTitle;
 
   const getLocalDate = (dateString) => {
+    if (!dateString) return new Date();
     const [year, month, day] = dateString.split('-');
     return new Date(year, month - 1, day);
   };
 
   const isBillable = (entry) => {
-    // Access properties directly since we're already at fieldData level
-    return entry.f_dnb !== "1" && entry.f_omit !== "1";
+    if (!entry?.fieldData) return false;
+    const { f_dnb, f_omit } = entry.fieldData;
+    return f_dnb !== "1" && f_omit !== "1";
   };
 
   const convertToCAD = (amount, entry) => {
-    // Access properties directly since we're already at fieldData level
-    if (entry["Customers::f_USD"] === "1") {
+    if (!entry?.fieldData) return amount;
+    const { "Customers::f_USD": isUSD, "Customers::f_EUR": isEUR } = entry.fieldData;
+    if (isUSD === "1") {
       return amount * 1.35; // USD to CAD
     }
-    if (entry["Customers::f_EUR"] === "1") {
+    if (isEUR === "1") {
       return amount * 1.45; // EUR to CAD
     }
     return amount; // Already in CAD
@@ -49,166 +83,210 @@ const Stats = ({ onClose }) => {
     return `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
   };
 
-  const filterByDate = (data, range) => {
-    const today = new Date();
-    const filters = {
-      Today: (entry) => {
-        const entryDate = getLocalDate(entry.DateStart);
-        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        return entryDate.getTime() === todayStart.getTime();
-      },
-      "This Week": (entry) => {
-        const entryDate = getLocalDate(entry.DateStart);
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
-        return entryDate >= weekStart && entryDate <= weekEnd;
-      },
-      "This Month": (entry) => {
-        return entry.year === today.getFullYear() && 
-                entry.month === (today.getMonth() + 1);
-      },
-      "Last 12 Weeks": (entry) => {
-        const entryDate = getLocalDate(entry.DateStart);
-        const twelveWeeksAgo = new Date(today);
-        twelveWeeksAgo.setDate(today.getDate() - (12 * 7));
-        const dayOfWeek = twelveWeeksAgo.getDay();
-        if (dayOfWeek === 1) {
-            twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 1);
-        } else {
-            twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - ((dayOfWeek + 6) % 7));
+  // Memoize filter functions to prevent unnecessary recalculations
+  const filterByDate = useMemo(() => {
+    return (data, range) => {
+      if (!Array.isArray(data)) return [];
+      
+      const today = new Date();
+      const filters = {
+        Today: (entry) => {
+          if (!entry?.fieldData?.DateStart) return false;
+          const entryDate = getLocalDate(entry.fieldData.DateStart);
+          const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          return entryDate.getTime() === todayStart.getTime();
+        },
+        "This Week": (entry) => {
+          if (!entry?.fieldData?.DateStart) return false;
+          const entryDate = getLocalDate(entry.fieldData.DateStart);
+          const weekStart = new Date(today);
+          weekStart.setDate(today.getDate() - today.getDay());
+          weekStart.setHours(0, 0, 0, 0);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          weekEnd.setHours(23, 59, 59, 999);
+          return entryDate >= weekStart && entryDate <= weekEnd;
+        },
+        "This Month": (entry) => {
+          if (!entry?.fieldData?.year || !entry?.fieldData?.month) return false;
+          return Number(entry.fieldData.year) === today.getFullYear() && 
+                 Number(entry.fieldData.month) === (today.getMonth() + 1);
+        },
+        "Last 12 Weeks": (entry) => {
+          if (!entry?.fieldData?.DateStart) return false;
+          const entryDate = getLocalDate(entry.fieldData.DateStart);
+          const twelveWeeksAgo = new Date(today);
+          twelveWeeksAgo.setDate(today.getDate() - (12 * 7));
+          twelveWeeksAgo.setHours(0, 0, 0, 0);
+          return entryDate >= twelveWeeksAgo && entryDate <= today;
+        },
+        "Last 6 Months": (entry) => {
+          if (!entry?.fieldData?.DateStart) return false;
+          const entryDate = getLocalDate(entry.fieldData.DateStart);
+          const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 6, 1);
+          sixMonthsAgo.setHours(0, 0, 0, 0);
+          return entryDate >= sixMonthsAgo;
+        },
+        "Rolling Last Year": (entry) => {
+          if (!entry?.fieldData?.DateStart) return false;
+          const entryDate = getLocalDate(entry.fieldData.DateStart);
+          const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), 1);
+          oneYearAgo.setHours(0, 0, 0, 0);
+          return entryDate >= oneYearAgo;
+        },
+        "Last 5 Years": (entry) => {
+          if (!entry?.fieldData?.DateStart) return false;
+          const entryDate = getLocalDate(entry.fieldData.DateStart);
+          const fiveYearsAgo = new Date(today.getFullYear() - 5, today.getMonth(), 1);
+          fiveYearsAgo.setHours(0, 0, 0, 0);
+          return entryDate >= fiveYearsAgo;
         }
-        twelveWeeksAgo.setHours(0, 0, 0, 0);
-        return entryDate >= twelveWeeksAgo && entryDate <= today;
-      },
-      "Last 6 Months": (entry) => {
-        const entryDate = getLocalDate(entry.DateStart);
-        const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 6, 1);
-        sixMonthsAgo.setHours(0, 0, 0, 0);
-        return entryDate >= sixMonthsAgo;
-      },
-      "Rolling Last Year": (entry) => {
-        const entryDate = getLocalDate(entry.DateStart);
-        // Get last year's same month and set the date to the first day of that month
-        const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), 1);
-        oneYearAgo.setHours(0, 0, 0, 0);
-        return entryDate >= oneYearAgo;
-      },
-      "Last 5 Years": (entry) => {
-        const entryDate = getLocalDate(entry.DateStart);
-        const fiveYearsAgo = new Date(today.getFullYear() - 5, today.getMonth(), 1);
-        fiveYearsAgo.setHours(0, 0, 0, 0);
-        return entryDate >= fiveYearsAgo;
+      };
+
+      return data.filter((entry) => {
+        try {
+          return filters[range](entry) && isBillable(entry);
+        } catch (error) {
+          return false;
+        }
+      });
+    };
+  }, []);
+
+  const aggregateHrsData = useMemo(() => {
+    return (data, filter) => {
+      try {
+        const filteredData = filterByDate(data, filter);
+        const result = {
+          byGroup: {},
+          totalHours: 0,
+        };
+    
+        filteredData.forEach((entry) => {
+          if (!entry?.fieldData) return;
+          
+          const { 
+            "customers_Projects::projectName": projectName,
+            "Customers::Name": customerName,
+            Billable_Time_Rounded: billableTime
+          } = entry.fieldData;
+          
+          const groupKey = filter === "Today" 
+            ? (projectName || "Unspecified Project")
+            : (customerName || "Unknown Customer");
+            
+          const hours = Number(billableTime || 0);
+          result.byGroup[groupKey] = (result.byGroup[groupKey] || 0) + hours;
+          result.totalHours += hours;
+        });
+
+        pieTitle = `Total Hours: ${result.totalHours.toFixed(2)}`;
+        return result.byGroup;
+      } catch (error) {
+        return {};
       }
     };
+  }, [filterByDate]);
 
-    return data.filter((entry) => filters[range](entry) && isBillable(entry));
-  };
+  const aggregateBillablesData = useMemo(() => {
+    return (data, filter, customer) => {
+      try {
+        let filteredData = filterByDate(data, filter);
+    
+        if (customer !== "All") {
+          filteredData = filteredData.filter(
+            (entry) => entry?.fieldData?.["customers_Projects::_custID"] === customer
+          );
+        }
+    
+        const isWeekly = filter === "Last 12 Weeks";
+        const today = new Date();
+        const aggregated = {};
+        
+        if (isWeekly) {
+          // Create week buckets for the last 12 weeks
+          for (let i = 0; i < 12; i++) {
+            const weekDate = new Date(today);
+            weekDate.setDate(today.getDate() - (i * 7));
+            const weekKey = getWeekKey(weekDate);
+            aggregated[weekKey] = 0;
+          }
 
-  const aggregateHrsData = (data, filter) => {
-    try {
-      const filteredData = filterByDate(data, filter);
-      const result = {
-        byGroup: {},
-        totalHours: 0,
-      };
-  
-      filteredData.forEach((entry) => {
-        // For Today filter, group by project name
-        // For other filters (This Week, This Month), group by customer
-        const groupKey = filter === "Today" 
-          ? entry["customers_Projects::projectName"] || "Unspecified Project"
-          : entry["Customers::Name"];
-          
-        const billableTime = entry.Billable_Time_Rounded;
-        result.byGroup[groupKey] = (result.byGroup[groupKey] || 0) + billableTime;
-        result.totalHours += billableTime;
-      });
-
-      pieTitle = `Total Hours: ${result.totalHours.toFixed(2)}`;
-      return result.byGroup;
-    } catch (error) {
-      return { byGroup: {}, totalHours: 0 };
-    }
-  };
-
-  const aggregateBillablesData = (data, filter, customer) => {
-    try {
-      let filteredData = filterByDate(data, filter);
-  
-      if (customer !== "All") {
-        filteredData = filteredData.filter(
-          (entry) => entry["customers_Projects::_custID"] === customer
-        );
-      }
-  
-      const isWeekly = filter === "Last 12 Weeks";
-      const today = new Date();
-      const aggregated = {};
-      
-      if (isWeekly) {
-        // Create week buckets for the last 12 weeks
-        for (let i = 0; i < 12; i++) {
-          const weekDate = new Date(today);
-          weekDate.setDate(today.getDate() - (i * 7));
-          const weekKey = getWeekKey(weekDate);
-          aggregated[weekKey] = 0;
+          // Aggregate data into week buckets
+          filteredData.forEach((entry) => {
+            if (!entry?.fieldData?.DateStart) return;
+            
+            const date = getLocalDate(entry.fieldData.DateStart);
+            const weekKey = getWeekKey(date);
+            
+            if (weekKey in aggregated) {
+              const hours = Number(entry.fieldData.Billable_Time_Rounded || 0);
+              const rate = Number(entry.fieldData["Customers::chargeRate"] || 0);
+              const total = convertToCAD(hours * rate, entry);
+              aggregated[weekKey] += total;
+            }
+          });
+        } else {
+          // Monthly aggregation
+          filteredData.forEach((entry) => {
+            if (!entry?.fieldData?.DateStart) return;
+            
+            const date = getLocalDate(entry.fieldData.DateStart);
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const hours = Number(entry.fieldData.Billable_Time_Rounded || 0);
+            const rate = Number(entry.fieldData["Customers::chargeRate"] || 0);
+            const total = convertToCAD(hours * rate, entry);
+            aggregated[key] = (aggregated[key] || 0) + total;
+          });
         }
 
-        // Aggregate data into week buckets
-        filteredData.forEach((entry) => {
-          const date = getLocalDate(entry.DateStart);
-          const weekKey = getWeekKey(date);
-          
-          if (weekKey in aggregated) {
-            const hours = entry.Billable_Time_Rounded;
-            const rate = entry["Customers::chargeRate"];
-            const total = convertToCAD(hours * rate, entry);
-            aggregated[weekKey] += total;
-          }
+        // Sort chronologically
+        const sortedKeys = Object.keys(aggregated).sort();
+        const sortedAggregated = {};
+        sortedKeys.forEach(key => {
+          sortedAggregated[key] = aggregated[key];
         });
-      } else {
-        // Monthly aggregation
-        filteredData.forEach((entry) => {
-          const date = getLocalDate(entry.DateStart);
-          const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          const hours = entry.Billable_Time_Rounded;
-          const rate = entry["Customers::chargeRate"];
-          const total = convertToCAD(hours * rate, entry);
-          aggregated[key] = (aggregated[key] || 0) + total;
-        });
+
+        return sortedAggregated;
+      } catch (error) {
+        return {};
       }
-
-      // Sort chronologically
-      const sortedKeys = Object.keys(aggregated).sort();
-      const sortedAggregated = {};
-      sortedKeys.forEach(key => {
-        sortedAggregated[key] = aggregated[key];
-      });
-
-      return sortedAggregated;
-    } catch (error) {
-      return {};
-    }
-  };
+    };
+  }, [filterByDate]);
 
   const hrsData = useMemo(() => {
     return aggregateHrsData(billables, hrsFilter);
-  }, [billables, hrsFilter]);
+  }, [billables, hrsFilter, aggregateHrsData]);
 
   const billablesData = useMemo(() => {
     return aggregateBillablesData(billables, billablesFilter, selectedCustomer);
-  }, [billables, billablesFilter, selectedCustomer]);
+  }, [billables, billablesFilter, selectedCustomer, aggregateBillablesData]);
+
+  // Memoize customer options to prevent unnecessary recalculations
+  const customerOptions = useMemo(() => {
+    return [...new Set(billables.filter(b => b?.fieldData).map((entry) => entry.fieldData["customers_Projects::_custID"]))].map(
+      (custID) => {
+        const customerName = billables.find(
+          (entry) => entry?.fieldData?.["customers_Projects::_custID"] === custID
+        )?.fieldData?.["Customers::Name"] || "Unknown";
+        return {
+          id: custID,
+          name: customerName
+        };
+      }
+    );
+  }, [billables]);
+
+  if (loading) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   return (
     <div id="chart-container" className="p-4 bg-white min-h-screen">
       <div id="header" className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">Stats Dashboard</h1>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="px-2 py-2 bg-white text-gray-700 rounded-full hover:bg-gray-100 flex items-center"
         >
           <svg
@@ -236,7 +314,7 @@ const Stats = ({ onClose }) => {
               <select
                 id="hrsFilter"
                 value={hrsFilter}
-                onChange={(e) => setHrsFilter(e.target.value)}
+                onChange={handleHrsFilterChange}
                 className="appearance-none border border-gray-300 bg-white px-4 py-1 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
               >
                 <option>Today</option>
@@ -256,22 +334,15 @@ const Stats = ({ onClose }) => {
               <select
                 id="selectedCustomer"
                 value={selectedCustomer}
-                onChange={(e) => setSelectedCustomer(e.target.value)}
+                onChange={handleCustomerChange}
                 className="appearance-none border border-gray-300 bg-white px-4 py-1 rounded-lg max-w-60 focus:outline-none focus:ring-2 focus:ring-gray-400"
               >
                 <option>All</option>
-                {[...new Set(billables.map((entry) => entry["customers_Projects::_custID"]))].map(
-                  (custID) => {
-                    const customerName = billables.find(
-                      (entry) => entry["customers_Projects::_custID"] === custID
-                    )?.["Customers::Name"] || "Unknown";
-                    return (
-                      <option key={custID} value={custID}>
-                        {customerName}
-                      </option>
-                    );
-                  }
-                )}
+                {customerOptions.map(({ id, name }) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="mb-4">
@@ -282,7 +353,7 @@ const Stats = ({ onClose }) => {
                 <select
                   id="billablesFilter"
                   value={billablesFilter}
-                  onChange={(e) => setBillablesFilter(e.target.value)}
+                  onChange={handleBillablesFilterChange}
                   className="appearance-none border border-gray-300 bg-white px-4 py-1 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
                 >
                   <option>Last 12 Weeks</option>
@@ -308,4 +379,4 @@ const Stats = ({ onClose }) => {
   );
 };
 
-export default Stats;
+export default React.memo(Stats);

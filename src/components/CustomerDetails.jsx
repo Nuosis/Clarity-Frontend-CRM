@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchProjectData } from '../store/projectSlice';
 import EditProject from './EditProject';
@@ -15,8 +15,6 @@ export default function CustomerDetails({ onClose }) {
   const teams = useSelector(state => state.teams.teams);
   const billables = useSelector(state => state.billables.billablesData);
   const currentStaffId = useSelector(state => state.staff.currentStaffId);
-
-  window.billables = billables
 
   // Get total billable hours for current month
   const totalMonthlyHours = useMemo(() => {
@@ -69,7 +67,7 @@ export default function CustomerDetails({ onClose }) {
     FileMaker.PerformScript('initialize QB via JS', selectedCustomer);
   };
 
-  // Process billables data for chart
+  // Process billables data for line chart
   const chartData = useMemo(() => {
     if (!billables?.length) return {};
 
@@ -109,6 +107,36 @@ export default function CustomerDetails({ onClose }) {
         obj[key] = data[key];
         return obj;
       }, {});
+  }, [billables, selectedCustomer]);
+
+  // Process current month's hours by project
+  const currentMonthProjectHours = useMemo(() => {
+    if (!billables?.length) return {};
+
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+
+    // Create a single object with project hours
+    const projectHours = billables
+      .filter(entry => {
+        const entryData = entry.fieldData || entry;
+        if (entryData.f_dnb === "1" || entryData.f_omit === "1") return false;
+        if (entryData["Customers::Name"] !== selectedCustomer) return false;
+        
+        const [year, month] = entryData.DateStart.split('-');
+        return parseInt(year) === currentYear && parseInt(month) === currentMonth;
+      })
+      .reduce((acc, entry) => {
+        const entryData = entry.fieldData || entry;
+        const projectName = entryData["customers_Projects::projectName"] || "Unassigned";
+        const hours = parseFloat(entryData.Billable_Time_Rounded) || 0;
+        
+        acc[projectName] = (acc[projectName] || 0) + hours;
+        return acc;
+      }, {});
+
+    return projectHours;
   }, [billables, selectedCustomer]);
 
   return (
@@ -170,16 +198,29 @@ export default function CustomerDetails({ onClose }) {
         </div>
       </div>
 
-      <div className="mt-8">
-        <Charts
-          type="Line"
-          data={chartData}
-          title="Billables Over Time (CAD)"
-          options={{ 
-            projection: "currentMonth",
-            showProjection: true
-          }}
-        />
+      <div className="space-y-8">
+        <div>
+          <Charts
+            type="Bar"
+            data={currentMonthProjectHours}
+            title={`Hours by Project (${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })})`}
+            options={{ 
+              format: 'hours'
+            }}
+          />
+        </div>
+
+        <div>
+          <Charts
+            type="Line"
+            data={chartData}
+            title="Billables Over Time (CAD)"
+            options={{ 
+              projection: "currentMonth",
+              showProjection: true
+            }}
+          />
+        </div>
       </div>
 
       <EditProject

@@ -1,4 +1,4 @@
-import { fetchBillablesData, setCurrentBill, clearCurrentBill } from '../../store/billablesSlice';
+import { fetchBillablesData, setCurrentBill, clearCurrentBill, updateBillablesData } from '../../store/billablesSlice';
 import { formatDate, formatTime } from './TimeManager';
 
 export class BillableManager {
@@ -67,10 +67,19 @@ export class BillableManager {
   async finalizeBillable(recordId, endTime, description) {
     if (!recordId) return;
 
-    await this.updateBillableRecord(recordId, {
+    const response = await this.updateBillableRecord(recordId, {
       TimeEnd: formatTime(endTime),
       ["Work Performed"]: description
     });
+
+    if (response) {
+      // Update the billables state with just this updated record
+      this.dispatch(updateBillablesData({ 
+        response: { 
+          data: [response] 
+        } 
+      }));
+    }
 
     this.dispatch(clearCurrentBill());
   }
