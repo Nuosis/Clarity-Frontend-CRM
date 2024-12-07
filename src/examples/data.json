@@ -1,0 +1,456 @@
+{
+  "response": {
+    "data": [
+      {
+        "fieldData": {
+          "ItemID": "N10005",
+          "LongDesc": "",
+          "ShortDesc": "CGL-10"
+        },
+        "modId": "65",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": 6,
+              "StgItem_BINs::BIN_Min": 3,
+              "StgItem_BINs::BIN_Qty": 7,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "51592"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL10",
+              "modId": "14",
+              "recordId": "290"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5200"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N10006",
+          "LongDesc": "CGL-15 HRC-II TYPE C FUSE",
+          "ShortDesc": "CGL-15"
+        },
+        "modId": "87",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": 8,
+              "StgItem_BINs::BIN_Min": 2,
+              "StgItem_BINs::BIN_Qty": 10,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "51593"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL15",
+              "modId": "18",
+              "recordId": "291"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5201"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N10007",
+          "LongDesc": "CGL-20 HRC II TYPE C FUSE",
+          "ShortDesc": "CGL-20"
+        },
+        "modId": "63",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": 6,
+              "StgItem_BINs::BIN_Min": 3,
+              "StgItem_BINs::BIN_Qty": 6,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "51594"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL20",
+              "modId": "18",
+              "recordId": "292"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5202"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N10008",
+          "LongDesc": "CGL-25 HRC-II TYPE C FUSE",
+          "ShortDesc": "CGL-25"
+        },
+        "modId": "62",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": 6,
+              "StgItem_BINs::BIN_Min": 2,
+              "StgItem_BINs::BIN_Qty": 5,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "51595"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL25",
+              "modId": "16",
+              "recordId": "293"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5203"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N10009",
+          "LongDesc": "CGL-30 HRC-II TYPE C FUSE",
+          "ShortDesc": "CGL-30"
+        },
+        "modId": "67",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": 6,
+              "StgItem_BINs::BIN_Min": 3,
+              "StgItem_BINs::BIN_Qty": 6,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "51597"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL30",
+              "modId": "18",
+              "recordId": "294"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5204"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N10010",
+          "LongDesc": "CGL-40 HRC-II TYPE C FUSE",
+          "ShortDesc": "CGL-40"
+        },
+        "modId": "63",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": 6,
+              "StgItem_BINs::BIN_Min": 2,
+              "StgItem_BINs::BIN_Qty": 6,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "51599"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL40",
+              "modId": "16",
+              "recordId": "295"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5205"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N10011",
+          "LongDesc": "CGL-50 HRC-II TYPE C FUSE",
+          "ShortDesc": "CGL-50"
+        },
+        "modId": "57",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": 4,
+              "StgItem_BINs::BIN_Min": 2,
+              "StgItem_BINs::BIN_Qty": 4,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "51600"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL50",
+              "modId": "15",
+              "recordId": "296"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5206"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N10012",
+          "LongDesc": "CGL-60 HRC-II TYPE C FUSE",
+          "ShortDesc": "CGL-60"
+        },
+        "modId": "63",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": "",
+              "StgItem_BINs::BIN_Min": "",
+              "StgItem_BINs::BIN_Qty": 2,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "51601"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL60",
+              "modId": "14",
+              "recordId": "297"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5207"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N10013",
+          "LongDesc": "CGL-70 HRC-II TYPE C FUSE",
+          "ShortDesc": "CGL-70"
+        },
+        "modId": "61",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": 6,
+              "StgItem_BINs::BIN_Min": 2,
+              "StgItem_BINs::BIN_Qty": 6,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "51602"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL70",
+              "modId": "15",
+              "recordId": "298"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5208"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N10014",
+          "LongDesc": "CGL-80 HRC-II TYPE C FUSE",
+          "ShortDesc": "CGL-80"
+        },
+        "modId": "62",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "B7",
+              "StgItem_BINs::BIN_Max": 6,
+              "StgItem_BINs::BIN_Min": 3,
+              "StgItem_BINs::BIN_Qty": 3,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "1",
+              "recordId": "51603"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "BUSCGL80",
+              "modId": "19",
+              "recordId": "299"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "5209"
+      }
+    ]
+  }
+}

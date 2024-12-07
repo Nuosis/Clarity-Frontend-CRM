@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from "react-dom/client";
 import Loading from './components/loading/Loading';
 import FMGofer from 'fm-gofer';
+import { flattenToCSV } from './utils/dataTransformations';
 
 // Function to fetch data from FileMaker
 async function fetchDataFromFileMaker(callback, attempt = 0) {
@@ -30,6 +31,15 @@ async function fetchDataFromFileMaker(callback, attempt = 0) {
                 try {
                     // Parse the result directly since it's already the data we need
                     const parsedData = JSON.parse(result);
+                    
+                    // Transform data to CSV and send back to FileMaker
+                    try {
+                        flattenToCSV(parsedData);
+                    } catch (csvError) {
+                        console.error("Error transforming data to CSV:", csvError);
+                    }
+                    
+                    // Continue with the original callback
                     callback(parsedData);
                 } catch (parseError) {
                     console.error("Error parsing FileMaker response:", parseError);
@@ -65,7 +75,7 @@ function App() {
         let isMounted = true;
         let timeoutId = null;
         
-        console.log("Effect running - starting data fetch");
+        console.log("Starting data fetch");
         
         const fetchData = async () => {
             const handleData = (result) => {
