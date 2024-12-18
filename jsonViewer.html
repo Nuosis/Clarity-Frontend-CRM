@@ -1,0 +1,86 @@
+data:text/html,
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formatted JSON Viewer</title>
+  <link 
+    rel="stylesheet" 
+    href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" 
+  >
+  <style>
+    pre {
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      overflow: auto;
+      min-height: 100px;
+    }
+  </style>
+  <script>
+    var setData = function(json) {
+      try {
+        var data = JSON.parse(json);
+        var displayElement = document.getElementById("jsonDisplay");
+        if (!displayElement) {
+          displayElement = document.createElement("pre");
+          displayElement.id = "jsonDisplay";
+          document.body.appendChild(displayElement);
+        }
+        displayElement.textContent = JSON.stringify(data, null, 2);
+        return data;
+      } catch (e) {
+        var displayElement = document.getElementById("jsonDisplay");
+        if (displayElement) {
+          displayElement.textContent = "Error: " + e.message;
+        }
+      }
+    };
+
+    var testSetData = function() {
+      setData('{"accountName":"developer","header":"Error","incident":"2.2","message":"No error","privSet":"[Full Access]"}');
+    };
+
+    var callFileMakerResume = function(action) {
+      if (typeof FileMaker !== "undefined" && FileMaker.PerformScriptWithOption) {
+        FileMaker.PerformScriptWithOption("app*js*callback", JSON.stringify({ action: action }), 3);
+      }
+    };
+
+    var initDisplay = function() {
+      var displayElement = document.getElementById("jsonDisplay");
+      if (displayElement) {
+        displayElement.textContent = "Viewer ready. Waiting for data...";
+      }
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initDisplay);
+    } else {
+      initDisplay();
+    }
+  </script>
+</head>
+<body>
+  <div class="container mt-4">
+    <h3>Formatted JSON Viewer</h3>
+    <div class="btn-group mb-2">
+      <button 
+        class="btn btn-primary" 
+        onclick="callFileMakerResume('resume')"
+      >
+        Resume
+      </button>
+      <button 
+        class="btn btn-secondary" 
+        onclick="callFileMakerResume('halt')"
+      >
+        Cancel
+      </button>
+    </div>
+    <pre id="jsonDisplay">Initializing...</pre>
+  </div>
+</body>
+</html>
