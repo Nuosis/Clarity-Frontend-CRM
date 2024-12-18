@@ -4,50 +4,100 @@ try {
     const transformModule = require('./dataTransformations.js');
     console.log('Module loaded:', Object.keys(transformModule));
     
-    const testData = require('../examples/data.json');
-    console.log('Test data loaded:', testData.response.data.length, 'records');
+    // Test with test.json
+    const testData = require('../examples/test.json');
     
+    // Analyze input data
+    console.log('\nInput Data Analysis:');
+    testData.response.data
+        .filter(d => Object.keys(d).length > 0)
+        .forEach((record, index) => {
+            console.log(`\nRecord ${index + 1}:`);
+            console.log('ItemID:', record.fieldData?.ItemID);
+            console.log('LongDesc:', record.fieldData?.LongDesc);
+            console.log('ShortDesc:', record.fieldData?.ShortDesc);
+            if (record.portalData?.StgItem_BINs?.length) {
+                console.log('Bins:', record.portalData.StgItem_BINs.map(bin => ({
+                    id: bin['StgItem_BINs::BIN_ID'],
+                    qty: bin['StgItem_BINs::BIN_Qty']
+                })));
+            } else {
+                console.log('Bins: []');
+            }
+            if (record.portalData?.Vendor_StgItem?.length) {
+                console.log('Vendors:', record.portalData.Vendor_StgItem.map(vendor => ({
+                    id: vendor['Vendor_StgItem::VendID'],
+                    partNo: vendor['Vendor_StgItem::Vendor PartNo']
+                })));
+            } else {
+                console.log('Vendors: []');
+            }
+        });
+    
+    // Generate CSV
     const result = transformModule.flattenToCSV(testData);
     const lines = result.split('\n');
     
-    console.log('\nCSV Generation Result:');
+    console.log('\nOutput Analysis:');
+    console.log('Total rows (including header):', lines.length);
+    console.log('Data rows:', lines.length - 1);
     
-    // Test CSV parsing
-    console.log('\nParsing first row fields:');
-    const firstRow = lines[1];
-    let field = '';
-    let inQuotes = false;
-    let fields = [];
-    
-    for (let i = 0; i < firstRow.length; i++) {
-        const char = firstRow[i];
-        if (char === '"') {
-            if (inQuotes && firstRow[i + 1] === '"') {
-                field += '"';
-                i++; // Skip next quote
+    // Parse CSV line considering quotes
+    function parseCSVLine(line) {
+        const fields = [];
+        let field = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                    field += '"';
+                    i++; // Skip next quote
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                fields.push(field);
+                field = '';
             } else {
-                inQuotes = !inQuotes;
+                field += char;
             }
-        } else if (char === ',' && !inQuotes) {
-            fields.push(field);
-            field = '';
-        } else {
-            field += char;
         }
+        fields.push(field); // Add the last field
+        
+        // Clean up quotes
+        return fields.map(f => {
+            f = f.trim();
+            if (f.startsWith('"') && f.endsWith('"')) {
+                f = f.slice(1, -1);
+            }
+            return f;
+        });
     }
-    if (field) fields.push(field);
     
-    console.log('\nField count:', fields.length);
-    console.log('\nFields:');
-    fields.forEach((f, i) => {
-        console.log(`${i + 1}. [${f}]`);
-    });
+    // Print headers
+    console.log('\nHeaders:');
+    const headers = parseCSVLine(lines[0]);
+    headers.forEach((h, i) => console.log(`${i + 1}. ${h}`));
     
-    console.log('\nRaw first row for verification:');
-    console.log(firstRow);
+    // Analyze each data row
+    console.log('\nData Rows:');
+    for (let i = 1; i < lines.length; i++) {
+        const fields = parseCSVLine(lines[i]);
+        console.log(`\nRow ${i}:`);
+        fields.forEach((field, index) => {
+            if (field !== '') {
+                console.log(`${headers[index]}: "${field}"`);
+            }
+        });
+    }
     
-    console.log('\nTotal rows:', lines.length);
+    // Print raw CSV for verification
+    console.log('\nRaw CSV output:');
+    lines.forEach((line, i) => console.log(`${i === 0 ? 'Header' : `Row ${i}`}: ${line}`));
     
 } catch (error) {
     console.error('Error occurred:', error);
+    console.error(error.stack);
 }

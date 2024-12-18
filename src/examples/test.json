@@ -1,0 +1,123 @@
+{
+  "response": {
+    "data": [
+      {
+        "fieldData": {
+          "ItemID": "N23073",
+          "LongDesc": "Stop Tube for cylinder - sealum - ETB33-11-20-H3317",
+          "ShortDesc": "",
+          "f_inactive": 0
+        },
+        "modId": "1",
+        "portalData": {
+          "StgItem_BINs": [],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "MOTION      ",
+              "Vendor_StgItem::Vendor PartNo": "B2961-30-0.75",
+              "modId": "0",
+              "recordId": "18200"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 0,
+            "returnedCount": 0,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "29982"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N23074",
+          "LongDesc": "Contactor, Eaton, 24vac coil DILM9-10",
+          "ShortDesc": "",
+          "f_inactive": 0
+        },
+        "modId": "1",
+        "portalData": {
+          "StgItem_BINs": [
+            {
+              "StgItem_BINs::BIN_ID": "RS",
+              "StgItem_BINs::BIN_Max": "",
+              "StgItem_BINs::BIN_Min": "",
+              "StgItem_BINs::BIN_Qty": 0,
+              "StgItem_BINs::BIN_Zone": "019",
+              "StgItem_BINs::Zone_Description": "Stores",
+              "modId": "0",
+              "recordId": "62659"
+            }
+          ],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "EBHORSMAN   ",
+              "Vendor_StgItem::Vendor PartNo": "XTCE009B10",
+              "modId": "0",
+              "recordId": "18201"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "29983"
+      },
+      {
+        "fieldData": {
+          "ItemID": "N23075",
+          "LongDesc": "Breaker, Eaton NZMN3-AEF350-NA",
+          "ShortDesc": "",
+          "f_inactive": 0
+        },
+        "modId": "1",
+        "portalData": {
+          "StgItem_BINs": [],
+          "Vendor_StgItem": [
+            {
+              "Vendor_StgItem::VendID": "WESTBURNE   ",
+              "Vendor_StgItem::Vendor PartNo": "NZMN3-AEF350-NA",
+              "modId": "0",
+              "recordId": "18202"
+            }
+          ]
+        },
+        "portalDataInfo": [
+          {
+            "database": "Inventory",
+            "foundCount": 0,
+            "returnedCount": 0,
+            "table": "StgItem_BINs"
+          },
+          {
+            "database": "Inventory",
+            "foundCount": 1,
+            "returnedCount": 1,
+            "table": "Vendor_StgItem"
+          }
+        ],
+        "recordId": "29984"
+      },
+      {}
+    ]
+  }
+}

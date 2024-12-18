@@ -9,18 +9,7 @@
         },
         "modId": "65",
         "portalData": {
-          "StgItem_BINs": [
-            {
-              "StgItem_BINs::BIN_ID": "B7",
-              "StgItem_BINs::BIN_Max": 6,
-              "StgItem_BINs::BIN_Min": 3,
-              "StgItem_BINs::BIN_Qty": 7,
-              "StgItem_BINs::BIN_Zone": "019",
-              "StgItem_BINs::Zone_Description": "Stores",
-              "modId": "0",
-              "recordId": "51592"
-            }
-          ],
+          "StgItem_BINs": [],
           "Vendor_StgItem": [
             {
               "Vendor_StgItem::VendID": "WESTBURNE   ",

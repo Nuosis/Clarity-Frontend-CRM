@@ -25,8 +25,6 @@ function flattenToCSV(jsonData) {
         return `"${trimmed.replace(/"/g, '""')}"`;
     };
 
-    const data = jsonData.response.data;
-    
     // Define CSV headers
     const headerFields = [
         'ItemID',
@@ -42,41 +40,96 @@ function flattenToCSV(jsonData) {
         'Vendor_PartNo'
     ];
     
-    // Create properly formatted header row with comma separation
+    // Create header row with proper formatting
     const headers = headerFields.map(formatField).join(',');
 
     // Process each record
-    const rows = data.flatMap(record => {
-        const fieldData = record.fieldData || {};
-        const bins = record.portalData?.StgItem_BINs || [];
-        const vendors = record.portalData?.Vendor_StgItem || [];
+    const rows = jsonData.response.data
+        // Filter out empty records
+        .filter(record => Object.keys(record).length > 0)
+        .flatMap(record => {
+            const fieldData = record.fieldData || {};
+            const bins = record.portalData?.StgItem_BINs || [];
+            const vendors = record.portalData?.Vendor_StgItem || [];
 
-        // Create cartesian product of bins and vendors
-        const flattenedRows = [];
-        for (const bin of bins) {
-            for (const vendor of vendors) {
-                // Format each field and ensure comma separation
-                const fields = [
-                    fieldData.ItemID,
-                    fieldData.LongDesc,
-                    fieldData.ShortDesc,
-                    bin['StgItem_BINs::BIN_ID'],
-                    bin['StgItem_BINs::BIN_Max'],
-                    bin['StgItem_BINs::BIN_Min'],
-                    bin['StgItem_BINs::BIN_Qty'],
-                    bin['StgItem_BINs::BIN_Zone'],
-                    bin['StgItem_BINs::Zone_Description'],
-                    vendor['Vendor_StgItem::VendID'],
-                    vendor['Vendor_StgItem::Vendor PartNo']
-                ].map(formatField);
-
-                // Join with explicit commas
-                const row = fields.join(',');
-                flattenedRows.push(row);
+            // If no bins and vendors exist, create one row per vendor with empty bin fields
+            if (bins.length === 0 && vendors.length > 0) {
+                return vendors.map(vendor => {
+                    const fields = [
+                        fieldData.ItemID || '',
+                        fieldData.LongDesc || '',
+                        fieldData.ShortDesc || '',
+                        '', // BIN_ID
+                        '', // BIN_Max
+                        '', // BIN_Min
+                        '', // BIN_Qty
+                        '', // BIN_Zone
+                        '', // Zone_Description
+                        (vendor['Vendor_StgItem::VendID'] || '').trim(),
+                        (vendor['Vendor_StgItem::Vendor PartNo'] || '').trim()
+                    ];
+                    return fields.map(formatField).join(',');
+                });
             }
-        }
-        return flattenedRows;
-    });
+
+            // If bins exist but no vendors, create one row per bin with empty vendor fields
+            if (bins.length > 0 && vendors.length === 0) {
+                return bins.map(bin => {
+                    const fields = [
+                        fieldData.ItemID || '',
+                        fieldData.LongDesc || '',
+                        fieldData.ShortDesc || '',
+                        bin['StgItem_BINs::BIN_ID'] || '',
+                        bin['StgItem_BINs::BIN_Max'] || '',
+                        bin['StgItem_BINs::BIN_Min'] || '',
+                        String(bin['StgItem_BINs::BIN_Qty'] || ''),
+                        bin['StgItem_BINs::BIN_Zone'] || '',
+                        bin['StgItem_BINs::Zone_Description'] || '',
+                        '', // VendID
+                        ''  // Vendor_PartNo
+                    ];
+                    return fields.map(formatField).join(',');
+                });
+            }
+
+            // If both bins and vendors exist, create cartesian product
+            if (bins.length > 0 && vendors.length > 0) {
+                return bins.flatMap(bin => 
+                    vendors.map(vendor => {
+                        const fields = [
+                            fieldData.ItemID || '',
+                            fieldData.LongDesc || '',
+                            fieldData.ShortDesc || '',
+                            bin['StgItem_BINs::BIN_ID'] || '',
+                            bin['StgItem_BINs::BIN_Max'] || '',
+                            bin['StgItem_BINs::BIN_Min'] || '',
+                            String(bin['StgItem_BINs::BIN_Qty'] || ''),
+                            bin['StgItem_BINs::BIN_Zone'] || '',
+                            bin['StgItem_BINs::Zone_Description'] || '',
+                            (vendor['Vendor_StgItem::VendID'] || '').trim(),
+                            (vendor['Vendor_StgItem::Vendor PartNo'] || '').trim()
+                        ];
+                        return fields.map(formatField).join(',');
+                    })
+                );
+            }
+
+            // If no bins and no vendors, create one row with empty fields
+            const fields = [
+                fieldData.ItemID || '',
+                fieldData.LongDesc || '',
+                fieldData.ShortDesc || '',
+                '', // BIN_ID
+                '', // BIN_Max
+                '', // BIN_Min
+                '', // BIN_Qty
+                '', // BIN_Zone
+                '', // Zone_Description
+                '', // VendID
+                ''  // Vendor_PartNo
+            ];
+            return [fields.map(formatField).join(',')];
+        });
 
     // Combine headers and rows with newlines
     const csv = [headers, ...rows].join('\n');

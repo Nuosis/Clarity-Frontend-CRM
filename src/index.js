@@ -122,7 +122,7 @@ function App() {
 }
 
 // Render the App to the root element
-console.log("version 1.0.6")
+console.log("excel 1.0.2")
 const container = document.getElementById("root");
 const root = createRoot(container);
 root.render(<App />)
