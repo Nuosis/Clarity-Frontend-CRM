@@ -61,7 +61,8 @@ export const projectSlice = createSlice({
     setSelectedCustomer: (state, action) => {
       state.selectedCustomer = action.payload;
       // Clear selected project when customer changes
-      if (state.selectedProject && (!action.payload || action.payload !== state.selectedProject.fieldData['Customers::Name'])) {
+      if (state.selectedProject?.fieldData && 
+          (!action.payload || action.payload !== state.selectedProject.fieldData['Customers::Name'])) {
         state.selectedProject = null;
       }
     },

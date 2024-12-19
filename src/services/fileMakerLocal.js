@@ -8,6 +8,7 @@
  * @param {string} param.query - Query in the format "[{}] ([n]<fieldName>:<fieldValue>)"
  * @param {string} param.action - Action type (read, metaData, create, update, delete, duplicate)
  * @param {string} [param.recordId] - Record ID (required for update, delete and duplicate)
+ * @param {string} [param.layout] - Layout name to use for the operation
  * @returns {Promise} Resolves with the script result
  */
 const executeFileMakerScript = (param) => {
@@ -30,7 +31,7 @@ const executeFileMakerScript = (param) => {
     }
 
     try {
-      FileMaker.PerformScript('JS * fetchData', JSON.stringify(param));
+      FileMaker.PerformScript('staff * JS * Fetch Data', JSON.stringify(param));
       resolve();
     } catch (error) {
       reject(error);
@@ -62,8 +63,67 @@ const getMetaData = (query) => {
   });
 };
 
+/**
+ * Creates a new note in FileMaker using the devNotes layout
+ * @param {Object} noteData - The note data to create
+ * @param {string} noteData.note - The note text
+ * @param {string} noteData._fkID - The foreign key ID (task ID)
+ * @returns {Promise}
+ */
+const createNote = (noteData) => {
+  return executeFileMakerScript({
+    action: 'create',
+    layout: 'devNotes',
+    fieldData: {
+      note: noteData.note,
+      _fkID: noteData._fkID
+    }
+  });
+};
+
+/**
+ * Creates a new link in FileMaker using the devLinks layout
+ * @param {Object} linkData - The link data to create
+ * @param {string} linkData.link - The link URL
+ * @param {string} linkData._fkID - The foreign key ID (task ID)
+ * @returns {Promise}
+ */
+const createLink = (linkData) => {
+  return executeFileMakerScript({
+    action: 'create',
+    layout: 'devLinks',
+    fieldData: {
+      link: linkData.link,
+      _fkID: linkData._fkID
+    }
+  });
+};
+
+/**
+ * Creates a new image in FileMaker using the devImage layout
+ * @param {Object} imageData - The image data to create
+ * @param {string} imageData.image_base64 - The base64 encoded image data
+ * @param {string} imageData.fileName - The name of the file
+ * @param {string} imageData._fkID - The foreign key ID (task ID)
+ * @returns {Promise}
+ */
+const createImage = (imageData) => {
+  return executeFileMakerScript({
+    action: 'create',
+    layout: 'devImage',
+    fieldData: {
+      image_base64: imageData.image_base64,
+      fileName: imageData.fileName,
+      _fkID: imageData._fkID
+    }
+  });
+};
+
 export const fileMakerLocal = {
   executeFileMakerScript,
   readData,
-  getMetaData
+  getMetaData,
+  createNote,
+  createLink,
+  createImage
 };

@@ -27,7 +27,7 @@ export default function TaskTable({ projectId, loadCustomer }) {
     if (currentStaffId) {
       let query;
       if (selectedProject) {
-        // If a project is selected, show only its tasks
+        // If a project is selected, always show only its tasks
         query = `[{"_staffID":"${currentStaffId}","_projectID":"${selectedProject.id}"}]`;
       } else if (selectedCustomer && projectId) {
         // If a customer is selected and we're in project view, show customer's project tasks
@@ -35,7 +35,7 @@ export default function TaskTable({ projectId, loadCustomer }) {
       } else if (selectedCustomer) {
         // If only a customer is selected, show all their project tasks
         const customerProjects = projectData?.filter(p => 
-          p.fieldData['Customers::Name'] === selectedCustomer
+          p.fieldData && selectedCustomer && p.fieldData['Customers::Name'] === selectedCustomer
         ).map(p => p.fieldData['__ID']);
         
         if (customerProjects?.length) {
@@ -77,6 +77,7 @@ export default function TaskTable({ projectId, loadCustomer }) {
       if (currentStaffId && billablesData?.length > 0) {
         // Filter billables for this staff member with no endTime
         const openBillables = billablesData.filter(b => 
+          b.fieldData && 
           b.fieldData._staffID === currentStaffId && 
           b.fieldData.TimeStart && 
           !b.fieldData.TimeEnd
@@ -225,7 +226,33 @@ export default function TaskTable({ projectId, loadCustomer }) {
     }
   };
 
-  const handleEditSubmit = async ({ task: taskName, priority, projectId: selectedProjectId, recordId }) => {
+  const handleEditSubmit = async ({ 
+    task: taskName, 
+    priority, 
+    projectId: selectedProjectId, 
+    recordId,
+    notes = [],
+    images = [],
+    links = []
+  }) => {
+    // Prepare portal data for FileMaker API
+    const portalData = {
+      taskNotes: notes.map(note => ({
+        'taskNotes::note': note.taskNotes.note,
+        'taskNotes::_fkID': recordId
+      })),
+      taskImages: images.map(image => ({
+        'taskImages::fileName': image.taskImages.fileName,
+        'taskImages::file': image.taskImages.file,
+        'taskImages::_fkID': recordId
+      })),
+      taskLinks: links.map(link => ({
+        'taskLinks::link': link.taskLinks.link,
+        'taskLinks::_fkID': recordId
+      }))
+    };
+
+    // Update task with portal data
     await dispatch(fetchTaskData({
       action: "update",
       recordId,
@@ -233,7 +260,8 @@ export default function TaskTable({ projectId, loadCustomer }) {
         task: taskName,
         f_priority: priority,
         _projectID: selectedProjectId || projectId || ''
-      }
+      },
+      portalData
     }));
     
     dispatch(setSelectedTask(null));
@@ -302,7 +330,10 @@ export default function TaskTable({ projectId, loadCustomer }) {
 
       <AddTask
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          dispatch(setSelectedTask(null));
+        }}
         onSubmit={handleAddSubmit}
         defaultProjectId={projectId}
       />

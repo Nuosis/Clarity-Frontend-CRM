@@ -13,21 +13,90 @@
 			{
 				"fieldData" : 
 				{
-					"__ID" : "3372CC52-8110-46A2-86B5-CB849E3DC9BD",
-					"_projectID" : "1234",
-					"_staffID" : "5678",
+					"__ID" : "5C9C37E4-BB5D-4299-A572-9FFB3930682F",
+					"_projectID" : "7591B189-E75D-4F48-AF56-3D0C362CEB61",
+					"_staffID" : "AFBE7D6F-C707-4C34-943D-70D7DF68B48F",
 					"f_completed" : 0,
-					"f_priority" : "low",
-					"f_status" : "incomplete",
-					"task" : "Create Task Slice",
+					"f_priority" : "active",
+					"task" : "WCM: PoC",
 					"~CreatedBy" : "Marcus Swift",
-					"~CreationTimestamp" : "2024-11-21 21:56:10",
-					"~ModificationTimestamp" : "2024-11-21 21:56:50",
+					"~CreationTimestamp" : "2024-12-16 06:38:43",
+					"~ModificationTimestamp" : "2024-12-17 19:04:05",
 					"~ModifiedBy" : "Marcus Swift"
 				},
-				"modId" : "1",
-				"portalData" : {},
-				"recordId" : "1"
+				"modId" : "5",
+				"portalData" : 
+				{
+					"taskImages" : 
+					[
+						{
+							"modId" : "1",
+							"recordId" : "14",
+							"taskImages::__ID" : "68937CBE-1410-448F-B61F-5485E5C8C463",
+							"taskImages::_fkID" : "5C9C37E4-BB5D-4299-A572-9FFB3930682F",
+							"taskImages::file" : "http://127.0.0.1:56179/Proxy/82F75390B6A0EEC584EF0220BA3A9A97.pdf?urlid=82F75390B6A0EEC584EF0220BA3A9A97",
+							"taskImages::fileName" : "Whiskey_Creek_Proposal.pdf",
+							"taskImages::image" : "",
+							"taskImages::image_base64" : "",
+							"taskImages::image_thm" : "",
+							"taskImages::~createdBy" : "Marcus Swift",
+							"taskImages::~creationTimestamp" : "2024-12-17 19:23:51",
+							"taskImages::~modificationTimestamp" : "2024-12-17 19:25:18",
+							"taskImages::~modifiedBy" : "Marcus Swift"
+						}
+					],
+					"taskLinks" : 
+					[
+						{
+							"modId" : "2",
+							"recordId" : "16",
+							"taskLinks::__ID" : "A7C8A7E1-E84B-4984-8F9A-6B18B4B428F5",
+							"taskLinks::_fkID" : "5C9C37E4-BB5D-4299-A572-9FFB3930682F",
+							"taskLinks::link" : "https://whiskeycreekmarine.ca",
+							"taskLinks::~createdBy" : "Marcus Swift",
+							"taskLinks::~creationTimestamp" : "2024-12-17 19:22:58",
+							"taskLinks::~modificationTimestamp" : "2024-12-17 19:23:25",
+							"taskLinks::~modifiedBy" : "Marcus Swift"
+						}
+					],
+					"taskNotes" : 
+					[
+						{
+							"modId" : "2",
+							"recordId" : "1",
+							"taskNotes::__ID" : "9844821A-9CFF-4421-8B84-26E3862942DC",
+							"taskNotes::_fkID" : "5C9C37E4-BB5D-4299-A572-9FFB3930682F",
+							"taskNotes::note" : "Waiting on feedback from owner. Proposal submitted",
+							"taskNotes::type" : "",
+							"taskNotes::~CreatedBy" : "Marcus Swift",
+							"taskNotes::~CreationTimestamp" : "2024-12-17 19:21:18",
+							"taskNotes::~ModificationTimestamp" : "2024-12-17 19:21:40",
+							"taskNotes::~ModifiedBy" : "Marcus Swift"
+						}
+					]
+				},
+				"portalDataInfo" : 
+				[
+					{
+						"database" : "clarityCRM",
+						"foundCount" : 1,
+						"returnedCount" : 1,
+						"table" : "taskImages"
+					},
+					{
+						"database" : "clarityCRM",
+						"foundCount" : 1,
+						"returnedCount" : 1,
+						"table" : "taskLinks"
+					},
+					{
+						"database" : "clarityCRM",
+						"foundCount" : 1,
+						"returnedCount" : 1,
+						"table" : "taskNotes"
+					}
+				],
+				"recordId" : "61"
 			}
 		],
 		"dataInfo" : 
@@ -37,7 +106,7 @@
 			"layout" : "dapiTasks",
 			"returnedCount" : 1,
 			"table" : "Tasks",
-			"totalRecordCount" : 1
+			"totalRecordCount" : 62
 		}
 	}
 }

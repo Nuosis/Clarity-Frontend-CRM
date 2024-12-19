@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchBillablesData } from "../store/billablesSlice";
 import Charts from "./Chart";
@@ -39,8 +39,6 @@ const Stats = ({ onClose }) => {
   const handleCustomerChange = useCallback((e) => {
     setSelectedCustomer(e.target.value);
   }, []);
-
-  let pieTitle;
 
   const getLocalDate = (dateString) => {
     if (!dateString) return new Date();
@@ -180,10 +178,15 @@ const Stats = ({ onClose }) => {
           result.totalHours += hours;
         });
 
-        pieTitle = `Total Hours: ${result.totalHours.toFixed(2)}`;
-        return result.byGroup;
+        return {
+          data: result.byGroup,
+          title: `Total Hours: ${result.totalHours.toFixed(2)}`
+        };
       } catch (error) {
-        return {};
+        return {
+          data: {},
+          title: "Total Hours: 0.00"
+        };
       }
     };
   }, [filterByDate]);
@@ -238,6 +241,35 @@ const Stats = ({ onClose }) => {
             const total = convertToCAD(hours * rate, entry);
             aggregated[key] = (aggregated[key] || 0) + total;
           });
+
+          // Calculate projection for current month
+          const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+          if (currentMonthKey in aggregated) {
+            // Get last 14 days of data
+            const fourteenDaysAgo = new Date(today);
+            fourteenDaysAgo.setDate(today.getDate() - 14);
+            
+            const last14DaysData = filteredData.filter(entry => {
+              const entryDate = getLocalDate(entry.fieldData.DateStart);
+              return entryDate >= fourteenDaysAgo && entryDate <= today;
+            });
+
+            // Calculate average daily earnings for last 14 days
+            const last14DaysTotal = last14DaysData.reduce((sum, entry) => {
+              const hours = Number(entry.fieldData.Billable_Time_Rounded || 0);
+              const rate = Number(entry.fieldData["Customers::chargeRate"] || 0);
+              return sum + convertToCAD(hours * rate, entry);
+            }, 0);
+            const avgDailyEarnings = last14DaysTotal / 14;
+
+            // Calculate remaining days in month
+            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            const remainingDays = lastDayOfMonth.getDate() - today.getDate();
+
+            // Project earnings for remaining days
+            const projectedAdditional = avgDailyEarnings * remainingDays;
+            aggregated[currentMonthKey] += projectedAdditional;
+          }
         }
 
         // Sort chronologically
@@ -323,7 +355,7 @@ const Stats = ({ onClose }) => {
               </select>
             </div>
           </div>
-          <Charts type="Pie" data={hrsData} title={pieTitle} />
+          <Charts type="Pie" data={hrsData.data} title={hrsData.title} />
         </div>
         <div className="flex flex-col gap-2">
           <div className="flex flex-row gap-2">

@@ -1,48 +1,107 @@
-{
-	"messages" : 
-	[
-		{
-			"code" : "0",
-			"message" : "OK"
-		}
-	],
-	"response" : 
+[
 	{
-		"data" : 
+		"fieldData" : 
+		{
+			"Customers::Name" : "AL3",
+			"__ID" : "9D3C453E-59AD-4259-B54A-875A8D560F6A",
+			"_custID" : "044423A3-2870-485B-822A-EC2BC671C048",
+			"_teamID" : "B2C7BF5F-A038-4A82-BF5B-165D1CA7D674",
+			"dataName" : "TSL_CDM",
+			"dataPath" : "TSLogistix.al3tech.com",
+			"estOfTime" : "",
+			"password" : "Micah6:8",
+			"projectName" : "TSL",
+			"status" : "Open",
+			"userName" : "Marcus Swift",
+			"~createdBy" : "Marcus Swift",
+			"~creationTimestamp" : "2024-10-15 14:16:37",
+			"~modificationTimestamp" : "2024-12-05 12:40:12",
+			"~modifiedBy" : "Marcus Swift"
+		},
+		"modId" : "3",
+		"portalData" : 
+		{
+			"projectActivity" : 
+			[
+				{
+					"PRC332::DateStart" : "2024-10-15",
+					"PRC332::TimeEnd" : "14:15:00",
+					"PRC332::TimeStart" : "12:00:00",
+					"PRC332::Work Performed" : "Orientation to TSL and request to write API integration",
+					"PRC332::__ID" : "ECC71453-C094-495C-B808-4B88048DABA3",
+					"PRC332::_obsiID" : "",
+					"PRC332::f_billed" : "1",
+					"PRC332::f_dnb" : "0",
+					"PRC332::month" : 10,
+					"PRC332::year" : 2024,
+					"modId" : "12",
+					"recordId" : "1336"
+				}
+			],
+			"projectDocs" : 
+			[
+				{
+					"modId" : "0",
+					"projectImages::__ID" : "F7D8DF8A-4E5C-4E16-99D0-AC14423051A8",
+					"projectImages::image" : "http://127.0.0.1:56179/Proxy/D51DB7DDAE64ED96C0CD43CE04D76508?urlid=D51DB7DDAE64ED96C0CD43CE04D76508",
+					"recordId" : "15"
+				}
+			],
+			"projectLinks" : 
+			[
+				{
+					"modId" : "0",
+					"projectLinks::__ID" : "CA3339F4-9411-4D65-B9C0-4F36450EFDF8",
+					"projectLinks::link" : "https://al3-technologies.postman.co/workspace/AL3-Technologies~5bcaa409-19f6-47a2-8831-e7d419232b32/collection/14899240-63e31e16-4cc5-43ce-9a83-be813a1755b0",
+					"recordId" : "17"
+				}
+			],
+			"projectNotes" : 
+			[
+				{
+					"modId" : "2",
+					"projectNotes::__ID" : "F8140E63-2EA1-4478-A169-3DDC70A4C381",
+					"projectNotes::_fkID" : "9D3C453E-59AD-4259-B54A-875A8D560F6A",
+					"projectNotes::note" : "Submitted API. Awaiting Scott feedback",
+					"projectNotes::type" : "",
+					"projectNotes::~CreatedBy" : "Marcus Swift",
+					"projectNotes::~CreationTimestamp" : "2024-12-17 19:35:53",
+					"projectNotes::~ModificationTimestamp" : "2024-12-17 19:36:20",
+					"projectNotes::~ModifiedBy" : "Marcus Swift",
+					"recordId" : "2"
+				}
+			]
+		},
+		"portalDataInfo" : 
 		[
 			{
-				"fieldData" : 
-				{
-					"Customers::Name" : "PRC",
-					"__ID" : "519252DF-BCEE-4982-A47D-B98F60846D6A",
-					"_custID" : "17C87CC6-AF98-4487-81C8-02AF424E9358",
-					"_teamID" : "9F53CA35-AA1D-4496-B103-BFF88075ED25",
-					"estOfTime" : "",
-					"projectName" : "PRC Support",
-					"status" : "Open",
-					"dataname" : "clarityCRM",
-					"dataPath" : "server.claritybusinesssolutions.ca",
-					"password" : "12345open",
-					"username" : "Dev",
-					"~createdBy" : "Marcus Swift",
-					"~creationTimestamp" : "2022-11-15 08:05:36",
-					"~modificationTimestamp" : "2024-11-14 22:43:27",
-					"~modifiedBy" : "Marcus Swift"
-				},
-				"modId" : "4",
-				"portalData" : {},
-				"recordId" : "30"
+				"database" : "clarityCRM",
+				"foundCount" : 56,
+				"portalObjectName" : "projectActivity",
+				"returnedCount" : 50,
+				"table" : "PRC332"
+			},
+			{
+				"database" : "clarityCRM",
+				"foundCount" : 1,
+				"portalObjectName" : "projectLinks",
+				"returnedCount" : 1,
+				"table" : "projectLinks"
+			},
+			{
+				"database" : "clarityCRM",
+				"foundCount" : 1,
+				"portalObjectName" : "projectDocs",
+				"returnedCount" : 1,
+				"table" : "projectImages"
+			},
+			{
+				"database" : "clarityCRM",
+				"foundCount" : 1,
+				"returnedCount" : 1,
+				"table" : "projectNotes"
 			}
 		],
-		"dataInfo" : 
-		{
-			"database" : "clarityCRM",
-			"foundCount" : 20,
-			"layout" : "devProjects",
-			"returnedCount" : 1,
-			"table" : "customers_Projects",
-			"totalRecordCount" : 86
-		}
-	},
-	"staffID" : "AFBE7D6F-C707-4C34-943D-70D7DF68B48F"
-}
+		"recordId" : "86"
+	}
+]
