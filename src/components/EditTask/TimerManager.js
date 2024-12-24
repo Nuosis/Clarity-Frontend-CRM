@@ -3,10 +3,10 @@ export const createTimerManager = (dispatch) => {
     startTime,
     billableManager,
     selectedProject,
+    selectedProjectData,
     currentStaffId,
     taskId,
-    taskDescription,
-    onTimerStart
+    taskDescription
   }) => {
     const billable = await billableManager.createBillableRecord({
       projectId: selectedProject,
@@ -16,23 +16,13 @@ export const createTimerManager = (dispatch) => {
       description: taskDescription
     });
 
-    if (billable) {
-      const newRecordId = billable.recordId || billable.fieldData?.__ID;
-      const elapsedMinutes = calculateElapsedMinutes(startTime.getTime());
+    if (!billable) return null;
 
-      // Call FileMaker script with project ID
-      const paramObject = { id: selectedProject };
-      FileMaker.PerformScript("On Open Project DB", JSON.stringify(paramObject));
+    // Call FileMaker script with project ID
+    const paramObject = { id: selectedProjectData?.fieldData?.__ID };
+    FileMaker.PerformScript("On Open Project DB", JSON.stringify(paramObject));
 
-      // Immediately initialize timer state with the start time from the billable record
-      const billableStartTime = new Date(`${billable.fieldData.DateStart} ${billable.fieldData.TimeStart}`);
-      
-      onTimerStart({
-        recordId: newRecordId,
-        elapsedMinutes: calculateElapsedMinutes(billableStartTime.getTime()),
-        startTime: billableStartTime
-      });
-    }
+    return billable;
   };
 
   const stopTimer = async ({
@@ -61,6 +51,7 @@ export const createTimerManager = (dispatch) => {
     billableRecordId,
     billableManager,
     selectedProject,
+    selectedProjectData,
     onTimeAdjusted
   }) => {
     if (!validateTimeAdjustment(newStartTime) || !billableRecordId) return;
@@ -71,7 +62,7 @@ export const createTimerManager = (dispatch) => {
     if (updatedBill) {
       const elapsedMinutes = calculateElapsedMinutes(newStartTime);
 
-      const paramObject = { id: selectedProject };
+      const paramObject = { id: selectedProjectData?.fieldData?.__ID };
       FileMaker.PerformScript("On Open Project DB", JSON.stringify(paramObject));
 
       onTimeAdjusted({

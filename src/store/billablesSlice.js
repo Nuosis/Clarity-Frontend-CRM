@@ -15,10 +15,18 @@ export const fetchBillablesData = createAsyncThunk(
       param.layout = "dapiRecords";
       const response = await FMGofer.PerformScript('staff * JS * Fetch Data', JSON.stringify(param));
       const data = typeof response === 'string' ? JSON.parse(response) : await response.json();
-      console.log('Raw FileMaker response:', response); // Debug log
-      console.log('Parsed data:', data); // Debug log
+      // console.log('Raw FileMaker response:', response); // Debug log
+      console.log('Parsed response data:', data); // Debug log
       
-      if (!data || !data.response || !data.response.data) {
+      // For create action, we expect recordId
+      if (param.action === 'create') {
+        if (!data || !data.response || !data.response.recordId) {
+          console.log('No recordId in create response'); // Debug log
+          return rejectWithValue('No recordId returned from create action');
+        }
+      } 
+      // For other actions, we expect data array
+      else if (!data || !data.response || !data.response.data) {
         console.log('No data in response, returning empty array'); // Debug log
         return { response: { data: [] } };
       }
@@ -60,12 +68,9 @@ export const billablesSlice = createSlice({
     },
     setCurrentBill: (state, action) => {
       console.log('setCurrentBill called with:', action.payload); // Debug log
-      const billData = action.payload?.response?.data?.[0] || action.payload;
+      const billData = action.payload?.response?.data?.[0];
       
-      // Only update if the new bill is different from the current one
-      if (!state.currentBill || 
-          billData?.fieldData?.__ID !== state.currentBill?.fieldData?.__ID ||
-          billData?.recordId !== state.currentBill?.recordId) {
+      if (billData) {
         console.log('Setting currentBill to:', billData); // Debug log
         state.currentBill = billData;
       }
@@ -122,37 +127,38 @@ export const billablesSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchBillablesData.fulfilled, (state, action) => {
-        console.log('fetchBillablesData.fulfilled with action:', action); // Debug log
+        console.log('fetchBillablesData.fulfilled with action:', action);
+
+        // Handle create action response
+        if (action.meta?.arg?.action === 'create') {
+          if (action.payload?.response?.recordId) {
+            console.log('Create action successful with recordId:', action.payload.response.recordId);
+            // Don't update state here - let the subsequent read handle that
+            state.loading = false;
+            return;
+          }
+        }
+
+        // Handle read/update responses with data array
         const newRecords = action.payload?.response?.data || [];
-        console.log('Extracted newRecords:', newRecords); // Debug log
-        
-        // Update existing records and add new ones based on ModificationTimestamp
+        console.log('Processing records:', newRecords);
+
+        // Update billablesData and currentBill
         newRecords.forEach(newRecord => {
-          console.log('Processing record:', newRecord); // Debug log
           const existingIndex = state.billablesData.findIndex(
             existing => existing.fieldData?.__ID === newRecord.fieldData?.__ID
           );
           
           if (existingIndex !== -1) {
-            const newModTime = new Date(newRecord['~ModificationTimestamp']);
-            const existingModTime = new Date(state.billablesData[existingIndex]['~ModificationTimestamp']);
-            
-            if (newModTime > existingModTime) {
-              state.billablesData[existingIndex] = newRecord;
-            }
+            state.billablesData[existingIndex] = newRecord;
           } else {
             state.billablesData.push(newRecord);
           }
         });
 
-        // Only update currentBill for create/update actions if it's relevant
-        if (newRecords.length > 0 && 
-            (!state.currentBill || 
-             newRecords[0].fieldData?.__ID === state.currentBill?.fieldData?.__ID)) {
-          console.log('Setting currentBill in fulfilled to:', newRecords[0]); // Debug log
+        // Set currentBill if we have records
+        if (newRecords.length > 0) {
           state.currentBill = newRecords[0];
-        } else {
-          console.log('Skipping currentBill update'); // Debug log
         }
         
         state.lastFetched = new Date().toISOString();

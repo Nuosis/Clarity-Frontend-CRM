@@ -51,7 +51,7 @@ const makeRequest = async (requestData) => {
 const createRecord = (fieldData, layout = 'dapiParty') => {
   return makeRequest({
     method: 'createRecord',
-    server: 'server.selectjanitorial.com',
+    server: 'server.claritybusinesssolutions.ca',
     database: 'clarityData',
     layout,
     params: {
@@ -70,7 +70,7 @@ const createRecord = (fieldData, layout = 'dapiParty') => {
 const updateRecord = (recordId, fieldData, layout = 'dapiParty') => {
   return makeRequest({
     method: 'updateRecord',
-    server: 'server.selectjanitorial.com',
+    server: 'server.claritybusinesssolutions.ca',
     database: 'clarityData',
     layout,
     params: {
@@ -89,8 +89,26 @@ const updateRecord = (recordId, fieldData, layout = 'dapiParty') => {
 const deleteRecord = (recordId, layout = 'dapiParty') => {
   return makeRequest({
     method: 'deleteRecord',
-    server: 'server.selectjanitorial.com',
+    server: 'server.claritybusinesssolutions.ca',
     database: 'clarityData',
+    layout,
+    params: {
+      recordId
+    }
+  });
+};
+
+/**
+ * Gets a single record by ID
+ * @param {string} recordId - The ID of the record to fetch
+ * @param {string} layout - The layout name
+ * @returns {Promise}
+ */
+const getRecord = (recordId, layout = 'dapiParty') => {
+  return makeRequest({
+    method: 'getRecord',
+    server: 'server.claritybusinesssolutions.ca',
+    database: 'clarityCRM',
     layout,
     params: {
       recordId
@@ -102,5 +120,6 @@ export const fileMakerDataApi = {
   createRecord,
   updateRecord,
   deleteRecord,
+  getRecord,
   makeRequest
 };

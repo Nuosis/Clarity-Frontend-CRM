@@ -25,6 +25,7 @@ const EditTask = ({ isOpen, onClose, task, defaultProjectId }) => {
   const dispatch = useDispatch();
   const currentStaffId = useSelector(state => state.staff.currentStaffId);
   const currentBill = useSelector(state => state.billables.currentBill);
+  const projectData = useSelector(state => state.project.projectData);
   
   // Initialize managers
   const billableManager = createBillableManager(dispatch);
@@ -58,26 +59,34 @@ const EditTask = ({ isOpen, onClose, task, defaultProjectId }) => {
 
   // Update timer state based on currentBill
   useEffect(() => {
-    if (currentBill) {
-      const recordId = currentBill.recordId || currentBill.fieldData?.__ID;
-      const timeEnd = currentBill.fieldData?.TimeEnd;
-      
-      if (!timerState.billableRecordId || recordId !== timerState.billableRecordId) {
+    if (!currentBill) {
+      setTimerState(prev => ({
+        ...prev,
+        showTimer: false,
+        timerActive: false,
+        billableRecordId: null
+      }));
+      return;
+    }
+
+    const recordId = currentBill.recordId || currentBill.fieldData?.__ID;
+    const timeEnd = currentBill.fieldData?.TimeEnd;
+    
+    if (!timerState.billableRecordId || recordId !== timerState.billableRecordId) {
+      setTimerState(prev => ({
+        ...prev,
+        showTimer: true,
+        billableRecordId: recordId,
+        timerActive: !timeEnd
+      }));
+
+      if (!timeEnd && currentBill.fieldData?.TimeStart) {
+        const startDate = new Date(`${currentBill.fieldData.DateStart} ${currentBill.fieldData.TimeStart}`);
         setTimerState(prev => ({
           ...prev,
-          showTimer: true,
-          billableRecordId: recordId,
-          timerActive: !timeEnd
+          timerStartTime: startDate,
+          minutes: Math.floor((Date.now() - startDate.getTime()) / (1000 * 60))
         }));
-
-        if (!timeEnd && currentBill.fieldData?.TimeStart) {
-          const startDate = new Date(`${currentBill.fieldData.DateStart} ${currentBill.fieldData.TimeStart}`);
-          setTimerState(prev => ({
-            ...prev,
-            timerStartTime: startDate,
-            minutes: Math.floor((Date.now() - startDate.getTime()) / (1000 * 60))
-          }));
-        }
       }
     }
   }, [currentBill]);
@@ -234,32 +243,55 @@ const EditTask = ({ isOpen, onClose, task, defaultProjectId }) => {
 
   const handleTimerStart = async () => {
     const startTime = new Date();
-    await timerManager.startTimer({
+    const selectedProjectData = projectData.find(p => p.fieldData.__ID === formState.selectedProject);
+    const billable = await timerManager.startTimer({
       startTime,
       billableManager,
       selectedProject: formState.selectedProject,
+      selectedProjectData,
       currentStaffId,
       taskId: task?.fieldData?.__ID,
-      taskDescription: formState.taskDescription,
-      onTimerStart: ({ recordId, elapsedMinutes, startTime }) => {
-        setTimerState(prev => ({
-          ...prev,
-          showTimer: true,
-          timerActive: true,
-          timerStartTime: startTime,
-          minutes: elapsedMinutes,
-          billableRecordId: recordId
-        }));
-        
-        if (formState.priority !== 'active') {
-          setFormState(prev => ({
-            ...prev,
-            priority: 'active'
-          }));
-        }
-      }
+      taskDescription: formState.taskDescription
     });
+
+    if (billable) {
+      // Update timer state immediately while Redux state updates
+      const startDate = new Date(`${billable.fieldData.DateStart} ${billable.fieldData.TimeStart}`);
+      setTimerState(prev => ({
+        ...prev,
+        showTimer: true,
+        timerActive: true,
+        timerStartTime: startDate,
+        minutes: Math.floor((Date.now() - startDate.getTime()) / (1000 * 60)),
+        billableRecordId: billable.recordId || billable.fieldData?.__ID
+      }));
+    }
   };
+
+  // Handle timer state updates when currentBill changes
+  useEffect(() => {
+    if (currentBill && !timerState.timerActive) {
+      const startDate = new Date(`${currentBill.fieldData.DateStart} ${currentBill.fieldData.TimeStart}`);
+      const recordId = currentBill.recordId || currentBill.fieldData?.__ID;
+      const elapsedMinutes = Math.floor((Date.now() - startDate.getTime()) / (1000 * 60));
+
+      setTimerState(prev => ({
+        ...prev,
+        showTimer: true,
+        timerActive: !currentBill.fieldData?.TimeEnd,
+        timerStartTime: startDate,
+        minutes: elapsedMinutes,
+        billableRecordId: recordId
+      }));
+
+      if (formState.priority !== 'active') {
+        setFormState(prev => ({
+          ...prev,
+          priority: 'active'
+        }));
+      }
+    }
+  }, [currentBill]);
 
   const handleTimerStop = async () => {
     const endTime = new Date();

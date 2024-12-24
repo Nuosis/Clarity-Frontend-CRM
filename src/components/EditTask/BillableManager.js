@@ -20,8 +20,9 @@ export class BillableManager {
         ["Work Performed"]: description
       }
     }));
+    console.log({createResponse})
 
-    if (createResponse.payload?.messages?.[0]?.code === "0") {
+    if (createResponse.payload?.messages?.[0]?.code === "0" && createResponse.payload?.response?.recordId) {
       return this.fetchActiveBillable(taskId);
     }
     
@@ -29,6 +30,7 @@ export class BillableManager {
   }
 
   async fetchActiveBillable(taskId) {
+    console.log("fetching active record...")
     const fetchResponse = await this.dispatch(fetchBillablesData({
       action: 'read',
       query: JSON.stringify([{
@@ -36,10 +38,12 @@ export class BillableManager {
         TimeEnd: "="  // FileMaker syntax for null/empty
       }])
     }));
+    console.log("fetched record: ",fetchResponse)
 
     if (fetchResponse.payload?.response?.data?.[0]) {
       const billData = fetchResponse.payload.response.data[0];
-      this.dispatch(setCurrentBill(billData));
+      // Ensure we're setting currentBill with the raw billData
+      this.dispatch(setCurrentBill({ response: { data: [billData] } }));
       return billData;
     }
 
@@ -57,7 +61,7 @@ export class BillableManager {
 
     if (response.payload?.response?.data?.[0]) {
       const updatedBill = response.payload.response.data[0];
-      this.dispatch(setCurrentBill(updatedBill));
+      this.dispatch(setCurrentBill({ response: { data: [updatedBill] } }));
       return updatedBill;
     }
 

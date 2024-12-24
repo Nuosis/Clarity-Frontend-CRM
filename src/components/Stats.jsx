@@ -6,9 +6,10 @@ import Charts from "./Chart";
 const Stats = ({ onClose }) => {
   const dispatch = useDispatch();
   // Use shallowEqual to prevent unnecessary re-renders
-  const billables = useSelector(state => state.billables.billablesData, 
-    (prev, next) => prev === next || (prev?.length === next?.length && prev?.every((item, i) => item.recordId === next[i].recordId))
-  );
+  const billables = useSelector(state => {
+    console.log('Raw billables data:', state.billables.billablesData);
+    return state.billables.billablesData;
+  }, (prev, next) => prev === next || (prev?.length === next?.length && prev?.every((item, i) => item.recordId === next[i].recordId)));
   const loading = useSelector(state => state.billables.loading);
   const lastFetched = useSelector(state => state.billables.lastFetched);
   
@@ -16,12 +17,18 @@ const Stats = ({ onClose }) => {
   const [billablesFilter, setBillablesFilter] = useState("Rolling Last Year");
   const [selectedCustomer, setSelectedCustomer] = useState("All");
 
-  // Only fetch if we haven't fetched before and aren't currently loading
+  // Fetch data initially and refresh every minute
   useEffect(() => {
-    if (!lastFetched && !loading && billables.length === 0) {
+    // Initial fetch
+    dispatch(fetchBillablesData({ action: 'read' }));
+
+    // Set up refresh interval
+    const intervalId = setInterval(() => {
       dispatch(fetchBillablesData({ action: 'read' }));
-    }
-  }, [dispatch, lastFetched, loading, billables.length]);
+    }, 60000); // Refresh every minute
+
+    return () => clearInterval(intervalId);
+  }, [dispatch]);
 
   // Memoize handlers to prevent unnecessary re-renders
   const handleClose = useCallback(() => {
@@ -56,10 +63,10 @@ const Stats = ({ onClose }) => {
     if (!entry?.fieldData) return amount;
     const { "Customers::f_USD": isUSD, "Customers::f_EUR": isEUR } = entry.fieldData;
     if (isUSD === "1") {
-      return amount * 1.35; // USD to CAD
+      return amount * 1.40; // USD to CAD
     }
     if (isEUR === "1") {
-      return amount * 1.45; // EUR to CAD
+      return amount * 1.5; // EUR to CAD
     }
     return amount; // Already in CAD
   };
@@ -92,7 +99,9 @@ const Stats = ({ onClose }) => {
           if (!entry?.fieldData?.DateStart) return false;
           const entryDate = getLocalDate(entry.fieldData.DateStart);
           const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          return entryDate.getTime() === todayStart.getTime();
+          const todayEnd = new Date(todayStart);
+          todayEnd.setHours(23, 59, 59, 999);
+          return entryDate >= todayStart && entryDate <= todayEnd;
         },
         "This Week": (entry) => {
           if (!entry?.fieldData?.DateStart) return false;
@@ -106,9 +115,11 @@ const Stats = ({ onClose }) => {
           return entryDate >= weekStart && entryDate <= weekEnd;
         },
         "This Month": (entry) => {
-          if (!entry?.fieldData?.year || !entry?.fieldData?.month) return false;
-          return Number(entry.fieldData.year) === today.getFullYear() && 
-                 Number(entry.fieldData.month) === (today.getMonth() + 1);
+          if (!entry?.fieldData?.DateStart) return false;
+          const entryDate = getLocalDate(entry.fieldData.DateStart);
+          const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+          const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+          return entryDate >= monthStart && entryDate <= monthEnd;
         },
         "Last 12 Weeks": (entry) => {
           if (!entry?.fieldData?.DateStart) return false;
@@ -141,13 +152,29 @@ const Stats = ({ onClose }) => {
         }
       };
 
-      return data.filter((entry) => {
+      console.log(`Filtering ${data.length} records for range: ${range}`);
+      const filtered = data.filter((entry) => {
         try {
-          return filters[range](entry) && isBillable(entry);
+          const dateFiltered = filters[range](entry);
+          const billableFiltered = isBillable(entry);
+          // if (!dateFiltered || !billableFiltered) {
+          //   console.log('Filtered out entry:', {
+          //     id: entry?.fieldData?.__ID,
+          //     date: entry?.fieldData?.DateStart,
+          //     dateFiltered,
+          //     billableFiltered,
+          //     dnb: entry?.fieldData?.f_dnb,
+          //     omit: entry?.fieldData?.f_omit
+          //   });
+          // }
+          return dateFiltered && billableFiltered;
         } catch (error) {
+          console.error('Error filtering entry:', error);
           return false;
         }
       });
+      console.log(`Filtered to ${filtered.length} records`);
+      return filtered;
     };
   }, []);
 
@@ -174,6 +201,15 @@ const Stats = ({ onClose }) => {
             : (customerName || "Unknown Customer");
             
           const hours = Number(billableTime || 0);
+          // console.log('Processing entry:', {
+          //   projectName,
+          //   customerName,
+          //   billableTime,
+          //   hours,
+          //   groupKey,
+          //   DateStart: entry.fieldData.DateStart
+          // });
+          
           result.byGroup[groupKey] = (result.byGroup[groupKey] || 0) + hours;
           result.totalHours += hours;
         });
@@ -287,7 +323,13 @@ const Stats = ({ onClose }) => {
   }, [filterByDate]);
 
   const hrsData = useMemo(() => {
-    return aggregateHrsData(billables, hrsFilter);
+    const data = aggregateHrsData(billables, hrsFilter);
+    console.log('Final hours data for Charts:', {
+      filter: hrsFilter,
+      data: data.data,
+      title: data.title
+    });
+    return data;
   }, [billables, hrsFilter, aggregateHrsData]);
 
   const billablesData = useMemo(() => {
