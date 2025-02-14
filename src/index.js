@@ -4,8 +4,8 @@ import Loading from './components/loading/Loading';
 import FMGofer from 'fm-gofer';
 
 // Function to fetch data from FileMaker
-async function fetchDataFromFileMaker(callback, attempt = 0) {
-    console.log("Attempting to fetch data from FileMaker, attempt:", attempt);
+async function fetchDataFromFileMaker(callback, params, attempt = 0) {
+    console.log("Attempting to fetch data from FileMaker", {params});
     
     // Check if we've exceeded max attempts (1 second / 100ms = 10 attempts)
     if (attempt >= 10) {
@@ -19,12 +19,11 @@ async function fetchDataFromFileMaker(callback, attempt = 0) {
     }
 
     // Check if FileMaker object exists
-    if (typeof FileMaker !== "undefined" && FileMaker.PerformScript) {
-        console.log("FileMaker object found. Requesting data via FMgofer...");
-        
+    if (typeof FileMaker !== "undefined" && FileMaker.PerformScript) {     
         try {
-            const result = await FMGofer.PerformScript("js * getData");
-            console.log("returned data", result);
+            
+            const result = await FMGofer.PerformScript("JS * Fetch Data", params);
+            console.log("returned data", JSON.parse(result));
             
             if (result !== null) {
                 try {
@@ -55,47 +54,169 @@ async function fetchDataFromFileMaker(callback, attempt = 0) {
         setTimeout(() => fetchDataFromFileMaker(callback, attempt + 1), 100);
     }
 }
+async function processCustomerData(data) {
+    try {
+        const customers = data.response.data;
+        const activeCustomers = customers.filter(customer => {
+            return customer.fieldData?.f_active === "1" || customer.fieldData?.f_active === 1;
+        });
+        return activeCustomers;
+    } catch (error) {
+        console.error('Error processing customer data:', error);
+        throw error;
+    }
+}
 
+async function fetchProjectsForCustomers(customerIds, callback) {
+    const query = customerIds.map(id => ({"_custID": id}));
+    const params = {
+        "layout": "devProjects",
+        "version": "vLatest",
+        "query": query,
+        "action": "read"
+    };
+    console.log("projectCustomer params", params);
+    return fetchDataFromFileMaker(callback, params);
+}
+
+async function fetchProjectRelatedData(projectIds, layout, callback) {
+    const fieldName = layout === "devProjectImages" || layout === "devProjectLinks" ? "_fkID" : "_projectID";
+    const query = projectIds.map(id => ({[fieldName]: id}));
+    const params = {
+        "layout": layout,
+        "version": "vLatest",
+        "query": query,
+        "action": "read"
+    };
+    return fetchDataFromFileMaker(callback, params);
+}
+
+async function processProjectData(projectData, imagesData, linksData, objectivesData, stepsData) {
+    try {
+        const projects = projectData.response.data.map(project => {
+            const projectId = project.fieldData.__ID;
+            return {
+                ...project.fieldData,
+                images: imagesData.response.data
+                    .filter(img => img.fieldData._projectID === projectId)
+                    .map(img => img.fieldData),
+                links: linksData.response.data
+                    .filter(link => link.fieldData._projectID === projectId)
+                    .map(link => link.fieldData),
+                objectives: objectivesData.response.data
+                    .filter(obj => obj.fieldData._projectID === projectId)
+                    .map(obj => ({
+                        ...obj.fieldData,
+                        steps: stepsData.response.data
+                            .filter(step => step.fieldData._objectiveID === obj.fieldData.__ID)
+                            .map(step => step.fieldData)
+                    }))
+            };
+        });
+        return projects;
+    } catch (error) {
+        console.error('Error processing project data:', error);
+        throw error;
+    }
+}
 // Main App Component
 function App() {
-    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [customers, setCustomers] = useState(null);
+    const [activeCustomers, setActiveCustomers] = useState(null);
+    const [selectedProject, setSelectedProject] = useState(null);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [projects, setProjects] = useState(null);
+    const [tasks, setTasks] = useState(null);
+    const [selectedTask, setSelectedTask] = useState(null);
+    const [timer, setTimer] = useState(null);
 
     // Load data from FileMaker on mount
     useEffect(() => {
-        let isMounted = true;
-        let timeoutId = null;
-        
-        console.log("Effect running - starting data fetch");
-        
-        const fetchData = async () => {
-            const handleData = (result) => {
-                if (isMounted) {
-                    console.log("Setting data with result");
-                    setData(result);
+        const fetchAllData = async () => {
+            setLoading(true);
+            try {
+                // Fetch and process customer data
+                const customerResult = await new Promise(resolve => {
+                    const query = [{"__ID": "*"}];
+                    const params = {
+                        "layout": "devCustomers",
+                        "version": "vLatest",
+                        "query": query,
+                        "action": "read"
+                    };
+                    fetchDataFromFileMaker(resolve, params);
+                });
+                
+                setCustomers(customerResult);
+                const activeCustomers = await processCustomerData(customerResult);
+                setActiveCustomers(activeCustomers);
+
+                if (!activeCustomers?.length) {
+                    console.log("No active customers found");
+                    setProjects([]);
+                    return;
                 }
-            };
 
-            fetchDataFromFileMaker(handleData);
+                console.log("Found active customers, fetching projects...");
+                const customerIds = activeCustomers.map(customer => customer.fieldData.__ID);
+                const projectResult = await new Promise(resolve => {
+                    fetchProjectsForCustomers(customerIds, resolve);
+                });
+
+                if (!projectResult?.response?.data?.length) {
+                    console.log("No projects found for active customers");
+                    setProjects([]);
+                    return;
+                }
+
+                const projectIds = projectResult.response.data.map(project => project.fieldData.__ID);
+                console.log("Fetching related project data...");
+
+                // Fetch all related project data in parallel
+                const [imagesData, linksData, objectivesData, stepsData] = await Promise.all([
+                    new Promise(resolve => fetchProjectRelatedData(projectIds, "devProjectImages", resolve)),
+                    new Promise(resolve => fetchProjectRelatedData(projectIds, "devProjectLinks", resolve)),
+                    new Promise(resolve => fetchProjectRelatedData(projectIds, "devProjectObjectives", resolve)),
+                    new Promise(resolve => fetchProjectRelatedData(projectIds, "devProjectObjSteps", resolve))
+                ]);
+
+                // Process all project data
+                const enrichedProjects = await processProjectData(projectResult, imagesData, linksData, objectivesData, stepsData);
+                console.log("Setting processed projects...");
+                setProjects(enrichedProjects);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                setLoading(false);
+            }
         };
-
-        fetchData();
+        
+        console.log("starting initial data fetch");
+        fetchAllData();
 
         // Cleanup function
         return () => {
-            console.log("Effect cleanup - cancelling any pending operations");
-            isMounted = false;
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-            }
+            console.log("Effect cleanup");
+            setLoading(false);
         };
     }, []); // Empty dependency array means this effect runs once on mount
 
-    window.data = data;
+    window.data = {
+        customers,
+        projects,
+        tasks,
+        selectedProject,
+        selectedCustomer,
+        selectedTask,
+        activeCustomers,
+        timer
+    };
 
     // Render Loading or data display based on data availability
     return (
         <div className="p-4">
-            {data === null ? (
+            {loading ? (
                 <Loading message="Loading data, please wait" />
             ) : data.error ? (
                 <div className="text-red-500 text-center py-4">
