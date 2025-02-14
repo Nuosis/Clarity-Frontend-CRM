@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { createRoot } from "react-dom/client";
 import Loading from './components/loading/Loading';
 import FMGofer from 'fm-gofer';
 
 // Function to fetch data from FileMaker
 async function fetchDataFromFileMaker(callback, params, attempt = 0) {
-    console.log("Attempting to fetch data from FileMaker", {params});
+    console.log("Attempting to fetch data from FileMaker");
     
     // Check if we've exceeded max attempts (1 second / 100ms = 10 attempts)
     if (attempt >= 10) {
@@ -19,51 +18,52 @@ async function fetchDataFromFileMaker(callback, params, attempt = 0) {
     }
 
     // Check if FileMaker object exists
-    if (typeof FileMaker !== "undefined" && FileMaker.PerformScript) {     
-        try {
-            
-            const result = await FMGofer.PerformScript("JS * Fetch Data", params);
-            console.log("returned data", JSON.parse(result));
-            
-            if (result !== null) {
-                try {
-                    // Parse the result directly since it's already the data we need
-                    const parsedData = JSON.parse(result);
-                    callback(parsedData);
-                } catch (parseError) {
-                    console.error("Error parsing FileMaker response:", parseError);
-                    callback({ 
-                        error: true, 
-                        message: "Failed to parse FileMaker response.",
-                        details: parseError.message 
-                    });
-                }
-            } else {
-                throw new Error("FileMaker returned null result");
-            }
-        } catch (error) {
-            console.error("Error with FMgofer:", error);
-            callback({ 
-                error: true, 
-                message: "Failed to fetch data from FileMaker.",
-                details: error.message 
-            });
-        }
-    } else {
+    if (typeof FileMaker === "undefined" || !FileMaker.PerformScript) {
         // Wait 100ms before trying again
-        setTimeout(() => fetchDataFromFileMaker(callback, attempt + 1), 100);
+        setTimeout(() => fetchDataFromFileMaker(callback, params, attempt + 1), 100);
+        return;
+    }
+
+    try {
+        console.log(params)
+        const param=JSON.stringify(params)
+        const result = await FMGofer.PerformScript("JS * Fetch Data", param);
+        if (!result) {
+            callback({
+                error: true,
+                message: "Failed to fetch data from FileMaker.",
+                details: "FileMaker returned null result"
+            });
+            return;
+        }
+        console.log("call result:", JSON.parse(result));
+        callback(JSON.parse(result));
+    } catch (error) {
+        console.error("Error with FileMaker response:", error);
+        callback({
+            error: true,
+            message: "Failed to fetch data from FileMaker.",
+            details: error.message
+        });
     }
 }
+
 async function processCustomerData(data) {
     try {
+        console.log("Processing customer data...", data);
+        if (!data?.response?.data) {
+            console.error("Invalid customer data structure:", data);
+            return [];
+        }
         const customers = data.response.data;
         const activeCustomers = customers.filter(customer => {
             return customer.fieldData?.f_active === "1" || customer.fieldData?.f_active === 1;
         });
+        console.log("Found active customers:", activeCustomers.length);
         return activeCustomers;
     } catch (error) {
         console.error('Error processing customer data:', error);
-        throw error;
+        return [];
     }
 }
 
@@ -122,6 +122,7 @@ async function processProjectData(projectData, imagesData, linksData, objectives
 // Main App Component
 function App() {
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
     const [customers, setCustomers] = useState(null);
     const [activeCustomers, setActiveCustomers] = useState(null);
     const [selectedProject, setSelectedProject] = useState(null);
@@ -134,23 +135,42 @@ function App() {
     // Load data from FileMaker on mount
     useEffect(() => {
         const fetchAllData = async () => {
-            setLoading(true);
+            // setLoading(true);
             try {
-                // Fetch and process customer data
-                const customerResult = await new Promise(resolve => {
-                    const query = [{"__ID": "*"}];
-                    const params = {
-                        "layout": "devCustomers",
-                        "version": "vLatest",
-                        "query": query,
-                        "action": "read"
-                    };
-                    fetchDataFromFileMaker(resolve, params);
-                });
-                
-                setCustomers(customerResult);
-                const activeCustomers = await processCustomerData(customerResult);
-                setActiveCustomers(activeCustomers);
+                // Fetch user Context
+                // Fetch user context and customer data in parallel
+                const [userContextResult, customerResult] = await Promise.all([
+                    new Promise(resolve => {
+                        const params = {
+                            "action": "returnContext"
+                        };
+                        fetchDataFromFileMaker(resolve, params);
+                    }),
+                    new Promise(resolve => {
+                        const query = [{"__ID": "*"}];
+                        const params = {
+                            "action": "read",
+                            "layout": "devCustomers",
+                            "version": "vLatest",
+                            "query": query,
+                        };
+                        fetchDataFromFileMaker(resolve, params);
+                    })
+                ]);
+
+                if (userContextResult?.error) {
+                    console.error("Error fetching user context:", userContextResult.message, userContextResult.details);
+                    throw new Error("Failed to fetch user context");
+                }
+
+                if (customerResult?.error) {
+                    console.error("Error fetching customers:", customerResult.message, customerResult.details);
+                    throw new Error("Failed to fetch customers");
+                }
+
+                const user = userContextResult;
+                const customer = customerResult;
+                const activeCustomers = await processCustomerData(customer);
 
                 if (!activeCustomers?.length) {
                     console.log("No active customers found");
@@ -184,25 +204,48 @@ function App() {
                 // Process all project data
                 const enrichedProjects = await processProjectData(projectResult, imagesData, linksData, objectivesData, stepsData);
                 console.log("Setting processed projects...");
-                setProjects(enrichedProjects);
+
+                // Batch state updates to prevent multiple rerenders
+                const updates = {
+                    user,
+                    customers: customer,
+                    activeCustomers,
+                    projects: enrichedProjects
+                };
+                
+                // Update all state at once
+                Object.entries(updates).forEach(([key, value]) => {
+                    const setter = {
+                        'user': setUser,
+                        'customers': setCustomers,
+                        'activeCustomers': setActiveCustomers,
+                        'projects': setProjects
+                    }[key];
+                    setter(value);
+                });
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
-                setLoading(false);
+                if (mounted) {
+                    setLoading(false);
+                }
             }
         };
         
         console.log("starting initial data fetch");
         fetchAllData();
 
+        let mounted = true;
+        
         // Cleanup function
         return () => {
             console.log("Effect cleanup");
-            setLoading(false);
+            mounted = false;
         };
     }, []); // Empty dependency array means this effect runs once on mount
 
     window.data = {
+        user,
         customers,
         projects,
         tasks,
@@ -234,6 +277,4 @@ function App() {
 
 // Render the App to the root element
 console.log("version 1.0.6")
-const container = document.getElementById("root");
-const root = createRoot(container);
-root.render(<App />)
+export default App;
