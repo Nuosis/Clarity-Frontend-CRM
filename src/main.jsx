@@ -2,6 +2,7 @@ import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './style.css'
 import App from './index.jsx'
+import { ThemeProvider } from './components/layout/AppLayout'
 
 console.log('Starting application...')
 
@@ -13,6 +14,8 @@ if (!container) {
 const root = createRoot(container)
 root.render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </StrictMode>
 )
