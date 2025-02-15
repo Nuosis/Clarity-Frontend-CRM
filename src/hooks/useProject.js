@@ -1,13 +1,16 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     fetchProjectsForCustomer,
     fetchProjectRelatedData,
     updateProjectStatus,
     createProject,
     updateProject,
-    fetchAllProjectData,
-    fetchProjectsForCustomers
+    fetchProjectsForCustomers,
+    fetchProjectNotes,
+    Layouts,
+    Actions
 } from '../api';
+import { recordQueueManager } from '../services/recordQueueManager';
 import {
     processProjectData,
     validateProjectData,
@@ -25,6 +28,45 @@ export function useProject(customerId = null) {
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
     const [stats, setStats] = useState(null);
+    const [relatedData, setRelatedData] = useState({
+        images: null,
+        links: null,
+        objectives: null,
+        steps: null
+    });
+    const [projectNotes, setProjectNotes] = useState([]);
+    const [projectRecords, setProjectRecords] = useState([]);
+    const recordsFetched = useRef(false);
+
+    // Load records on mount
+    useEffect(() => {
+        if (!recordsFetched.current) {
+            recordsFetched.current = true;
+            
+            const now = new Date();
+            const monthsAgo = new Date(now.setMonth(now.getMonth() - 12));
+            const startMonth = String(monthsAgo.getMonth() + 1).padStart(2, '0');
+            const startYear = monthsAgo.getFullYear();
+
+            const params = {
+                layout: Layouts.RECORDS,
+                action: Actions.READ,
+                callBackName: "returnRecords",
+                query: [
+                    { DateStart: `>${startYear.toString()}+${startMonth-1}+*` },
+                ]
+            };
+            
+            // Use queue manager to handle the request
+            recordQueueManager.enqueue(params, (data) => {
+                setProjectRecords(data);
+            });
+        }
+
+        return () => {
+            recordsFetched.current = false;
+        };
+    }, []);
 
     // Load projects when customerId changes
     useEffect(() => {
@@ -60,13 +102,16 @@ export function useProject(customerId = null) {
                     fetchProjectRelatedData(projectIds, 'devProjectObjSteps')
                 ]);
 
-                const processedProjects = processProjectData(projectResult, {
+                // Store related data in state for reuse
+                const newRelatedData = {
                     images,
                     links,
                     objectives,
                     steps
-                });
-                
+                };
+                setRelatedData(newRelatedData);
+
+                const processedProjects = processProjectData(projectResult, newRelatedData);
                 setProjects(processedProjects);
             } else {
                 setProjects([]);
@@ -77,39 +122,57 @@ export function useProject(customerId = null) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [setRelatedData]);
 
     /**
      * Selects a project and loads all its data
      */
     const handleProjectSelect = useCallback(async (projectId) => {
         try {
-            console.log('Starting project selection for:', projectId);
             setLoading(true);
             setError(null);
             
-            console.log('Fetching project data...');
-            const projectData = await fetchAllProjectData(projectId);
-            console.log('Project data received:', projectData);
+            // Find the project in our existing projects array
+            const project = projects.find(p => p.id === projectId);
             
-            console.log('Processing project data...');
+            if (!project) {
+                throw new Error('Project not found in cached data');
+            }
+            
+            // Filter related data for this specific project
+            const projectRelatedData = {
+                images: relatedData.images?.response?.data?.filter(
+                    img => img.fieldData._projectID === projectId
+                ) || [],
+                links: relatedData.links?.response?.data?.filter(
+                    link => link.fieldData._projectID === projectId
+                ) || [],
+                objectives: relatedData.objectives?.response?.data?.filter(
+                    obj => obj.fieldData._projectID === projectId
+                ) || [],
+                steps: relatedData.steps?.response?.data || []
+            };
+
+            // Fetch project notes
+            const notesResult = await fetchProjectNotes(projectId);
+            const notes = notesResult.response?.data || [];
+            setProjectNotes(notes);
+
+            // Process the project with its filtered related data
             const [processedProject] = processProjectData({
                 response: {
-                    data: [{ fieldData: projectData }]
+                    data: [{ fieldData: project }]
                 }
-            }, projectData);
-            console.log('Processed project:', processedProject);
+            }, projectRelatedData);
             
-            console.log('Setting selected project...');
             setSelectedProject(processedProject);
-            console.log('Selected project set successfully');
         } catch (err) {
             setError(err.message);
             console.error('Error selecting project:', err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [projects, relatedData]);
 
     /**
      * Creates a new project
@@ -229,6 +292,8 @@ export function useProject(customerId = null) {
         projects,
         selectedProject,
         stats,
+        projectNotes,
+        projectRecords,
         
         // Getters
         activeProjects: projects.filter(project => project.status === 'Open'),

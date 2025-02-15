@@ -32,7 +32,7 @@ export function formatParams(params) {
  * Handles retries, error handling, and response formatting
  */
 export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true) {
-    console.log("Attempting to fetch data from FileMaker");
+    //console.log(`Attempting to fetch ${params.layout} data from FileMaker`);
     
     return new Promise((resolve, reject) => {
        if (attempt >= 30) { // 30 retries = 3 seconds
@@ -56,11 +56,12 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
             console.log("Formatted params:", formattedParams);
             
             const param = JSON.stringify(formattedParams);
+            const layout = formattedParams.layout;
             
             if (isAsync) {
                 // Use FMGofer for async operations (default)
                 FMGofer.PerformScript("JS * Fetch Data", param)
-                    .then(result => handleScriptResult(result, resolve, reject))
+                    .then(result => handleScriptResult(layout, result, resolve, reject))
                     .catch(error => {
                         console.error("FileMaker script error:", error);
                         error.code = "SCRIPT_ERROR";
@@ -70,7 +71,7 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
                 // Use FileMaker.PerformScript for sync operations
                 try {
                     const result = FileMaker.PerformScript("JS * Fetch Data", param);
-                    handleScriptResult(result, resolve, reject);
+                    handleScriptResult(layout, result, resolve, reject);
                 } catch (error) {
                     console.error("FileMaker script error:", error);
                     error.code = "SCRIPT_ERROR";
@@ -86,7 +87,7 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
 }
 
 // Helper function to handle script results consistently
-function handleScriptResult(result, resolve, reject) {
+function handleScriptResult(layout, result, resolve, reject) {
     if (!result) {
         const error = new Error("FileMaker returned null result");
         error.code = "NULL_RESULT";
@@ -95,7 +96,7 @@ function handleScriptResult(result, resolve, reject) {
     }
     
     const parsedResult = JSON.parse(result);
-    console.log("FileMaker response:", parsedResult);
+    console.log(`FileMaker ${layout} response:`, parsedResult);
     
     if (parsedResult.error) {
         const error = new Error(parsedResult.message || "Unknown FileMaker error");

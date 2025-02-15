@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import Loading from './components/loading/Loading';
 import AppLayout, { ThemeProvider } from './components/layout/AppLayout';
 import Sidebar from './components/layout/Sidebar';
@@ -94,39 +94,45 @@ function AppContent() {
         initialize();
     }, [fmReady, loadCustomers, setError, setLoading, setUser]);
 
-    // Memoized handlers
-    const handlers = React.useMemo(() => ({
-        onCustomerSelect: async (customer) => {
-            clearSelectedProject();
-            clearSelectedTask();
-            await handleCustomerSelect(customer.id);
-            setSelectedCustomer(customer);
-        },
+    // Memoized handlers using useCallback
+    const onCustomerSelect = useCallback(async (customer) => {
+        clearSelectedProject();
+        clearSelectedTask();
+        await handleCustomerSelect(customer.id);
+        setSelectedCustomer(customer);
+    }, [clearSelectedProject, clearSelectedTask, handleCustomerSelect, setSelectedCustomer]);
 
-        onProjectSelect: async (project) => {
-            console.log('Project selected:', project);
-            clearSelectedTask();
-            const result = await handleProjectSelect(project.id);
-            console.log('Project selection result:', result);
-            setSelectedProject(project);
-            console.log('Selected project set:', project);
-        },
+    const onProjectSelect = useCallback(async (project) => {
+        console.log('Project selected:', project);
+        clearSelectedTask();
+        const result = await handleProjectSelect(project.id);
+        console.log('Project selection result:', result);
+        setSelectedProject(project);
+        console.log('Selected project set:', project);
+    }, [clearSelectedTask, handleProjectSelect, setSelectedProject]);
 
-        onTaskSelect: (task) => {
-            handleTaskSelect(task.id);
-            setSelectedTask(task);
-        },
+    const onTaskSelect = useCallback((task) => {
+        handleTaskSelect(task.id);
+        setSelectedTask(task);
+    }, [handleTaskSelect, setSelectedTask]);
 
-        clearSelectedTask: () => {
-            clearSelectedTask();
-            setSelectedTask(null);
-        },
+    const clearSelectedTaskHandler = useCallback(() => {
+        clearSelectedTask();
+        setSelectedTask(null);
+    }, [clearSelectedTask, setSelectedTask]);
 
-        clearSelectedProject: () => {
-            clearSelectedProject();
-            setSelectedProject(null);
-        },
+    const clearSelectedProjectHandler = useCallback(() => {
+        clearSelectedProject();
+        setSelectedProject(null);
+    }, [clearSelectedProject, setSelectedProject]);
 
+    // Combine all handlers
+    const handlers = useMemo(() => ({
+        onCustomerSelect,
+        onProjectSelect,
+        onTaskSelect,
+        clearSelectedTask: clearSelectedTaskHandler,
+        clearSelectedProject: clearSelectedProjectHandler,
         handleTaskCreate,
         handleTaskUpdate,
         handleTaskStatusChange,
@@ -138,24 +144,21 @@ function AppContent() {
         handleTimerPause,
         handleTimerAdjust
     }), [
-        clearSelectedProject,
-        clearSelectedTask,
-        handleCustomerSelect,
-        handleProjectCreate,
-        handleProjectSelect,
-        handleProjectStatusChange,
-        handleProjectUpdate,
+        onCustomerSelect,
+        onProjectSelect,
+        onTaskSelect,
+        clearSelectedTaskHandler,
+        clearSelectedProjectHandler,
         handleTaskCreate,
-        handleTaskSelect,
-        handleTaskStatusChange,
         handleTaskUpdate,
-        handleTimerAdjust,
-        handleTimerPause,
+        handleTaskStatusChange,
+        handleProjectStatusChange,
+        handleProjectCreate,
+        handleProjectUpdate,
         handleTimerStart,
         handleTimerStop,
-        setSelectedCustomer,
-        setSelectedProject,
-        setSelectedTask
+        handleTimerPause,
+        handleTimerAdjust
     ]);
 
     // Handle initialization states

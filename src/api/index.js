@@ -26,7 +26,8 @@ export {
     createProject,
     updateProject,
     fetchAllProjectData,
-    fetchProjectsForCustomers
+    fetchProjectsForCustomers,
+    fetchProjectNotes
 } from './projects';
 
 // Task operations
@@ -39,7 +40,9 @@ export {
     stopTaskTimer,
     fetchTaskTimers,
     updateTaskNotes,
-    fetchActiveProjectTasks
+    fetchActiveProjectTasks,
+    fetchTaskNotes,
+    fetchTaskLinks
 } from './tasks';
 
 // API version

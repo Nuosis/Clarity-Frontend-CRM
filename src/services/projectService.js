@@ -21,6 +21,11 @@ export function processProjectData(projectData, relatedData) {
             images: processProjectImages(relatedData.images, projectId),
             links: processProjectLinks(relatedData.links, projectId),
             objectives: processProjectObjectives(relatedData.objectives, projectId, relatedData.steps),
+            records: processProjectRecords(relatedData.records, projectId).records || [],
+            stats: processProjectRecords(relatedData.records, projectId).stats || {
+                totalHours: 0,
+                unbilledHours: 0
+            },
             isActive: project.fieldData.status === 'Open',
             createdAt: project.fieldData['~creationTimestamp'],
             modifiedAt: project.fieldData['~modificationTimestamp']
@@ -113,6 +118,67 @@ function processObjectiveSteps(steps, objectiveId) {
             completed: step.fieldData.f_completed === "1"
         }))
         .sort((a, b) => a.order - b.order);
+}
+
+/**
+ * Processes project time records
+ * @param {Array} records - Raw time record data
+ * @param {string} projectId - Project ID
+ * @returns {Array} Processed time records
+ */
+function processProjectRecords(records, projectId) {
+    if (!records?.response?.data) {
+        return {
+            records: [],
+            stats: {
+                totalHours: 0,
+                unbilledHours: 0
+            }
+        };
+    }
+
+    const projectRecords = records.response.data
+        .filter(record => record.fieldData._projectID === projectId)
+        .map(record => ({
+            id: record.fieldData.__ID,
+            startTime: record.fieldData.startTime,
+            endTime: record.fieldData.endTime,
+            description: record.fieldData.description || '',
+            duration: calculateDuration(record.fieldData.startTime, record.fieldData.endTime),
+            isBilled: record.fieldData.f_billed === "1" || record.fieldData.f_billed === 1
+        }))
+        .sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+
+    // Calculate total and unbilled hours
+    const totalMinutes = projectRecords.reduce((total, record) => total + record.duration, 0);
+    const unbilledMinutes = projectRecords
+        .filter(record => !record.isBilled)
+        .reduce((total, record) => total + record.duration, 0);
+
+    return {
+        records: projectRecords,
+        stats: {
+            totalHours: Math.round(totalMinutes / 60 * 10) / 10, // Round to 1 decimal place
+            unbilledHours: Math.round(unbilledMinutes / 60 * 10) / 10
+        }
+    };
+}
+
+/**
+ * Calculates duration between two timestamps in minutes
+ * @param {string} startTime - Start timestamp
+ * @param {string} endTime - End timestamp
+ * @returns {number} Duration in minutes
+ */
+function calculateDuration(startTime, endTime) {
+    if (!startTime || !endTime) {
+        return 0;
+    }
+
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const diffMs = end - start;
+    return Math.round(diffMs / (1000 * 60)); // Convert to minutes
 }
 
 /**

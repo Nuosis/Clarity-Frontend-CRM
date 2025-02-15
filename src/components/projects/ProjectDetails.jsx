@@ -181,6 +181,45 @@ function ProjectDetails({
                     )}
                     <span>Created: {new Date(project.createdAt).toLocaleDateString()}</span>
                 </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-4">
+                    <div className={`
+                        p-3 rounded-lg
+                        ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
+                    `}>
+                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Total Hours
+                        </div>
+                        <div className="text-2xl font-semibold mt-1">
+                            {project.stats.totalHours}
+                        </div>
+                    </div>
+                    <div className={`
+                        p-3 rounded-lg
+                        ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
+                    `}>
+                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Unbilled Hours
+                        </div>
+                        <div className="text-2xl font-semibold mt-1">
+                            {project.stats.unbilledHours}
+                        </div>
+                    </div>
+                    <div className={`
+                        p-3 rounded-lg
+                        ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
+                    `}>
+                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Completion
+                        </div>
+                        <div className="text-2xl font-semibold mt-1">
+                            {Math.round(project.objectives.reduce(
+                                (total, obj) => total + (obj.completed ? 1 : 0),
+                                0
+                            ) / project.objectives.length * 100) || 0}%
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Tasks Section */}
@@ -296,21 +335,17 @@ ProjectDetails.propTypes = {
             id: PropTypes.string.isRequired,
             url: PropTypes.string.isRequired,
             title: PropTypes.string
-        }))
+        })),
+        stats: PropTypes.shape({
+            totalHours: PropTypes.number.isRequired,
+            unbilledHours: PropTypes.number.isRequired
+        }).isRequired
     }).isRequired,
     onTaskSelect: PropTypes.func,
     onStatusChange: PropTypes.func,
     onTaskCreate: PropTypes.func,
     onTaskUpdate: PropTypes.func,
     onTaskStatusChange: PropTypes.func
-};
-
-ProjectDetails.defaultProps = {
-    onTaskSelect: () => {},
-    onStatusChange: () => {},
-    onTaskCreate: () => {},
-    onTaskUpdate: () => {},
-    onTaskStatusChange: () => {}
 };
 
 export default React.memo(ProjectDetails);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { loadingStateManager } from '../services/loadingStateManager';
 import { useAppStateOperations } from '../context/AppStateContext';
 
@@ -83,10 +83,10 @@ class ErrorBoundaryFallback extends React.Component {
 export default function ErrorBoundary({ children }) {
     const { resetState } = useAppStateOperations();
 
-    const handleRetry = () => {
+    const handleRetry = useCallback(() => {
         // Reset application state
         resetState();
-    };
+    }, [resetState]);
 
     return (
         <ErrorBoundaryFallback onRetry={handleRetry}>

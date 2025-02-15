@@ -243,12 +243,4 @@ TaskForm.propTypes = {
     projectId: PropTypes.string
 };
 
-TaskForm.defaultProps = {
-    task: null,
-    isOpen: false,
-    onClose: () => {},
-    onSubmit: () => {},
-    projectId: null
-};
-
 export default React.memo(TaskForm);

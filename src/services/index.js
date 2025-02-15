@@ -25,6 +25,8 @@ export {
 export {
     processTaskData,
     processTimerRecords,
+    processTaskNotes,
+    processTaskLinks,
     calculateTotalTaskTime,
     formatDuration,
     validateTaskData,

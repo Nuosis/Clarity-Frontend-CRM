@@ -58,8 +58,8 @@ CustomerListItem.propTypes = {
 
 function Sidebar({
     customers,
-    selectedCustomer,
-    customerStats,
+    selectedCustomer = null,
+    customerStats = null,
     onCustomerSelect,
     onCustomerStatusToggle
 }) {
@@ -161,11 +161,6 @@ Sidebar.propTypes = {
     }),
     onCustomerSelect: PropTypes.func.isRequired,
     onCustomerStatusToggle: PropTypes.func.isRequired
-};
-
-Sidebar.defaultProps = {
-    selectedCustomer: null,
-    customerStats: null
 };
 
 export default React.memo(Sidebar);

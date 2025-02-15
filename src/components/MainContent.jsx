@@ -4,16 +4,17 @@ import TaskTimer from './tasks/TaskTimer';
 import ProjectDetails from './projects/ProjectDetails';
 import CustomerDetails from './customers/CustomerDetails';
 import ErrorBoundary from './ErrorBoundary';
-
+import Loading from './loading/Loading';
 const MainContent = React.memo(function MainContent({
-    selectedTask,
-    selectedProject,
-    selectedCustomer,
-    tasks,
-    projects,
-    taskStats,
-    projectStats,
-    timer,
+    selectedTask = null,
+    selectedProject = null,
+    selectedCustomer = null,
+    tasks = [],
+    projects = [],
+    taskStats = null,
+    projectStats = null,
+    timer = null,
+    loading = false,
     handlers
 }) {
     if (selectedTask) {
@@ -40,6 +41,9 @@ const MainContent = React.memo(function MainContent({
     }
 
     if (selectedProject) {
+        if (loading) {
+            return <Loading message="Loading project details..." />;
+        }
         return (
             <ErrorBoundary onReset={handlers.clearSelectedProject}>
                 <ProjectDetails
@@ -91,7 +95,7 @@ MainContent.propTypes = {
         type: PropTypes.string,
         description: PropTypes.string,
         isCompleted: PropTypes.bool.isRequired,
-        createdAt: PropTypes.string.isRequired,
+        createdAt: PropTypes.string,
         modifiedAt: PropTypes.string.isRequired
     }),
     selectedProject: PropTypes.shape({
@@ -160,11 +164,14 @@ MainContent.propTypes = {
         adjustment: PropTypes.number
     }),
     
+    // Loading state
+    loading: PropTypes.bool,
+    
     // Handlers
     handlers: PropTypes.shape({
         clearSelectedTask: PropTypes.func.isRequired,
         clearSelectedProject: PropTypes.func.isRequired,
-        handleTaskSelect: PropTypes.func.isRequired,
+        handleTaskSelect: PropTypes.func,
         handleTaskCreate: PropTypes.func.isRequired,
         handleTaskUpdate: PropTypes.func.isRequired,
         handleTaskStatusChange: PropTypes.func.isRequired,
@@ -176,17 +183,6 @@ MainContent.propTypes = {
         handleTimerPause: PropTypes.func.isRequired,
         handleTimerAdjust: PropTypes.func.isRequired
     }).isRequired
-};
-
-MainContent.defaultProps = {
-    selectedTask: null,
-    selectedProject: null,
-    selectedCustomer: null,
-    tasks: [],
-    projects: [],
-    taskStats: null,
-    projectStats: null,
-    timer: null
 };
 
 export default MainContent;

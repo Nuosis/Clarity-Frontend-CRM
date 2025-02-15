@@ -84,7 +84,7 @@ TimerControls.propTypes = {
 // Main TaskTimer component
 function TaskTimer({
     task,
-    timer,
+    timer = null,
     onStart,
     onPause,
     onStop,
@@ -290,10 +290,6 @@ TaskTimer.propTypes = {
     onPause: PropTypes.func.isRequired,
     onStop: PropTypes.func.isRequired,
     onAdjust: PropTypes.func.isRequired
-};
-
-TaskTimer.defaultProps = {
-    timer: null
 };
 
 export default React.memo(TaskTimer);

@@ -1,12 +1,14 @@
 import React, { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
+import { useAppStateOperations } from '../../context/AppStateContext';
 
 // Memoized project card component
 const ProjectCard = React.memo(function ProjectCard({
     project,
     darkMode,
-    onSelect
+    onSelect,
+    setLoading
 }) {
     const completion = useMemo(() => {
         const totalSteps = project.objectives.reduce(
@@ -27,10 +29,8 @@ const ProjectCard = React.memo(function ProjectCard({
     return (
         <div
             onClick={(e) => {
-                console.log('Project card clicked:', project);
-                console.log('Calling onSelect handler...');
+                setLoading(true);
                 onSelect(project);
-                console.log('onSelect handler called');
             }}
             className={`
                 p-4 rounded-lg border cursor-pointer
@@ -97,7 +97,8 @@ ProjectCard.propTypes = {
         tasks: PropTypes.array
     }).isRequired,
     darkMode: PropTypes.bool.isRequired,
-    onSelect: PropTypes.func.isRequired
+    onSelect: PropTypes.func.isRequired,
+    setLoading: PropTypes.func.isRequired
 };
 
 function CustomerDetails({
@@ -108,6 +109,7 @@ function CustomerDetails({
     onProjectCreate = () => {}
 }) {
     const { darkMode } = useTheme();
+    const { setLoading } = useAppStateOperations();
 
     // Memoized project grouping with error handling
     const { activeProjects, closedProjects, groupingError } = useMemo(() => {
@@ -167,7 +169,7 @@ function CustomerDetails({
                     </div>
                     <button
                         onClick={handleProjectCreate}
-                        className="px-4 py-2 bg-bg-[#004967] text-white rounded-md hover:bg-blue-700"
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
                     >
                         New Project
                     </button>
@@ -236,6 +238,7 @@ function CustomerDetails({
                                 project={project}
                                 darkMode={darkMode}
                                 onSelect={onProjectSelect}
+                                setLoading={setLoading}
                             />
                         ))}
                     </div>
@@ -262,6 +265,7 @@ function CustomerDetails({
                                 project={project}
                                 darkMode={darkMode}
                                 onSelect={onProjectSelect}
+                                setLoading={setLoading}
                             />
                         ))}
                     </div>
@@ -296,13 +300,6 @@ CustomerDetails.propTypes = {
     }),
     onProjectSelect: PropTypes.func,
     onProjectCreate: PropTypes.func
-};
-
-CustomerDetails.defaultProps = {
-    projects: [],
-    stats: null,
-    onProjectSelect: () => {},
-    onProjectCreate: () => {}
 };
 
 export default React.memo(CustomerDetails);

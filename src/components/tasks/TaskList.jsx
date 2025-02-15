@@ -2,6 +2,7 @@ import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useTask } from '../../hooks/useTask';
+import ErrorBoundary from '../ErrorBoundary';
 
 // Memoized task item component
 const TaskItem = React.memo(function TaskItem({
@@ -9,27 +10,23 @@ const TaskItem = React.memo(function TaskItem({
     darkMode,
     onEdit,
     onStatusChange,
-    onSelect
+    onSelect,
+    onExpand,
+    taskNotes,
+    taskLinks,
+    timerRecords,
+    isLoading
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const { handleTaskSelect, taskNotes, taskLinks, timerRecords } = useTask();
 
     const toggleExpand = useCallback(async () => {
         const newExpandedState = !isExpanded;
         setIsExpanded(newExpandedState);
         
         if (newExpandedState) {
-            setIsLoading(true);
-            try {
-                await handleTaskSelect(task.id);
-            } catch (error) {
-                console.error('Error loading task details:', error);
-            } finally {
-                setIsLoading(false);
-            }
+            await onExpand(task.id);
         }
-    }, [isExpanded, task.id, handleTaskSelect]);
+    }, [isExpanded, task.id, onExpand]);
 
     return (
         <div
@@ -193,7 +190,12 @@ TaskItem.propTypes = {
     darkMode: PropTypes.bool.isRequired,
     onEdit: PropTypes.func.isRequired,
     onStatusChange: PropTypes.func.isRequired,
-    onSelect: PropTypes.func.isRequired
+    onSelect: PropTypes.func.isRequired,
+    onExpand: PropTypes.func.isRequired,
+    taskNotes: PropTypes.array,
+    taskLinks: PropTypes.array,
+    timerRecords: PropTypes.array,
+    isLoading: PropTypes.bool
 };
 
 // Memoized task section component
@@ -204,6 +206,11 @@ const TaskSection = React.memo(function TaskSection({
     onEdit,
     onStatusChange,
     onSelect,
+    onExpand,
+    taskNotes,
+    taskLinks,
+    timerRecords,
+    isLoading,
     emptyMessage
 }) {
     if (tasks.length === 0) {
@@ -236,6 +243,11 @@ const TaskSection = React.memo(function TaskSection({
                         onEdit={onEdit}
                         onStatusChange={onStatusChange}
                         onSelect={onSelect}
+                        onExpand={onExpand}
+                        taskNotes={taskNotes}
+                        taskLinks={taskLinks}
+                        timerRecords={timerRecords}
+                        isLoading={isLoading}
                     />
                 ))}
             </div>
@@ -250,6 +262,11 @@ TaskSection.propTypes = {
     onEdit: PropTypes.func.isRequired,
     onStatusChange: PropTypes.func.isRequired,
     onSelect: PropTypes.func.isRequired,
+    onExpand: PropTypes.func.isRequired,
+    taskNotes: PropTypes.array,
+    taskLinks: PropTypes.array,
+    timerRecords: PropTypes.array,
+    isLoading: PropTypes.bool,
     emptyMessage: PropTypes.string.isRequired
 };
 
@@ -263,6 +280,8 @@ function TaskList({
 }) {
     const { darkMode } = useTheme();
     const [showCompleted, setShowCompleted] = useState(false);
+    const [expandedTaskId, setExpandedTaskId] = useState(null);
+    const { handleTaskSelect, taskNotes, taskLinks, timerRecords, loading } = useTask(projectId);
 
     // Memoized task grouping
     const { activeTasks, completedTasks } = useMemo(() => {
@@ -275,6 +294,15 @@ function TaskList({
             return acc;
         }, { activeTasks: [], completedTasks: [] });
     }, [tasks]);
+
+    const handleExpand = useCallback(async (taskId) => {
+        setExpandedTaskId(taskId);
+        try {
+            await handleTaskSelect(taskId);
+        } catch (error) {
+            console.error('Error loading task details:', error);
+        }
+    }, [handleTaskSelect]);
 
     // Memoized handlers
     const handleEdit = useCallback((task) => {
@@ -310,6 +338,11 @@ function TaskList({
                 onEdit={handleEdit}
                 onStatusChange={handleStatusChange}
                 onSelect={handleSelect}
+                onExpand={handleExpand}
+                taskNotes={taskNotes}
+                taskLinks={taskLinks}
+                timerRecords={timerRecords}
+                isLoading={loading}
                 emptyMessage="No active tasks"
             />
 
@@ -336,6 +369,11 @@ function TaskList({
                             onEdit={handleEdit}
                             onStatusChange={handleStatusChange}
                             onSelect={handleSelect}
+                            onExpand={handleExpand}
+                            taskNotes={taskNotes}
+                            taskLinks={taskLinks}
+                            timerRecords={timerRecords}
+                            isLoading={loading}
                             emptyMessage="No completed tasks"
                         />
                     )}
@@ -363,13 +401,10 @@ TaskList.propTypes = {
     onTaskUpdate: PropTypes.func
 };
 
-TaskList.defaultProps = {
-    tasks: [],
-    projectId: null,
-    onTaskSelect: () => {},
-    onTaskStatusChange: () => {},
-    onTaskCreate: () => {},
-    onTaskUpdate: () => {}
-};
-
-export default React.memo(TaskList);
+export default React.memo(function WrappedTaskList(props) {
+    return (
+        <ErrorBoundary>
+            <TaskList {...props} />
+        </ErrorBoundary>
+    );
+});

@@ -25,18 +25,39 @@ export async function fetchProjectsForCustomer(customerId) {
  * @param {string} layout - The layout to fetch from
  * @returns {Promise<Array>} Array of related records
  */
+export async function fetchProjectNotes(projectId) {
+    validateParams({ projectId }, ['projectId']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.NOTES,
+            action: Actions.READ,
+            query: [{ "_fkID": projectId }]
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}
+
 export async function fetchProjectRelatedData(projectId, layout) {
     validateParams({ projectId, layout }, ['projectId', 'layout']);
     
     return handleFileMakerOperation(async () => {
-        const fieldName = layout === Layouts.PROJECT_IMAGES || layout === Layouts.PROJECT_LINKS 
-            ? "_fkID" 
-            : "_projectID";
+        const fieldName = layout === Layouts.PROJECT_IMAGES || layout === Layouts.PROJECT_LINKS
+            ? "_fkID"
+            : layout === Layouts.RECORDS
+                ? "_projectID"
+                : "_projectID";
             
+        // Convert single projectId into array of query objects
+        const queryArray = Array.isArray(projectId)
+            ? projectId.map(id => ({ [fieldName]: id }))
+            : [{ [fieldName]: projectId }];
+
         const params = {
             layout,
             action: Actions.READ,
-            query: [{ [fieldName]: projectId }]
+            query: queryArray
         };
         
         return await fetchDataFromFileMaker(params);
@@ -113,18 +134,20 @@ export async function fetchAllProjectData(projectId) {
     validateParams({ projectId }, ['projectId']);
     
     return handleFileMakerOperation(async () => {
-        const [images, links, objectives, steps] = await Promise.all([
-            fetchProjectRelatedData(projectId, Layouts.PROJECT_IMAGES),
-            fetchProjectRelatedData(projectId, Layouts.PROJECT_LINKS),
-            fetchProjectRelatedData(projectId, Layouts.PROJECT_OBJECTIVES),
-            fetchProjectRelatedData(projectId, Layouts.PROJECT_OBJ_STEPS)
+        // Ensure projectId is treated as a single ID for each related data fetch
+        const [images, links, objectives, steps, records] = await Promise.all([
+            fetchProjectRelatedData([projectId], Layouts.PROJECT_IMAGES),
+            fetchProjectRelatedData([projectId], Layouts.PROJECT_LINKS),
+            fetchProjectRelatedData([projectId], Layouts.PROJECT_OBJECTIVES),
+            fetchProjectRelatedData([projectId], Layouts.PROJECT_OBJ_STEPS),
+            fetchProjectRelatedData([projectId], Layouts.RECORDS)
         ]);
-        
         return {
             images: images.response?.data || [],
             links: links.response?.data || [],
             objectives: objectives.response?.data || [],
-            steps: steps.response?.data || []
+            steps: steps.response?.data || [],
+            records: records.response?.data || []
         };
     });
 }
