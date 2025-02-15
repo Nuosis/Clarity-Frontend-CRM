@@ -6,7 +6,6 @@ import CustomerDetails from './customers/CustomerDetails';
 import ErrorBoundary from './ErrorBoundary';
 
 const MainContent = React.memo(function MainContent({
-    darkMode,
     selectedTask,
     selectedProject,
     selectedCustomer,
@@ -23,12 +22,7 @@ const MainContent = React.memo(function MainContent({
                 <div className="space-y-6">
                     <button
                         onClick={handlers.clearSelectedTask}
-                        className={`
-                            text-sm px-3 py-1 rounded-md
-                            ${darkMode 
-                                ? 'bg-gray-700 hover:bg-gray-600' 
-                                : 'bg-gray-200 hover:bg-gray-300'}
-                        `}
+                        className="text-sm px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
                     >
                         ← Back to Project
                     </button>
@@ -85,9 +79,6 @@ const MainContent = React.memo(function MainContent({
 });
 
 MainContent.propTypes = {
-    // Theme
-    darkMode: PropTypes.bool.isRequired,
-    
     // Selected items
     selectedTask: PropTypes.shape({
         id: PropTypes.string.isRequired,

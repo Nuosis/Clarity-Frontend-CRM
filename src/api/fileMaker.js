@@ -1,5 +1,15 @@
 import FMGofer from 'fm-gofer';
 
+// Initialize web viewer communication
+if (typeof window !== "undefined") {
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'FM_BRIDGE_READY') {
+            window.FileMaker = event.data.api;
+            console.log('FileMaker web viewer bridge initialized');
+        }
+    });
+}
+
 /**
  * Formats parameters for FileMaker API calls
  * Ensures consistent parameter structure and version
@@ -25,12 +35,12 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
     console.log("Attempting to fetch data from FileMaker");
     
     return new Promise((resolve, reject) => {
-        if (attempt >= 10) {
-            const error = new Error("FileMaker object is unavailable after 1 second");
-            error.code = "TIMEOUT";
-            reject(error);
-            return;
-        }
+       if (attempt >= 30) { // 30 retries = 3 seconds
+           const error = new Error("FileMaker object is unavailable after 3 seconds");
+           error.code = "TIMEOUT";
+           reject(error);
+           return;
+       }
 
         if (typeof FileMaker === "undefined" || !FileMaker.PerformScript) {
             setTimeout(() => {

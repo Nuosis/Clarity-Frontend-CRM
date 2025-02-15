@@ -1,4 +1,63 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
+
+export function useFileMakerBridge() {
+    const [isReady, setIsReady] = useState(false);
+    const [error, setError] = useState(null);
+    const [status, setStatus] = useState('Initializing FileMaker connection...');
+    const [retryCount, setRetryCount] = useState(0);
+
+    useEffect(() => {
+        let isMounted = true;
+        let retries = 0;
+        let retryTimer = null;
+        
+        const checkBridge = () => {
+            try {
+                if (typeof FileMaker === "undefined") {
+                    throw new Error('FileMaker bridge not detected');
+                }
+                
+                if (isMounted) {
+                    setIsReady(true);
+                    setError(null);
+                    setStatus('FileMaker connection established');
+                }
+            } catch (error) {
+                if (isMounted && retries < 10) { // Increased from 20 to 50 (5 seconds total)
+                    retries++;
+                    setStatus(`Attempting to connect to FileMaker (${retries}/50)...`);
+                    console.log(`FileMaker bridge attempt ${retries}`);
+                    retryTimer = setTimeout(checkBridge, 100);
+                } else if (isMounted) {
+                    setError('Failed to initialize FileMaker connection after 5 seconds');
+                    setStatus('Failed to connect to FileMaker');
+                    setIsReady(false);
+                }
+            }
+        };
+
+        checkBridge();
+        return () => {
+            isMounted = false;
+            if (retryTimer) {
+                clearTimeout(retryTimer);
+            }
+        };
+    }, [retryCount]);
+
+    return {
+        isReady,
+        error,
+        status,
+        retry: () => setRetryCount(prev => prev + 1)
+    };
+
+    return {
+        isReady,
+        error,
+        retry: () => setRetryCount(prev => prev + 1)
+    };
+}
 
 // Export main hooks
 export { useCustomer } from './useCustomer';

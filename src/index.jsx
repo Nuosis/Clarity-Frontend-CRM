@@ -1,51 +1,60 @@
-import React, { useCallback } from 'react';
+import React, { useEffect } from 'react';
 import Loading from './components/loading/Loading';
-import AppLayout from './components/layout/AppLayout';
+import AppLayout, { ThemeProvider } from './components/layout/AppLayout';
 import Sidebar from './components/layout/Sidebar';
 import MainContent from './components/MainContent';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useTheme } from './components/layout/AppLayout';
-import { useCustomer, useProject, useTask } from './hooks';
+import { useCustomer, useProject, useTask, useFileMakerBridge } from './hooks';
+import { initializationService } from './services/initializationService';
+import { loadingStateManager, useGlobalLoadingState } from './services/loadingStateManager';
+import { AppStateProvider, useAppState, useAppStateOperations } from './context/AppStateContext';
 
-// Memoized sidebar
+// Memoized sidebar for performance
 const MemoizedSidebar = React.memo(Sidebar);
 
-function App() {
+function AppContent() {
     const { darkMode } = useTheme();
-    
-    // Customer state and handlers
+    const { isReady: fmReady, error: fmError, status: fmStatus } = useFileMakerBridge();
+    const appState = useAppState();
+    const { 
+        setLoading, 
+        setError, 
+        setUser, 
+        setSelectedCustomer,
+        setSelectedProject,
+        setSelectedTask,
+        resetState
+    } = useAppStateOperations();
+    const globalLoadingState = useGlobalLoadingState();
+
     const {
-        loading: customerLoading,
-        error: customerError,
         customers,
-        selectedCustomer,
-        stats: customerStats,
+        error: customerError,
         handleCustomerSelect,
-        handleCustomerStatusToggle
+        handleCustomerStatusToggle,
+        loadCustomers
     } = useCustomer();
 
     // Project state and handlers
     const {
-        loading: projectLoading,
-        error: projectError,
         projects,
-        selectedProject,
+        error: projectError,
         stats: projectStats,
         handleProjectSelect,
         handleProjectCreate,
         handleProjectUpdate,
         handleProjectStatusChange,
         clearSelectedProject
-    } = useProject(selectedCustomer?.id);
+    } = useProject(appState.selectedCustomer?.id);
 
     // Task state and handlers
     const {
-        loading: taskLoading,
-        error: taskError,
         tasks,
         selectedTask,
         timer,
         stats: taskStats,
+        error: taskError,
         handleTaskSelect,
         handleTaskCreate,
         handleTaskUpdate,
@@ -55,24 +64,66 @@ function App() {
         handleTimerPause,
         handleTimerAdjust,
         clearSelectedTask
-    } = useTask(selectedProject?.id);
+    } = useTask(appState.selectedProject?.id);
+
+    // Initialization effect
+    useEffect(() => {
+        const initialize = async () => {
+            try {
+                loadingStateManager.setLoading('initialization', true, 'Connecting to FileMaker...');
+                
+                // Wait for FileMaker connection
+                await initializationService.waitForFileMaker(() => fmReady);
+                
+                loadingStateManager.setLoading('initialization', true, 'Loading user context...');
+                const userContext = await initializationService.loadUserContext();
+                setUser(userContext);
+                
+                loadingStateManager.setLoading('initialization', true, 'Loading initial data...');
+                await initializationService.preloadData(loadCustomers);
+                
+                loadingStateManager.clearLoadingState('initialization');
+                setLoading(false);
+            } catch (error) {
+                console.error('Initialization error:', error);
+                setError(error.message);
+                loadingStateManager.clearLoadingState('initialization');
+            }
+        };
+
+        initialize();
+    }, [fmReady, loadCustomers, setError, setLoading, setUser]);
 
     // Memoized handlers
-    const handlers = {
-        onCustomerSelect: useCallback(async (customer) => {
+    const handlers = React.useMemo(() => ({
+        onCustomerSelect: async (customer) => {
             clearSelectedProject();
             clearSelectedTask();
             await handleCustomerSelect(customer.id);
-        }, [clearSelectedProject, clearSelectedTask, handleCustomerSelect]),
+            setSelectedCustomer(customer);
+        },
 
-        handleProjectSelect: useCallback(async (project) => {
+        onProjectSelect: async (project) => {
             clearSelectedTask();
             await handleProjectSelect(project.id);
-        }, [clearSelectedTask, handleProjectSelect]),
+            setSelectedProject(project);
+        },
 
-        clearSelectedTask,
-        clearSelectedProject,
-        handleTaskSelect,
+        onTaskSelect: (task) => {
+            handleTaskSelect(task.id);
+            setSelectedTask(task);
+        },
+
+        clearSelectedTask: () => {
+            clearSelectedTask();
+            setSelectedTask(null);
+        },
+
+        clearSelectedProject: () => {
+            clearSelectedProject();
+            setSelectedProject(null);
+        },
+
         handleTaskCreate,
         handleTaskUpdate,
         handleTaskStatusChange,
@@ -83,15 +134,54 @@ function App() {
         handleTimerStop,
         handleTimerPause,
         handleTimerAdjust
-    };
+    }), [
+        clearSelectedProject,
+        clearSelectedTask,
+        handleCustomerSelect,
+        handleProjectCreate,
+        handleProjectSelect,
+        handleProjectStatusChange,
+        handleProjectUpdate,
+        handleTaskCreate,
+        handleTaskSelect,
+        handleTaskStatusChange,
+        handleTaskUpdate,
+        handleTimerAdjust,
+        handleTimerPause,
+        handleTimerStart,
+        handleTimerStop,
+        setSelectedCustomer,
+        setSelectedProject,
+        setSelectedTask
+    ]);
 
-    // Loading state
-    const isLoading = customerLoading || projectLoading || taskLoading;
-    if (isLoading) {
-        return <Loading message="Loading data, please wait" />;
+    // Handle initialization states
+    if (!fmReady) {
+        return (
+            <div className="text-center p-4">
+                <div className="text-blue-600 mb-2">{fmStatus}</div>
+                {fmError && (
+                    <div className="text-red-600">
+                        Connection Error: {fmError}
+                    </div>
+                )}
+            </div>
+        );
     }
 
-    // Error handling
+    if (appState.error) {
+        return (
+            <div className="text-center text-red-600 p-4">
+                Error: {appState.error}
+            </div>
+        );
+    }
+
+    if (globalLoadingState.isLoading) {
+        return <Loading message={globalLoadingState.message} />;
+    }
+
+    // Combined error handling
     const error = customerError || projectError || taskError;
     if (error) {
         return (
@@ -101,32 +191,62 @@ function App() {
         );
     }
 
+    // Process customers data before passing to Sidebar
+    const processedCustomers = customers.map(customer => ({
+        id: customer.id || customer.fieldData?.__ID,
+        Name: customer.Name || customer.fieldData?.Name,
+        Email: customer.Email || customer.fieldData?.Email,
+        isActive: customer.isActive ?? (customer.fieldData?.f_active === "1" || customer.fieldData?.f_active === 1)
+    }));
+
+    // Process selected customer if exists
+    const processedSelectedCustomer = appState.selectedCustomer ? {
+        id: appState.selectedCustomer.id || appState.selectedCustomer.fieldData?.__ID,
+        Name: appState.selectedCustomer.Name || appState.selectedCustomer.fieldData?.Name,
+        Email: appState.selectedCustomer.Email || appState.selectedCustomer.fieldData?.Email,
+        isActive: appState.selectedCustomer.isActive ?? (appState.selectedCustomer.fieldData?.f_active === "1" || appState.selectedCustomer.fieldData?.f_active === 1)
+    } : null;
+
     return (
         <ErrorBoundary>
             <AppLayout>
                 <MemoizedSidebar
-                    customers={customers}
-                    selectedCustomer={selectedCustomer}
+                    customers={processedCustomers}
+                    selectedCustomer={processedSelectedCustomer}
                     onCustomerSelect={handlers.onCustomerSelect}
                     onCustomerStatusToggle={handleCustomerStatusToggle}
-                    customerStats={customerStats}
+                    customerStats={customers.length > 0 ? {
+                        total: customers.length,
+                        active: processedCustomers.filter(c => c.isActive).length,
+                        inactive: processedCustomers.filter(c => !c.isActive).length,
+                        activePercentage: Math.round((processedCustomers.filter(c => c.isActive).length / customers.length) * 100)
+                    } : null}
                 />
                 <MainContent
                     darkMode={darkMode}
                     selectedTask={selectedTask}
-                    selectedProject={selectedProject}
-                    selectedCustomer={selectedCustomer}
+                    selectedProject={appState.selectedProject}
+                    selectedCustomer={processedSelectedCustomer}
                     tasks={tasks}
-                    projects={projects}
                     taskStats={taskStats}
                     projectStats={projectStats}
                     timer={timer}
                     handlers={handlers}
+                    projects={projects}
                 />
             </AppLayout>
         </ErrorBoundary>
     );
 }
 
-console.log("version 1.1.2");
+function App() {
+    return (
+        <ThemeProvider>
+            <AppStateProvider>
+                <AppContent />
+            </AppStateProvider>
+        </ThemeProvider>
+    );
+}
+
 export default App;

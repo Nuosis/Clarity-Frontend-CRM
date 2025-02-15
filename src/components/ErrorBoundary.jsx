@@ -1,10 +1,11 @@
 import React from 'react';
-import { useTheme } from './layout/AppLayout';
+import { loadingStateManager } from '../services/loadingStateManager';
+import { useAppStateOperations } from '../context/AppStateContext';
 
-class ErrorBoundaryClass extends React.Component {
+class ErrorBoundaryFallback extends React.Component {
     constructor(props) {
         super(props);
-        this.state = { 
+        this.state = {
             hasError: false,
             error: null,
             errorInfo: null
@@ -12,36 +13,65 @@ class ErrorBoundaryClass extends React.Component {
     }
 
     static getDerivedStateFromError(error) {
-        return { hasError: true, error };
+        return {
+            hasError: true,
+            error
+        };
     }
 
     componentDidCatch(error, errorInfo) {
         this.setState({
-            error,
             errorInfo
         });
         
-        // Log error to your error reporting service
-        console.error('Error Boundary caught an error:', error, errorInfo);
+        // Log error to console for debugging
+        console.error('Error caught by boundary:', error);
+        console.error('Error stack:', errorInfo.componentStack);
     }
+
+    handleRetry = () => {
+        // Clear loading states
+        loadingStateManager.clearAll();
+        
+        // Reset error state
+        this.setState({
+            hasError: false,
+            error: null,
+            errorInfo: null
+        });
+
+        // Call parent's retry handler if provided
+        if (this.props.onRetry) {
+            this.props.onRetry();
+        }
+    };
 
     render() {
         if (this.state.hasError) {
             return (
-                <ErrorDisplay 
-                    error={this.state.error}
-                    errorInfo={this.state.errorInfo}
-                    onReset={() => {
-                        this.setState({ 
-                            hasError: false,
-                            error: null,
-                            errorInfo: null
-                        });
-                        if (this.props.onReset) {
-                            this.props.onReset();
-                        }
-                    }}
-                />
+                <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+                    <div className="max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+                        <div className="text-center">
+                            <h2 className="text-2xl font-bold text-red-600 mb-4">
+                                Something went wrong
+                            </h2>
+                            <div className="text-gray-600 dark:text-gray-300 mb-6">
+                                {this.state.error?.message || 'An unexpected error occurred'}
+                            </div>
+                            {process.env.NODE_ENV === 'development' && (
+                                <pre className="text-left bg-gray-100 dark:bg-gray-700 p-4 rounded mb-6 overflow-auto text-sm">
+                                    {this.state.errorInfo?.componentStack}
+                                </pre>
+                            )}
+                            <button
+                                onClick={this.handleRetry}
+                                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
             );
         }
 
@@ -49,74 +79,18 @@ class ErrorBoundaryClass extends React.Component {
     }
 }
 
-function ErrorDisplay({ error, errorInfo, onReset }) {
-    const { darkMode } = useTheme();
+// Wrapper component to provide hooks to class component
+export default function ErrorBoundary({ children }) {
+    const { resetState } = useAppStateOperations();
 
-    return (
-        <div className={`
-            p-6 rounded-lg border
-            ${darkMode 
-                ? 'bg-gray-800 border-gray-700 text-white' 
-                : 'bg-white border-gray-200 text-gray-900'}
-        `}>
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-red-600">
-                        Something went wrong
-                    </h2>
-                    <button
-                        onClick={onReset}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                    >
-                        Try Again
-                    </button>
-                </div>
-
-                <div className={`
-                    p-4 rounded-md
-                    ${darkMode ? 'bg-gray-900' : 'bg-gray-100'}
-                `}>
-                    <p className="font-mono text-sm mb-2">
-                        {error?.toString()}
-                    </p>
-                    {errorInfo && (
-                        <pre className={`
-                            text-xs overflow-auto
-                            ${darkMode ? 'text-gray-400' : 'text-gray-600'}
-                        `}>
-                            {errorInfo.componentStack}
-                        </pre>
-                    )}
-                </div>
-
-                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    If this error persists, please contact support with the error details above.
-                </p>
-            </div>
-        </div>
-    );
-}
-
-/**
- * Error boundary component with hooks support
- */
-export default function ErrorBoundary({ children, onReset }) {
-    return (
-        <ErrorBoundaryClass onReset={onReset}>
-            {children}
-        </ErrorBoundaryClass>
-    );
-}
-
-/**
- * Higher-order component to wrap components with error boundary
- */
-export function withErrorBoundary(Component, onReset) {
-    return function WrappedComponent(props) {
-        return (
-            <ErrorBoundary onReset={onReset}>
-                <Component {...props} />
-            </ErrorBoundary>
-        );
+    const handleRetry = () => {
+        // Reset application state
+        resetState();
     };
+
+    return (
+        <ErrorBoundaryFallback onRetry={handleRetry}>
+            {children}
+        </ErrorBoundaryFallback>
+    );
 }

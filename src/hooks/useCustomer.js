@@ -5,12 +5,9 @@ import {
     updateCustomer,
     createCustomer,
     toggleCustomerStatus,
-    fetchActiveCustomers,
-    fetchCustomerContext
 } from '../api';
 import {
     processCustomerData,
-    filterActiveCustomers,
     sortCustomers,
     validateCustomerData,
     formatCustomerForFileMaker,
@@ -26,11 +23,6 @@ export function useCustomer() {
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [stats, setStats] = useState(null);
-
-    // Load initial customer data
-    useEffect(() => {
-        loadCustomers();
-    }, []);
 
     // Update stats when customers change
     useEffect(() => {

@@ -104,16 +104,31 @@ function CustomerDetails({
 }) {
     const { darkMode } = useTheme();
 
-    // Memoized project grouping
-    const { activeProjects, closedProjects } = useMemo(() => {
-        return projects.reduce((acc, project) => {
-            if (project.status === 'Open') {
-                acc.activeProjects.push(project);
-            } else {
-                acc.closedProjects.push(project);
-            }
-            return acc;
-        }, { activeProjects: [], closedProjects: [] });
+    // Memoized project grouping with error handling
+    const { activeProjects, closedProjects, groupingError } = useMemo(() => {
+        try {
+            const result = projects.reduce((acc, project) => {
+                if (!project || !project.status) {
+                    throw new Error('Invalid project data');
+                }
+                
+                if (project.status === 'Open') {
+                    acc.activeProjects.push(project);
+                } else {
+                    acc.closedProjects.push(project);
+                }
+                return acc;
+            }, { activeProjects: [], closedProjects: [] });
+            
+            return { ...result, groupingError: null };
+        } catch (error) {
+            console.error('Error grouping projects:', error);
+            return {
+                activeProjects: [],
+                closedProjects: [],
+                groupingError: error.message
+            };
+        }
     }, [projects]);
 
     // Memoized handlers
@@ -192,10 +207,23 @@ function CustomerDetails({
                 )}
             </div>
 
+            {/* Error Display */}
+            {groupingError && (
+                <div className={`
+                    p-4 mb-6 rounded-lg border
+                    ${darkMode
+                        ? 'bg-red-900/20 border-red-800 text-red-200'
+                        : 'bg-red-50 border-red-200 text-red-800'}
+                `}>
+                    <div className="font-medium">Error loading projects:</div>
+                    <div className="text-sm mt-1">{groupingError}</div>
+                </div>
+            )}
+
             {/* Active Projects */}
             <div>
                 <h3 className="text-lg font-semibold mb-4">Active Projects</h3>
-                {activeProjects.length > 0 ? (
+                {!groupingError && activeProjects.length > 0 ? (
                     <div className="grid grid-cols-2 gap-4">
                         {activeProjects.map(project => (
                             <ProjectCard

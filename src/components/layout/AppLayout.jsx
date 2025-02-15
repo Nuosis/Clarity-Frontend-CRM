@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 // Create theme context
 const ThemeContext = createContext({
@@ -8,7 +9,33 @@ const ThemeContext = createContext({
 
 // Theme provider component
 export function ThemeProvider({ children }) {
-  const [darkMode, setDarkMode] = useState(false);
+  // Initialize with system preference
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  // Update dark mode class on html element
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  // Listen for system theme changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e) => {
+      setDarkMode(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   const toggleDarkMode = () => {
     setDarkMode(prev => !prev);
@@ -30,19 +57,30 @@ export function useTheme() {
 export default function AppLayout({ children }) {
   const { darkMode } = useTheme();
 
+  // Expect exactly two children: Sidebar and MainContent
+  const [sidebar, mainContent] = React.Children.toArray(children);
+
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="flex min-h-screen">
         {/* Sidebar container - fixed width */}
-        <aside className="w-[200px] fixed inset-y-0 left-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-          {/* Sidebar content will go here */}
+        <aside className="w-64 fixed inset-y-0 left-0">
+          {sidebar}
         </aside>
 
         {/* Main content area - with margin for sidebar */}
-        <main className="flex-1 ml-[200px] p-6">
-          {children}
+        <main className="flex-1 ml-64 p-6">
+          {mainContent}
         </main>
       </div>
     </div>
   );
 }
+
+AppLayout.propTypes = {
+  children: PropTypes.arrayOf(PropTypes.element).isRequired
+};
+
+ThemeProvider.propTypes = {
+  children: PropTypes.node.isRequired
+};

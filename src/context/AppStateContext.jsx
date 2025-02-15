@@ -1,0 +1,160 @@
+import React, { createContext, useContext, useReducer, useCallback } from 'react';
+
+const AppStateContext = createContext();
+const AppDispatchContext = createContext();
+
+// Action types
+export const APP_ACTIONS = {
+    SET_LOADING: 'SET_LOADING',
+    SET_ERROR: 'SET_ERROR',
+    SET_USER: 'SET_USER',
+    SET_SELECTED_CUSTOMER: 'SET_SELECTED_CUSTOMER',
+    SET_SELECTED_PROJECT: 'SET_SELECTED_PROJECT',
+    SET_SELECTED_TASK: 'SET_SELECTED_TASK',
+    CLEAR_ERROR: 'CLEAR_ERROR',
+    RESET_STATE: 'RESET_STATE'
+};
+
+const initialState = {
+    loading: true,
+    error: null,
+    user: null,
+    selectedCustomer: null,
+    selectedProject: null,
+    selectedTask: null,
+    version: 1, // For state versioning
+};
+
+function appReducer(state, action) {
+    switch (action.type) {
+        case APP_ACTIONS.SET_LOADING:
+            return {
+                ...state,
+                loading: action.payload,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_ERROR:
+            return {
+                ...state,
+                error: action.payload,
+                loading: false,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_USER:
+            return {
+                ...state,
+                user: action.payload,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SELECTED_CUSTOMER:
+            return {
+                ...state,
+                selectedCustomer: action.payload,
+                selectedProject: null, // Clear related selections
+                selectedTask: null,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SELECTED_PROJECT:
+            return {
+                ...state,
+                selectedProject: action.payload,
+                selectedTask: null, // Clear related selection
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SELECTED_TASK:
+            return {
+                ...state,
+                selectedTask: action.payload,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.CLEAR_ERROR:
+            return {
+                ...state,
+                error: null,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.RESET_STATE:
+            return {
+                ...initialState,
+                version: state.version + 1
+            };
+        default:
+            return state;
+    }
+}
+
+export function AppStateProvider({ children }) {
+    const [state, dispatch] = useReducer(appReducer, initialState);
+
+    return (
+        <AppStateContext.Provider value={state}>
+            <AppDispatchContext.Provider value={dispatch}>
+                {children}
+            </AppDispatchContext.Provider>
+        </AppStateContext.Provider>
+    );
+}
+
+export function useAppState() {
+    const context = useContext(AppStateContext);
+    if (context === undefined) {
+        throw new Error('useAppState must be used within an AppStateProvider');
+    }
+    return context;
+}
+
+export function useAppDispatch() {
+    const context = useContext(AppDispatchContext);
+    if (context === undefined) {
+        throw new Error('useAppDispatch must be used within an AppStateProvider');
+    }
+    return context;
+}
+
+// Custom hook for common state operations
+export function useAppStateOperations() {
+    const dispatch = useAppDispatch();
+
+    const setLoading = useCallback((isLoading) => {
+        dispatch({ type: APP_ACTIONS.SET_LOADING, payload: isLoading });
+    }, [dispatch]);
+
+    const setError = useCallback((error) => {
+        dispatch({ type: APP_ACTIONS.SET_ERROR, payload: error });
+    }, [dispatch]);
+
+    const clearError = useCallback(() => {
+        dispatch({ type: APP_ACTIONS.CLEAR_ERROR });
+    }, [dispatch]);
+
+    const setUser = useCallback((user) => {
+        dispatch({ type: APP_ACTIONS.SET_USER, payload: user });
+    }, [dispatch]);
+
+    const setSelectedCustomer = useCallback((customer) => {
+        dispatch({ type: APP_ACTIONS.SET_SELECTED_CUSTOMER, payload: customer });
+    }, [dispatch]);
+
+    const setSelectedProject = useCallback((project) => {
+        dispatch({ type: APP_ACTIONS.SET_SELECTED_PROJECT, payload: project });
+    }, [dispatch]);
+
+    const setSelectedTask = useCallback((task) => {
+        dispatch({ type: APP_ACTIONS.SET_SELECTED_TASK, payload: task });
+    }, [dispatch]);
+
+    const resetState = useCallback(() => {
+        dispatch({ type: APP_ACTIONS.RESET_STATE });
+    }, [dispatch]);
+
+    return {
+        setLoading,
+        setError,
+        clearError,
+        setUser,
+        setSelectedCustomer,
+        setSelectedProject,
+        setSelectedTask,
+        resetState
+    };
+}
