@@ -26,7 +26,12 @@ const ProjectCard = React.memo(function ProjectCard({
 
     return (
         <div
-            onClick={() => onSelect(project)}
+            onClick={(e) => {
+                console.log('Project card clicked:', project);
+                console.log('Calling onSelect handler...');
+                onSelect(project);
+                console.log('onSelect handler called');
+            }}
             className={`
                 p-4 rounded-lg border cursor-pointer
                 ${darkMode 
@@ -60,7 +65,7 @@ const ProjectCard = React.memo(function ProjectCard({
                     </div>
                     <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-blue-600 rounded-full"
+                            className="h-full bg-bg-[#004967] rounded-full"
                             style={{ width: `${completion}%` }}
                         />
                     </div>
@@ -162,7 +167,7 @@ function CustomerDetails({
                     </div>
                     <button
                         onClick={handleProjectCreate}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        className="px-4 py-2 bg-bg-[#004967] text-white rounded-md hover:bg-blue-700"
                     >
                         New Project
                     </button>

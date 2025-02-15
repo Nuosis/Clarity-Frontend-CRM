@@ -8,7 +8,9 @@ import {
     stopTaskTimer,
     fetchTaskTimers,
     updateTaskNotes,
-    fetchActiveProjectTasks
+    fetchActiveProjectTasks,
+    fetchTaskNotes,
+    fetchTaskLinks
 } from '../api';
 import {
     processTaskData,
@@ -18,7 +20,9 @@ import {
     formatTaskForFileMaker,
     calculateTaskStats,
     isValidTimerAdjustment,
-    sortTasks
+    sortTasks,
+    processTaskNotes,
+    processTaskLinks
 } from '../services';
 
 /**
@@ -31,6 +35,8 @@ export function useTask(projectId = null) {
     const [selectedTask, setSelectedTask] = useState(null);
     const [timer, setTimer] = useState(null);
     const [timerRecords, setTimerRecords] = useState([]);
+    const [taskNotes, setTaskNotes] = useState([]);
+    const [taskLinks, setTaskLinks] = useState([]);
     const [stats, setStats] = useState(null);
 
     // Load tasks when projectId changes
@@ -69,7 +75,43 @@ export function useTask(projectId = null) {
     }, []);
 
     /**
-     * Selects a task and loads its timer records
+     * Loads task details including notes and links
+     */
+    const loadTaskDetails = useCallback(async (taskId) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const [timerResult, notesResult, linksResult] = await Promise.all([
+                fetchTaskTimers(taskId),
+                fetchTaskNotes(taskId),
+                fetchTaskLinks(taskId)
+            ]);
+
+            const processedTimers = processTimerRecords(timerResult);
+            const processedNotes = processTaskNotes(notesResult);
+            const processedLinks = processTaskLinks(linksResult);
+
+            setTimerRecords(processedTimers);
+            setTaskNotes(processedNotes);
+            setTaskLinks(processedLinks);
+
+            return {
+                timers: processedTimers,
+                notes: processedNotes,
+                links: processedLinks
+            };
+        } catch (err) {
+            setError(err.message);
+            console.error('Error loading task details:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    /**
+     * Selects a task and loads its details
      */
     const handleTaskSelect = useCallback(async (taskId) => {
         try {
@@ -81,18 +123,21 @@ export function useTask(projectId = null) {
                 throw new Error('Task not found');
             }
             
-            const timerResult = await fetchTaskTimers(taskId);
-            const processedTimers = processTimerRecords(timerResult);
-            
+            const details = await loadTaskDetails(taskId);
             setSelectedTask(task);
-            setTimerRecords(processedTimers);
+
+            return {
+                task,
+                ...details
+            };
         } catch (err) {
             setError(err.message);
             console.error('Error selecting task:', err);
+            throw err;
         } finally {
             setLoading(false);
         }
-    }, [tasks]);
+    }, [tasks, loadTaskDetails]);
 
     /**
      * Creates a new task
@@ -279,6 +324,8 @@ export function useTask(projectId = null) {
         selectedTask,
         timer,
         timerRecords,
+        taskNotes,
+        taskLinks,
         stats,
         
         // Getters
@@ -303,6 +350,8 @@ export function useTask(projectId = null) {
         clearSelectedTask: () => {
             setSelectedTask(null);
             setTimerRecords([]);
+            setTaskNotes([]);
+            setTaskLinks([]);
             if (timer) {
                 handleTimerStop(true);
             }

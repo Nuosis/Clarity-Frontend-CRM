@@ -43,8 +43,10 @@ const MainContent = React.memo(function MainContent({
         return (
             <ErrorBoundary onReset={handlers.clearSelectedProject}>
                 <ProjectDetails
-                    project={selectedProject}
-                    tasks={tasks}
+                    project={{
+                        ...selectedProject,
+                        tasks: tasks
+                    }}
                     stats={taskStats}
                     onTaskSelect={handlers.handleTaskSelect}
                     onStatusChange={handlers.handleProjectStatusChange}
@@ -64,7 +66,10 @@ const MainContent = React.memo(function MainContent({
                     customer={selectedCustomer}
                     projects={projects}
                     stats={projectStats}
-                    onProjectSelect={handlers.handleProjectSelect}
+                    onProjectSelect={(project) => {
+                        console.log('Project select handler called in MainContent');
+                        handlers.onProjectSelect(project);
+                    }}
                     onProjectCreate={handlers.handleProjectCreate}
                 />
             </ErrorBoundary>

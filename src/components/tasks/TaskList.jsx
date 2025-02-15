@@ -1,6 +1,7 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
+import { useTask } from '../../hooks/useTask';
 
 // Memoized task item component
 const TaskItem = React.memo(function TaskItem({
@@ -10,6 +11,26 @@ const TaskItem = React.memo(function TaskItem({
     onStatusChange,
     onSelect
 }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const { handleTaskSelect, taskNotes, taskLinks, timerRecords } = useTask();
+
+    const toggleExpand = useCallback(async () => {
+        const newExpandedState = !isExpanded;
+        setIsExpanded(newExpandedState);
+        
+        if (newExpandedState) {
+            setIsLoading(true);
+            try {
+                await handleTaskSelect(task.id);
+            } catch (error) {
+                console.error('Error loading task details:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    }, [isExpanded, task.id, handleTaskSelect]);
+
     return (
         <div
             className={`
@@ -21,76 +42,141 @@ const TaskItem = React.memo(function TaskItem({
             `}
         >
             <div className="flex items-center justify-between">
-                <div className="flex-1">
-                    <h4 className="font-medium mb-1">{task.task}</h4>
-                    {task.type && (
-                        <span className={`
-                            text-sm px-2 py-1 rounded-full
-                            ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}
-                        `}>
-                            {task.type}
-                        </span>
-                    )}
+                <div className="flex items-center flex-1 space-x-3">
+                    <button
+                        onClick={toggleExpand}
+                        className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        aria-label={isExpanded ? 'Collapse task details' : 'Expand task details'}
+                    >
+                        <svg
+                            className={`w-4 h-4 transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''} ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                            />
+                        </svg>
+                    </button>
+                    <div>
+                        <h4 className="font-medium">{task.task}</h4>
+                        {task.type && (
+                            <span className={`
+                                text-sm px-2 py-1 rounded-full
+                                ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}
+                            `}>
+                                {task.type}
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                    <button
-                        onClick={() => onEdit(task)}
-                        className={`
-                            p-2 rounded-md text-sm
-                            ${darkMode 
-                                ? 'bg-gray-700 hover:bg-gray-600' 
-                                : 'bg-gray-100 hover:bg-gray-200'}
-                        `}
-                    >
-                        Edit
-                    </button>
-                    <button
-                        onClick={() => onStatusChange(task.id, !task.isCompleted)}
-                        className={`
-                            p-2 rounded-md text-sm
-                            ${darkMode 
-                                ? 'bg-gray-700 hover:bg-gray-600' 
-                                : 'bg-gray-100 hover:bg-gray-200'}
-                        `}
-                    >
-                        {task.isCompleted ? 'Reopen' : 'Complete'}
-                    </button>
+                <div className="flex items-center">
                     {!task.isCompleted && (
                         <button
                             onClick={() => onSelect(task)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
                         >
                             Start Timer
                         </button>
                     )}
                 </div>
             </div>
-            {(task.description || task.notes) && (
-                <div className="mt-2 space-y-2">
-                    {task.description && (
-                        <p className={`
+            <div className={`
+                overflow-hidden transition-all duration-200 ease-in-out
+                ${isExpanded ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'}
+            `}>
+                <div className="space-y-2">
+                    {isLoading ? (
+                        <div className={`
                             text-sm
-                            ${task.isCompleted
-                                ? (darkMode ? 'text-gray-500' : 'text-gray-400')
-                                : (darkMode ? 'text-gray-400' : 'text-gray-600')}
-                            ${task.isCompleted ? 'line-through' : ''}
+                            ${darkMode ? 'text-gray-400' : 'text-gray-600'}
                         `}>
-                            {task.description}
-                        </p>
-                    )}
-                    {task.notes && (
-                        <p className={`
-                            text-sm
-                            ${task.isCompleted
-                                ? (darkMode ? 'text-gray-500' : 'text-gray-400')
-                                : (darkMode ? 'text-gray-400' : 'text-gray-600')}
-                            ${task.isCompleted ? 'line-through' : ''}
-                        `}>
-                            <span className="font-medium">Notes:</span> {task.notes}
-                        </p>
+                            Loading task details...
+                        </div>
+                    ) : (
+                        <>
+                            {task.description && (
+                                <p className={`
+                                    text-sm
+                                    ${task.isCompleted
+                                        ? (darkMode ? 'text-gray-500' : 'text-gray-400')
+                                        : (darkMode ? 'text-gray-400' : 'text-gray-600')}
+                                    ${task.isCompleted ? 'line-through' : ''}
+                                `}>
+                                    {task.description}
+                                </p>
+                            )}
+                            {taskNotes?.length > 0 && (
+                                <div className="space-y-1">
+                                    <h5 className={`
+                                        text-sm font-medium
+                                        ${darkMode ? 'text-gray-400' : 'text-gray-600'}
+                                    `}>
+                                        Notes
+                                    </h5>
+                                    {taskNotes.map(note => (
+                                        <p key={note.id} className={`
+                                            text-sm pl-2 border-l-2
+                                            ${darkMode 
+                                                ? 'text-gray-400 border-gray-700' 
+                                                : 'text-gray-600 border-gray-200'}
+                                        `}>
+                                            {note.content}
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
+                            {taskLinks?.length > 0 && (
+                                <div className="space-y-1">
+                                    <h5 className={`
+                                        text-sm font-medium
+                                        ${darkMode ? 'text-gray-400' : 'text-gray-600'}
+                                    `}>
+                                        Links
+                                    </h5>
+                                    {taskLinks.map(link => (
+                                        <a
+                                            key={link.id}
+                                            href={link.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={`
+                                                text-sm block hover:underline
+                                                ${darkMode ? 'text-blue-400' : 'text-blue-600'}
+                                            `}
+                                        >
+                                            {link.url}
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
+                            {timerRecords?.length > 0 && (
+                                <div className={`
+                                    text-sm
+                                    ${darkMode ? 'text-gray-400' : 'text-gray-600'}
+                                `}>
+                                    <span className="font-medium">Time Records:</span> {timerRecords.length} entries
+                                </div>
+                            )}
+                            <button
+                                onClick={() => onStatusChange(task.id, !task.isCompleted)}
+                                className={`
+                                    p-2 rounded-md text-sm w-full text-left
+                                    ${darkMode 
+                                        ? 'bg-gray-700 hover:bg-gray-600' 
+                                        : 'bg-gray-100 hover:bg-gray-200'}
+                                `}
+                            >
+                                {task.isCompleted ? 'Reopen Task' : 'Mark as Complete'}
+                            </button>
+                        </>
                     )}
                 </div>
-            )}
+            </div>
         </div>
     );
 });
@@ -176,6 +262,7 @@ function TaskList({
     onTaskUpdate = () => {}
 }) {
     const { darkMode } = useTheme();
+    const [showCompleted, setShowCompleted] = useState(false);
 
     // Memoized task grouping
     const { activeTasks, completedTasks } = useMemo(() => {
@@ -209,7 +296,7 @@ function TaskList({
                 <h3 className="text-lg font-semibold">Tasks</h3>
                 <button
                     onClick={() => onTaskCreate({ projectId })}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
                 >
                     New Task
                 </button>
@@ -226,17 +313,33 @@ function TaskList({
                 emptyMessage="No active tasks"
             />
 
-            {/* Completed Tasks */}
+            {/* Completed Tasks Toggle */}
             {completedTasks.length > 0 && (
-                <TaskSection
-                    title="Completed Tasks"
-                    tasks={completedTasks}
-                    darkMode={darkMode}
-                    onEdit={handleEdit}
-                    onStatusChange={handleStatusChange}
-                    onSelect={handleSelect}
-                    emptyMessage="No completed tasks"
-                />
+                <div className="space-y-4">
+                    <button
+                        onClick={() => setShowCompleted(!showCompleted)}
+                        className={`
+                            text-sm px-3 py-1 rounded-md
+                            ${darkMode
+                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
+                        `}
+                    >
+                        {showCompleted ? 'Hide' : 'Show'} Completed Tasks ({completedTasks.length})
+                    </button>
+                    
+                    {showCompleted && (
+                        <TaskSection
+                            title="Completed Tasks"
+                            tasks={completedTasks}
+                            darkMode={darkMode}
+                            onEdit={handleEdit}
+                            onStatusChange={handleStatusChange}
+                            onSelect={handleSelect}
+                            emptyMessage="No completed tasks"
+                        />
+                    )}
+                </div>
             )}
         </div>
     );

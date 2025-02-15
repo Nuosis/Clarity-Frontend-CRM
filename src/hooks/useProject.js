@@ -84,17 +84,25 @@ export function useProject(customerId = null) {
      */
     const handleProjectSelect = useCallback(async (projectId) => {
         try {
+            console.log('Starting project selection for:', projectId);
             setLoading(true);
             setError(null);
             
+            console.log('Fetching project data...');
             const projectData = await fetchAllProjectData(projectId);
-            const [processedProject] = processProjectData({ 
-                response: { 
-                    data: [{ fieldData: projectData }] 
+            console.log('Project data received:', projectData);
+            
+            console.log('Processing project data...');
+            const [processedProject] = processProjectData({
+                response: {
+                    data: [{ fieldData: projectData }]
                 }
             }, projectData);
+            console.log('Processed project:', processedProject);
             
+            console.log('Setting selected project...');
             setSelectedProject(processedProject);
+            console.log('Selected project set successfully');
         } catch (err) {
             setError(err.message);
             console.error('Error selecting project:', err);

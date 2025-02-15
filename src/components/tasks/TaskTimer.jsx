@@ -47,7 +47,7 @@ const TimerControls = React.memo(function TimerControls({
                     {isPaused ? (
                         <button
                             onClick={onResume}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                            className="px-4 py-2 bg-bg-[#004967] text-white rounded-md hover:bg-blue-700"
                         >
                             Resume
                         </button>
@@ -260,7 +260,7 @@ function TaskTimer({
                             </button>
                             <button
                                 onClick={handleStopConfirm}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                className="px-4 py-2 bg-bg-[#004967] text-white rounded-md hover:bg-blue-700"
                             >
                                 Save & Stop
                             </button>

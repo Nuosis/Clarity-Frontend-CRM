@@ -104,9 +104,12 @@ function AppContent() {
         },
 
         onProjectSelect: async (project) => {
+            console.log('Project selected:', project);
             clearSelectedTask();
-            await handleProjectSelect(project.id);
+            const result = await handleProjectSelect(project.id);
+            console.log('Project selection result:', result);
             setSelectedProject(project);
+            console.log('Selected project set:', project);
         },
 
         onTaskSelect: (task) => {
@@ -159,7 +162,7 @@ function AppContent() {
     if (!fmReady) {
         return (
             <div className="text-center p-4">
-                <div className="text-blue-600 mb-2">{fmStatus}</div>
+                <div className="text-bg-[#004967] mb-2">{fmStatus}</div>
                 {fmError && (
                     <div className="text-red-600">
                         Connection Error: {fmError}

@@ -218,7 +218,7 @@ function TaskForm({
                         </button>
                         <button
                             type="submit"
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                            className="px-4 py-2 bg-bg-[#004967] text-white rounded-md hover:bg-blue-700"
                         >
                             {task ? 'Update Task' : 'Create Task'}
                         </button>

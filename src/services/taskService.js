@@ -44,6 +44,44 @@ export function processTimerRecords(timerRecords) {
 }
 
 /**
+ * Processes notes for a task
+ * @param {Object} data - Raw notes data
+ * @returns {Array} Processed notes
+ */
+export function processTaskNotes(data) {
+    if (!data?.response?.data) {
+        return [];
+    }
+
+    return data.response.data.map(note => ({
+        id: note.fieldData.__ID,
+        content: note.fieldData.note,
+        type: note.fieldData.type || 'general',
+        createdAt: note.fieldData['~CreationTimestamp'],
+        modifiedAt: note.fieldData['~ModificationTimestamp'],
+        createdBy: note.fieldData['~CreatedBy']
+    }));
+}
+
+/**
+ * Processes links for a task
+ * @param {Object} data - Raw links data
+ * @returns {Array} Processed links
+ */
+export function processTaskLinks(data) {
+    if (!data?.response?.data) {
+        return [];
+    }
+
+    return data.response.data.map(link => ({
+        id: link.fieldData.__ID,
+        url: link.fieldData.link,
+        createdAt: link.fieldData['~creationTimestamp'],
+        modifiedAt: link.fieldData['~modificationTimestamp']
+    }));
+}
+
+/**
  * Calculates total time spent on a task
  * @param {Array} timerRecords - Processed timer records
  * @returns {number} Total minutes spent
@@ -98,9 +136,11 @@ export function validateTaskData(data) {
  * Formats task data for display
  * @param {Object} task - Task record
  * @param {Array} timerRecords - Associated timer records
+ * @param {Array} notes - Associated notes
+ * @param {Array} links - Associated links
  * @returns {Object} Formatted task data
  */
-export function formatTaskForDisplay(task, timerRecords = []) {
+export function formatTaskForDisplay(task, timerRecords = [], notes = [], links = []) {
     const totalTime = calculateTotalTaskTime(timerRecords);
     
     return {
@@ -111,7 +151,8 @@ export function formatTaskForDisplay(task, timerRecords = []) {
         totalTime: formatDuration(totalTime),
         created: new Date(task.createdAt).toLocaleDateString(),
         modified: new Date(task.modifiedAt).toLocaleDateString(),
-        notes: task.notes || 'No notes',
+        notes: notes || [],
+        links: links || [],
         timerCount: timerRecords.length
     };
 }

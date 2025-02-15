@@ -151,7 +151,7 @@ function ProjectDetails({
     ), [darkMode]);
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 h-[calc(100vh)] overflow-y-auto">
             {/* Project Header */}
             <div className={`
                 border-b pb-4
@@ -193,10 +193,67 @@ function ProjectDetails({
                 onTaskUpdate={onTaskUpdate}
             />
 
-            {/* Project Objectives */}
+            {/* Notes Section */}
             <div>
-                <h3 className="text-lg font-semibold mb-4">Objectives</h3>
-                {project.objectives?.length > 0 ? (
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Notes</h3>
+                    <button
+                        onClick={() => console.log('Add new note')}
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                    >
+                        New Note
+                    </button>
+                </div>
+                {project.notes?.length > 0 && (
+                    <div className="space-y-4">
+                        {project.notes.map(note => (
+                            <div
+                                key={note.id}
+                                className={`
+                                    p-4 rounded-lg border
+                                    ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+                                `}
+                            >
+                                <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{note.content}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Links Section */}
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Links</h3>
+                    <button
+                        onClick={() => console.log('Add new link')}
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                    >
+                        New Link
+                    </button>
+                </div>
+                {project.links?.length > 0 && (
+                    <ResourceGrid
+                        title="Links"
+                        items={project.links}
+                        renderItem={renderLink}
+                        darkMode={darkMode}
+                    />
+                )}
+            </div>
+
+            {/* Objectives Section */}
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Objectives</h3>
+                    <button
+                        onClick={() => console.log('Add new objective')}
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                    >
+                        New Objective
+                    </button>
+                </div>
+                {project.objectives?.length > 0 && (
                     <div className="space-y-4">
                         {project.objectives.map(objective => (
                             <Objective
@@ -206,30 +263,9 @@ function ProjectDetails({
                             />
                         ))}
                     </div>
-                ) : (
-                    <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        No objectives defined for this project
-                    </div>
                 )}
             </div>
 
-            {/* Project Resources */}
-            <div className="grid grid-cols-2 gap-6">
-                <ResourceGrid
-                    title="Links"
-                    items={project.links}
-                    renderItem={renderLink}
-                    darkMode={darkMode}
-                    emptyMessage="No links available"
-                />
-                <ResourceGrid
-                    title="Images"
-                    items={project.images}
-                    renderItem={renderImage}
-                    darkMode={darkMode}
-                    emptyMessage="No images available"
-                />
-            </div>
         </div>
     );
 }

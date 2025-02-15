@@ -65,7 +65,7 @@ class ErrorBoundaryFallback extends React.Component {
                             )}
                             <button
                                 onClick={this.handleRetry}
-                                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                                className="bg-blue-500 hover:bg-bg-[#004967] text-white font-semibold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                             >
                                 Try Again
                             </button>

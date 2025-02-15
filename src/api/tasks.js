@@ -197,3 +197,41 @@ export async function fetchActiveProjectTasks(projectId) {
         return await fetchDataFromFileMaker(params);
     });
 }
+
+/**
+ * Fetches notes for a task
+ * @param {string} taskId - The task ID
+ * @returns {Promise<Array>} Array of task notes
+ */
+export async function fetchTaskNotes(taskId) {
+    validateParams({ taskId }, ['taskId']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.NOTES,
+            action: Actions.READ,
+            query: [{ "_fkID": taskId }]
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}
+
+/**
+ * Fetches links for a task
+ * @param {string} taskId - The task ID
+ * @returns {Promise<Array>} Array of task links
+ */
+export async function fetchTaskLinks(taskId) {
+    validateParams({ taskId }, ['taskId']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.LINKS,
+            action: Actions.READ,
+            query: [{ "_fkID": taskId }]
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}
