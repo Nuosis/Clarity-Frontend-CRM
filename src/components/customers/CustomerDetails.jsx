@@ -2,6 +2,7 @@ import React, { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useAppStateOperations } from '../../context/AppStateContext';
+import { useProject } from '../../hooks/useProject';
 
 // Memoized project card component
 const ProjectCard = React.memo(function ProjectCard({
@@ -110,6 +111,30 @@ function CustomerDetails({
 }) {
     const { darkMode } = useTheme();
     const { setLoading } = useAppStateOperations();
+    const { projectRecords } = useProject();
+    // Debug logging for project records and calculations
+    console.log('Project records in CustomerDetails:', {
+        records: projectRecords,
+        count: projectRecords?.length ?? 0,
+        sample: projectRecords?.[0] ?? null,
+        relevantProjects: projects.map(p => p.id)
+    });
+
+    // Debug unbilled hours calculation
+    const unbilledRecords = projectRecords ? projectRecords.filter(record =>
+        record.fieldData.f_billed === "0" &&
+        projects.some(project => project.id === record.fieldData._projectID)
+    ) : [];
+    
+    console.log('Unbilled records:', {
+        count: unbilledRecords.length,
+        records: unbilledRecords,
+        totalHours: unbilledRecords.length > 0
+            ? unbilledRecords.reduce((total, record) =>
+                total + (parseFloat(record.fieldData.Billable_Time_Rounded) || 0), 0
+              ).toFixed(1)
+            : "0.0"
+    });
 
     // Memoized project grouping with error handling
     const { activeProjects, closedProjects, groupingError } = useMemo(() => {
@@ -204,10 +229,18 @@ function CustomerDetails({
                             ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
                         `}>
                             <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                Average Completion
+                                Unbilled Hours
                             </div>
                             <div className="text-2xl font-semibold mt-1">
-                                {stats.averageCompletion}%
+                                {projectRecords
+                                    ? projectRecords
+                                        .filter(record =>
+                                            record.fieldData.f_billed === "0" &&
+                                            projects.some(project => project.id === record.fieldData._projectID)
+                                        )
+                                        .reduce((total, record) => total + (parseFloat(record.fieldData.Billable_Time_Rounded) || 0), 0)
+                                        .toFixed(1)
+                                    : "- hrs"}
                             </div>
                         </div>
                     </div>
@@ -295,8 +328,7 @@ CustomerDetails.propTypes = {
     stats: PropTypes.shape({
         total: PropTypes.number.isRequired,
         open: PropTypes.number.isRequired,
-        closed: PropTypes.number.isRequired,
-        averageCompletion: PropTypes.number.isRequired
+        closed: PropTypes.number.isRequired
     }),
     onProjectSelect: PropTypes.func,
     onProjectCreate: PropTypes.func

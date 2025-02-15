@@ -113,17 +113,3 @@ export async function fetchActiveCustomers() {
         return await fetchDataFromFileMaker(params);
     });
 }
-
-/**
- * Fetches customer context (user permissions, etc.)
- * @returns {Promise<Object>} Customer context data
- */
-export async function fetchCustomerContext() {
-    return handleFileMakerOperation(async () => {
-        const params = {
-            action: "returnContext"
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
-}

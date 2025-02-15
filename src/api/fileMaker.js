@@ -149,7 +149,7 @@ export const Layouts = {
     CUSTOMERS: 'devCustomers',
     PROJECTS: 'devProjects',
     TASKS: 'devTasks',
-    RECORDS: 'devRecords',
+    RECORDS: 'dapiRecords',
     NOTES: 'devNotes',
     LINKS: 'devLinks',
     IMAGES: 'devImages',

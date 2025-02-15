@@ -35,7 +35,7 @@ export function useProject(customerId = null) {
         steps: null
     });
     const [projectNotes, setProjectNotes] = useState([]);
-    const [projectRecords, setProjectRecords] = useState([]);
+    const [projectRecords, setProjectRecords] = useState(null);
     const recordsFetched = useRef(false);
 
     // Load records on mount
@@ -59,7 +59,13 @@ export function useProject(customerId = null) {
             
             // Use queue manager to handle the request
             recordQueueManager.enqueue(params, (data) => {
+                console.log('Project records received in useProject:', {
+                    count: data?.length || 0,
+                    sample: data?.[0],
+                    data
+                });
                 setProjectRecords(data);
+                console.log('State updated with project records');
             });
         }
 
@@ -140,6 +146,14 @@ export function useProject(customerId = null) {
             }
             
             // Filter related data for this specific project
+            const filteredRecords = {
+                response: {
+                    data: projectRecords?.filter(record =>
+                        record.fieldData?._projectID === projectId
+                    ) || []
+                }
+            };
+
             const projectRelatedData = {
                 images: relatedData.images?.response?.data?.filter(
                     img => img.fieldData._projectID === projectId
@@ -150,7 +164,8 @@ export function useProject(customerId = null) {
                 objectives: relatedData.objectives?.response?.data?.filter(
                     obj => obj.fieldData._projectID === projectId
                 ) || [],
-                steps: relatedData.steps?.response?.data || []
+                steps: relatedData.steps?.response?.data || [],
+                records: filteredRecords
             };
 
             // Fetch project notes
