@@ -297,8 +297,107 @@ export function calculateProjectStats(projects) {
         open: grouped.open.length,
         closed: grouped.closed.length,
         averageCompletion: Math.round(
-            projects.reduce((sum, project) => sum + calculateProjectCompletion(project), 0) / 
+            projects.reduce((sum, project) => sum + calculateProjectCompletion(project), 0) /
             projects.length
         ) || 0
     };
+}
+
+/**
+ * Calculates customer-specific project statistics
+ * @param {Array} projects - Array of customer's projects
+ * @param {Array} records - Array of time records
+ * @returns {Object} Customer project statistics
+ */
+export function calculateCustomerStats(projects, records) {
+    if (!projects || !records) {
+        return {
+            total: 0,
+            open: 0,
+            closed: 0,
+            unbilledHours: 0
+        };
+    }
+
+    // Calculate project stats
+    const projectStats = calculateProjectStats(projects);
+
+    // Calculate total unbilled hours across all customer projects
+    const unbilledHours = records
+        .filter(record => 
+            record.fieldData.f_billed === "0" &&
+            projects.some(project => project.id === record.fieldData._projectID)
+        )
+        .reduce((total, record) => 
+            total + (parseFloat(record.fieldData.Billable_Time_Rounded) || 0), 0
+        );
+
+    return {
+        ...projectStats,
+        unbilledHours: Math.round(unbilledHours * 10) / 10 // Round to 1 decimal place
+    };
+}
+
+/**
+ * Calculates detailed statistics for a single project
+ * @param {Object} project - Project data
+ * @param {Array} records - Project time records
+ * @returns {Object} Project statistics
+ */
+// Calculate total hours from records
+function calculateRecordsTotalHours(records) {
+    if (!records) return "0.0";
+    return records.reduce((total, record) =>
+        total + (parseFloat(record.fieldData.Billable_Time_Rounded) || 0), 0
+    ).toFixed(1);
+}
+
+// Calculate unbilled hours from records
+export function calculateRecordsUnbilledHours(records) {
+    if (!records) return "0.0";
+    return records
+        .filter(record => record.fieldData.f_billed === "0")
+        .reduce((total, record) =>
+            total + (parseFloat(record.fieldData.Billable_Time_Rounded) || 0), 0
+        ).toFixed(1);
+}
+
+// Calculate detailed stats for a single project
+export function calculateProjectDetailStats(project, records) {
+    if (!project || !records) {
+        return {
+            totalHours: "0.0",
+            unbilledHours: "0.0",
+            completion: 0
+        };
+    }
+
+    const projectRecords = records.filter(r =>
+        r.fieldData._projectID === project.id
+    );
+    
+    return {
+        totalHours: calculateRecordsTotalHours(projectRecords),
+        unbilledHours: calculateRecordsUnbilledHours(projectRecords),
+        completion: calculateProjectCompletion(project)
+    };
+}
+
+/**
+ * Gets a fully processed project with all related data
+ * @param {Object} project - Base project data
+ * @param {Object} relatedData - Related project data (images, links, records, etc.)
+ * @returns {Object} Processed project with all data
+ */
+export function getProcessedProject(project, relatedData) {
+    return processProjectData({
+        response: {
+            data: [{
+                fieldData: {
+                    ...project,
+                    __ID: project.id
+                }
+            }]
+        }
+    }, relatedData)[0];
 }

@@ -26,11 +26,9 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 
 // Wrap the app with strict mode and providers
 root.render(
-    <React.StrictMode>
-        <AppStateProvider>
-            <ErrorBoundary>
-                <App />
-            </ErrorBoundary>
-        </AppStateProvider>
-    </React.StrictMode>
+    <AppStateProvider>
+        <ErrorBoundary>
+            <App />
+        </ErrorBoundary>
+    </AppStateProvider>
 );

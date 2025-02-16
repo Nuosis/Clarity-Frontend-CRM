@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useAppStateOperations } from '../../context/AppStateContext';
 import { useProject } from '../../hooks/useProject';
+import { calculateRecordsUnbilledHours } from '../../services/projectService';
 
 // Memoized project card component
 const ProjectCard = React.memo(function ProjectCard({
@@ -105,36 +106,24 @@ ProjectCard.propTypes = {
 function CustomerDetails({
     customer,
     projects = [],
-    stats = null,
     onProjectSelect = () => {},
     onProjectCreate = () => {}
 }) {
     const { darkMode } = useTheme();
     const { setLoading } = useAppStateOperations();
     const { projectRecords } = useProject();
-    // Debug logging for project records and calculations
-    console.log('Project records in CustomerDetails:', {
-        records: projectRecords,
-        count: projectRecords?.length ?? 0,
-        sample: projectRecords?.[0] ?? null,
-        relevantProjects: projects.map(p => p.id)
-    });
 
-    // Debug unbilled hours calculation
-    const unbilledRecords = projectRecords ? projectRecords.filter(record =>
-        record.fieldData.f_billed === "0" &&
-        projects.some(project => project.id === record.fieldData._projectID)
-    ) : [];
-    
-    console.log('Unbilled records:', {
-        count: unbilledRecords.length,
-        records: unbilledRecords,
-        totalHours: unbilledRecords.length > 0
-            ? unbilledRecords.reduce((total, record) =>
-                total + (parseFloat(record.fieldData.Billable_Time_Rounded) || 0), 0
-              ).toFixed(1)
-            : "0.0"
-    });
+    // Calculate stats for display
+    const stats = useMemo(() => {
+        if (!projects || !projectRecords) return null;
+        
+        const activeProjects = projects.filter(p => p.status === 'Open');
+        return {
+            total: projects.length,
+            open: activeProjects.length,
+            unbilledHours: calculateRecordsUnbilledHours(projectRecords)
+        };
+    }, [projects, projectRecords]);
 
     // Memoized project grouping with error handling
     const { activeProjects, closedProjects, groupingError } = useMemo(() => {
@@ -232,15 +221,7 @@ function CustomerDetails({
                                 Unbilled Hours
                             </div>
                             <div className="text-2xl font-semibold mt-1">
-                                {projectRecords
-                                    ? projectRecords
-                                        .filter(record =>
-                                            record.fieldData.f_billed === "0" &&
-                                            projects.some(project => project.id === record.fieldData._projectID)
-                                        )
-                                        .reduce((total, record) => total + (parseFloat(record.fieldData.Billable_Time_Rounded) || 0), 0)
-                                        .toFixed(1)
-                                    : "- hrs"}
+                                {stats.unbilledHours} hrs
                             </div>
                         </div>
                     </div>
@@ -325,11 +306,6 @@ CustomerDetails.propTypes = {
             tasks: PropTypes.array
         })
     ),
-    stats: PropTypes.shape({
-        total: PropTypes.number.isRequired,
-        open: PropTypes.number.isRequired,
-        closed: PropTypes.number.isRequired
-    }),
     onProjectSelect: PropTypes.func,
     onProjectCreate: PropTypes.func
 };

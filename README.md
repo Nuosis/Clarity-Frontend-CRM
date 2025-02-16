@@ -72,6 +72,37 @@ src/
 ├── reference/                  # Documentation
 └── index.jsx                  # Application entry
 ```
+## Project Flow
+
+### App/AppContent (Top Level):
+    Manages global state via hooks (useCustomer, useProject, useTask)
+    Coordinates between different parts of the app
+    Handles initialization and error boundaries
+    Passes down processed data and handlers
+
+### MainContent (Router/Container):
+    Acts as a router between different views
+    Doesn't manage state directly
+    Passes appropriate data and handlers to child components
+    Handles conditional rendering based on selected items
+
+### CustomerDetails/ProjectDetails (View Components):
+    Focus on displaying data and handling user interactions
+    Use hooks for component-specific state/processing
+    Rely on services for data processing
+    Don't know about app-level state management
+
+### The flow follows a clear hierarchy:
+    App manages global state through hooks
+    MainContent routes to appropriate views
+    Detail components handle their specific UI concerns
+
+### Each layer has a clear responsibility:
+    App → State Management
+    MainContent → Routing/Layout
+    Detail Components → UI/Display
+    Hooks → Data/State Coordination
+    Services → Business Logic/Data Processing
 
 ## Usage
 

@@ -1,6 +1,8 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
+import { useProject } from '../../hooks/useProject';
+import { getProcessedProject, calculateProjectDetailStats } from '../../services/projectService';
 import TaskList from '../tasks/TaskList';
 
 // Memoized objective component
@@ -97,7 +99,8 @@ ResourceGrid.propTypes = {
 };
 
 function ProjectDetails({
-    project,
+    projectId,
+    tasks = [],
     onTaskSelect = () => {},
     onStatusChange = () => {},
     onTaskCreate = () => {},
@@ -105,6 +108,57 @@ function ProjectDetails({
     onTaskStatusChange = () => {}
 }) {
     const { darkMode } = useTheme();
+    const {
+        selectedProject,
+        projectRecords,
+        relatedData,
+        handleProjectSelect
+    } = useProject();
+
+    // Select project when component mounts
+    useEffect(() => {
+        if (projectId) {
+            handleProjectSelect(projectId);
+        }
+    }, [projectId, handleProjectSelect]);
+
+    const processedProject = useMemo(() => {
+        if (!selectedProject) return null;
+
+        // Filter records for this project
+        const filteredRecords = {
+            response: {
+                data: projectRecords?.filter(record =>
+                    record.fieldData?._projectID === selectedProject.id
+                ) || []
+            }
+        };
+
+        // Filter related data for this project
+        const projectRelatedData = {
+            images: relatedData.images?.response?.data?.filter(
+                img => img.fieldData._projectID === selectedProject.id
+            ) || [],
+            links: relatedData.links?.response?.data?.filter(
+                link => link.fieldData._projectID === selectedProject.id
+            ) || [],
+            objectives: relatedData.objectives?.response?.data?.filter(
+                obj => obj.fieldData._projectID === selectedProject.id
+            ) || [],
+            steps: relatedData.steps?.response?.data || [],
+            records: filteredRecords
+        };
+
+        return getProcessedProject(selectedProject, projectRelatedData);
+    }, [selectedProject, projectRecords, relatedData]);
+
+    if (!processedProject) return null;
+
+    // Calculate project stats using service
+    const stats = useMemo(() => {
+        if (!processedProject || !processedProject.records) return null;
+        return calculateProjectDetailStats(processedProject, processedProject.records);
+    }, [processedProject]);
 
     const statusColors = {
         Open: 'text-green-600 dark:text-green-400',
@@ -113,8 +167,8 @@ function ProjectDetails({
 
     // Memoized handlers
     const handleStatusChange = useCallback((e) => {
-        onStatusChange(project.id, e.target.value);
-    }, [project.id, onStatusChange]);
+        onStatusChange(processedProject.id, e.target.value);
+    }, [processedProject.id, onStatusChange]);
 
     // Memoized renderers
     const renderLink = useCallback((link) => (
@@ -159,16 +213,16 @@ function ProjectDetails({
             `}>
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold">
-                        {project.projectName}
+                        {processedProject.projectName}
                     </h2>
                     <select
-                        value={project.status}
+                        value={processedProject.status}
                         onChange={handleStatusChange}
                         className={`
                             px-3 py-1 rounded-md text-sm font-medium
                             ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
                             border
-                            ${statusColors[project.status]}
+                            ${statusColors[processedProject.status]}
                         `}
                     >
                         <option value="Open">Open</option>
@@ -176,10 +230,10 @@ function ProjectDetails({
                     </select>
                 </div>
                 <div className={`mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {project.estOfTime && (
-                        <span className="mr-4">Estimated Time: {project.estOfTime}</span>
+                    {processedProject.estOfTime && (
+                        <span className="mr-4">Estimated Time: {processedProject.estOfTime}</span>
                     )}
-                    <span>Created: {new Date(project.createdAt).toLocaleDateString()}</span>
+                    <span>Created: {new Date(processedProject.createdAt).toLocaleDateString()}</span>
                 </div>
 
                 <div className="mt-4 grid grid-cols-3 gap-4">
@@ -191,7 +245,7 @@ function ProjectDetails({
                             Total Hours
                         </div>
                         <div className="text-2xl font-semibold mt-1">
-                            {project.stats.totalHours}
+                            {stats?.totalHours.toFixed(1)}
                         </div>
                     </div>
                     <div className={`
@@ -202,7 +256,7 @@ function ProjectDetails({
                             Unbilled Hours
                         </div>
                         <div className="text-2xl font-semibold mt-1">
-                            {project.stats.unbilledHours}
+                            {stats?.unbilledHours.toFixed(1)}
                         </div>
                     </div>
                     <div className={`
@@ -213,10 +267,7 @@ function ProjectDetails({
                             Completion
                         </div>
                         <div className="text-2xl font-semibold mt-1">
-                            {Math.round(project.objectives.reduce(
-                                (total, obj) => total + (obj.completed ? 1 : 0),
-                                0
-                            ) / project.objectives.length * 100) || 0}%
+                            {stats?.completion || 0}%
                         </div>
                     </div>
                 </div>
@@ -224,8 +275,8 @@ function ProjectDetails({
 
             {/* Tasks Section */}
             <TaskList
-                tasks={project.tasks || []}
-                projectId={project.id}
+                tasks={tasks}
+                projectId={processedProject.id}
                 onTaskSelect={onTaskSelect}
                 onTaskStatusChange={onTaskStatusChange}
                 onTaskCreate={onTaskCreate}
@@ -243,9 +294,9 @@ function ProjectDetails({
                         New Note
                     </button>
                 </div>
-                {project.notes?.length > 0 && (
+                {processedProject.notes?.length > 0 && (
                     <div className="space-y-4">
-                        {project.notes.map(note => (
+                        {processedProject.notes.map(note => (
                             <div
                                 key={note.id}
                                 className={`
@@ -271,10 +322,10 @@ function ProjectDetails({
                         New Link
                     </button>
                 </div>
-                {project.links?.length > 0 && (
+                {processedProject.links?.length > 0 && (
                     <ResourceGrid
                         title="Links"
-                        items={project.links}
+                        items={processedProject.links}
                         renderItem={renderLink}
                         darkMode={darkMode}
                     />
@@ -292,9 +343,9 @@ function ProjectDetails({
                         New Objective
                     </button>
                 </div>
-                {project.objectives?.length > 0 && (
+                {processedProject.objectives?.length > 0 && (
                     <div className="space-y-4">
-                        {project.objectives.map(objective => (
+                        {processedProject.objectives.map(objective => (
                             <Objective
                                 key={objective.id}
                                 objective={objective}
@@ -310,37 +361,8 @@ function ProjectDetails({
 }
 
 ProjectDetails.propTypes = {
-    project: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        projectName: PropTypes.string.isRequired,
-        status: PropTypes.oneOf(['Open', 'Closed']).isRequired,
-        estOfTime: PropTypes.string,
-        createdAt: PropTypes.string.isRequired,
-        tasks: PropTypes.array,
-        objectives: PropTypes.arrayOf(PropTypes.shape({
-            id: PropTypes.string.isRequired,
-            objective: PropTypes.string.isRequired,
-            steps: PropTypes.arrayOf(PropTypes.shape({
-                id: PropTypes.string.isRequired,
-                step: PropTypes.string.isRequired,
-                completed: PropTypes.bool.isRequired
-            })).isRequired
-        })),
-        links: PropTypes.arrayOf(PropTypes.shape({
-            id: PropTypes.string.isRequired,
-            url: PropTypes.string.isRequired,
-            title: PropTypes.string
-        })),
-        images: PropTypes.arrayOf(PropTypes.shape({
-            id: PropTypes.string.isRequired,
-            url: PropTypes.string.isRequired,
-            title: PropTypes.string
-        })),
-        stats: PropTypes.shape({
-            totalHours: PropTypes.number.isRequired,
-            unbilledHours: PropTypes.number.isRequired
-        }).isRequired
-    }).isRequired,
+    projectId: PropTypes.string.isRequired,
+    tasks: PropTypes.arrayOf(PropTypes.object),
     onTaskSelect: PropTypes.func,
     onStatusChange: PropTypes.func,
     onTaskCreate: PropTypes.func,

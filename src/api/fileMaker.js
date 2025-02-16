@@ -1,10 +1,13 @@
 import FMGofer from 'fm-gofer';
 
 // Initialize web viewer communication
+let bridgeInitialized = false;
+
 if (typeof window !== "undefined") {
     window.addEventListener('message', (event) => {
-        if (event.data.type === 'FM_BRIDGE_READY') {
+        if (event.data.type === 'FM_BRIDGE_READY' && !bridgeInitialized) {
             window.FileMaker = event.data.api;
+            bridgeInitialized = true;
             console.log('FileMaker web viewer bridge initialized');
         }
     });
@@ -58,7 +61,11 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
             const param = JSON.stringify(formattedParams);
             const layout = formattedParams.layout;
             
-            if (isAsync) {
+            // Special case for returnRecords calls
+            if (formattedParams.callBackName === "returnRecords") {
+                FileMaker.PerformScript("JS * Fetch Data", param);
+                resolve({ status: "pending" }); // Resolve immediately, actual data comes through callback
+            } else if (isAsync) {
                 // Use FMGofer for async operations (default)
                 FMGofer.PerformScript("JS * Fetch Data", param)
                     .then(result => handleScriptResult(layout, result, resolve, reject))

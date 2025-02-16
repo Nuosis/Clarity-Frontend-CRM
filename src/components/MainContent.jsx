@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import TaskTimer from './tasks/TaskTimer';
 import ProjectDetails from './projects/ProjectDetails';
 import CustomerDetails from './customers/CustomerDetails';
 import ErrorBoundary from './ErrorBoundary';
 import Loading from './loading/Loading';
+import { useProject } from '../hooks/useProject';
 const MainContent = React.memo(function MainContent({
     selectedTask = null,
     selectedProject = null,
@@ -17,6 +18,14 @@ const MainContent = React.memo(function MainContent({
     loading = false,
     handlers
 }) {
+    const { handleProjectSelect } = useProject();
+
+    // Memoized project selection handler
+    const handleProjectSelection = useCallback((project) => {
+        console.log('Project selection handler called in MainContent');
+        handleProjectSelect(project.id);
+        handlers.onProjectSelect(project);
+    }, [handleProjectSelect, handlers.onProjectSelect]);
     if (selectedTask) {
         return (
             <ErrorBoundary onReset={handlers.clearSelectedTask}>
@@ -47,10 +56,8 @@ const MainContent = React.memo(function MainContent({
         return (
             <ErrorBoundary onReset={handlers.clearSelectedProject}>
                 <ProjectDetails
-                    project={{
-                        ...selectedProject,
-                        tasks: tasks
-                    }}
+                    projectId={selectedProject.id}
+                    tasks={tasks}
                     stats={taskStats}
                     onTaskSelect={handlers.handleTaskSelect}
                     onStatusChange={handlers.handleProjectStatusChange}
@@ -70,10 +77,7 @@ const MainContent = React.memo(function MainContent({
                     customer={selectedCustomer}
                     projects={projects}
                     stats={projectStats}
-                    onProjectSelect={(project) => {
-                        console.log('Project select handler called in MainContent');
-                        handlers.onProjectSelect(project);
-                    }}
+                    onProjectSelect={handleProjectSelection}
                     onProjectCreate={handlers.handleProjectCreate}
                 />
             </ErrorBoundary>
@@ -131,9 +135,9 @@ MainContent.propTypes = {
         Name: PropTypes.string.isRequired,
         Email: PropTypes.string,
         Phone: PropTypes.string,
-        isActive: PropTypes.bool.isRequired,
-        createdAt: PropTypes.string.isRequired,
-        modifiedAt: PropTypes.string.isRequired
+        isActive: PropTypes.bool,
+        createdAt: PropTypes.string,
+        modifiedAt: PropTypes.string
     }),
     
     // Lists

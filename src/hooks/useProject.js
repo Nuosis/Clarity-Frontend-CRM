@@ -27,15 +27,13 @@ export function useProject(customerId = null) {
     const [error, setError] = useState(null);
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
-    const [stats, setStats] = useState(null);
+    const [projectRecords, setProjectRecords] = useState(null);
     const [relatedData, setRelatedData] = useState({
         images: null,
         links: null,
         objectives: null,
         steps: null
     });
-    const [projectNotes, setProjectNotes] = useState([]);
-    const [projectRecords, setProjectRecords] = useState(null);
     const recordsFetched = useRef(false);
 
     // Load records on mount
@@ -68,10 +66,6 @@ export function useProject(customerId = null) {
                 console.log('State updated with project records');
             });
         }
-
-        return () => {
-            recordsFetched.current = false;
-        };
     }, []);
 
     // Load projects when customerId changes
@@ -81,12 +75,6 @@ export function useProject(customerId = null) {
         }
     }, [customerId]);
 
-    // Update stats when projects change
-    useEffect(() => {
-        if (projects.length > 0) {
-            setStats(calculateProjectStats(projects));
-        }
-    }, [projects]);
 
     /**
      * Loads projects for a customer
@@ -133,7 +121,7 @@ export function useProject(customerId = null) {
     /**
      * Selects a project and loads all its data
      */
-    const handleProjectSelect = useCallback(async (projectId) => {
+    const handleProjectSelect = useCallback((projectId) => {
         try {
             setLoading(true);
             setError(null);
@@ -145,49 +133,14 @@ export function useProject(customerId = null) {
                 throw new Error('Project not found in cached data');
             }
             
-            // Filter related data for this specific project
-            const filteredRecords = {
-                response: {
-                    data: projectRecords?.filter(record =>
-                        record.fieldData?._projectID === projectId
-                    ) || []
-                }
-            };
-
-            const projectRelatedData = {
-                images: relatedData.images?.response?.data?.filter(
-                    img => img.fieldData._projectID === projectId
-                ) || [],
-                links: relatedData.links?.response?.data?.filter(
-                    link => link.fieldData._projectID === projectId
-                ) || [],
-                objectives: relatedData.objectives?.response?.data?.filter(
-                    obj => obj.fieldData._projectID === projectId
-                ) || [],
-                steps: relatedData.steps?.response?.data || [],
-                records: filteredRecords
-            };
-
-            // Fetch project notes
-            const notesResult = await fetchProjectNotes(projectId);
-            const notes = notesResult.response?.data || [];
-            setProjectNotes(notes);
-
-            // Process the project with its filtered related data
-            const [processedProject] = processProjectData({
-                response: {
-                    data: [{ fieldData: project }]
-                }
-            }, projectRelatedData);
-            
-            setSelectedProject(processedProject);
+            setSelectedProject(project);
         } catch (err) {
             setError(err.message);
             console.error('Error selecting project:', err);
         } finally {
             setLoading(false);
         }
-    }, [projects, relatedData]);
+    }, [projects]);
 
     /**
      * Creates a new project
@@ -245,7 +198,7 @@ export function useProject(customerId = null) {
             
             // Update selected project if it's the one being updated
             if (selectedProject?.id === projectId) {
-                setSelectedProject(prev => ({ ...prev, ...projectData }));
+                setSelectedProject(prevProject => ({ ...prevProject, ...projectData }));
             }
             
             return result;
@@ -279,7 +232,7 @@ export function useProject(customerId = null) {
             
             // Update selected project if it's the one being updated
             if (selectedProject?.id === projectId) {
-                setSelectedProject(prev => ({ ...prev, status }));
+                setSelectedProject(prevProject => ({ ...prevProject, status }));
             }
             
             return result;
@@ -306,9 +259,8 @@ export function useProject(customerId = null) {
         error,
         projects,
         selectedProject,
-        stats,
-        projectNotes,
         projectRecords,
+        relatedData,
         
         // Getters
         activeProjects: projects.filter(project => project.status === 'Open'),
