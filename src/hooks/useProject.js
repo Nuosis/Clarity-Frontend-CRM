@@ -26,13 +26,6 @@ export function useProject(customerId = null) {
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
     const projectRecords = useProjectRecords();
-    const [relatedData, setRelatedData] = useState({
-        images: null,
-        links: null,
-        objectives: null,
-        steps: null
-    });
-
     // Load projects when customerId changes
     useEffect(() => {
         if (customerId) {
@@ -50,43 +43,55 @@ export function useProject(customerId = null) {
             setError(null);
             
             const projectResult = await fetchProjectsForCustomer(custId);
-            const projectIds = projectResult.response?.data?.map(p => p.fieldData.__ID) || [];
-            
-            if (projectIds.length > 0) {
-                // Fetch all related data in parallel
-                const [images, links, objectives, steps] = await Promise.all([
-                    fetchProjectRelatedData(projectIds, 'devProjectImages'),
-                    fetchProjectRelatedData(projectIds, 'devProjectLinks'),
-                    fetchProjectRelatedData(projectIds, 'devProjectObjectives'),
-                    fetchProjectRelatedData(projectIds, 'devProjectObjSteps')
-                ]);
-
-                // Store related data in state for reuse
-                const newRelatedData = {
-                    images,
-                    links,
-                    objectives,
-                    steps
-                };
-                setRelatedData(newRelatedData);
-
-                const processedProjects = processProjectData(projectResult, newRelatedData);
-                setProjects(processedProjects);
-            } else {
-                setProjects([]);
-            }
+            const processedProjects = processProjectData(projectResult);
+            setProjects(processedProjects);
         } catch (err) {
             setError(err.message);
             console.error('Error loading projects:', err);
         } finally {
             setLoading(false);
         }
-    }, [setRelatedData]);
+    }, []);
+
+    /**
+     * Loads detailed data for a specific project
+     */
+    const loadProjectDetails = useCallback(async (projectId) => {
+        try {
+            const [images, links, objectives, steps] = await Promise.all([
+                fetchProjectRelatedData([projectId], 'devProjectImages'),
+                fetchProjectRelatedData([projectId], 'devProjectLinks'),
+                fetchProjectRelatedData([projectId], 'devProjectObjectives'),
+                fetchProjectRelatedData([projectId], 'devProjectObjSteps')
+            ]);
+
+            const projectDetails = {
+                images,
+                links,
+                objectives,
+                steps
+            };
+
+            // Update the project with the details
+            setProjects(prevProjects =>
+                prevProjects.map(p =>
+                    p.id === projectId
+                        ? { ...p, ...projectDetails }
+                        : p
+                )
+            );
+
+            return projectDetails;
+        } catch (err) {
+            console.error('Error loading project details:', err);
+            throw err;
+        }
+    }, []);
 
     /**
      * Selects a project and loads all its data
      */
-    const handleProjectSelect = useCallback((projectId) => {
+    const handleProjectSelect = useCallback(async (projectId) => {
         try {
             setLoading(true);
             setError(null);
@@ -97,15 +102,21 @@ export function useProject(customerId = null) {
             if (!project) {
                 throw new Error('Project not found in cached data');
             }
-            
-            setSelectedProject(project);
+
+            // Load details if not already loaded
+            if (!project.images || !project.links) {
+                const details = await loadProjectDetails(projectId);
+                setSelectedProject({ ...project, ...details });
+            } else {
+                setSelectedProject(project);
+            }
         } catch (err) {
             setError(err.message);
             console.error('Error selecting project:', err);
         } finally {
             setLoading(false);
         }
-    }, [projects]);
+    }, [projects, loadProjectDetails]);
 
     /**
      * Creates a new project
@@ -225,7 +236,6 @@ export function useProject(customerId = null) {
         projects,
         selectedProject,
         projectRecords,
-        relatedData,
         
         // Getters
         activeProjects: projects.filter(project => project.status === 'Open'),
