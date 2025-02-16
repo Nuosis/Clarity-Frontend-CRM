@@ -29,10 +29,12 @@ class InitializationService {
 
     async loadUserContext() {
         this.currentPhase = 'loading_user';
+        // console.log('[InitializationService] Loading user context...');
         try {
             const userContext = await fetchDataFromFileMaker({
                 action: 'returnContext'
             });
+            // console.log('[InitializationService] User context loaded:', userContext);
             return userContext;
         } catch (error) {
             throw new Error(`Failed to load user context: ${error.message}`);

@@ -63,7 +63,7 @@ export function useProject(customerId = null) {
                     data
                 });
                 setProjectRecords(data);
-                console.log('State updated with project records');
+                // console.log('State updated with project records');
             });
         }
     }, []);

@@ -10,7 +10,7 @@ class RecordQueueManager {
         // Initialize global returnRecords function
         window.returnRecords = (d) => {
             const data = JSON.parse(d);
-            console.log("returnedRecords: ",{data})
+            // console.log("returnedRecords: ",{data})
             if (data?.response?.data) {
                 const currentRequest = this.queue[0];
                 const callback = this.callbacks.get(currentRequest?.callbackId);

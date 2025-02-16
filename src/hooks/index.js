@@ -7,6 +7,7 @@ export function useFileMakerBridge() {
     const [retryCount, setRetryCount] = useState(0);
 
     useEffect(() => {
+        console.log('[FileMaker Bridge] Initializing bridge check');
         let isMounted = true;
         let retries = 0;
         let retryTimer = null;
@@ -18,18 +19,20 @@ export function useFileMakerBridge() {
                 }
                 
                 if (isMounted) {
+                    console.log('[FileMaker Bridge] Connection established');
                     setIsReady(true);
                     setError(null);
                     setStatus('FileMaker connection established');
                 }
             } catch (error) {
-                if (isMounted && retries < 10) { // Increased from 20 to 50 (5 seconds total)
+                if (isMounted && retries < 10) {
                     retries++;
-                    setStatus(`Attempting to connect to FileMaker (${retries}/50)...`);
-                    console.log(`FileMaker bridge attempt ${retries}`);
+                    setStatus(`Attempting to connect to FileMaker (${retries}/10)...`);
+                    console.log(`[FileMaker Bridge] Attempt ${retries}/10`);
                     retryTimer = setTimeout(checkBridge, 100);
                 } else if (isMounted) {
-                    setError('Failed to initialize FileMaker connection after 5 seconds');
+                    console.log('[FileMaker Bridge] Connection failed after all retries');
+                    setError('Failed to initialize FileMaker connection after 1 second');
                     setStatus('Failed to connect to FileMaker');
                     setIsReady(false);
                 }
@@ -37,25 +40,26 @@ export function useFileMakerBridge() {
         };
 
         checkBridge();
+        
         return () => {
+            console.log('[FileMaker Bridge] Cleanup - cancelling any pending retries');
             isMounted = false;
             if (retryTimer) {
                 clearTimeout(retryTimer);
             }
         };
-    }, [retryCount]);
+    }, []); // Removed retryCount dependency as it's not used in the effect
+
+    const retry = useCallback(() => {
+        console.log('[FileMaker Bridge] Manual retry requested');
+        setRetryCount(prev => prev + 1);
+    }, []);
 
     return {
         isReady,
         error,
         status,
-        retry: () => setRetryCount(prev => prev + 1)
-    };
-
-    return {
-        isReady,
-        error,
-        retry: () => setRetryCount(prev => prev + 1)
+        retry
     };
 }
 

@@ -5,10 +5,18 @@ let bridgeInitialized = false;
 
 if (typeof window !== "undefined") {
     window.addEventListener('message', (event) => {
-        if (event.data.type === 'FM_BRIDGE_READY' && !bridgeInitialized) {
-            window.FileMaker = event.data.api;
-            bridgeInitialized = true;
-            console.log('FileMaker web viewer bridge initialized');
+        if (event.data.type === 'FM_BRIDGE_READY') {
+            const timestamp = new Date().toISOString();
+            console.log(`[FileMaker Bridge ${timestamp}] Received FM_BRIDGE_READY event`, {
+                wasInitialized: bridgeInitialized,
+                stack: new Error().stack
+            });
+            
+            if (!bridgeInitialized) {
+                window.FileMaker = event.data.api;
+                bridgeInitialized = true;
+                console.log(`[FileMaker Bridge ${timestamp}] Bridge initialized for the first time`);
+            }
         }
     });
 }
@@ -35,7 +43,13 @@ export function formatParams(params) {
  * Handles retries, error handling, and response formatting
  */
 export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true) {
-    //console.log(`Attempting to fetch ${params.layout} data from FileMaker`);
+    const timestamp = new Date().toISOString();
+    console.log(`[FileMaker API ${timestamp}] Fetching data:`, {
+        action: params.action,
+        layout: params.layout,
+        attempt,
+        stack: new Error().stack
+    });
     
     return new Promise((resolve, reject) => {
        if (attempt >= 30) { // 30 retries = 3 seconds
@@ -56,7 +70,7 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
 
         try {
             const formattedParams = formatParams(params);
-            console.log("Formatted params:", formattedParams);
+            // console.log("Formatted params:", formattedParams);
             
             const param = JSON.stringify(formattedParams);
             const layout = formattedParams.layout;

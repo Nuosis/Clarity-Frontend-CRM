@@ -68,8 +68,17 @@ function AppContent() {
 
     // Initialization effect
     useEffect(() => {
+        let isInitialized = false;
+        
         const initialize = async () => {
+            // Skip if already initialized
+            if (isInitialized) {
+                console.log('[App] Skipping initialization - already initialized');
+                return;
+            }
+            
             try {
+                console.log('[App] Starting initialization');
                 loadingStateManager.setLoading('initialization', true, 'Connecting to FileMaker...');
                 
                 // Wait for FileMaker connection
@@ -84,14 +93,18 @@ function AppContent() {
                 
                 loadingStateManager.clearLoadingState('initialization');
                 setLoading(false);
+                isInitialized = true;
+                console.log('[App] Initialization complete');
             } catch (error) {
-                console.error('Initialization error:', error);
+                console.error('[App] Initialization error:', error);
                 setError(error.message);
                 loadingStateManager.clearLoadingState('initialization');
             }
         };
 
-        initialize();
+        if (fmReady) {
+            initialize();
+        }
     }, [fmReady, loadCustomers, setError, setLoading, setUser]);
 
     // Memoized handlers using useCallback
