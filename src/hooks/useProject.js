@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     fetchProjectsForCustomer,
     fetchProjectRelatedData,
@@ -6,11 +6,9 @@ import {
     createProject,
     updateProject,
     fetchProjectsForCustomers,
-    fetchProjectNotes,
-    Layouts,
-    Actions
+    fetchProjectNotes
 } from '../api';
-import { recordQueueManager } from '../services/recordQueueManager';
+import { useProjectRecords } from '../context/ProjectContext';
 import {
     processProjectData,
     validateProjectData,
@@ -27,46 +25,13 @@ export function useProject(customerId = null) {
     const [error, setError] = useState(null);
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
-    const [projectRecords, setProjectRecords] = useState(null);
+    const projectRecords = useProjectRecords();
     const [relatedData, setRelatedData] = useState({
         images: null,
         links: null,
         objectives: null,
         steps: null
     });
-    const recordsFetched = useRef(false);
-
-    // Load records on mount
-    useEffect(() => {
-        if (!recordsFetched.current) {
-            recordsFetched.current = true;
-            
-            const now = new Date();
-            const monthsAgo = new Date(now.setMonth(now.getMonth() - 12));
-            const startMonth = String(monthsAgo.getMonth() + 1).padStart(2, '0');
-            const startYear = monthsAgo.getFullYear();
-
-            const params = {
-                layout: Layouts.RECORDS,
-                action: Actions.READ,
-                callBackName: "returnRecords",
-                query: [
-                    { DateStart: `>${startYear.toString()}+${startMonth-1}+*` },
-                ]
-            };
-            
-            // Use queue manager to handle the request
-            recordQueueManager.enqueue(params, (data) => {
-                console.log('Project records received in useProject:', {
-                    count: data?.length || 0,
-                    sample: data?.[0],
-                    data
-                });
-                setProjectRecords(data);
-                // console.log('State updated with project records');
-            });
-        }
-    }, []);
 
     // Load projects when customerId changes
     useEffect(() => {

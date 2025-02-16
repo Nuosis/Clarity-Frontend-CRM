@@ -9,6 +9,7 @@ import { useCustomer, useProject, useTask, useFileMakerBridge } from './hooks';
 import { initializationService } from './services/initializationService';
 import { loadingStateManager, useGlobalLoadingState } from './services/loadingStateManager';
 import { AppStateProvider, useAppState, useAppStateOperations } from './context/AppStateContext';
+import { ProjectProvider } from './context/ProjectContext';
 
 // Memoized sidebar for performance
 const MemoizedSidebar = React.memo(Sidebar);
@@ -262,7 +263,9 @@ function App() {
     return (
         <ThemeProvider>
             <AppStateProvider>
-                <AppContent />
+                <ProjectProvider>
+                    <AppContent />
+                </ProjectProvider>
             </AppStateProvider>
         </ThemeProvider>
     );
