@@ -53,6 +53,10 @@ export function useTask(projectId = null) {
         try {
             setLoading(true);
             setError(null);
+            if (!projId) {
+                console.error('No project ID provided to loadTasks');
+                return;
+            }
             const result = await loadProjectTasks(projId);
             setTasks(result || []);
         } catch (err) {
@@ -91,15 +95,35 @@ export function useTask(projectId = null) {
     }, [tasks, showError]);
 
     const handleTaskCreate = useCallback(async (taskData) => {
+        if (!projectId) {
+            console.error('No project ID available for task creation');
+            return null;
+        }
+
         try {
             setLoading(true);
             setError(null);
             
+            // Wait for task creation to complete
             const result = await createNewTask(taskData);
-            if (result) {
-                await loadTasks(projectId);
+            console.log('Task creation result:', result);
+            // Validate the result
+            if (result?.response?.data?.[0]?.recordId) {
+                // Don't reload tasks, just update state directly
+                setTasks(prevTasks => [...prevTasks, {
+                    id: result.response.data[0].recordId,
+                    recordId: result.response.data[0].recordId,
+                    task: taskData.task,
+                    isCompleted: false,
+                    _projectID: taskData._projectID,
+                    _staffID: taskData._staffID,
+                    createdAt: new Date().toISOString(),
+                    modifiedAt: new Date().toISOString()
+                }]);
+                return result;
             }
-            return result;
+            
+            throw new Error('Failed to create task: Invalid response');
         } catch (err) {
             showError(err.message);
             console.error('Error creating task:', err);

@@ -355,9 +355,9 @@ export function formatTaskForDisplay(task, timerRecords = [], notes = [], links 
  * @returns {Promise<Object>} Created task data
  */
 export async function createNewTask(params) {
-    if (!params || typeof params !== 'object') {
-        throw new Error('Invalid task parameters');
-    }
+    // if (!params || typeof params !== 'object') {
+    //     throw new Error('Invalid task parameters');
+    // }
 
     const { projectId, staffId, taskName, type, priority = "active" } = params;
 
@@ -379,8 +379,30 @@ export async function createNewTask(params) {
         throw new Error(validation.errors[0]); // Throw first error
     }
 
-    // Create task through API
-    return await createTaskAPI(taskData);
+    try {
+        // Create task through API and wait for completion
+        const result = await createTaskAPI(taskData);
+        
+        // For CREATE operations, we get recordId instead of data
+        if (!result?.response?.recordId) {
+            throw new Error('Failed to create task: No record ID returned');
+        }
+        
+        // Return a properly formatted response
+        return {
+            response: {
+                data: [{
+                    recordId: result.response.recordId,
+                    modId: result.response.modId,
+                    fieldData: taskData
+                }]
+            },
+            messages: result.messages
+        };
+    } catch (error) {
+        console.error('Error in createNewTask:', error);
+        throw error;
+    }
 }
 
 /**

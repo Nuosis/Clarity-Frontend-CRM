@@ -34,7 +34,19 @@ export async function createTask(data) {
             fieldData: data
         };
         
-        return await fetchDataFromFileMaker(params);
+        // Wait for the FileMaker operation to complete
+        const result = await fetchDataFromFileMaker(params);
+        
+        // For CREATE operations, FileMaker returns recordId instead of data
+        if (params.action === Actions.CREATE) {
+            if (!result?.response?.recordId) {
+                throw new Error('Invalid CREATE response from FileMaker');
+            }
+        } else if (!result?.response?.data) {
+            throw new Error('Invalid response from FileMaker');
+        }
+        
+        return result;
     });
 }
 

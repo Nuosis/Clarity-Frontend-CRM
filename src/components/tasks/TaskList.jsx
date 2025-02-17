@@ -383,11 +383,20 @@ function TaskList({
     }, [handleTaskStatusChange, onTaskStatusChange]);
 
     const handleNewTask = useCallback(async (taskName) => {
+        if (!taskName?.trim() || !projectId || !user?.userID) {
+            console.error('Missing required fields for task creation:', {
+                taskName: taskName?.trim(),
+                projectId,
+                staffId: user?.userID
+            });
+            return;
+        }
+        
         try {
             await handleTaskCreate({
                 projectId,
                 staffId: user.userID,
-                taskName,
+                taskName: taskName.trim(),
                 priority: "active"
             });
             onTaskCreate();
@@ -414,7 +423,13 @@ function TaskList({
                     title="New Task"
                     placeholder="Enter task name..."
                     submitLabel="Create"
-                    onSubmit={handleNewTask}
+                    onSubmit={(taskName) => {
+                        if (!projectId || !user?.userID) {
+                            showError('Unable to create task: Missing project or user information');
+                            return;
+                        }
+                        return handleNewTask(taskName.trim());
+                    }}
                     onCancel={() => setShowNewTaskInput(false)}
                 />
             )}
