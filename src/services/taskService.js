@@ -31,16 +31,26 @@ export function processTimerRecords(timerRecords) {
         return [];
     }
 
-    return timerRecords.response.data.map(record => ({
-        id: record.fieldData.__ID,
-        startTime: new Date(record.fieldData.startTime),
-        endTime: record.fieldData.endTime ? new Date(record.fieldData.endTime) : null,
-        description: record.fieldData.description || '',
-        duration: calculateDuration(
-            record.fieldData.startTime,
-            record.fieldData.endTime
-        )
-    }));
+    console.log('Timer Records from FileMaker:', timerRecords?.response?.data);
+    return timerRecords.response.data.map(record => {
+        // Convert time strings (e.g. "1:30:00 PM") to Date objects
+        // console.log(record)
+        const startTimeStr = record.fieldData.startTime;
+        const endTimeStr = record.fieldData.endTime;
+        
+        // Create a Date object for today with the specified time
+        const today = new Date();
+        const startTime = startTimeStr ? new Date(today.toDateString() + ' ' + startTimeStr) : null;
+        const endTime = endTimeStr ? new Date(today.toDateString() + ' ' + endTimeStr) : null;
+        
+        return {
+            id: record.fieldData.__ID,
+            startTime,
+            endTime,
+            description: record.fieldData["Work Performed"] || '',
+            duration: record.fieldData.Billable_Time_Rounded
+        };
+    });
 }
 
 /**
@@ -53,14 +63,16 @@ export function processTaskNotes(data) {
         return [];
     }
 
-    return data.response.data.map(note => ({
-        id: note.fieldData.__ID,
-        content: note.fieldData.note,
-        type: note.fieldData.type || 'general',
-        createdAt: note.fieldData['~CreationTimestamp'],
-        modifiedAt: note.fieldData['~ModificationTimestamp'],
-        createdBy: note.fieldData['~CreatedBy']
-    }));
+    return data.response.data
+        .map(note => ({
+            id: note.fieldData.__ID,
+            content: note.fieldData.note,
+            type: note.fieldData.type || 'general',
+            createdAt: note.fieldData['~CreationTimestamp'],
+            modifiedAt: note.fieldData['~ModificationTimestamp'],
+            createdBy: note.fieldData['~CreatedBy']
+        }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Sort by creation date, newest first
 }
 
 /**
@@ -79,17 +91,6 @@ export function processTaskLinks(data) {
         createdAt: link.fieldData['~creationTimestamp'],
         modifiedAt: link.fieldData['~modificationTimestamp']
     }));
-}
-
-/**
- * Calculates total time spent on a task
- * @param {Array} timerRecords - Processed timer records
- * @returns {number} Total minutes spent
- */
-export function calculateTotalTaskTime(timerRecords) {
-    return timerRecords.reduce((total, record) => {
-        return total + (record.duration || 0);
-    }, 0);
 }
 
 /**
@@ -175,23 +176,6 @@ export function formatTaskForFileMaker(data) {
 // Helper functions
 
 /**
- * Calculates duration between two timestamps in minutes
- * @param {string} startTime - Start timestamp
- * @param {string} endTime - End timestamp
- * @returns {number} Duration in minutes
- */
-function calculateDuration(startTime, endTime) {
-    if (!startTime || !endTime) {
-        return 0;
-    }
-
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const diffMs = end - start;
-    return Math.round(diffMs / (1000 * 60)); // Convert to minutes
-}
-
-/**
  * Groups tasks by completion status
  * @param {Array} tasks - Array of task records
  * @returns {Object} Grouped tasks { active, completed }
@@ -232,6 +216,22 @@ export function calculateTaskStats(tasks, timerRecords) {
 export function isValidTimerAdjustment(minutes) {
     // Only allow adjustments in 6-minute increments
     return minutes % 6 === 0;
+}
+
+/**
+ * Calculates total time from timer records
+ * @param {Array} timerRecords - Array of timer records
+ * @returns {number} Total time in minutes
+ */
+export function calculateTotalTaskTime(timerRecords) {
+    if (!timerRecords?.length) {
+        return 0;
+    }
+    
+    return timerRecords.reduce((total, record) => {
+        // Convert hours to minutes since duration comes from FileMaker in hours
+        return total + ((record.duration || 0) * 60);
+    }, 0);
 }
 
 /**

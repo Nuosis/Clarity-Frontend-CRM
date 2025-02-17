@@ -262,7 +262,12 @@ export function useTask(projectId = null) {
             const result = await startTaskTimer(selectedTask.id);
             setTimer({
                 recordId: result.recordId,
-                startTime: new Date(),
+                startTime: new Date().toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                }),
                 isPaused: false
             });
         } catch (err) {

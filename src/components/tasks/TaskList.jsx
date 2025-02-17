@@ -2,6 +2,10 @@ import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useTask } from '../../hooks/useTask';
+import { formatDuration } from '../../services/taskService';
+import { createNote } from '../../services/noteService';
+import { createLink } from '../../services/linkService';
+import TextInput from '../global/TextInput';
 import ErrorBoundary from '../ErrorBoundary';
 
 // Memoized task item component
@@ -18,6 +22,28 @@ const TaskItem = React.memo(function TaskItem({
     isLoading
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [showNoteInput, setShowNoteInput] = useState(false);
+    const [showLinkInput, setShowLinkInput] = useState(false);
+
+    const handleNoteSubmit = async (note) => {
+        try {
+            await createNote(task.id, note);
+            await onExpand(task.id); // Refresh task details
+            setShowNoteInput(false);
+        } catch (error) {
+            console.error('Error creating note:', error);
+        }
+    };
+
+    const handleLinkSubmit = async (url) => {
+        try {
+            await createLink(task.id, url);
+            await onExpand(task.id); // Refresh task details
+            setShowLinkInput(false);
+        } catch (error) {
+            console.error('Error creating link:', error);
+        }
+    };
 
     const toggleExpand = useCallback(async () => {
         const newExpandedState = !isExpanded;
@@ -27,6 +53,8 @@ const TaskItem = React.memo(function TaskItem({
             await onExpand(task.id);
         }
     }, [isExpanded, task.id, onExpand]);
+
+    console.log({timerRecords})
 
     return (
         <div
@@ -108,23 +136,27 @@ const TaskItem = React.memo(function TaskItem({
                                 </p>
                             )}
                             {taskNotes?.length > 0 && (
-                                <div className="space-y-1">
+                                <div>
                                     <h5 className={`
-                                        text-sm font-medium
+                                        text-sm font-medium mb-2
                                         ${darkMode ? 'text-gray-400' : 'text-gray-600'}
                                     `}>
                                         Notes
                                     </h5>
-                                    {taskNotes.map(note => (
-                                        <p key={note.id} className={`
-                                            text-sm pl-2 border-l-2
-                                            ${darkMode 
-                                                ? 'text-gray-400 border-gray-700' 
-                                                : 'text-gray-600 border-gray-200'}
-                                        `}>
-                                            {note.content}
-                                        </p>
-                                    ))}
+                                    <div className="max-h-[105px] overflow-y-auto pr-2">
+                                        <div className="space-y-2">
+                                            {taskNotes.map(note => (
+                                                <p key={note.id} className={`
+                                                    text-sm pl-2 border-l-2
+                                                    ${darkMode
+                                                        ? 'text-gray-400 border-gray-700'
+                                                        : 'text-gray-600 border-gray-200'}
+                                                `}>
+                                                    {note.content}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                             {taskLinks?.length > 0 && (
@@ -152,24 +184,68 @@ const TaskItem = React.memo(function TaskItem({
                                 </div>
                             )}
                             {timerRecords?.length > 0 && (
-                                <div className={`
-                                    text-sm
-                                    ${darkMode ? 'text-gray-400' : 'text-gray-600'}
-                                `}>
-                                    <span className="font-medium">Time Records:</span> {timerRecords.length} entries
-                                </div>
+                                <>
+                                    <div className={`
+                                        text-sm
+                                        ${darkMode ? 'text-gray-400' : 'text-gray-600'}
+                                    `}>
+                                        <span className="font-medium">Total Time:</span> {formatDuration(timerRecords.reduce((total, record) => total + ((record.duration || 0) * 60), 0))}
+                                    </div>
+                                </>
                             )}
-                            <button
-                                onClick={() => onStatusChange(task.id, !task.isCompleted)}
-                                className={`
-                                    p-2 rounded-md text-sm w-full text-left
-                                    ${darkMode 
-                                        ? 'bg-gray-700 hover:bg-gray-600' 
-                                        : 'bg-gray-100 hover:bg-gray-200'}
-                                `}
-                            >
-                                {task.isCompleted ? 'Reopen Task' : 'Mark as Complete'}
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowNoteInput(true)}
+                                    className={`
+                                        p-2 rounded-md text-sm flex-1
+                                        ${darkMode
+                                            ? 'bg-gray-700 hover:bg-gray-600'
+                                            : 'bg-gray-100 hover:bg-gray-200'}
+                                    `}
+                                >
+                                    New Note
+                                </button>
+                                <button
+                                    onClick={() => setShowLinkInput(true)}
+                                    className={`
+                                        p-2 rounded-md text-sm flex-1
+                                        ${darkMode
+                                            ? 'bg-gray-700 hover:bg-gray-600'
+                                            : 'bg-gray-100 hover:bg-gray-200'}
+                                    `}
+                                >
+                                    New Link
+                                </button>
+                                <button
+                                    onClick={() => onStatusChange(task.id, !task.isCompleted)}
+                                    className={`
+                                        p-2 rounded-md text-sm flex-1
+                                        ${darkMode
+                                            ? 'bg-gray-700 hover:bg-gray-600'
+                                            : 'bg-gray-100 hover:bg-gray-200'}
+                                    `}
+                                >
+                                    {task.isCompleted ? 'Reopen Task' : 'Mark as Complete'}
+                                </button>
+                            </div>
+                            {showNoteInput && (
+                                <TextInput
+                                    title="Add Note"
+                                    placeholder="Enter your note..."
+                                    submitLabel="Create"
+                                    onSubmit={handleNoteSubmit}
+                                    onCancel={() => setShowNoteInput(false)}
+                                />
+                            )}
+                            {showLinkInput && (
+                                <TextInput
+                                    title="Add Link"
+                                    placeholder="Enter URL..."
+                                    submitLabel="Create"
+                                    onSubmit={handleLinkSubmit}
+                                    onCancel={() => setShowLinkInput(false)}
+                                />
+                            )}
                         </>
                     )}
                 </div>
@@ -188,7 +264,7 @@ TaskItem.propTypes = {
         isCompleted: PropTypes.bool.isRequired
     }).isRequired,
     darkMode: PropTypes.bool.isRequired,
-    onEdit: PropTypes.func.isRequired,
+    onEdit: PropTypes.func.isRequired, // Called with task object including type: 'note' or 'link'
     onStatusChange: PropTypes.func.isRequired,
     onSelect: PropTypes.func.isRequired,
     onExpand: PropTypes.func.isRequired,

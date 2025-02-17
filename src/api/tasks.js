@@ -99,7 +99,12 @@ export async function startTaskTimer(taskId) {
             action: Actions.CREATE,
             fieldData: {
                 taskId,
-                startTime: new Date().toISOString()
+                startTime: new Date().toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                })
             }
         };
         
@@ -123,7 +128,12 @@ export async function stopTaskTimer(recordId, description = '', saveImmediately 
             action: Actions.UPDATE,
             recordId,
             fieldData: {
-                endTime: new Date().toISOString(),
+                endTime: new Date().toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                }),
                 description: saveImmediately ? 'Time logged' : description
             }
         };
@@ -144,7 +154,7 @@ export async function fetchTaskTimers(taskId) {
         const params = {
             layout: Layouts.RECORDS,
             action: Actions.READ,
-            query: [{ "taskId": taskId }]
+            query: [{ "_taskId": taskId }]
         };
         
         return await fetchDataFromFileMaker(params);

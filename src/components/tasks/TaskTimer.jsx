@@ -282,7 +282,7 @@ TaskTimer.propTypes = {
     }).isRequired,
     timer: PropTypes.shape({
         recordId: PropTypes.string.isRequired,
-        startTime: PropTypes.instanceOf(Date).isRequired,
+        startTime: PropTypes.string.isRequired,
         isPaused: PropTypes.bool.isRequired,
         adjustment: PropTypes.number
     }),
