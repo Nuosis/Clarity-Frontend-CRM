@@ -33,7 +33,14 @@ export function useTask(projectId = null) {
     const [error, setError] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [selectedTask, setSelectedTask] = useState(null);
-    const [timer, setTimer] = useState(null);
+    const [timer, setTimer] = useState({
+        recordId: null,
+        TimeStart: null,
+        isPaused: false,
+        pauseStartTime: null,
+        totalPauseTime: 0,
+        adjustment: 0
+    });
     const [timerRecords, setTimerRecords] = useState([]);
     const [taskNotes, setTaskNotes] = useState([]);
     const [taskLinks, setTaskLinks] = useState([]);
@@ -222,7 +229,11 @@ export function useTask(projectId = null) {
             setLoading(true);
             setError(null);
             
-            const result = await updateTaskStatus(taskId, completed);
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) {
+                throw new Error('Task not found');
+            }
+            const result = await updateTaskStatus(task.recordId, completed);
             
             // Update local state
             setTasks(prevTasks => 
@@ -253,22 +264,26 @@ export function useTask(projectId = null) {
     /**
      * Timer operations
      */
-    const handleTimerStart = useCallback(async () => {
+    const handleTimerStart = useCallback(async (task = null) => {
         try {
-            if (!selectedTask) {
+            const taskToUse = task || selectedTask;
+            if (!taskToUse) {
                 throw new Error('No task selected');
             }
             
-            const result = await startTaskTimer(selectedTask.id);
+            const result = await startTaskTimer(taskToUse.id, taskToUse);
             setTimer({
-                recordId: result.recordId,
-                startTime: new Date().toLocaleTimeString('en-US', {
-                    hour: 'numeric',
+                recordId: result.response.recordId,
+                TimeStart: new Date().toLocaleTimeString('en-US', {
+                    hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit',
-                    hour12: true
+                    hour12: false
                 }),
-                isPaused: false
+                isPaused: false,
+                pauseStartTime: null,
+                totalPauseTime: 0,
+                adjustment: 0
             });
         } catch (err) {
             setError(err.message);
@@ -279,11 +294,20 @@ export function useTask(projectId = null) {
 
     const handleTimerStop = useCallback(async (saveImmediately = false, description = '') => {
         try {
-            if (!timer) {
+            if (!timer?.recordId) {
                 throw new Error('No active timer');
             }
+
+            // If currently paused, add the final pause duration
+            let finalPauseTime = Math.round(timer.totalPauseTime);
+            if (timer.isPaused && timer.pauseStartTime) {
+                finalPauseTime += Math.round((new Date() - timer.pauseStartTime) / 1000);
+            }
+
+            // Calculate final adjustment including pauses and manual adjustments
+            const finalAdjustment = Math.round(finalPauseTime + (timer.adjustment || 0));
             
-            await stopTaskTimer(timer.recordId, description, saveImmediately);
+            await stopTaskTimer(timer.recordId, description, saveImmediately, finalAdjustment);
             
             // Reload timer records
             if (selectedTask) {
@@ -291,7 +315,14 @@ export function useTask(projectId = null) {
                 setTimerRecords(processTimerRecords(timerResult));
             }
             
-            setTimer(null);
+            setTimer({
+                recordId: null,
+                startTime: null,
+                isPaused: false,
+                pauseStartTime: null,
+                totalPauseTime: 0,
+                adjustment: 0
+            });
         } catch (err) {
             setError(err.message);
             console.error('Error stopping timer:', err);
@@ -300,26 +331,45 @@ export function useTask(projectId = null) {
     }, [timer, selectedTask]);
 
     const handleTimerPause = useCallback(() => {
-        if (!timer) {
+        if (!timer?.recordId) {
             throw new Error('No active timer');
         }
         
-        setTimer(prev => ({
-            ...prev,
-            isPaused: !prev.isPaused
-        }));
+        setTimer(prev => {
+            if (prev.isPaused) {
+                // Resuming - calculate and add pause duration to total
+                const pauseDuration = (new Date() - prev.pauseStartTime) / 1000;
+                return {
+                    ...prev,
+                    isPaused: false,
+                    pauseStartTime: null,
+                    totalPauseTime: prev.totalPauseTime + pauseDuration
+                };
+            } else {
+                // Pausing - store pause start time
+                return {
+                    ...prev,
+                    isPaused: true,
+                    pauseStartTime: new Date()
+                };
+            }
+        });
     }, [timer]);
 
     const handleTimerAdjust = useCallback((minutes) => {
+        if (!timer?.recordId) {
+            throw new Error('No active timer');
+        }
+        
         if (!isValidTimerAdjustment(minutes)) {
             throw new Error('Invalid timer adjustment');
         }
         
         setTimer(prev => ({
             ...prev,
-            adjustment: (prev.adjustment || 0) + minutes
+            adjustment: prev.adjustment + (minutes * 60) // Convert minutes to seconds
         }));
-    }, []);
+    }, [timer]);
 
     return {
         // State
@@ -357,7 +407,7 @@ export function useTask(projectId = null) {
             setTimerRecords([]);
             setTaskNotes([]);
             setTaskLinks([]);
-            if (timer) {
+            if (timer?.recordId) {
                 handleTimerStop(true);
             }
         }

@@ -36,14 +36,16 @@ const MainContent = React.memo(function MainContent({
                     >
                         ← Back to Project
                     </button>
-                    <TaskTimer
-                        task={selectedTask}
-                        timer={timer}
-                        onStart={handlers.handleTimerStart}
-                        onPause={handlers.handleTimerPause}
-                        onStop={handlers.handleTimerStop}
-                        onAdjust={handlers.handleTimerAdjust}
-                    />
+                    {timer?.recordId && (
+                        <TaskTimer
+                            task={selectedTask}
+                            timer={timer}
+                            onStart={handlers.handleTimerStart}
+                            onPause={handlers.handleTimerPause}
+                            onStop={handlers.handleTimerStop}
+                            onAdjust={handlers.handleTimerAdjust}
+                        />
+                    )}
                 </div>
             </ErrorBoundary>
         );
@@ -163,10 +165,12 @@ MainContent.propTypes = {
     
     // Timer
     timer: PropTypes.shape({
-        recordId: PropTypes.string.isRequired,
-        startTime: PropTypes.instanceOf(Date).isRequired,
-        isPaused: PropTypes.bool.isRequired,
-        adjustment: PropTypes.number
+        recordId: PropTypes.string,
+        TimeStart: PropTypes.string,
+        isPaused: PropTypes.bool,
+        adjustment: PropTypes.number,
+        pauseStartTime: PropTypes.instanceOf(Date),
+        totalPauseTime: PropTypes.number
     }),
     
     // Loading state

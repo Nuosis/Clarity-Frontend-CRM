@@ -15,6 +15,7 @@ export function processCustomerData(data) {
     return data.response.data.map(customer => ({
         ...customer.fieldData,
         id: customer.fieldData.__ID,
+        recordId: customer.recordId,
         isActive: customer.fieldData.f_active === "1" || customer.fieldData.f_active === 1,
         createdAt: customer.fieldData['~creationTimestamp'],
         modifiedAt: customer.fieldData['~modificationTimestamp']
@@ -80,6 +81,7 @@ export function validateCustomerData(data) {
 export function formatCustomerForDisplay(customer) {
     return {
         id: customer.id,
+        recordId: customer.recordId,
         name: customer.Name,
         email: customer.Email || 'N/A',
         phone: customer.Phone || 'N/A',

@@ -3,23 +3,44 @@ import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 
 // Memoized timer display component
-const TimerDisplay = React.memo(function TimerDisplay({ time, darkMode }) {
+const TimerDisplay = React.memo(function TimerDisplay({ time, adjustedTime, isPaused, darkMode }) {
     const formattedTime = useMemo(() => {
-        const hours = Math.floor(time / 3600);
-        const minutes = Math.floor((time % 3600) / 60);
-        const seconds = time % 60;
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }, [time]);
+        const formatSeconds = (seconds) => {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        };
+
+        return {
+            elapsed: formatSeconds(adjustedTime),
+            adjusted: formatSeconds(time)
+        };
+    }, [time, adjustedTime]);
 
     return (
-        <div className="text-3xl font-mono font-bold mb-2">
-            {formattedTime}
+        <div className="text-center">
+            <div className="text-3xl font-mono font-bold mb-1">
+                {formattedTime.adjusted}
+            </div>
+            {time !== adjustedTime && (
+                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    (Total: {formattedTime.elapsed})
+                </div>
+            )}
+            {isPaused && (
+                <div className="text-yellow-500 font-semibold mt-1">
+                    PAUSED
+                </div>
+            )}
         </div>
     );
 });
 
 TimerDisplay.propTypes = {
     time: PropTypes.number.isRequired,
+    adjustedTime: PropTypes.number.isRequired,
+    isPaused: PropTypes.bool.isRequired,
     darkMode: PropTypes.bool.isRequired
 };
 
@@ -94,28 +115,58 @@ function TaskTimer({
     const [isRunning, setIsRunning] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [elapsedTime, setElapsedTime] = useState(0);
+    const [adjustedTime, setAdjustedTime] = useState(0);
     const [description, setDescription] = useState('');
     const [showStopDialog, setShowStopDialog] = useState(false);
 
-    // Reset timer when task changes
+    // Initialize timer state when mounted
     useEffect(() => {
-        setIsRunning(false);
-        setIsPaused(false);
-        setElapsedTime(0);
-        setDescription('');
-        setShowStopDialog(false);
-    }, [task?.id]);
+        if (timer?.recordId) {
+            setIsRunning(true);
+            setIsPaused(timer.isPaused);
+            if (timer.startTime) {
+                const start = new Date(timer.startTime);
+                const initialElapsed = Math.round((new Date() - start) / 1000);
+                setElapsedTime(initialElapsed);
+            }
+        } else {
+            setIsRunning(false);
+            setIsPaused(false);
+            setElapsedTime(0);
+            setDescription('');
+            setShowStopDialog(false);
+        }
+    }, [timer, task?.id]);
 
-    // Update elapsed time
+    // Update elapsed time and handle adjustments
     useEffect(() => {
         let interval;
         if (isRunning && !isPaused) {
+            // Calculate initial elapsed time if timer exists
+            if (timer?.TimeStart) {
+                const start = new Date();
+                const [hours, minutes, seconds] = timer.TimeStart.split(':').map(Number);
+                start.setHours(hours, minutes, seconds);
+                const initialElapsed = Math.round((new Date() - start) / 1000);
+                setElapsedTime(initialElapsed);
+            }
+
             interval = setInterval(() => {
                 setElapsedTime(prev => prev + 1);
             }, 1000);
         }
         return () => clearInterval(interval);
-    }, [isRunning, isPaused]);
+    }, [isRunning, isPaused, timer?.startTime]);
+
+    // Calculate adjusted time including pauses and manual adjustments
+    useEffect(() => {
+        if (timer) {
+            const totalAdjustment = (timer.totalPauseTime || 0) + (timer.adjustment || 0);
+            setAdjustedTime(Math.max(0, elapsedTime - totalAdjustment));
+        } else {
+            setAdjustedTime(0);
+        }
+    }, [elapsedTime, timer]);
 
     // Handle keyboard shortcuts
     useEffect(() => {
@@ -181,7 +232,12 @@ function TaskTimer({
         `}>
             {/* Timer Display */}
             <div className="text-center mb-4">
-                <TimerDisplay time={elapsedTime} darkMode={darkMode} />
+                <TimerDisplay
+                    time={elapsedTime}
+                    adjustedTime={adjustedTime}
+                    isPaused={isPaused}
+                    darkMode={darkMode}
+                />
                 <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     {task.task}
                 </div>
@@ -281,10 +337,12 @@ TaskTimer.propTypes = {
         isCompleted: PropTypes.bool.isRequired
     }).isRequired,
     timer: PropTypes.shape({
-        recordId: PropTypes.string.isRequired,
-        startTime: PropTypes.string.isRequired,
-        isPaused: PropTypes.bool.isRequired,
-        adjustment: PropTypes.number
+        recordId: PropTypes.string,
+        TimeStart: PropTypes.string,
+        isPaused: PropTypes.bool,
+        adjustment: PropTypes.number,
+        pauseStartTime: PropTypes.instanceOf(Date),
+        totalPauseTime: PropTypes.number
     }),
     onStart: PropTypes.func.isRequired,
     onPause: PropTypes.func.isRequired,

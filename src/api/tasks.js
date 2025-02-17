@@ -64,7 +64,7 @@ export async function updateTask(taskId, data) {
 
 /**
  * Updates a task's completion status
- * @param {string} taskId - The task ID
+ * @param {string} taskId - The task recordId
  * @param {boolean} completed - The completion status
  * @returns {Promise<Object>} Updated task record
  */
@@ -90,20 +90,27 @@ export async function updateTaskStatus(taskId, completed) {
  * @param {string} taskId - The task ID
  * @returns {Promise<Object>} Created timer record
  */
-export async function startTaskTimer(taskId) {
-    validateParams({ taskId }, ['taskId']);
+export async function startTaskTimer(taskId, selectedTask) {
+    validateParams({ taskId, selectedTask }, ['taskId', 'selectedTask']);
     
     return handleFileMakerOperation(async () => {
         const params = {
             layout: Layouts.RECORDS,
             action: Actions.CREATE,
             fieldData: {
-                taskId,
-                startTime: new Date().toLocaleTimeString('en-US', {
-                    hour: 'numeric',
+                _taskID: taskId,
+                _staffID: selectedTask._staffID,
+                _projectID: selectedTask._projectID,
+                TimeStart: new Date().toLocaleTimeString('en-US', {
+                    hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit',
-                    hour12: true
+                    hour12: false
+                }),
+                DateStart: new Date().toLocaleDateString('en-US', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    year: 'numeric'
                 })
             }
         };
@@ -115,11 +122,12 @@ export async function startTaskTimer(taskId) {
 /**
  * Stops a timer
  * @param {string} recordId - The timer record ID
- * @param {string} description - The work description
+ * @param {string} description - The work performed description
  * @param {boolean} saveImmediately - Whether to save without description
+ * @param {number} TimeAdjust - Time adjustment in seconds
  * @returns {Promise<Object>} Updated timer record
  */
-export async function stopTaskTimer(recordId, description = '', saveImmediately = false) {
+export async function stopTaskTimer(recordId, description = '', saveImmediately = false, TimeAdjust = 0) {
     validateParams({ recordId }, ['recordId']);
     
     return handleFileMakerOperation(async () => {
@@ -128,13 +136,14 @@ export async function stopTaskTimer(recordId, description = '', saveImmediately 
             action: Actions.UPDATE,
             recordId,
             fieldData: {
-                endTime: new Date().toLocaleTimeString('en-US', {
-                    hour: 'numeric',
+                TimeEnd: new Date().toLocaleTimeString('en-US', {
+                    hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit',
-                    hour12: true
+                    hour12: false
                 }),
-                description: saveImmediately ? 'Time logged' : description
+                ["Work Performed"]: saveImmediately ? 'Time logged' : description,
+                TimeAdjust // Store total adjustment in seconds
             }
         };
         
@@ -154,7 +163,7 @@ export async function fetchTaskTimers(taskId) {
         const params = {
             layout: Layouts.RECORDS,
             action: Actions.READ,
-            query: [{ "_taskId": taskId }]
+            query: [{ "_taskID": taskId }]
         };
         
         return await fetchDataFromFileMaker(params);
@@ -163,7 +172,7 @@ export async function fetchTaskTimers(taskId) {
 
 /**
  * Updates task notes
- * @param {string} taskId - The task ID
+ * @param {string} taskId - The task recordId
  * @param {string} notes - The notes content
  * @returns {Promise<Object>} Updated task record
  */

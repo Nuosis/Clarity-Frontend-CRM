@@ -13,11 +13,15 @@ export function processTaskData(data) {
     }
 
     return data.response.data.map(task => ({
-        ...task.fieldData,
         id: task.fieldData.__ID,
+        recordId: task.recordId,
+        task: task.fieldData.task,
+        type: task.fieldData.type,
         isCompleted: task.fieldData.f_completed === "1" || task.fieldData.f_completed === 1,
         createdAt: task.fieldData['~creationTimestamp'],
-        modifiedAt: task.fieldData['~modificationTimestamp']
+        modifiedAt: task.fieldData['~modificationTimestamp'],
+        _projectID: task.fieldData._projectID,
+        _staffID: task.fieldData._staffID
     }));
 }
 
@@ -45,6 +49,7 @@ export function processTimerRecords(timerRecords) {
         
         return {
             id: record.fieldData.__ID,
+            recordId: record.recordId,
             startTime,
             endTime,
             description: record.fieldData["Work Performed"] || '',
@@ -66,6 +71,7 @@ export function processTaskNotes(data) {
     return data.response.data
         .map(note => ({
             id: note.fieldData.__ID,
+            recordId: note.recordId,
             content: note.fieldData.note,
             type: note.fieldData.type || 'general',
             createdAt: note.fieldData['~CreationTimestamp'],
@@ -87,6 +93,7 @@ export function processTaskLinks(data) {
 
     return data.response.data.map(link => ({
         id: link.fieldData.__ID,
+        recordId: link.recordId,
         url: link.fieldData.link,
         createdAt: link.fieldData['~creationTimestamp'],
         modifiedAt: link.fieldData['~modificationTimestamp']
@@ -146,6 +153,7 @@ export function formatTaskForDisplay(task, timerRecords = [], notes = [], links 
     
     return {
         id: task.id,
+        recordId: task.recordId,
         description: task.task,
         type: task.type || 'General',
         status: task.isCompleted ? 'Completed' : 'Active',

@@ -32,6 +32,7 @@ export function processTaskNotes(data) {
     return data.response.data
         .map(note => ({
             id: note.fieldData.__ID,
+            recordId: note.recordID,
             content: note.fieldData.note,
             createdAt: note.fieldData['~CreationTimestamp'],
             createdBy: note.fieldData['~CreatedBy']

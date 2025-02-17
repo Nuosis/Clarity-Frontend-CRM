@@ -7,6 +7,7 @@ import { createNote } from '../../services/noteService';
 import { createLink } from '../../services/linkService';
 import TextInput from '../global/TextInput';
 import ErrorBoundary from '../ErrorBoundary';
+import TaskTimer from './TaskTimer';
 
 // Memoized task item component
 const TaskItem = React.memo(function TaskItem({
@@ -14,12 +15,13 @@ const TaskItem = React.memo(function TaskItem({
     darkMode,
     onEdit,
     onStatusChange,
-    onSelect,
     onExpand,
     taskNotes,
     taskLinks,
     timerRecords,
-    isLoading
+    isLoading,
+    handleTimerStart,
+    handleTaskSelect
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showNoteInput, setShowNoteInput] = useState(false);
@@ -102,7 +104,14 @@ const TaskItem = React.memo(function TaskItem({
                 <div className="flex items-center">
                     {!task.isCompleted && (
                         <button
-                            onClick={() => onSelect(task)}
+                            onClick={async () => {
+                                try {
+                                    const { task: selectedTask } = await handleTaskSelect(task.id);
+                                    await handleTimerStart(selectedTask);
+                                } catch (error) {
+                                    console.error('Error starting timer:', error);
+                                }
+                            }}
                             className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
                         >
                             Start Timer
@@ -266,12 +275,13 @@ TaskItem.propTypes = {
     darkMode: PropTypes.bool.isRequired,
     onEdit: PropTypes.func.isRequired, // Called with task object including type: 'note' or 'link'
     onStatusChange: PropTypes.func.isRequired,
-    onSelect: PropTypes.func.isRequired,
     onExpand: PropTypes.func.isRequired,
     taskNotes: PropTypes.array,
     taskLinks: PropTypes.array,
     timerRecords: PropTypes.array,
-    isLoading: PropTypes.bool
+    isLoading: PropTypes.bool,
+    handleTimerStart: PropTypes.func.isRequired,
+    handleTaskSelect: PropTypes.func.isRequired
 };
 
 // Memoized task section component
@@ -281,13 +291,14 @@ const TaskSection = React.memo(function TaskSection({
     darkMode,
     onEdit,
     onStatusChange,
-    onSelect,
     onExpand,
     taskNotes,
     taskLinks,
     timerRecords,
     isLoading,
-    emptyMessage
+    emptyMessage,
+    handleTimerStart,
+    handleTaskSelect
 }) {
     if (tasks.length === 0) {
         return (
@@ -318,12 +329,13 @@ const TaskSection = React.memo(function TaskSection({
                         darkMode={darkMode}
                         onEdit={onEdit}
                         onStatusChange={onStatusChange}
-                        onSelect={onSelect}
                         onExpand={onExpand}
                         taskNotes={taskNotes}
                         taskLinks={taskLinks}
                         timerRecords={timerRecords}
                         isLoading={isLoading}
+                        handleTimerStart={handleTimerStart}
+                        handleTaskSelect={handleTaskSelect}
                     />
                 ))}
             </div>
@@ -337,19 +349,19 @@ TaskSection.propTypes = {
     darkMode: PropTypes.bool.isRequired,
     onEdit: PropTypes.func.isRequired,
     onStatusChange: PropTypes.func.isRequired,
-    onSelect: PropTypes.func.isRequired,
     onExpand: PropTypes.func.isRequired,
     taskNotes: PropTypes.array,
     taskLinks: PropTypes.array,
     timerRecords: PropTypes.array,
     isLoading: PropTypes.bool,
-    emptyMessage: PropTypes.string.isRequired
+    emptyMessage: PropTypes.string.isRequired,
+    handleTimerStart: PropTypes.func.isRequired,
+    handleTaskSelect: PropTypes.func.isRequired
 };
 
 function TaskList({
     tasks = [],
     projectId = null,
-    onTaskSelect = () => {},
     onTaskStatusChange = () => {},
     onTaskCreate = () => {},
     onTaskUpdate = () => {}
@@ -357,7 +369,19 @@ function TaskList({
     const { darkMode } = useTheme();
     const [showCompleted, setShowCompleted] = useState(false);
     const [expandedTaskId, setExpandedTaskId] = useState(null);
-    const { handleTaskSelect, taskNotes, taskLinks, timerRecords, loading } = useTask(projectId);
+    const {
+        handleTaskSelect,
+        handleTimerStart,
+        handleTimerStop,
+        handleTimerPause,
+        handleTimerAdjust,
+        taskNotes,
+        taskLinks,
+        timerRecords,
+        loading,
+        selectedTask,
+        timer
+    } = useTask(projectId);
 
     // Memoized task grouping
     const { activeTasks, completedTasks } = useMemo(() => {
@@ -389,10 +413,6 @@ function TaskList({
         onTaskStatusChange(taskId, completed);
     }, [onTaskStatusChange]);
 
-    const handleSelect = useCallback((task) => {
-        onTaskSelect(task);
-    }, [onTaskSelect]);
-
     return (
         <div className="space-y-6">
             {/* Header with New Task Button */}
@@ -406,6 +426,20 @@ function TaskList({
                 </button>
             </div>
 
+            {/* Timer */}
+            {timer?.recordId && selectedTask && (
+                <div className="mb-6">
+                    <TaskTimer
+                        task={selectedTask}
+                        timer={timer}
+                        onStart={handleTimerStart}
+                        onPause={handleTimerPause}
+                        onStop={handleTimerStop}
+                        onAdjust={handleTimerAdjust}
+                    />
+                </div>
+            )}
+
             {/* Active Tasks */}
             <TaskSection
                 title="Active Tasks"
@@ -413,13 +447,14 @@ function TaskList({
                 darkMode={darkMode}
                 onEdit={handleEdit}
                 onStatusChange={handleStatusChange}
-                onSelect={handleSelect}
                 onExpand={handleExpand}
                 taskNotes={taskNotes}
                 taskLinks={taskLinks}
                 timerRecords={timerRecords}
                 isLoading={loading}
                 emptyMessage="No active tasks"
+                handleTimerStart={handleTimerStart}
+                handleTaskSelect={handleTaskSelect}
             />
 
             {/* Completed Tasks Toggle */}
@@ -444,13 +479,14 @@ function TaskList({
                             darkMode={darkMode}
                             onEdit={handleEdit}
                             onStatusChange={handleStatusChange}
-                            onSelect={handleSelect}
                             onExpand={handleExpand}
                             taskNotes={taskNotes}
                             taskLinks={taskLinks}
                             timerRecords={timerRecords}
                             isLoading={loading}
                             emptyMessage="No completed tasks"
+                            handleTimerStart={handleTimerStart}
+                            handleTaskSelect={handleTaskSelect}
                         />
                     )}
                 </div>
@@ -471,7 +507,6 @@ TaskList.propTypes = {
         })
     ),
     projectId: PropTypes.string,
-    onTaskSelect: PropTypes.func,
     onTaskStatusChange: PropTypes.func,
     onTaskCreate: PropTypes.func,
     onTaskUpdate: PropTypes.func

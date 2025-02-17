@@ -15,9 +15,11 @@ export function processProjectData(projectData, relatedData = {}) {
 
     return projectData.response.data.map(project => {
         const projectId = project.fieldData.__ID;
+        const projectRecordId = project.recordID;
         return {
             ...project.fieldData,
             id: projectId,
+            recordId: projectRecordId,
             status: project.fieldData.status || 'Open', // Provide default status
             images: processProjectImages(relatedData.images, projectId) || [],
             links: processProjectLinks(relatedData.links, projectId) || [],
@@ -49,6 +51,7 @@ export function processProjectImages(images, projectId) {
         .filter(img => img.fieldData._projectID === projectId)
         .map(img => ({
             id: img.fieldData.__ID,
+            recordId: img.recordID,
             url: img.fieldData.url,
             title: img.fieldData.title || '',
             description: img.fieldData.description || ''
@@ -70,6 +73,7 @@ export function processProjectLinks(links, projectId) {
         .filter(link => link.fieldData._projectID === projectId)
         .map(link => ({
             id: link.fieldData.__ID,
+            recordId: link.recordID,
             url: link.fieldData.url,
             title: link.fieldData.title || new URL(link.fieldData.url).hostname
         }));
@@ -91,6 +95,7 @@ export function processProjectObjectives(objectives, projectId, steps) {
         .filter(obj => obj.fieldData._projectID === projectId)
         .map(obj => ({
             id: obj.fieldData.__ID,
+            recordId: obj.recordID,
             objective: obj.fieldData.projectObjective,
             order: obj.fieldData.order || 0,
             completed: obj.fieldData.f_completed === "1",
@@ -114,6 +119,7 @@ export function processObjectiveSteps(steps, objectiveId) {
         .filter(step => step.fieldData._objectiveID === objectiveId)
         .map(step => ({
             id: step.fieldData.__ID,
+            recordId: step.recordID,
             step: step.fieldData.projectObjectiveStep,
             order: step.fieldData.order || 0,
             completed: step.fieldData.f_completed === "1"
@@ -142,6 +148,7 @@ function processProjectRecords(records, projectId) {
         .filter(record => record.fieldData._projectID === projectId)
         .map(record => ({
             id: record.fieldData.__ID,
+            recordId: record.recordID,
             startTime: record.fieldData.startTime,
             endTime: record.fieldData.endTime,
             description: record.fieldData.description || '',
@@ -216,6 +223,7 @@ export function validateProjectData(data) {
 export function formatProjectForDisplay(project) {
     return {
         id: project.id,
+        recordId: project.recordID,
         name: project.projectName,
         status: project.status,
         timeEstimate: project.estOfTime || 'Not specified',

@@ -37,6 +37,7 @@ export function processLinks(data) {
     return data.response.data
         .map(link => ({
             id: link.fieldData.__ID,
+            recordId: link.recordID,
             url: link.fieldData.link,
             createdAt: link.fieldData['~creationTimestamp'],
             createdBy: link.fieldData['~createdBy']
