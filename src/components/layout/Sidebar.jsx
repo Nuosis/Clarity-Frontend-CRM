@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from './AppLayout';
+import { calculateRecordsUnbilledHours } from '../../services/projectService';
+import { useProject } from '../../hooks/useProject';
 
 // Memoized customer list item
 const CustomerListItem = React.memo(function CustomerListItem({
@@ -64,10 +66,16 @@ function Sidebar({
     onCustomerStatusToggle
 }) {
     const { darkMode } = useTheme();
+    const { projects, projectRecords } = useProject();
+    //console.log(projectRecords)
 
-    // Memoize customer grouping
-    const { activeCustomers, inactiveCustomers } = useMemo(() => {
-        return customers.reduce((acc, customer) => {
+    // Memoize customer grouping and stats
+    const { activeCustomers, inactiveCustomers, stats } = useMemo(() => {
+        // Calculate stats
+        const unbilledHours = calculateRecordsUnbilledHours(projectRecords, true); // true for current month only
+
+        // Group customers
+        const groups = customers.reduce((acc, customer) => {
             if (customer.isActive) {
                 acc.activeCustomers.push(customer);
             } else {
@@ -75,7 +83,18 @@ function Sidebar({
             }
             return acc;
         }, { activeCustomers: [], inactiveCustomers: [] });
-    }, [customers]);
+        
+        // Destructure from groups
+        const { activeCustomers } = groups;
+
+        return {
+            ...groups,
+            stats: {
+                active: activeCustomers.length,
+                unbilledHours
+            }
+        };
+    }, [customers, projects, projectRecords]);
 
     return (
         <div className={`
@@ -93,13 +112,13 @@ function Sidebar({
                 `}>
                     Customers
                 </h2>
-                {customerStats && (
+                {stats && (
                     <div className={`
                         mt-2 text-sm
                         ${darkMode ? 'text-gray-400' : 'text-gray-500'}
                     `}>
-                        <span className="font-medium">{customerStats.active}</span> active,{' '}
-                        <span className="font-medium">{customerStats.total}</span> total
+                        <span className="font-medium">{stats.active}</span> active,{' '}
+                        <span className="font-medium">{stats.unbilledHours}</span> unbilled hours
                     </div>
                 )}
             </div>

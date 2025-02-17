@@ -23,7 +23,7 @@ const MainContent = React.memo(function MainContent({
     // Memoized project selection handler
     const handleProjectSelection = useCallback((project) => {
         console.log('Project selection handler called in MainContent');
-        handleProjectSelect(project.id);
+        handleProjectSelect(project);
         handlers.onProjectSelect(project);
     }, [handleProjectSelect, handlers.onProjectSelect]);
     if (selectedTask) {
@@ -65,6 +65,7 @@ const MainContent = React.memo(function MainContent({
                     onTaskUpdate={handlers.handleTaskUpdate}
                     onTaskStatusChange={handlers.handleTaskStatusChange}
                     onProjectUpdate={handlers.handleProjectUpdate}
+                    project={selectedProject}
                 />
             </ErrorBoundary>
         );

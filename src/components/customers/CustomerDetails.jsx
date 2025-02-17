@@ -112,6 +112,8 @@ function CustomerDetails({
     const { darkMode } = useTheme();
     const { setLoading } = useAppStateOperations();
     const { projectRecords } = useProject();
+    //console.log(projectRecords)
+    //console.log("customer",customer)
 
     // Calculate stats for display
     const stats = useMemo(() => {
@@ -121,7 +123,7 @@ function CustomerDetails({
         return {
             total: projects.length,
             open: activeProjects.length,
-            unbilledHours: calculateRecordsUnbilledHours(projectRecords)
+            unbilledHours: calculateRecordsUnbilledHours(projectRecords, true, customer.id)
         };
     }, [projects, projectRecords]);
 

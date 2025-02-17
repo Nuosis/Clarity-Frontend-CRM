@@ -43,7 +43,7 @@ export async function fetchProjectRelatedData(projectId, layout) {
     validateParams({ projectId, layout }, ['projectId', 'layout']);
     
     return handleFileMakerOperation(async () => {
-        const fieldName = layout === Layouts.PROJECT_IMAGES || layout === Layouts.PROJECT_LINKS
+        const fieldName = layout === Layouts.PROJECT_IMAGES || layout === Layouts.PROJECT_LINKS || layout === Layouts.NOTES
             ? "_fkID"
             : layout === Layouts.RECORDS
                 ? "_projectID"
@@ -161,7 +161,9 @@ export async function fetchProjectsForCustomers(customerIds) {
     validateParams({ customerIds }, ['customerIds']);
     
     return handleFileMakerOperation(async () => {
-        const query = customerIds.map(id => ({ "_custID": id }));
+        const query = customerIds.length > 0
+            ? customerIds.map(id => ({ "_custID": id }))
+            : [{ "__ID": "*" }];
         const params = {
             layout: Layouts.PROJECTS,
             action: Actions.READ,

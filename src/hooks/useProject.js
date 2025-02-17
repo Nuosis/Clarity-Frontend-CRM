@@ -14,8 +14,11 @@ import {
     validateProjectData,
     formatProjectForFileMaker,
     calculateProjectCompletion,
-    calculateProjectStats
-} from '../services';
+    calculateProjectStats,
+    processProjectImages,
+    processProjectLinks,
+    processProjectObjectives
+} from '../services/projectService';
 
 /**
  * Hook for managing project state and operations
@@ -30,6 +33,9 @@ export function useProject(customerId = null) {
     useEffect(() => {
         if (customerId) {
             loadProjects(customerId);
+        } else {
+            // Load all projects when no customerId is provided
+            loadProjects();
         }
     }, [customerId]);
 
@@ -42,7 +48,12 @@ export function useProject(customerId = null) {
             setLoading(true);
             setError(null);
             
-            const projectResult = await fetchProjectsForCustomer(custId);
+            let projectResult;
+            if (custId) {
+                projectResult = await fetchProjectsForCustomer(custId);
+            } else {
+                projectResult = await fetchProjectsForCustomers([]);
+            }
             const processedProjects = processProjectData(projectResult);
             setProjects(processedProjects);
         } catch (err) {
@@ -58,21 +69,32 @@ export function useProject(customerId = null) {
      */
     const loadProjectDetails = useCallback(async (projectId) => {
         try {
-            const [images, links, objectives, steps] = await Promise.all([
+            const [images, links, objectives, steps, notes] = await Promise.all([
                 fetchProjectRelatedData([projectId], 'devProjectImages'),
                 fetchProjectRelatedData([projectId], 'devProjectLinks'),
                 fetchProjectRelatedData([projectId], 'devProjectObjectives'),
-                fetchProjectRelatedData([projectId], 'devProjectObjSteps')
+                fetchProjectRelatedData([projectId], 'devProjectObjSteps'),
+                fetchProjectRelatedData([projectId], 'devNotes')
             ]);
 
-            const projectDetails = {
-                images,
-                links,
+            // Process each type of data
+            const processedImages = processProjectImages(images, projectId);
+            const processedLinks = processProjectLinks(links, projectId);
+            const processedObjectives = processProjectObjectives(
                 objectives,
-                steps
+                projectId,
+                { response: { data: steps.response?.data || [] } }
+            );
+            const processedNotes = notes.response?.data || [];
+
+            const projectDetails = {
+                images: processedImages,
+                links: processedLinks,
+                objectives: processedObjectives,
+                notes: processedNotes
             };
 
-            // Update the project with the details
+            // Update the project with the processed details
             setProjects(prevProjects =>
                 prevProjects.map(p =>
                     p.id === projectId
@@ -91,22 +113,35 @@ export function useProject(customerId = null) {
     /**
      * Selects a project and loads all its data
      */
-    const handleProjectSelect = useCallback(async (projectId) => {
+    const handleProjectSelect = useCallback(async (projectOrId) => {
         try {
             setLoading(true);
             setError(null);
             
-            // Find the project in our existing projects array
-            const project = projects.find(p => p.id === projectId);
+            // Handle both project object and project ID
+            const projectId = typeof projectOrId === 'string' ? projectOrId : projectOrId.id;
+            const project = typeof projectOrId === 'string' ?
+                projects.find(p => p.id === projectId) :
+                projectOrId;
             
             if (!project) {
-                throw new Error('Project not found in cached data');
+                throw new Error('Project not found');
             }
 
             // Load details if not already loaded
             if (!project.images || !project.links) {
                 const details = await loadProjectDetails(projectId);
-                setSelectedProject({ ...project, ...details });
+                const processedProject = processProjectData({
+                    response: {
+                        data: [{
+                            fieldData: {
+                                ...project,
+                                __ID: project.id
+                            }
+                        }]
+                    }
+                }, details)[0];
+                setSelectedProject(processedProject);
             } else {
                 setSelectedProject(project);
             }
@@ -242,6 +277,7 @@ export function useProject(customerId = null) {
         
         // Actions
         loadProjects,
+        loadProjectDetails,
         handleProjectSelect,
         handleProjectCreate,
         handleProjectUpdate,
@@ -250,6 +286,7 @@ export function useProject(customerId = null) {
         // Utilities
         getProjectCompletion,
         clearError: () => setError(null),
-        clearSelectedProject: () => setSelectedProject(null)
+        clearSelectedProject: () => setSelectedProject(null),
+        isLoading: loading
     };
 }

@@ -8,7 +8,7 @@
  * @param {Object} relatedData - Related project data (images, links, etc.)
  * @returns {Array} Processed project records
  */
-export function processProjectData(projectData, relatedData) {
+export function processProjectData(projectData, relatedData = {}) {
     if (!projectData?.response?.data) {
         return [];
     }
@@ -18,15 +18,16 @@ export function processProjectData(projectData, relatedData) {
         return {
             ...project.fieldData,
             id: projectId,
-            images: processProjectImages(relatedData.images, projectId),
-            links: processProjectLinks(relatedData.links, projectId),
-            objectives: processProjectObjectives(relatedData.objectives, projectId, relatedData.steps),
-            records: processProjectRecords(relatedData.records, projectId).records || [],
-            stats: processProjectRecords(relatedData.records, projectId).stats || {
+            status: project.fieldData.status || 'Open', // Provide default status
+            images: processProjectImages(relatedData.images, projectId) || [],
+            links: processProjectLinks(relatedData.links, projectId) || [],
+            objectives: processProjectObjectives(relatedData.objectives, projectId, relatedData.steps) || [],
+            records: processProjectRecords(relatedData.records, projectId)?.records || [],
+            stats: processProjectRecords(relatedData.records, projectId)?.stats || {
                 totalHours: 0,
                 unbilledHours: 0
             },
-            isActive: project.fieldData.status === 'Open',
+            isActive: (project.fieldData.status || 'Open') === 'Open',
             createdAt: project.fieldData['~creationTimestamp'],
             modifiedAt: project.fieldData['~modificationTimestamp']
         };
@@ -39,7 +40,7 @@ export function processProjectData(projectData, relatedData) {
  * @param {string} projectId - Project ID
  * @returns {Array} Processed image records
  */
-function processProjectImages(images, projectId) {
+export function processProjectImages(images, projectId) {
     if (!images?.response?.data) {
         return [];
     }
@@ -60,7 +61,7 @@ function processProjectImages(images, projectId) {
  * @param {string} projectId - Project ID
  * @returns {Array} Processed link records
  */
-function processProjectLinks(links, projectId) {
+export function processProjectLinks(links, projectId) {
     if (!links?.response?.data) {
         return [];
     }
@@ -81,7 +82,7 @@ function processProjectLinks(links, projectId) {
  * @param {Array} steps - Raw step data
  * @returns {Array} Processed objective records with steps
  */
-function processProjectObjectives(objectives, projectId, steps) {
+export function processProjectObjectives(objectives, projectId, steps) {
     if (!objectives?.response?.data) {
         return [];
     }
@@ -104,7 +105,7 @@ function processProjectObjectives(objectives, projectId, steps) {
  * @param {string} objectiveId - Objective ID
  * @returns {Array} Processed step records
  */
-function processObjectiveSteps(steps, objectiveId) {
+export function processObjectiveSteps(steps, objectiveId) {
     if (!steps?.response?.data) {
         return [];
     }
@@ -352,10 +353,29 @@ function calculateRecordsTotalHours(records) {
     ).toFixed(1);
 }
 
-// Calculate unbilled hours from records
-export function calculateRecordsUnbilledHours(records) {
+// Calculate unbilled hours from records, optionally filtered by current month and customer
+export function calculateRecordsUnbilledHours(records, currentMonthOnly = false, customerId = null) {
     if (!records) return "0.0";
-    return records
+    
+    // Apply both customer and month filters in a single operation
+    const filteredRecords = records.filter(record => {
+        // Check customer ID if provided
+        const matchesCustomer = !customerId ||
+            record.fieldData["customers_Projects::_custID"] === customerId;
+
+        // Check current month if required
+        const matchesMonth = !currentMonthOnly || (() => {
+            const now = new Date();
+            const recordDate = new Date(record.fieldData.DateStart);
+            return recordDate.getMonth() === now.getMonth() &&
+                   recordDate.getFullYear() === now.getFullYear();
+        })();
+
+        return matchesCustomer && matchesMonth;
+    });
+
+    // Calculate unbilled hours from filtered records
+    return filteredRecords
         .filter(record => record.fieldData.f_billed === "0")
         .reduce((total, record) =>
             total + (parseFloat(record.fieldData.Billable_Time_Rounded) || 0), 0

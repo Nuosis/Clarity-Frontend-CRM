@@ -2,7 +2,6 @@ import React, { useMemo, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useProject } from '../../hooks/useProject';
-import { getProcessedProject, calculateProjectDetailStats } from '../../services/projectService';
 import TaskList from '../tasks/TaskList';
 
 // Memoized objective component
@@ -105,70 +104,24 @@ function ProjectDetails({
     onStatusChange = () => {},
     onTaskCreate = () => {},
     onTaskUpdate = () => {},
-    onTaskStatusChange = () => {}
+    onTaskStatusChange = () => {},
+    project
 }) {
     const { darkMode } = useTheme();
-    const {
-        selectedProject,
-        projectRecords,
-        relatedData,
-        handleProjectSelect
-    } = useProject();
-
-    // Select project when component mounts
-    useEffect(() => {
-        if (projectId) {
-            handleProjectSelect(projectId);
-        }
-    }, [projectId, handleProjectSelect]);
-
-    const processedProject = useMemo(() => {
-        if (!selectedProject) return null;
-
-        // Filter records for this project
-        const filteredRecords = {
-            response: {
-                data: projectRecords?.filter(record =>
-                    record.fieldData?._projectID === selectedProject.id
-                ) || []
-            }
-        };
-
-        // Filter related data for this project
-        const projectRelatedData = {
-            images: relatedData.images?.response?.data?.filter(
-                img => img.fieldData._projectID === selectedProject.id
-            ) || [],
-            links: relatedData.links?.response?.data?.filter(
-                link => link.fieldData._projectID === selectedProject.id
-            ) || [],
-            objectives: relatedData.objectives?.response?.data?.filter(
-                obj => obj.fieldData._projectID === selectedProject.id
-            ) || [],
-            steps: relatedData.steps?.response?.data || [],
-            records: filteredRecords
-        };
-
-        return getProcessedProject(selectedProject, projectRelatedData);
-    }, [selectedProject, projectRecords, relatedData]);
-
-    if (!processedProject) return null;
+    console.log("Project in ProjectDetails:", project);
 
     // Calculate project stats using service
     const stats = useMemo(() => {
-        if (!processedProject || !processedProject.records) return null;
-        return calculateProjectDetailStats(processedProject, processedProject.records);
-    }, [processedProject]);
-
-    const statusColors = {
-        Open: 'text-green-600 dark:text-green-400',
-        Closed: 'text-red-600 dark:text-red-400'
-    };
+        if (!project?.stats) return null;
+        return project.stats;
+    }, [project]);
 
     // Memoized handlers
     const handleStatusChange = useCallback((e) => {
-        onStatusChange(processedProject.id, e.target.value);
-    }, [processedProject.id, onStatusChange]);
+        if (project?.__ID) {
+            onStatusChange(project.__ID, e.target.value);
+        }
+    }, [project, onStatusChange]);
 
     // Memoized renderers
     const renderLink = useCallback((link) => (
@@ -179,8 +132,8 @@ function ProjectDetails({
             rel="noopener noreferrer"
             className={`
                 block p-2 rounded
-                ${darkMode 
-                    ? 'text-blue-400 hover:bg-gray-800' 
+                ${darkMode
+                    ? 'text-blue-400 hover:bg-gray-800'
                     : 'text-blue-600 hover:bg-gray-100'}
             `}
         >
@@ -204,6 +157,20 @@ function ProjectDetails({
         </div>
     ), [darkMode]);
 
+    // Show loading state
+    if (!project) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    const statusColors = {
+        Open: 'text-green-600 dark:text-green-400',
+        Closed: 'text-red-600 dark:text-red-400'
+    };
+
     return (
         <div className="space-y-8 h-[calc(100vh)] overflow-y-auto">
             {/* Project Header */}
@@ -213,148 +180,163 @@ function ProjectDetails({
             `}>
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold">
-                        {processedProject.projectName}
+                        {project?.projectName}
                     </h2>
-                    <select
-                        value={processedProject.status}
-                        onChange={handleStatusChange}
-                        className={`
-                            px-3 py-1 rounded-md text-sm font-medium
-                            ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
-                            border
-                            ${statusColors[processedProject.status]}
-                        `}
-                    >
-                        <option value="Open">Open</option>
-                        <option value="Closed">Closed</option>
-                    </select>
+                    {project?.status && (
+                        <select
+                            value={project.status}
+                            onChange={handleStatusChange}
+                            className={`
+                                px-3 py-1 rounded-md text-sm font-medium
+                                ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+                                border
+                                ${statusColors[project.status]}
+                            `}
+                        >
+                            <option value="Open">Open</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    )}
                 </div>
                 <div className={`mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {processedProject.estOfTime && (
-                        <span className="mr-4">Estimated Time: {processedProject.estOfTime}</span>
+                    {project?.estOfTime && (
+                        <span className="mr-4">Estimated Time: {project.estOfTime}</span>
                     )}
-                    <span>Created: {new Date(processedProject.createdAt).toLocaleDateString()}</span>
+                    {project?.createdAt && (
+                        <span>Created: {new Date(project.createdAt).toLocaleDateString()}</span>
+                    )}
                 </div>
 
-                <div className="mt-4 grid grid-cols-3 gap-4">
-                    <div className={`
-                        p-3 rounded-lg
-                        ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
-                    `}>
-                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Total Hours
+                {stats && (
+                    <div className="mt-4 grid grid-cols-3 gap-4">
+                        <div className={`
+                            p-3 rounded-lg
+                            ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
+                        `}>
+                            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Total Hours
+                            </div>
+                            <div className="text-2xl font-semibold mt-1">
+                                {(Number(stats.totalHours) || 0).toFixed(1)}
+                            </div>
                         </div>
-                        <div className="text-2xl font-semibold mt-1">
-                            {stats?.totalHours.toFixed(1)}
+                        <div className={`
+                            p-3 rounded-lg
+                            ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
+                        `}>
+                            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Unbilled Hours
+                            </div>
+                            <div className="text-2xl font-semibold mt-1">
+                                {(Number(stats.unbilledHours) || 0).toFixed(1)}
+                            </div>
+                        </div>
+                        <div className={`
+                            p-3 rounded-lg
+                            ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
+                        `}>
+                            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Completion
+                            </div>
+                            <div className="text-2xl font-semibold mt-1">
+                                {stats.completion || 0}%
+                            </div>
                         </div>
                     </div>
-                    <div className={`
-                        p-3 rounded-lg
-                        ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
-                    `}>
-                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Unbilled Hours
-                        </div>
-                        <div className="text-2xl font-semibold mt-1">
-                            {stats?.unbilledHours.toFixed(1)}
-                        </div>
-                    </div>
-                    <div className={`
-                        p-3 rounded-lg
-                        ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}
-                    `}>
-                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Completion
-                        </div>
-                        <div className="text-2xl font-semibold mt-1">
-                            {stats?.completion || 0}%
-                        </div>
-                    </div>
-                </div>
+                )}
             </div>
 
             {/* Tasks Section */}
-            <TaskList
-                tasks={tasks}
-                projectId={processedProject.id}
-                onTaskSelect={onTaskSelect}
-                onTaskStatusChange={onTaskStatusChange}
-                onTaskCreate={onTaskCreate}
-                onTaskUpdate={onTaskUpdate}
-            />
+            {project?.__ID && (
+                <TaskList
+                    tasks={tasks}
+                    projectId={project.__ID}
+                    onTaskSelect={onTaskSelect}
+                    onTaskStatusChange={onTaskStatusChange}
+                    onTaskCreate={onTaskCreate}
+                    onTaskUpdate={onTaskUpdate}
+                />
+            )}
 
             {/* Notes Section */}
-            <div>
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Notes</h3>
-                    <button
-                        onClick={() => console.log('Add new note')}
-                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
-                    >
-                        New Note
-                    </button>
-                </div>
-                {processedProject.notes?.length > 0 && (
-                    <div className="space-y-4">
-                        {processedProject.notes.map(note => (
-                            <div
-                                key={note.id}
-                                className={`
-                                    p-4 rounded-lg border
-                                    ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
-                                `}
-                            >
-                                <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{note.content}</p>
-                            </div>
-                        ))}
+            {project && (
+                <div>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Notes</h3>
+                        <button
+                            onClick={() => console.log('Add new note')}
+                            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                        >
+                            New Note
+                        </button>
                     </div>
-                )}
-            </div>
+                    {project.notes?.length > 0 && (
+                        <div className="space-y-4">
+                            {project.notes.map(note => (
+                                <div
+                                    key={note.id}
+                                    className={`
+                                        p-4 rounded-lg border
+                                        ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+                                    `}
+                                >
+                                    <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{note.content}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Links Section */}
-            <div>
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Links</h3>
-                    <button
-                        onClick={() => console.log('Add new link')}
-                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
-                    >
-                        New Link
-                    </button>
+            {project && (
+                <div>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Links</h3>
+                        <button
+                            onClick={() => console.log('Add new link')}
+                            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                        >
+                            New Link
+                        </button>
+                    </div>
+                    {project.links?.length > 0 && (
+                        <ResourceGrid
+                            title="Links"
+                            items={project.links}
+                            renderItem={renderLink}
+                            darkMode={darkMode}
+                            emptyMessage="No links added yet"
+                        />
+                    )}
                 </div>
-                {processedProject.links?.length > 0 && (
-                    <ResourceGrid
-                        title="Links"
-                        items={processedProject.links}
-                        renderItem={renderLink}
-                        darkMode={darkMode}
-                    />
-                )}
-            </div>
+            )}
 
             {/* Objectives Section */}
-            <div>
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Objectives</h3>
-                    <button
-                        onClick={() => console.log('Add new objective')}
-                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
-                    >
-                        New Objective
-                    </button>
-                </div>
-                {processedProject.objectives?.length > 0 && (
-                    <div className="space-y-4">
-                        {processedProject.objectives.map(objective => (
-                            <Objective
-                                key={objective.id}
-                                objective={objective}
-                                darkMode={darkMode}
-                            />
-                        ))}
+            {project && (
+                <div>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Objectives</h3>
+                        <button
+                            onClick={() => console.log('Add new objective')}
+                            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                        >
+                            New Objective
+                        </button>
                     </div>
-                )}
-            </div>
+                    {project.objectives?.length > 0 && (
+                        <div className="space-y-4">
+                            {project.objectives.map(objective => (
+                                <Objective
+                                    key={objective.id}
+                                    objective={objective}
+                                    darkMode={darkMode}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
         </div>
     );
@@ -367,7 +349,37 @@ ProjectDetails.propTypes = {
     onStatusChange: PropTypes.func,
     onTaskCreate: PropTypes.func,
     onTaskUpdate: PropTypes.func,
-    onTaskStatusChange: PropTypes.func
+    onTaskStatusChange: PropTypes.func,
+    project: PropTypes.shape({
+        __ID: PropTypes.string.isRequired,
+        projectName: PropTypes.string.isRequired,
+        status: PropTypes.string,
+        estOfTime: PropTypes.string,
+        createdAt: PropTypes.string,
+        stats: PropTypes.shape({
+            totalHours: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+            unbilledHours: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+            completion: PropTypes.number
+        }),
+        notes: PropTypes.arrayOf(PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            content: PropTypes.string.isRequired
+        })),
+        links: PropTypes.arrayOf(PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            url: PropTypes.string.isRequired,
+            title: PropTypes.string
+        })),
+        objectives: PropTypes.arrayOf(PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            objective: PropTypes.string.isRequired,
+            steps: PropTypes.arrayOf(PropTypes.shape({
+                id: PropTypes.string.isRequired,
+                step: PropTypes.string.isRequired,
+                completed: PropTypes.bool.isRequired
+            }))
+        }))
+    }).isRequired
 };
 
 export default React.memo(ProjectDetails);

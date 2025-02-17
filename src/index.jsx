@@ -10,6 +10,7 @@ import { initializationService } from './services/initializationService';
 import { loadingStateManager, useGlobalLoadingState } from './services/loadingStateManager';
 import { AppStateProvider, useAppState, useAppStateOperations } from './context/AppStateContext';
 import { ProjectProvider } from './context/ProjectContext';
+import { calculateProjectDetailStats } from './services/projectService';
 
 // Memoized sidebar for performance
 const MemoizedSidebar = React.memo(Sidebar);
@@ -46,7 +47,9 @@ function AppContent() {
         handleProjectCreate,
         handleProjectUpdate,
         handleProjectStatusChange,
-        clearSelectedProject
+        clearSelectedProject,
+        loadProjectDetails,
+        projectRecords
     } = useProject(appState.selectedCustomer?.id);
 
     // Task state and handlers
@@ -117,13 +120,37 @@ function AppContent() {
     }, [clearSelectedProject, clearSelectedTask, handleCustomerSelect, setSelectedCustomer]);
 
     const onProjectSelect = useCallback(async (project) => {
-        console.log('Project selected:', project);
         clearSelectedTask();
-        const result = await handleProjectSelect(project.id);
-        console.log('Project selection result:', result);
-        setSelectedProject(project);
-        console.log('Selected project set:', project);
-    }, [clearSelectedTask, handleProjectSelect, setSelectedProject]);
+        try {
+            // Load project details including images, links, objectives, steps, and notes
+            console.log("Loading project details for project:", project);
+            const details = await loadProjectDetails(project.__ID);
+            console.log("Project details loaded:", details);
+
+            // Calculate stats using project records
+            const stats = calculateProjectDetailStats(project, projectRecords);
+            console.log("Project stats calculated:", stats);
+            
+            // Create complete project object with all data
+            const completeProject = {
+                ...project,
+                images: details.images || [],
+                links: details.links || [],
+                objectives: details.objectives || [],
+                notes: details.notes || [],
+                records: projectRecords.filter(r => r.fieldData._projectID === project.__ID),
+                stats: {
+                    totalHours: stats.totalHours,
+                    unbilledHours: stats.unbilledHours,
+                    completion: stats.completion
+                }
+            };
+            console.log("Complete project object:", completeProject);
+            setSelectedProject(completeProject);
+        } catch (error) {
+            console.error('Error selecting project:', error);
+        }
+    }, [clearSelectedTask, loadProjectDetails, projectRecords, setSelectedProject, calculateProjectDetailStats]);
 
     const onTaskSelect = useCallback((task) => {
         handleTaskSelect(task.id);

@@ -45,10 +45,7 @@ export function formatParams(params) {
 export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true) {
     const timestamp = new Date().toISOString();
     console.log(`[FileMaker API ${timestamp}] Fetching data:`, {
-        action: params.action,
-        layout: params.layout,
-        attempt,
-        stack: new Error().stack
+        params
     });
     
     return new Promise((resolve, reject) => {
@@ -77,6 +74,9 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
             
             // Special case for returnRecords calls
             if (formattedParams.callBackName === "returnRecords") {
+                FileMaker.PerformScript("JS * Fetch Data", param);
+                resolve({ status: "pending" }); // Resolve immediately, actual data comes through callback
+            } else if (formattedParams.callBackName === "returnContext") {
                 FileMaker.PerformScript("JS * Fetch Data", param);
                 resolve({ status: "pending" }); // Resolve immediately, actual data comes through callback
             } else if (isAsync) {
