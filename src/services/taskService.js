@@ -127,10 +127,11 @@ export function validateTaskData(data) {
     const errors = [];
 
     if (!data.task?.trim()) {
-        errors.push('Task description is required');
+        errors.push('Task name is required');
     }
 
-    if (!data._projectID) {
+    // Only check for projectID if it's a new task (has no id)
+    if (!data.id && !data._projectID) {
         errors.push('Project ID is required');
     }
 
@@ -173,9 +174,9 @@ export function formatTaskForDisplay(task, timerRecords = [], notes = [], links 
  */
 export function formatTaskForFileMaker(data) {
     return {
-        task: data.description,
+        task: data.task,
         type: data.type,
-        _projectID: data.projectId,
+        _projectID: data._projectID,
         f_completed: data.isCompleted ? "1" : "0",
         notes: data.notes
     };

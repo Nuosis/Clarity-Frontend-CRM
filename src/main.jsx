@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './index';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AppStateProvider } from './context/AppStateContext';
+import { SnackBarProvider } from './context/SnackBarContext';
 import './index.css';
 import './style.css';
 import 'tailwindcss/tailwind.css';
@@ -27,8 +28,10 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 // Wrap the app with strict mode and providers
 root.render(
     <AppStateProvider>
-        <ErrorBoundary>
-            <App />
-        </ErrorBoundary>
+        <SnackBarProvider>
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
+        </SnackBarProvider>
     </AppStateProvider>
 );

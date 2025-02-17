@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useSnackBar } from '../context/SnackBarContext';
 import {
     fetchTasksForProject,
     createTask,
@@ -32,6 +33,7 @@ export function useTask(projectId = null) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [tasks, setTasks] = useState([]);
+    const { showError } = useSnackBar();
     const [selectedTask, setSelectedTask] = useState(null);
     const [timer, setTimer] = useState({
         recordId: null,
@@ -156,7 +158,8 @@ export function useTask(projectId = null) {
             
             const validation = validateTaskData(taskData);
             if (!validation.isValid) {
-                throw new Error(validation.errors.join(', '));
+                showError(validation.errors.join(', '));
+                return null;
             }
             
             const formattedData = formatTaskForFileMaker(taskData);
@@ -171,13 +174,18 @@ export function useTask(projectId = null) {
             
             return result;
         } catch (err) {
+            // Use SnackBar for validation errors, throw others to error boundary
+            if (err.message.includes('required')) {
+                showError(err.message);
+                return null;
+            }
             setError(err.message);
             console.error('Error creating task:', err);
             throw err;
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [showError]);
 
     /**
      * Updates an existing task
@@ -189,16 +197,17 @@ export function useTask(projectId = null) {
             
             const validation = validateTaskData(taskData);
             if (!validation.isValid) {
-                throw new Error(validation.errors.join(', '));
+                showError(validation.errors.join(', '));
+                return null;
             }
             
             const formattedData = formatTaskForFileMaker(taskData);
             const result = await updateTask(taskId, formattedData);
             
             // Update local state
-            setTasks(prevTasks => 
+            setTasks(prevTasks =>
                 sortTasks(
-                    prevTasks.map(task => 
+                    prevTasks.map(task =>
                         task.id === taskId
                             ? { ...task, ...taskData }
                             : task
@@ -213,13 +222,18 @@ export function useTask(projectId = null) {
             
             return result;
         } catch (err) {
+            // Use SnackBar for validation errors, throw others to error boundary
+            if (err.message.includes('required')) {
+                showError(err.message);
+                return null;
+            }
             setError(err.message);
             console.error('Error updating task:', err);
             throw err;
         } finally {
             setLoading(false);
         }
-    }, [selectedTask]);
+    }, [selectedTask, showError]);
 
     /**
      * Updates task completion status

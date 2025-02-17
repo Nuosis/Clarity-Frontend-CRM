@@ -175,7 +175,7 @@ function ProjectDetails({
         <div className="space-y-8 h-[calc(100vh)] overflow-y-auto">
             {/* Project Header */}
             <div className={`
-                border-b pb-4
+                border-b pb-4 mt-6
                 ${darkMode ? 'border-gray-700' : 'border-gray-200'}
             `}>
                 <div className="flex items-center justify-between">
@@ -261,7 +261,7 @@ function ProjectDetails({
             {/* Notes Section */}
             {project && (
                 <div>
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-center mb-4 pr-5">
                         <h3 className="text-lg font-semibold">Notes</h3>
                         <button
                             onClick={() => console.log('Add new note')}
@@ -291,7 +291,7 @@ function ProjectDetails({
             {/* Links Section */}
             {project && (
                 <div>
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-center mb-4 pr-5">
                         <h3 className="text-lg font-semibold">Links</h3>
                         <button
                             onClick={() => console.log('Add new link')}
@@ -315,7 +315,7 @@ function ProjectDetails({
             {/* Objectives Section */}
             {project && (
                 <div>
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-center mb-4 pr-5">
                         <h3 className="text-lg font-semibold">Objectives</h3>
                         <button
                             onClick={() => console.log('Add new objective')}

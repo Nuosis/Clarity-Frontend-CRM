@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { loadingStateManager } from '../services/loadingStateManager';
 import { useAppStateOperations } from '../context/AppStateContext';
+import { useSnackBar } from '../context/SnackBarContext';
 
 class ErrorBoundaryFallback extends React.Component {
     constructor(props) {
@@ -20,13 +21,25 @@ class ErrorBoundaryFallback extends React.Component {
     }
 
     componentDidCatch(error, errorInfo) {
-        this.setState({
-            errorInfo
-        });
+        // Check if we should show the error boundary
+        const shouldShowErrorBoundary = this.props.onError ? this.props.onError(error) : true;
         
-        // Log error to console for debugging
-        console.error('Error caught by boundary:', error);
-        console.error('Error stack:', errorInfo.componentStack);
+        if (shouldShowErrorBoundary) {
+            this.setState({
+                errorInfo
+            });
+            
+            // Log error to console for debugging
+            console.error('Error caught by boundary:', error);
+            console.error('Error stack:', errorInfo.componentStack);
+        } else {
+            // Reset error state if we're not showing the error boundary
+            this.setState({
+                hasError: false,
+                error: null,
+                errorInfo: null
+            });
+        }
     }
 
     handleRetry = () => {
@@ -82,14 +95,25 @@ class ErrorBoundaryFallback extends React.Component {
 // Wrapper component to provide hooks to class component
 export default function ErrorBoundary({ children }) {
     const { resetState } = useAppStateOperations();
+    const { showError } = useSnackBar();
 
     const handleRetry = useCallback(() => {
         // Reset application state
         resetState();
     }, [resetState]);
 
+    // Create error handler for non-critical errors
+    const handleError = useCallback((error) => {
+        // Show non-critical errors in SnackBar
+        if (error && !error.critical) {
+            showError(error.message || 'An unexpected error occurred');
+            return false; // Don't show error boundary for non-critical errors
+        }
+        return true; // Show error boundary for critical errors
+    }, [showError]);
+
     return (
-        <ErrorBoundaryFallback onRetry={handleRetry}>
+        <ErrorBoundaryFallback onRetry={handleRetry} onError={handleError}>
             {children}
         </ErrorBoundaryFallback>
     );

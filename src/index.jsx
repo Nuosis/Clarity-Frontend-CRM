@@ -127,8 +127,8 @@ function AppContent() {
             const details = await loadProjectDetails(project.__ID);
             console.log("Project details loaded:", details);
 
-            // Calculate stats using project records
-            const stats = calculateProjectDetailStats(project, projectRecords);
+            // Calculate stats using project records if they exist
+            const stats = projectRecords ? calculateProjectDetailStats(project, projectRecords) : { totalHours: 0, unbilledHours: 0, completion: 0 };
             console.log("Project stats calculated:", stats);
             
             // Create complete project object with all data
@@ -138,7 +138,7 @@ function AppContent() {
                 links: details.links || [],
                 objectives: details.objectives || [],
                 notes: details.notes || [],
-                records: projectRecords.filter(r => r.fieldData._projectID === project.__ID),
+                records: projectRecords ? projectRecords.filter(r => r.fieldData._projectID === project.__ID) : [],
                 stats: {
                     totalHours: stats.totalHours,
                     unbilledHours: stats.unbilledHours,

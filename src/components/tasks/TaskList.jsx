@@ -2,9 +2,11 @@ import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useTask } from '../../hooks/useTask';
-import { formatDuration } from '../../services/taskService';
+import { formatDuration, validateTaskData } from '../../services/taskService';
 import { createNote } from '../../services/noteService';
 import { createLink } from '../../services/linkService';
+import { useSnackBar } from '../../context/SnackBarContext';
+import { createTask } from '../../api/tasks';
 import TextInput from '../global/TextInput';
 import ErrorBoundary from '../ErrorBoundary';
 import TaskTimer from './TaskTimer';
@@ -237,24 +239,28 @@ const TaskItem = React.memo(function TaskItem({
                                     {task.isCompleted ? 'Reopen Task' : 'Mark as Complete'}
                                 </button>
                             </div>
-                            {showNoteInput && (
-                                <TextInput
-                                    title="Add Note"
-                                    placeholder="Enter your note..."
-                                    submitLabel="Create"
-                                    onSubmit={handleNoteSubmit}
-                                    onCancel={() => setShowNoteInput(false)}
-                                />
-                            )}
-                            {showLinkInput && (
-                                <TextInput
-                                    title="Add Link"
-                                    placeholder="Enter URL..."
-                                    submitLabel="Create"
-                                    onSubmit={handleLinkSubmit}
-                                    onCancel={() => setShowLinkInput(false)}
-                                />
-                            )}
+                            {showNoteInput ? (
+                                <>
+                                    <TextInput
+                                        title="Add Note"
+                                        placeholder="Enter your note..."
+                                        submitLabel="Create"
+                                        onSubmit={handleNoteSubmit}
+                                        onCancel={() => setShowNoteInput(false)}
+                                    />
+                                </>
+                            ) : null}
+                            {showLinkInput ? (
+                                <>
+                                    <TextInput
+                                        title="Add Link"
+                                        placeholder="Enter URL..."
+                                        submitLabel="Create"
+                                        onSubmit={handleLinkSubmit}
+                                        onCancel={() => setShowLinkInput(false)}
+                                    />
+                                </>
+                            ) : null}
                         </>
                     )}
                 </div>
@@ -367,8 +373,10 @@ function TaskList({
     onTaskUpdate = () => {}
 }) {
     const { darkMode } = useTheme();
+    const { showError } = useSnackBar();
     const [showCompleted, setShowCompleted] = useState(false);
     const [expandedTaskId, setExpandedTaskId] = useState(null);
+    const [showNewTaskInput, setShowNewTaskInput] = useState(false);
     const {
         handleTaskSelect,
         handleTimerStart,
@@ -413,18 +421,54 @@ function TaskList({
         onTaskStatusChange(taskId, completed);
     }, [onTaskStatusChange]);
 
+    const handleTaskCreate = useCallback(async (taskName) => {
+        try {
+            const taskData = {
+                _projectID: projectId,
+                task: taskName,
+                type: 'General',
+                f_completed: false
+            };
+            
+            const validation = validateTaskData(taskData);
+            if (!validation.isValid) {
+                showError(validation.errors.join(', '));
+                return;
+            }
+
+            const result = await createTask(taskData);
+            // Notify parent component to refresh tasks
+            onTaskCreate({ projectId });
+            setShowNewTaskInput(false);
+        } catch (error) {
+            showError(error.message);
+            console.error('Error creating task:', error);
+        }
+    }, [projectId, onTaskCreate, showError]);
+
     return (
         <div className="space-y-6">
             {/* Header with New Task Button */}
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Tasks</h3>
                 <button
-                    onClick={() => onTaskCreate({ projectId })}
-                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                    onClick={() => setShowNewTaskInput(true)}
+                    className="px-4 py-2 mr-5 bg-primary text-white rounded-md hover:bg-primary-hover"
                 >
                     New Task
                 </button>
             </div>
+            {showNewTaskInput ? (
+                <>
+                    <TextInput
+                        title="New Task"
+                        placeholder="Enter task name..."
+                        submitLabel="Create"
+                        onSubmit={handleTaskCreate}
+                        onCancel={() => setShowNewTaskInput(false)}
+                    />
+                </>
+            ) : null}
 
             {/* Timer */}
             {timer?.recordId && selectedTask && (

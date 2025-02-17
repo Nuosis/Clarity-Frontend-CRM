@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 
-function TextInput({ 
+function TextInput({
     title = 'Input',
     placeholder = 'Enter text...',
     submitLabel = 'Submit',
     cancelLabel = 'Cancel',
     onSubmit,
-    onCancel 
+    onCancel,
+    isModal = true
 }) {
     const { darkMode } = useTheme();
     const [text, setText] = useState('');
