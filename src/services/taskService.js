@@ -1,3 +1,78 @@
+import {
+    fetchTasksForProject,
+    fetchTaskTimers,
+    fetchTaskNotes,
+    fetchTaskLinks,
+    createTask as createTaskAPI,
+    updateTask as updateTaskAPI,
+    updateTaskStatus as updateTaskStatusAPI,
+    startTaskTimer as startTaskTimerAPI,
+    stopTaskTimer as stopTaskTimerAPI
+} from '../api/tasks';
+
+/**
+ * Loads tasks for a project with processing and sorting
+ * @param {string} projectId - Project ID
+ * @returns {Promise<Array>} Processed and sorted tasks
+ */
+export async function loadProjectTasks(projectId) {
+    const data = await fetchTasksForProject(projectId);
+    //console.log('Raw data from FileMaker:', data);
+    const processedTasks = processTaskData(data);
+    //console.log('Processed tasks:', processedTasks);
+    const sortedTasks = sortTasks(processedTasks);
+    //console.log('Sorted tasks:', sortedTasks);
+    return sortedTasks;
+}
+
+/**
+ * Loads all details for a task
+ * @param {string} taskId - Task ID
+ * @returns {Promise<Object>} Task details including timers, notes, and links
+ */
+export async function loadTaskDetails(taskId) {
+    const [timerResult, notesResult, linksResult] = await Promise.all([
+        fetchTaskTimers(taskId),
+        fetchTaskNotes(taskId),
+        fetchTaskLinks(taskId)
+    ]);
+
+    return {
+        timers: processTimerRecords(timerResult),
+        notes: processTaskNotes(notesResult),
+        links: processTaskLinks(linksResult)
+    };
+}
+
+/**
+ * Starts a timer with validation
+ * @param {Object} task - Task to start timer for
+ * @returns {Promise<Object>} Created timer record
+ */
+export async function startTimer(task) {
+    if (!task?.id) {
+        throw new Error('Invalid task for timer');
+    }
+    return await startTaskTimerAPI(task.id, task);
+}
+
+/**
+ * Stops a timer with validation and adjustments
+ * @param {Object} params - Timer stop parameters
+ * @returns {Promise<Object>} Updated timer record
+ */
+export async function stopTimer(params) {
+    if (!params?.recordId) {
+        throw new Error('Invalid timer record');
+    }
+    return await stopTaskTimerAPI(
+        params.recordId,
+        params.description,
+        params.saveImmediately,
+        params.totalPauseTime + params.adjustment
+    );
+}
+
 /**
  * Task data processing and business logic
  */
@@ -8,21 +83,30 @@
  * @returns {Array} Processed task records
  */
 export function processTaskData(data) {
+    //console.log('Processing task data:', data);
+    
     if (!data?.response?.data) {
+        console.log('No data to process, returning empty array');
         return [];
     }
 
-    return data.response.data.map(task => ({
-        id: task.fieldData.__ID,
-        recordId: task.recordId,
-        task: task.fieldData.task,
-        type: task.fieldData.type,
-        isCompleted: task.fieldData.f_completed === "1" || task.fieldData.f_completed === 1,
-        createdAt: task.fieldData['~creationTimestamp'],
-        modifiedAt: task.fieldData['~modificationTimestamp'],
-        _projectID: task.fieldData._projectID,
-        _staffID: task.fieldData._staffID
-    }));
+    const processed = data.response.data.map(task => {
+        // console.log('Processing individual task:', task);
+        return {
+            id: task.fieldData.__ID,
+            recordId: task.recordId,
+            task: task.fieldData.task,
+            type: task.fieldData.type,
+            isCompleted: task.fieldData.f_completed === "1" || task.fieldData.f_completed === 1,
+            createdAt: task.fieldData['~creationTimestamp'],
+            modifiedAt: task.fieldData['~modificationTimestamp'],
+            _projectID: task.fieldData._projectID,
+            _staffID: task.fieldData._staffID
+        };
+    });
+    
+    //console.log('Processed tasks result:', processed);
+    return processed;
 }
 
 /**
@@ -119,25 +203,118 @@ export function formatDuration(minutes) {
 }
 
 /**
+ * Task field definitions with validation rules
+ */
+export const TASK_FIELDS = {
+    // Required fields
+    task: {
+        required: true,
+        type: 'string',
+        minLength: 1,
+        maxLength: 200,
+        validate: (value) => {
+            if (!value?.trim()) return 'Task name is required';
+            if (value.length > 200) return 'Task name must be less than 200 characters';
+            return null;
+        }
+    },
+    _projectID: {
+        required: true,
+        type: 'string',
+        validate: (value) => !value ? 'Project ID is required' : null
+    },
+    _staffID: {
+        required: true,
+        type: 'string',
+        validate: (value) => !value ? 'Staff ID is required' : null
+    },
+    
+    f_completed: {
+        required: false,
+        type: 'number',
+        validate: (value) => {
+            if (value === undefined || value === null) return null;
+            return value === 0 || value === 1 ? null : 'Completion status must be 0 or 1';
+        }
+    },
+    f_priority: {
+        required: false,
+        type: 'string',
+        validate: (value) => {
+            if (!value) return null;
+            return ['active', 'high', 'low'].includes(value) ? null : 'Invalid priority value';
+        }
+    }
+};
+
+/**
  * Validates task data before creation/update
  * @param {Object} data - Task data to validate
- * @returns {Object} Validation result { isValid, errors }
+ * @param {Object} options - Validation options
+ * @param {boolean} options.isUpdate - Whether this is an update operation
+ * @param {boolean} options.partial - Whether to allow partial data (only validate provided fields)
+ * @returns {Object} Validation result { isValid, errors, fieldErrors }
  */
-export function validateTaskData(data) {
+export function validateTaskData(data, { isUpdate = false, partial = false } = {}) {
     const errors = [];
+    const fieldErrors = {};
 
-    if (!data.task?.trim()) {
-        errors.push('Task name is required');
+    // Check if data is provided
+    if (!data || typeof data !== 'object') {
+        return {
+            isValid: false,
+            errors: ['Invalid task data provided'],
+            fieldErrors: {}
+        };
     }
 
-    // Only check for projectID if it's a new task (has no id)
-    if (!data.id && !data._projectID) {
-        errors.push('Project ID is required');
-    }
+    // Validate each field according to rules
+    Object.entries(TASK_FIELDS).forEach(([field, rules]) => {
+        // Skip validation for fields not provided in partial validation
+        if (partial && !(field in data)) return;
+
+        // Skip _projectID validation for updates
+        if (isUpdate && field === '_projectID') return;
+
+        const value = data[field];
+
+        // Required field validation
+        if (rules.required && !isUpdate && !partial) {
+            if (value === undefined || value === null || value === '') {
+                fieldErrors[field] = `${field} is required`;
+                return;
+            }
+        }
+
+        // Skip validation if value is not provided and field is optional
+        if (!rules.required && (value === undefined || value === null)) return;
+
+        // Type checking
+        if (value !== undefined && value !== null) {
+            if (typeof value !== rules.type) {
+                fieldErrors[field] = `${field} must be a ${rules.type}`;
+                return;
+            }
+
+            // Custom field validation
+            if (rules.validate) {
+                const validationError = rules.validate(value);
+                if (validationError) {
+                    fieldErrors[field] = validationError;
+                }
+            }
+        }
+    });
+
+    // Add field errors to main errors array
+    Object.values(fieldErrors).forEach(error => {
+        errors.push(error);
+    });
 
     return {
         isValid: errors.length === 0,
-        errors
+        errors,
+        fieldErrors
     };
 }
 
@@ -168,18 +345,128 @@ export function formatTaskForDisplay(task, timerRecords = [], notes = [], links 
 }
 
 /**
+ * Creates a new task with proper validation and formatting
+ * @param {Object} params - Task creation parameters
+ * @param {string} params.projectId - Project ID
+ * @param {string} params.staffId - Staff ID
+ * @param {string} params.taskName - Task name
+ * @param {string} [params.type] - Task type (optional)
+ * @param {string} [params.priority="active"] - Task priority
+ * @returns {Promise<Object>} Created task data
+ */
+export async function createNewTask(params) {
+    if (!params || typeof params !== 'object') {
+        throw new Error('Invalid task parameters');
+    }
+
+    const { projectId, staffId, taskName, type, priority = "active" } = params;
+
+    if (!projectId || !staffId || !taskName) {
+        throw new Error('Project ID, Staff ID, and Task Name are required');
+    }
+    // Prepare task data
+    const taskData = {
+        _projectID: projectId,
+        _staffID: staffId,
+        task: taskName.trim(),
+        f_completed: 0,
+        f_priority: priority
+    };
+
+    // Validate task data
+    const validation = validateTaskData(taskData, { partial: false });
+    if (!validation.isValid) {
+        throw new Error(validation.errors[0]); // Throw first error
+    }
+
+    // Create task through API
+    return await createTaskAPI(taskData);
+}
+
+/**
+ * Task operations with business logic
+ */
+
+/**
+ * Updates a task with validation and state management
+ * @param {string} taskId - Task ID to update
+ * @param {Object} taskData - New task data
+ * @returns {Promise<Object>} Updated task data
+ */
+export async function updateExistingTask(taskId, taskData) {
+    // Validate task data
+    const validation = validateTaskData(taskData, {
+        isUpdate: true,
+        partial: true
+    });
+    if (!validation.isValid) {
+        throw new Error(validation.errors[0]);
+    }
+
+    // Update task through API
+    return await updateTaskAPI(taskId, formatTaskForFileMaker(taskData));
+}
+
+/**
+ * Updates a task's completion status
+ * @param {string} taskId - Task ID to update
+ * @param {boolean} completed - New completion status
+ * @returns {Promise<Object>} Updated task data
+ */
+export async function updateTaskCompletionStatus(taskId, completed) {
+    return await updateTaskStatusAPI(taskId, completed);
+}
+
+/**
+ * Timer operations with business logic
+ */
+
+/**
+ * Starts a timer for a task
+ * @param {Object} task - Task to start timer for
+ * @returns {Promise<Object>} Created timer record
+ */
+export async function startNewTaskTimer(task) {
+    if (!task) {
+        throw new Error('No task selected');
+    }
+    
+    return await startTaskTimerAPI(task.id, task);
+}
+
+/**
+ * Stops a timer with adjustments
+ * @param {Object} params - Timer stop parameters
+ * @param {string} params.recordId - Timer record ID
+ * @param {string} [params.description=''] - Work description
+ * @param {boolean} [params.saveImmediately=false] - Whether to save without description
+ * @param {number} [params.totalPauseTime=0] - Total pause time in seconds
+ * @param {number} [params.adjustment=0] - Manual adjustment in seconds
+ * @returns {Promise<Object>} Updated timer record
+ */
+export async function stopExistingTaskTimer({
+    recordId,
+    description = '',
+    saveImmediately = false,
+    totalPauseTime = 0,
+    adjustment = 0
+}) {
+    if (!recordId) {
+        throw new Error('No active timer');
+    }
+
+    const finalAdjustment = Math.round(totalPauseTime + adjustment);
+    return await stopTaskTimerAPI(recordId, description, saveImmediately, finalAdjustment);
+}
+
+/**
  * Formats task data for FileMaker
  * @param {Object} data - Task data to format
  * @returns {Object} Formatted data for FileMaker
  */
 export function formatTaskForFileMaker(data) {
-    return {
-        task: data.task,
-        type: data.type,
-        _projectID: data._projectID,
-        f_completed: data.isCompleted ? "1" : "0",
-        notes: data.notes
-    };
+    // Pass through the data as-is since it's already in FileMaker format
+    return data;
 }
 
 // Helper functions
@@ -190,11 +477,24 @@ export function formatTaskForFileMaker(data) {
  * @returns {Object} Grouped tasks { active, completed }
  */
 export function groupTasksByStatus(tasks) {
-    return tasks.reduce((groups, task) => {
+    //console.log('Grouping tasks:', tasks);
+    const groups = {
+        active: [],
+        completed: []
+    };
+    
+    if (!tasks?.length) {
+        //console.log('No tasks to group, returning empty groups');
+        return groups;
+    }
+
+    tasks.forEach(task => {
+        //console.log('Processing task:', task);
         const key = task.isCompleted ? 'completed' : 'active';
         groups[key].push(task);
-        return groups;
-    }, { active: [], completed: [] });
+    });
+    
+    return groups;
 }
 
 /**
@@ -204,6 +504,17 @@ export function groupTasksByStatus(tasks) {
  * @returns {Object} Task statistics
  */
 export function calculateTaskStats(tasks, timerRecords) {
+    if (!tasks?.length) {
+        return {
+            total: 0,
+            active: 0,
+            completed: 0,
+            completionRate: 0,
+            totalTimeSpent: '0m',
+            averageTimePerTask: '0m'
+        };
+    }
+
     const grouped = groupTasksByStatus(tasks);
     const totalTime = calculateTotalTaskTime(timerRecords);
     
@@ -249,6 +560,10 @@ export function calculateTotalTaskTime(timerRecords) {
  * @returns {Array} Sorted task records
  */
 export function sortTasks(tasks) {
+    if (!tasks?.length) {
+        return [];
+    }
+    
     return [...tasks].sort((a, b) => {
         // Active tasks first
         if (a.isCompleted !== b.isCompleted) {

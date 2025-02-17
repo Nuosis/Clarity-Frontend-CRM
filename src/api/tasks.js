@@ -31,10 +31,7 @@ export async function createTask(data) {
         const params = {
             layout: Layouts.TASKS,
             action: Actions.CREATE,
-            fieldData: {
-                ...data,
-                f_completed: false
-            }
+            fieldData: data
         };
         
         return await fetchDataFromFileMaker(params);

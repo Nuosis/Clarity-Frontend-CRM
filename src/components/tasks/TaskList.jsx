@@ -1,12 +1,10 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useTask } from '../../hooks/useTask';
-import { formatDuration, validateTaskData } from '../../services/taskService';
-import { createNote } from '../../services/noteService';
-import { createLink } from '../../services/linkService';
+import { useAppState } from '../../context/AppStateContext';
+import { formatDuration } from '../../services/taskService';
 import { useSnackBar } from '../../context/SnackBarContext';
-import { createTask } from '../../api/tasks';
 import TextInput from '../global/TextInput';
 import ErrorBoundary from '../ErrorBoundary';
 import TaskTimer from './TaskTimer';
@@ -28,26 +26,7 @@ const TaskItem = React.memo(function TaskItem({
     const [isExpanded, setIsExpanded] = useState(false);
     const [showNoteInput, setShowNoteInput] = useState(false);
     const [showLinkInput, setShowLinkInput] = useState(false);
-
-    const handleNoteSubmit = async (note) => {
-        try {
-            await createNote(task.id, note);
-            await onExpand(task.id); // Refresh task details
-            setShowNoteInput(false);
-        } catch (error) {
-            console.error('Error creating note:', error);
-        }
-    };
-
-    const handleLinkSubmit = async (url) => {
-        try {
-            await createLink(task.id, url);
-            await onExpand(task.id); // Refresh task details
-            setShowLinkInput(false);
-        } catch (error) {
-            console.error('Error creating link:', error);
-        }
-    };
+    const { showError } = useSnackBar();
 
     const toggleExpand = useCallback(async () => {
         const newExpandedState = !isExpanded;
@@ -57,8 +36,6 @@ const TaskItem = React.memo(function TaskItem({
             await onExpand(task.id);
         }
     }, [isExpanded, task.id, onExpand]);
-
-    console.log({timerRecords})
 
     return (
         <div
@@ -91,17 +68,7 @@ const TaskItem = React.memo(function TaskItem({
                             />
                         </svg>
                     </button>
-                    <div>
-                        <h4 className="font-medium">{task.task}</h4>
-                        {task.type && (
-                            <span className={`
-                                text-sm px-2 py-1 rounded-full
-                                ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}
-                            `}>
-                                {task.type}
-                            </span>
-                        )}
-                    </div>
+                    <h4 className="font-medium">{task.task}</h4>
                 </div>
                 <div className="flex items-center">
                     {!task.isCompleted && (
@@ -111,7 +78,7 @@ const TaskItem = React.memo(function TaskItem({
                                     const { task: selectedTask } = await handleTaskSelect(task.id);
                                     await handleTimerStart(selectedTask);
                                 } catch (error) {
-                                    console.error('Error starting timer:', error);
+                                    showError('Error starting timer');
                                 }
                             }}
                             className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
@@ -135,17 +102,6 @@ const TaskItem = React.memo(function TaskItem({
                         </div>
                     ) : (
                         <>
-                            {task.description && (
-                                <p className={`
-                                    text-sm
-                                    ${task.isCompleted
-                                        ? (darkMode ? 'text-gray-500' : 'text-gray-400')
-                                        : (darkMode ? 'text-gray-400' : 'text-gray-600')}
-                                    ${task.isCompleted ? 'line-through' : ''}
-                                `}>
-                                    {task.description}
-                                </p>
-                            )}
                             {taskNotes?.length > 0 && (
                                 <div>
                                     <h5 className={`
@@ -239,28 +195,40 @@ const TaskItem = React.memo(function TaskItem({
                                     {task.isCompleted ? 'Reopen Task' : 'Mark as Complete'}
                                 </button>
                             </div>
-                            {showNoteInput ? (
-                                <>
-                                    <TextInput
-                                        title="Add Note"
-                                        placeholder="Enter your note..."
-                                        submitLabel="Create"
-                                        onSubmit={handleNoteSubmit}
-                                        onCancel={() => setShowNoteInput(false)}
-                                    />
-                                </>
-                            ) : null}
-                            {showLinkInput ? (
-                                <>
-                                    <TextInput
-                                        title="Add Link"
-                                        placeholder="Enter URL..."
-                                        submitLabel="Create"
-                                        onSubmit={handleLinkSubmit}
-                                        onCancel={() => setShowLinkInput(false)}
-                                    />
-                                </>
-                            ) : null}
+                            {showNoteInput && (
+                                <TextInput
+                                    title="Add Note"
+                                    placeholder="Enter your note..."
+                                    submitLabel="Create"
+                                    onSubmit={async (note) => {
+                                        try {
+                                            await onEdit({ id: task.id, type: 'note', content: note });
+                                            await onExpand(task.id);
+                                            setShowNoteInput(false);
+                                        } catch (error) {
+                                            showError('Error creating note');
+                                        }
+                                    }}
+                                    onCancel={() => setShowNoteInput(false)}
+                                />
+                            )}
+                            {showLinkInput && (
+                                <TextInput
+                                    title="Add Link"
+                                    placeholder="Enter URL..."
+                                    submitLabel="Create"
+                                    onSubmit={async (url) => {
+                                        try {
+                                            await onEdit({ id: task.id, type: 'link', content: url });
+                                            await onExpand(task.id);
+                                            setShowLinkInput(false);
+                                        } catch (error) {
+                                            showError('Error creating link');
+                                        }
+                                    }}
+                                    onCancel={() => setShowLinkInput(false)}
+                                />
+                            )}
                         </>
                     )}
                 </div>
@@ -273,13 +241,11 @@ TaskItem.propTypes = {
     task: PropTypes.shape({
         id: PropTypes.string.isRequired,
         task: PropTypes.string.isRequired,
-        type: PropTypes.string,
-        description: PropTypes.string,
         notes: PropTypes.string,
         isCompleted: PropTypes.bool.isRequired
     }).isRequired,
     darkMode: PropTypes.bool.isRequired,
-    onEdit: PropTypes.func.isRequired, // Called with task object including type: 'note' or 'link'
+    onEdit: PropTypes.func.isRequired,
     onStatusChange: PropTypes.func.isRequired,
     onExpand: PropTypes.func.isRequired,
     taskNotes: PropTypes.array,
@@ -306,7 +272,7 @@ const TaskSection = React.memo(function TaskSection({
     handleTimerStart,
     handleTaskSelect
 }) {
-    if (tasks.length === 0) {
+    if (!tasks?.length) {
         return (
             <div className={`
                 text-center py-8 rounded-lg border
@@ -328,7 +294,7 @@ const TaskSection = React.memo(function TaskSection({
                 {title}
             </h4>
             <div className="space-y-2">
-                {tasks.map(task => (
+                {tasks?.map(task => (
                     <TaskItem
                         key={task.id}
                         task={task}
@@ -366,85 +332,70 @@ TaskSection.propTypes = {
 };
 
 function TaskList({
-    tasks = [],
     projectId = null,
     onTaskStatusChange = () => {},
     onTaskCreate = () => {},
     onTaskUpdate = () => {}
 }) {
     const { darkMode } = useTheme();
-    const { showError } = useSnackBar();
+    const { user } = useAppState();
     const [showCompleted, setShowCompleted] = useState(false);
-    const [expandedTaskId, setExpandedTaskId] = useState(null);
     const [showNewTaskInput, setShowNewTaskInput] = useState(false);
+    
     const {
         handleTaskSelect,
         handleTimerStart,
         handleTimerStop,
         handleTimerPause,
         handleTimerAdjust,
+        handleTaskCreate,
+        handleTaskUpdate,
+        handleTaskStatusChange,
         taskNotes,
         taskLinks,
         timerRecords,
         loading,
         selectedTask,
-        timer
+        timer,
+        activeTasks,
+        completedTasks
     } = useTask(projectId);
 
-    // Memoized task grouping
-    const { activeTasks, completedTasks } = useMemo(() => {
-        return tasks.reduce((acc, task) => {
-            if (task.isCompleted) {
-                acc.completedTasks.push(task);
-            } else {
-                acc.activeTasks.push(task);
-            }
-            return acc;
-        }, { activeTasks: [], completedTasks: [] });
-    }, [tasks]);
-
-    const handleExpand = useCallback(async (taskId) => {
-        setExpandedTaskId(taskId);
-        try {
-            await handleTaskSelect(taskId);
-        } catch (error) {
-            console.error('Error loading task details:', error);
-        }
-    }, [handleTaskSelect]);
+    // console.log('TaskList received:', { activeTasks, completedTasks, loading });
 
     // Memoized handlers
-    const handleEdit = useCallback((task) => {
-        onTaskUpdate(task.id, task);
-    }, [onTaskUpdate]);
-
-    const handleStatusChange = useCallback((taskId, completed) => {
-        onTaskStatusChange(taskId, completed);
-    }, [onTaskStatusChange]);
-
-    const handleTaskCreate = useCallback(async (taskName) => {
+    const handleEdit = useCallback(async (taskData) => {
         try {
-            const taskData = {
-                _projectID: projectId,
-                task: taskName,
-                type: 'General',
-                f_completed: false
-            };
-            
-            const validation = validateTaskData(taskData);
-            if (!validation.isValid) {
-                showError(validation.errors.join(', '));
-                return;
-            }
+            await handleTaskUpdate(taskData.id, taskData);
+            onTaskUpdate(taskData.id, taskData);
+        } catch (error) {
+            console.error('Error updating task:', error);
+        }
+    }, [handleTaskUpdate, onTaskUpdate]);
 
-            const result = await createTask(taskData);
-            // Notify parent component to refresh tasks
-            onTaskCreate({ projectId });
+    const handleStatusChange = useCallback(async (taskId, completed) => {
+        try {
+            await handleTaskStatusChange(taskId, completed);
+            onTaskStatusChange(taskId, completed);
+        } catch (error) {
+            console.error('Error updating task status:', error);
+        }
+    }, [handleTaskStatusChange, onTaskStatusChange]);
+
+    const handleNewTask = useCallback(async (taskName) => {
+        try {
+            await handleTaskCreate({
+                projectId,
+                staffId: user.userID,
+                taskName,
+                priority: "active"
+            });
+            onTaskCreate();
             setShowNewTaskInput(false);
         } catch (error) {
-            showError(error.message);
             console.error('Error creating task:', error);
         }
-    }, [projectId, onTaskCreate, showError]);
+    }, [projectId, user?.userID, handleTaskCreate, onTaskCreate]);
 
     return (
         <div className="space-y-6">
@@ -458,17 +409,15 @@ function TaskList({
                     New Task
                 </button>
             </div>
-            {showNewTaskInput ? (
-                <>
-                    <TextInput
-                        title="New Task"
-                        placeholder="Enter task name..."
-                        submitLabel="Create"
-                        onSubmit={handleTaskCreate}
-                        onCancel={() => setShowNewTaskInput(false)}
-                    />
-                </>
-            ) : null}
+            {showNewTaskInput && (
+                <TextInput
+                    title="New Task"
+                    placeholder="Enter task name..."
+                    submitLabel="Create"
+                    onSubmit={handleNewTask}
+                    onCancel={() => setShowNewTaskInput(false)}
+                />
+            )}
 
             {/* Timer */}
             {timer?.recordId && selectedTask && (
@@ -487,11 +436,11 @@ function TaskList({
             {/* Active Tasks */}
             <TaskSection
                 title="Active Tasks"
-                tasks={activeTasks}
+                tasks={activeTasks || []}
                 darkMode={darkMode}
                 onEdit={handleEdit}
                 onStatusChange={handleStatusChange}
-                onExpand={handleExpand}
+                onExpand={handleTaskSelect}
                 taskNotes={taskNotes}
                 taskLinks={taskLinks}
                 timerRecords={timerRecords}
@@ -502,7 +451,7 @@ function TaskList({
             />
 
             {/* Completed Tasks Toggle */}
-            {completedTasks.length > 0 && (
+            {completedTasks?.length > 0 && (
                 <div className="space-y-4">
                     <button
                         onClick={() => setShowCompleted(!showCompleted)}
@@ -519,11 +468,11 @@ function TaskList({
                     {showCompleted && (
                         <TaskSection
                             title="Completed Tasks"
-                            tasks={completedTasks}
+                            tasks={completedTasks || []}
                             darkMode={darkMode}
                             onEdit={handleEdit}
                             onStatusChange={handleStatusChange}
-                            onExpand={handleExpand}
+                            onExpand={handleTaskSelect}
                             taskNotes={taskNotes}
                             taskLinks={taskLinks}
                             timerRecords={timerRecords}
@@ -540,16 +489,6 @@ function TaskList({
 }
 
 TaskList.propTypes = {
-    tasks: PropTypes.arrayOf(
-        PropTypes.shape({
-            id: PropTypes.string.isRequired,
-            task: PropTypes.string.isRequired,
-            type: PropTypes.string,
-            description: PropTypes.string,
-            notes: PropTypes.string,
-            isCompleted: PropTypes.bool.isRequired
-        })
-    ),
     projectId: PropTypes.string,
     onTaskStatusChange: PropTypes.func,
     onTaskCreate: PropTypes.func,

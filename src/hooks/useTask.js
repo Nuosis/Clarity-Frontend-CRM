@@ -1,40 +1,30 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSnackBar } from '../context/SnackBarContext';
 import {
-    fetchTasksForProject,
-    createTask,
-    updateTask,
-    updateTaskStatus,
-    startTaskTimer,
-    stopTaskTimer,
-    fetchTaskTimers,
-    updateTaskNotes,
-    fetchActiveProjectTasks,
-    fetchTaskNotes,
-    fetchTaskLinks
-} from '../api';
-import {
-    processTaskData,
-    processTimerRecords,
-    calculateTotalTaskTime,
-    validateTaskData,
-    formatTaskForFileMaker,
-    calculateTaskStats,
-    isValidTimerAdjustment,
-    sortTasks,
-    processTaskNotes,
-    processTaskLinks
-} from '../services';
+    loadProjectTasks,
+    loadTaskDetails,
+    createNewTask,
+    updateExistingTask,
+    updateTaskCompletionStatus,
+    startTimer,
+    stopTimer,
+    groupTasksByStatus,
+    calculateTaskStats
+} from '../services/taskService';
 
 /**
  * Hook for managing task state and operations
  */
 export function useTask(projectId = null) {
+    // State management
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [tasks, setTasks] = useState([]);
-    const { showError } = useSnackBar();
     const [selectedTask, setSelectedTask] = useState(null);
+    const [timerRecords, setTimerRecords] = useState([]);
+    const [taskNotes, setTaskNotes] = useState([]);
+    const [taskLinks, setTaskLinks] = useState([]);
+    const [stats, setStats] = useState(null);
     const [timer, setTimer] = useState({
         recordId: null,
         TimeStart: null,
@@ -43,10 +33,8 @@ export function useTask(projectId = null) {
         totalPauseTime: 0,
         adjustment: 0
     });
-    const [timerRecords, setTimerRecords] = useState([]);
-    const [taskNotes, setTaskNotes] = useState([]);
-    const [taskLinks, setTaskLinks] = useState([]);
-    const [stats, setStats] = useState(null);
+
+    const { showError } = useSnackBar();
 
     // Load tasks when projectId changes
     useEffect(() => {
@@ -57,71 +45,24 @@ export function useTask(projectId = null) {
 
     // Update stats when tasks or timer records change
     useEffect(() => {
-        if (tasks.length > 0) {
-            setStats(calculateTaskStats(tasks, timerRecords));
-        }
+        setStats(calculateTaskStats(tasks, timerRecords));
     }, [tasks, timerRecords]);
 
-    /**
-     * Loads tasks for a project
-     */
+    // Task operations
     const loadTasks = useCallback(async (projId) => {
         try {
             setLoading(true);
             setError(null);
-            
-            const result = await fetchTasksForProject(projId);
-            const processedTasks = processTaskData(result);
-            const sortedTasks = sortTasks(processedTasks);
-            
-            setTasks(sortedTasks);
+            const result = await loadProjectTasks(projId);
+            setTasks(result || []);
         } catch (err) {
-            setError(err.message);
+            showError('Failed to load tasks. Please try refreshing the page.');
             console.error('Error loading tasks:', err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [showError]);
 
-    /**
-     * Loads task details including notes and links
-     */
-    const loadTaskDetails = useCallback(async (taskId) => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            const [timerResult, notesResult, linksResult] = await Promise.all([
-                fetchTaskTimers(taskId),
-                fetchTaskNotes(taskId),
-                fetchTaskLinks(taskId)
-            ]);
-
-            const processedTimers = processTimerRecords(timerResult);
-            const processedNotes = processTaskNotes(notesResult);
-            const processedLinks = processTaskLinks(linksResult);
-
-            setTimerRecords(processedTimers);
-            setTaskNotes(processedNotes);
-            setTaskLinks(processedLinks);
-
-            return {
-                timers: processedTimers,
-                notes: processedNotes,
-                links: processedLinks
-            };
-        } catch (err) {
-            setError(err.message);
-            console.error('Error loading task details:', err);
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    /**
-     * Selects a task and loads its details
-     */
     const handleTaskSelect = useCallback(async (taskId) => {
         try {
             setLoading(true);
@@ -129,206 +70,155 @@ export function useTask(projectId = null) {
             
             const task = tasks.find(t => t.id === taskId);
             if (!task) {
-                throw new Error('Task not found');
+                showError('Task not found');
+                return null;
             }
             
             const details = await loadTaskDetails(taskId);
+            setTimerRecords(details.timers);
+            setTaskNotes(details.notes);
+            setTaskLinks(details.links);
             setSelectedTask(task);
 
-            return {
-                task,
-                ...details
-            };
+            return { task, ...details };
         } catch (err) {
-            setError(err.message);
+            showError('Failed to load task details. Please try refreshing the page.');
             console.error('Error selecting task:', err);
-            throw err;
+            return null;
         } finally {
             setLoading(false);
         }
-    }, [tasks, loadTaskDetails]);
+    }, [tasks, showError]);
 
-    /**
-     * Creates a new task
-     */
     const handleTaskCreate = useCallback(async (taskData) => {
         try {
             setLoading(true);
             setError(null);
             
-            const validation = validateTaskData(taskData);
-            if (!validation.isValid) {
-                showError(validation.errors.join(', '));
-                return null;
+            const result = await createNewTask(taskData);
+            if (result) {
+                await loadTasks(projectId);
             }
-            
-            const formattedData = formatTaskForFileMaker(taskData);
-            const result = await createTask(formattedData);
-            
-            // Add new task to local state
-            const newTask = processTaskData({
-                response: { data: [{ fieldData: { ...formattedData, __ID: result.recordId } }] }
-            })[0];
-            
-            setTasks(prevTasks => sortTasks([...prevTasks, newTask]));
-            
             return result;
         } catch (err) {
-            // Use SnackBar for validation errors, throw others to error boundary
-            if (err.message.includes('required')) {
-                showError(err.message);
-                return null;
-            }
-            setError(err.message);
+            showError(err.message);
             console.error('Error creating task:', err);
-            throw err;
+            return null;
         } finally {
             setLoading(false);
         }
-    }, [showError]);
+    }, [projectId, loadTasks, showError]);
 
-    /**
-     * Updates an existing task
-     */
     const handleTaskUpdate = useCallback(async (taskId, taskData) => {
         try {
             setLoading(true);
             setError(null);
             
-            const validation = validateTaskData(taskData);
-            if (!validation.isValid) {
-                showError(validation.errors.join(', '));
-                return null;
-            }
-            
-            const formattedData = formatTaskForFileMaker(taskData);
-            const result = await updateTask(taskId, formattedData);
-            
-            // Update local state
-            setTasks(prevTasks =>
-                sortTasks(
+            const result = await updateExistingTask(taskId, taskData);
+            if (result) {
+                setTasks(prevTasks =>
                     prevTasks.map(task =>
                         task.id === taskId
                             ? { ...task, ...taskData }
                             : task
                     )
-                )
-            );
-            
-            // Update selected task if it's the one being updated
-            if (selectedTask?.id === taskId) {
-                setSelectedTask(prev => ({ ...prev, ...taskData }));
+                );
+                
+                if (selectedTask?.id === taskId) {
+                    setSelectedTask(prev => ({ ...prev, ...taskData }));
+                }
             }
-            
             return result;
         } catch (err) {
-            // Use SnackBar for validation errors, throw others to error boundary
-            if (err.message.includes('required')) {
-                showError(err.message);
-                return null;
-            }
-            setError(err.message);
+            showError(err.message);
             console.error('Error updating task:', err);
-            throw err;
+            return null;
         } finally {
             setLoading(false);
         }
     }, [selectedTask, showError]);
 
-    /**
-     * Updates task completion status
-     */
     const handleTaskStatusChange = useCallback(async (taskId, completed) => {
         try {
             setLoading(true);
             setError(null);
             
-            const task = tasks.find(t => t.id === taskId);
-            if (!task) {
-                throw new Error('Task not found');
-            }
-            const result = await updateTaskStatus(task.recordId, completed);
-            
-            // Update local state
-            setTasks(prevTasks => 
-                sortTasks(
-                    prevTasks.map(task => 
+            const result = await updateTaskCompletionStatus(taskId, completed);
+            if (result) {
+                setTasks(prevTasks =>
+                    prevTasks.map(task =>
                         task.id === taskId
                             ? { ...task, isCompleted: completed }
                             : task
                     )
-                )
-            );
-            
-            // Update selected task if it's the one being updated
-            if (selectedTask?.id === taskId) {
-                setSelectedTask(prev => ({ ...prev, isCompleted: completed }));
+                );
+                
+                if (selectedTask?.id === taskId) {
+                    setSelectedTask(prev => ({ ...prev, isCompleted: completed }));
+                }
             }
-            
             return result;
         } catch (err) {
-            setError(err.message);
+            showError(err.message);
             console.error('Error updating task status:', err);
-            throw err;
+            return null;
         } finally {
             setLoading(false);
         }
-    }, [selectedTask]);
+    }, [selectedTask, showError]);
 
-    /**
-     * Timer operations
-     */
     const handleTimerStart = useCallback(async (task = null) => {
         try {
             const taskToUse = task || selectedTask;
-            if (!taskToUse) {
-                throw new Error('No task selected');
-            }
+            const result = await startTimer(taskToUse);
             
-            const result = await startTaskTimer(taskToUse.id, taskToUse);
-            setTimer({
-                recordId: result.response.recordId,
-                TimeStart: new Date().toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                }),
-                isPaused: false,
-                pauseStartTime: null,
-                totalPauseTime: 0,
-                adjustment: 0
-            });
+            if (result) {
+                setTimer({
+                    recordId: result.recordId,
+                    TimeStart: new Date().toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    }),
+                    isPaused: false,
+                    pauseStartTime: null,
+                    totalPauseTime: 0,
+                    adjustment: 0
+                });
+            }
         } catch (err) {
-            setError(err.message);
+            showError(err.message);
             console.error('Error starting timer:', err);
-            throw err;
         }
-    }, [selectedTask]);
+    }, [selectedTask, showError]);
 
     const handleTimerStop = useCallback(async (saveImmediately = false, description = '') => {
         try {
             if (!timer?.recordId) {
-                throw new Error('No active timer');
+                showError('No active timer');
+                return;
             }
 
-            // If currently paused, add the final pause duration
-            let finalPauseTime = Math.round(timer.totalPauseTime);
-            if (timer.isPaused && timer.pauseStartTime) {
-                finalPauseTime += Math.round((new Date() - timer.pauseStartTime) / 1000);
-            }
+            const totalPauseTime = Math.round(timer.totalPauseTime + 
+                (timer.isPaused && timer.pauseStartTime 
+                    ? (new Date() - timer.pauseStartTime) / 1000 
+                    : 0)
+            );
 
-            // Calculate final adjustment including pauses and manual adjustments
-            const finalAdjustment = Math.round(finalPauseTime + (timer.adjustment || 0));
-            
-            await stopTaskTimer(timer.recordId, description, saveImmediately, finalAdjustment);
-            
-            // Reload timer records
+            await stopTimer({
+                recordId: timer.recordId,
+                description,
+                saveImmediately,
+                totalPauseTime,
+                adjustment: timer.adjustment || 0
+            });
+
             if (selectedTask) {
-                const timerResult = await fetchTaskTimers(selectedTask.id);
-                setTimerRecords(processTimerRecords(timerResult));
+                const details = await loadTaskDetails(selectedTask.id);
+                setTimerRecords(details.timers);
             }
-            
+
             setTimer({
                 recordId: null,
                 startTime: null,
@@ -338,20 +228,19 @@ export function useTask(projectId = null) {
                 adjustment: 0
             });
         } catch (err) {
-            setError(err.message);
+            showError(err.message);
             console.error('Error stopping timer:', err);
-            throw err;
         }
-    }, [timer, selectedTask]);
+    }, [timer, selectedTask, showError]);
 
     const handleTimerPause = useCallback(() => {
         if (!timer?.recordId) {
-            throw new Error('No active timer');
+            showError('No active timer');
+            return;
         }
-        
+
         setTimer(prev => {
             if (prev.isPaused) {
-                // Resuming - calculate and add pause duration to total
                 const pauseDuration = (new Date() - prev.pauseStartTime) / 1000;
                 return {
                     ...prev,
@@ -360,7 +249,6 @@ export function useTask(projectId = null) {
                     totalPauseTime: prev.totalPauseTime + pauseDuration
                 };
             } else {
-                // Pausing - store pause start time
                 return {
                     ...prev,
                     isPaused: true,
@@ -368,22 +256,30 @@ export function useTask(projectId = null) {
                 };
             }
         });
-    }, [timer]);
+    }, [timer, showError]);
 
     const handleTimerAdjust = useCallback((minutes) => {
         if (!timer?.recordId) {
-            throw new Error('No active timer');
+            showError('No active timer');
+            return;
         }
-        
-        if (!isValidTimerAdjustment(minutes)) {
-            throw new Error('Invalid timer adjustment');
-        }
-        
+
         setTimer(prev => ({
             ...prev,
-            adjustment: prev.adjustment + (minutes * 60) // Convert minutes to seconds
+            adjustment: prev.adjustment + (minutes * 60)
         }));
-    }, [timer]);
+    }, [timer, showError]);
+
+    // Get grouped tasks
+    const { activeTasks, completedTasks } = useMemo(() => {
+        //console.log('Tasks in useTask:', tasks);
+        const grouped = groupTasksByStatus(tasks || []);
+        //console.log('Grouped tasks:', grouped);
+        return {
+            activeTasks: grouped.active || [],
+            completedTasks: grouped.completed || []
+        };
+    }, [tasks]);
 
     return {
         // State
@@ -396,19 +292,17 @@ export function useTask(projectId = null) {
         taskNotes,
         taskLinks,
         stats,
+        activeTasks,
+        completedTasks,
         
-        // Getters
-        activeTasks: tasks.filter(task => !task.isCompleted),
-        completedTasks: tasks.filter(task => task.isCompleted),
-        
-        // Task actions
+        // Task operations
         loadTasks,
         handleTaskSelect,
         handleTaskCreate,
         handleTaskUpdate,
         handleTaskStatusChange,
         
-        // Timer actions
+        // Timer operations
         handleTimerStart,
         handleTimerStop,
         handleTimerPause,

@@ -363,6 +363,7 @@ function calculateRecordsTotalHours(records) {
 
 // Calculate unbilled hours from records, optionally filtered by current month and customer
 export function calculateRecordsUnbilledHours(records, currentMonthOnly = false, customerId = null) {
+    //console.log({records})
     if (!records) return "0.0";
     
     // Apply both customer and month filters in a single operation
