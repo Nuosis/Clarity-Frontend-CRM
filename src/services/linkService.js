@@ -1,4 +1,4 @@
-import { createTaskLink } from '../api/links';
+import { createLink } from '../api/links';
 
 /**
  * Creates a new link for a task
@@ -6,8 +6,8 @@ import { createTaskLink } from '../api/links';
  * @param {string} link - The link URL
  * @returns {Promise<Object>} Created link record
  */
-export async function createLink(taskId, link) {
-    if (!taskId || !link?.trim()) {
+export async function createNewLink(fkId, link) {
+    if (!fkId || !link?.trim()) {
         throw new Error('Task ID and link URL are required');
     }
 
@@ -18,8 +18,8 @@ export async function createLink(taskId, link) {
         throw new Error('Invalid URL format');
     }
 
-    return await createTaskLink({
-        taskId,
+    return await createLink({
+        fkId,
         link: link.trim()
     });
 }

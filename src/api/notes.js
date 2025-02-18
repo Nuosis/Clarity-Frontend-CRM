@@ -5,7 +5,7 @@ import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layou
  * @param {Object} data - The note data
  * @returns {Promise<Object>} Created note record
  */
-export async function createTaskNote(data) {
+export async function createNote(data) {
     validateParams({ data }, ['data']);
     
     return handleFileMakerOperation(async () => {

@@ -14,7 +14,6 @@ import {
     validateProjectData,
     formatProjectForFileMaker,
     calculateProjectCompletion,
-    calculateProjectStats,
     processProjectImages,
     processProjectLinks,
     processProjectObjectives
@@ -76,10 +75,11 @@ export function useProject(customerId = null) {
                 fetchProjectRelatedData([projectId], 'devProjectObjSteps'),
                 fetchProjectRelatedData([projectId], 'devNotes')
             ]);
-
+            console.log("Links: ",links)
             // Process each type of data
             const processedImages = processProjectImages(images, projectId);
             const processedLinks = processProjectLinks(links, projectId);
+            console.log("processedLinks: ",processedLinks)
             const processedObjectives = processProjectObjectives(
                 objectives,
                 projectId,

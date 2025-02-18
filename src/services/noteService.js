@@ -1,4 +1,4 @@
-import { createTaskNote } from '../api/notes';
+import { createNote } from '../api/notes';
 
 /**
  * Creates a new note for a task
@@ -7,13 +7,13 @@ import { createTaskNote } from '../api/notes';
  * @param {string} type - The note type (optional)
  * @returns {Promise<Object>} Created note record
  */
-export async function createNote(taskId, note, type = 'general') {
-    if (!taskId || !note?.trim()) {
+export async function createNewNote(fkId, note, type = 'general') {
+    if (!fkId || !note?.trim()) {
         throw new Error('Task ID and note content are required');
     }
 
-    return await createTaskNote({
-        taskId,
+    return await createNote({
+        fkId,
         note: note.trim(),
         type
     });
@@ -24,7 +24,7 @@ export async function createNote(taskId, note, type = 'general') {
  * @param {Object} data - Raw notes data
  * @returns {Array} Processed notes
  */
-export function processTaskNotes(data) {
+export function processNotes(data) {
     if (!data?.response?.data) {
         return [];
     }

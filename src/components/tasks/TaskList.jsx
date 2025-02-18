@@ -2,6 +2,8 @@ import React, { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useTask } from '../../hooks/useTask';
+import { useNote } from '../../hooks/useNote';
+import { useLink } from '../../hooks/useLink';
 import { useAppState } from '../../context/AppStateContext';
 import { formatDuration } from '../../services/taskService';
 import { useSnackBar } from '../../context/SnackBarContext';
@@ -13,7 +15,6 @@ import TaskTimer from './TaskTimer';
 const TaskItem = React.memo(function TaskItem({
     task,
     darkMode,
-    onEdit,
     onStatusChange,
     onExpand,
     taskNotes,
@@ -21,7 +22,9 @@ const TaskItem = React.memo(function TaskItem({
     timerRecords,
     isLoading,
     handleTimerStart,
-    handleTaskSelect
+    handleTaskSelect,
+    handleCreateNote,
+    handleCreateLink
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showNoteInput, setShowNoteInput] = useState(false);
@@ -202,7 +205,7 @@ const TaskItem = React.memo(function TaskItem({
                                     submitLabel="Create"
                                     onSubmit={async (note) => {
                                         try {
-                                            await onEdit({ id: task.id, type: 'note', content: note });
+                                            await handleCreateNote(task.id, note);
                                             await onExpand(task.id);
                                             setShowNoteInput(false);
                                         } catch (error) {
@@ -219,7 +222,7 @@ const TaskItem = React.memo(function TaskItem({
                                     submitLabel="Create"
                                     onSubmit={async (url) => {
                                         try {
-                                            await onEdit({ id: task.id, type: 'link', content: url });
+                                            await handleCreateLink(task.id, url);
                                             await onExpand(task.id);
                                             setShowLinkInput(false);
                                         } catch (error) {
@@ -253,7 +256,9 @@ TaskItem.propTypes = {
     timerRecords: PropTypes.array,
     isLoading: PropTypes.bool,
     handleTimerStart: PropTypes.func.isRequired,
-    handleTaskSelect: PropTypes.func.isRequired
+    handleTaskSelect: PropTypes.func.isRequired,
+    handleCreateNote: PropTypes.func.isRequired,
+    handleCreateLink: PropTypes.func.isRequired
 };
 
 // Memoized task section component
@@ -270,7 +275,9 @@ const TaskSection = React.memo(function TaskSection({
     isLoading,
     emptyMessage,
     handleTimerStart,
-    handleTaskSelect
+    handleTaskSelect,
+    handleCreateNote,
+    handleCreateLink
 }) {
     if (!tasks?.length) {
         return (
@@ -308,6 +315,8 @@ const TaskSection = React.memo(function TaskSection({
                         isLoading={isLoading}
                         handleTimerStart={handleTimerStart}
                         handleTaskSelect={handleTaskSelect}
+                        handleCreateNote={handleCreateNote}
+                        handleCreateLink={handleCreateLink}
                     />
                 ))}
             </div>
@@ -328,13 +337,13 @@ TaskSection.propTypes = {
     isLoading: PropTypes.bool,
     emptyMessage: PropTypes.string.isRequired,
     handleTimerStart: PropTypes.func.isRequired,
-    handleTaskSelect: PropTypes.func.isRequired
+    handleTaskSelect: PropTypes.func.isRequired,
+    handleCreateNote: PropTypes.func.isRequired,
+    handleCreateLink: PropTypes.func.isRequired
 };
-
 function TaskList({
     projectId = null,
     onTaskStatusChange = () => {},
-    onTaskCreate = () => {},
     onTaskUpdate = () => {}
 }) {
     const { darkMode } = useTheme();
@@ -354,17 +363,54 @@ function TaskList({
         taskNotes,
         taskLinks,
         timerRecords,
-        loading,
-        loadTasks,
+        loading: taskLoading,
         selectedTask,
         timer,
         activeTasks,
         completedTasks
     } = useTask(projectId);
 
-    // console.log('TaskList received:', { activeTasks, completedTasks, loading });
+    const {
+        handleNoteCreate,
+        loading: noteLoading
+    } = useNote();
+
+    const {
+        handleLinkCreate,
+        loading: linkLoading
+    } = useLink();
+
+    const loading = taskLoading || noteLoading|| linkLoading;
 
     // Memoized handlers
+    const handleCreateNote = useCallback(async (fkId, noteContent) => {
+        try {
+            console.log("new note called ... ",{fkId, noteContent})
+            const result = await handleNoteCreate(fkId, noteContent);
+            if (result) {
+                await handleTaskSelect(fkId);
+            }
+            return result;
+        } catch (error) {
+            console.error('Error creating note:', error);
+            throw error;
+        }
+    }, [handleNoteCreate, handleTaskSelect]);
+
+    const handleCreateLink = useCallback(async (fkId, url) => {
+        try {
+            console.log("new link called ... ",{fkId, url})
+            const result = await handleLinkCreate(fkId, url);
+            if (result) {
+                await handleTaskSelect(fkId);
+            }
+            return result;
+        } catch (error) {
+            console.error('Error creating note:', error);
+            throw error;
+        }
+    }, [handleLinkCreate, handleTaskSelect]);
+
     const handleEdit = useCallback(async (taskData) => {
         try {
             await handleTaskUpdate(taskData.id, taskData);
@@ -469,6 +515,8 @@ function TaskList({
                 emptyMessage="No active tasks"
                 handleTimerStart={handleTimerStart}
                 handleTaskSelect={handleTaskSelect}
+                handleCreateNote={handleCreateNote}
+                handleCreateLink={handleCreateLink}
             />
 
             {/* Completed Tasks Toggle */}
@@ -501,6 +549,8 @@ function TaskList({
                             emptyMessage="No completed tasks"
                             handleTimerStart={handleTimerStart}
                             handleTaskSelect={handleTaskSelect}
+                            handleCreateNote={handleCreateNote}
+                            handleCreateLink={handleCreateLink}
                         />
                     )}
                 </div>

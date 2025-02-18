@@ -67,6 +67,7 @@ export function useFileMakerBridge() {
 export { useCustomer } from './useCustomer';
 export { useProject } from './useProject';
 export { useTask } from './useTask';
+export { useLink } from './useLink';
 
 /**
  * Hook for managing loading and error states

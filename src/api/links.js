@@ -5,7 +5,7 @@ import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layou
  * @param {Object} data - The link data
  * @returns {Promise<Object>} Created link record
  */
-export async function createTaskLink(data) {
+export async function createLink(data) {
     validateParams({ data }, ['data']);
     
     return handleFileMakerOperation(async () => {
@@ -14,7 +14,7 @@ export async function createTaskLink(data) {
             action: Actions.CREATE,
             fieldData: {
                 link: data.link,
-                _fkID: data.taskId
+                _fkID: data.fkId
             }
         };
         

@@ -70,12 +70,12 @@ export function processProjectLinks(links, projectId) {
     }
 
     return links.response.data
-        .filter(link => link.fieldData._projectID === projectId)
+        .filter(link => link.fieldData._fkID === projectId)
         .map(link => ({
             id: link.fieldData.__ID,
             recordId: link.recordID,
-            url: link.fieldData.url,
-            title: link.fieldData.title || new URL(link.fieldData.url).hostname
+            url: link.fieldData.link,
+            title: link.fieldData.title || new URL(link.fieldData.link).hostname
         }));
 }
 
@@ -148,7 +148,7 @@ function processProjectRecords(records, projectId) {
         .filter(record => record.fieldData._projectID === projectId)
         .map(record => ({
             id: record.fieldData.__ID,
-            recordId: record.recordID,
+            recordId: record.recordId,
             startTime: record.fieldData.startTime,
             endTime: record.fieldData.endTime,
             description: record.fieldData.description || '',

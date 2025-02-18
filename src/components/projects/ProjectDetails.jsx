@@ -1,8 +1,11 @@
-import React, { useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useProject } from '../../hooks/useProject';
+import { useNote } from '../../hooks/useNote';
+import { useLink } from '../../hooks/useLink';
 import TaskList from '../tasks/TaskList';
+import TextInput from '../global/TextInput';
 
 // Memoized objective component
 const Objective = React.memo(function Objective({
@@ -108,6 +111,11 @@ function ProjectDetails({
     project
 }) {
     const { darkMode } = useTheme();
+    const [showNewNoteInput, setShowNewNoteInput] = useState(false);
+    const [showNewLinkInput, setShowNewLinkInput] = useState(false);
+    const { handleNoteCreate, loading: noteLoading } = useNote();
+    const { handleLinkCreate, loading: linkLoading } = useLink();
+    const { loadProjectDetails } = useProject();
     console.log("Project in ProjectDetails:", project);
 
     // Calculate project stats using service
@@ -264,23 +272,45 @@ function ProjectDetails({
                     <div className="flex justify-between items-center mb-4 pr-5">
                         <h3 className="text-lg font-semibold">Notes</h3>
                         <button
-                            onClick={() => console.log('Add new note')}
+                            onClick={() => setShowNewNoteInput(true)}
                             className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                            disabled={noteLoading}
                         >
-                            New Note
+                            {noteLoading ? 'Adding...' : 'New Note'}
                         </button>
                     </div>
+                    {showNewNoteInput && (
+                        <div className="mb-4">
+                            <TextInput
+                                title="Add Note"
+                                placeholder="Enter your note..."
+                                submitLabel="Create"
+                                onSubmit={async (noteContent) => {
+                                    try {
+                                        const result = await handleNoteCreate(project.__ID, noteContent);
+                                        if (result) {
+                                            await loadProjectDetails(project.__ID);
+                                            setShowNewNoteInput(false);
+                                        }
+                                    } catch (error) {
+                                        console.error('Error creating note:', error);
+                                    }
+                                }}
+                                onCancel={() => setShowNewNoteInput(false)}
+                            />
+                        </div>
+                    )}
                     {project.notes?.length > 0 && (
                         <div className="space-y-4">
                             {project.notes.map(note => (
                                 <div
-                                    key={note.id}
+                                    key={note.fieldData.__ID}
                                     className={`
                                         p-4 rounded-lg border
                                         ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
                                     `}
                                 >
-                                    <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{note.content}</p>
+                                    <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{note.fieldData.note}</p>
                                 </div>
                             ))}
                         </div>
@@ -294,15 +324,36 @@ function ProjectDetails({
                     <div className="flex justify-between items-center mb-4 pr-5">
                         <h3 className="text-lg font-semibold">Links</h3>
                         <button
-                            onClick={() => console.log('Add new link')}
+                            onClick={() => setShowNewLinkInput(true)}
                             className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                            disabled={linkLoading}
                         >
-                            New Link
+                            {linkLoading ? 'Adding...' : 'New Link'}
                         </button>
                     </div>
+                    {showNewLinkInput && (
+                        <div className="mb-4">
+                            <TextInput
+                                title="Add Link"
+                                placeholder="Enter URL..."
+                                submitLabel="Create"
+                                onSubmit={async (url) => {
+                                    try {
+                                        const result = await handleLinkCreate(project.__ID, url);
+                                        if (result) {
+                                            await loadProjectDetails(project.__ID);
+                                            setShowNewLinkInput(false);
+                                        }
+                                    } catch (error) {
+                                        console.error('Error creating link:', error);
+                                    }
+                                }}
+                                onCancel={() => setShowNewLinkInput(false)}
+                            />
+                        </div>
+                    )}
                     {project.links?.length > 0 && (
                         <ResourceGrid
-                            title="Links"
                             items={project.links}
                             renderItem={renderLink}
                             darkMode={darkMode}
