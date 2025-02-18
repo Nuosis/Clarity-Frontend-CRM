@@ -5,6 +5,25 @@ import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layou
  * @param {string} projectId - The project ID
  * @returns {Promise<Array>} Array of task records
  */
+export async function fetchTasks(projectId, query) {
+    validateParams({ projectId }, ['projectId','query']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.TASKS,
+            action: Actions.READ,
+            query
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}
+
+/**
+ * Fetches tasks for a project
+ * @param {string} projectId - The project ID
+ * @returns {Promise<Array>} Array of task records
+ */
 export async function fetchTasksForProject(projectId) {
     validateParams({ projectId }, ['projectId']);
     

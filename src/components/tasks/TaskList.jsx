@@ -355,6 +355,7 @@ function TaskList({
         taskLinks,
         timerRecords,
         loading,
+        loadTasks,
         selectedTask,
         timer,
         activeTasks,
@@ -383,14 +384,16 @@ function TaskList({
     }, [handleTaskStatusChange, onTaskStatusChange]);
 
     const handleNewTask = useCallback(async (taskName) => {
+        const staffId = user?.userID;
         if (!taskName?.trim() || !projectId || !user?.userID) {
             console.error('Missing required fields for task creation:', {
                 taskName: taskName?.trim(),
                 projectId,
-                staffId: user?.userID
+                staffId
             });
             return;
         }
+        console.log("new task called ... ",{projectId, staffId, taskName})
         
         try {
             await handleTaskCreate({
@@ -399,12 +402,15 @@ function TaskList({
                 taskName: taskName.trim(),
                 priority: "active"
             });
-            onTaskCreate();
+            console.log("setShowNewTaskInput ... ")
+            // thos should cause a rerender of the tasks. Since task as added to state it should load the new task
             setShowNewTaskInput(false);
+            // console.log("re-render tasks ")
+            // loadTasks(projectId)
         } catch (error) {
             console.error('Error creating task:', error);
         }
-    }, [projectId, user?.userID, handleTaskCreate, onTaskCreate]);
+    }, [projectId, user?.userID, handleTaskCreate]);
 
     return (
         <div className="space-y-6">

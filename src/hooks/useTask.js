@@ -113,7 +113,7 @@ export function useTask(projectId = null) {
                 setTasks(prevTasks => [...prevTasks, {
                     id: result.response.data[0].recordId,
                     recordId: result.response.data[0].recordId,
-                    task: taskData.task,
+                    task: taskData.taskName,
                     isCompleted: false,
                     _projectID: taskData._projectID,
                     _staffID: taskData._staffID,
