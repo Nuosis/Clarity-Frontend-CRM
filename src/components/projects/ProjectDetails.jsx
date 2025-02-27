@@ -93,7 +93,7 @@ const ResourceGrid = React.memo(function ResourceGrid({
 });
 
 ResourceGrid.propTypes = {
-    title: PropTypes.string.isRequired,
+    title: PropTypes.string,
     items: PropTypes.array,
     renderItem: PropTypes.func.isRequired,
     darkMode: PropTypes.bool.isRequired,

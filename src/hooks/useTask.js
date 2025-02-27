@@ -25,13 +25,23 @@ export function useTask(projectId = null) {
     const [taskNotes, setTaskNotes] = useState([]);
     const [taskLinks, setTaskLinks] = useState([]);
     const [stats, setStats] = useState(null);
-    const [timer, setTimer] = useState({
-        recordId: null,
-        TimeStart: null,
-        isPaused: false,
-        pauseStartTime: null,
-        totalPauseTime: 0,
-        adjustment: 0
+    const [timer, setTimer] = useState(() => {
+        const savedTimer = localStorage.getItem('activeTimer');
+        if (savedTimer) {
+            const parsed = JSON.parse(savedTimer);
+            return {
+                ...parsed,
+                pauseStartTime: parsed.pauseStartTime ? new Date(parsed.pauseStartTime) : null
+            };
+        }
+        return {
+            recordId: null,
+            TimeStart: null,
+            isPaused: false,
+            pauseStartTime: null,
+            totalPauseTime: 0,
+            adjustment: 0
+        };
     });
 
     const { showError } = useSnackBar();
@@ -195,10 +205,13 @@ export function useTask(projectId = null) {
         try {
             const taskToUse = task || selectedTask;
             const result = await startTimer(taskToUse);
+            //console.log("handleTimerStart result: ",result)
+            const resultCode = result.messages[0].code;
+
             
-            if (result) {
-                setTimer({
-                    recordId: result.recordId,
+            if (result && resultCode === '0') {
+                const newTimer = {
+                    recordId: result.response?.recordId || null,
                     TimeStart: new Date().toLocaleTimeString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -209,7 +222,11 @@ export function useTask(projectId = null) {
                     pauseStartTime: null,
                     totalPauseTime: 0,
                     adjustment: 0
-                });
+                };
+                setTimer(newTimer);
+                localStorage.setItem('activeTimer', JSON.stringify(newTimer));
+            } else {
+                throw new Error(`Failed to start timer: ${result.messages[0].message}`);
             }
         } catch (err) {
             showError(err.message);
@@ -243,14 +260,16 @@ export function useTask(projectId = null) {
                 setTimerRecords(details.timers);
             }
 
-            setTimer({
+            const newTimer = {
                 recordId: null,
                 startTime: null,
                 isPaused: false,
                 pauseStartTime: null,
                 totalPauseTime: 0,
                 adjustment: 0
-            });
+            };
+            setTimer(newTimer);
+            localStorage.removeItem('activeTimer');
         } catch (err) {
             showError(err.message);
             console.error('Error stopping timer:', err);
@@ -264,21 +283,20 @@ export function useTask(projectId = null) {
         }
 
         setTimer(prev => {
-            if (prev.isPaused) {
-                const pauseDuration = (new Date() - prev.pauseStartTime) / 1000;
-                return {
+            const newTimer = prev.isPaused
+                ? {
                     ...prev,
                     isPaused: false,
                     pauseStartTime: null,
-                    totalPauseTime: prev.totalPauseTime + pauseDuration
-                };
-            } else {
-                return {
+                    totalPauseTime: prev.totalPauseTime + ((new Date() - prev.pauseStartTime) / 1000)
+                }
+                : {
                     ...prev,
                     isPaused: true,
                     pauseStartTime: new Date()
                 };
-            }
+            localStorage.setItem('activeTimer', JSON.stringify(newTimer));
+            return newTimer;
         });
     }, [timer, showError]);
 
@@ -288,10 +306,14 @@ export function useTask(projectId = null) {
             return;
         }
 
-        setTimer(prev => ({
-            ...prev,
-            adjustment: prev.adjustment + (minutes * 60)
-        }));
+        setTimer(prev => {
+            const newTimer = {
+                ...prev,
+                adjustment: prev.adjustment + (minutes * 60)
+            };
+            localStorage.setItem('activeTimer', JSON.stringify(newTimer));
+            return newTimer;
+        });
     }, [timer, showError]);
 
     // Get grouped tasks
@@ -341,6 +363,7 @@ export function useTask(projectId = null) {
             setTaskLinks([]);
             if (timer?.recordId) {
                 handleTimerStop(true);
+                localStorage.removeItem('activeTimer');
             }
         }
     };
