@@ -38,6 +38,23 @@ export {
     sortTasks
 } from './taskService';
 
+// Financial service exports
+export {
+    processFinancialData,
+    formatFinancialRecordForDisplay,
+    groupRecordsByCustomer,
+    groupRecordsByProject,
+    calculateTotals,
+    calculateMonthlyTotals,
+    prepareChartData,
+    validateFinancialRecordData,
+    formatFinancialRecordForFileMaker,
+    sortRecordsByDate,
+    sortRecordsByAmount,
+    filterRecordsByDateRange,
+    filterRecordsByBilledStatus
+} from './financialService';
+
 // Service version
 export const SERVICES_VERSION = '1.0.0';
 

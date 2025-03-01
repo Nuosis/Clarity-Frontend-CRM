@@ -4,7 +4,8 @@ export {
     handleFileMakerOperation,
     validateParams,
     Layouts,
-    Actions
+    Actions,
+    initializeQuickBooks
 } from './fileMaker';
 
 // Customer operations
@@ -43,6 +44,15 @@ export {
     fetchTaskNotes,
     fetchTaskLinks
 } from './tasks';
+
+// Financial record operations
+export {
+    fetchFinancialRecords,
+    fetchUnpaidRecords,
+    fetchMonthlyRecords,
+    fetchQuarterlyRecords,
+    fetchYearlyRecords
+} from './financialRecords';
 
 // API version
 export const API_VERSION = '1.0.0';

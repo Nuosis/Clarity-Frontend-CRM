@@ -1,9 +1,11 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useAppStateOperations } from '../../context/AppStateContext';
 import { useProject } from '../../hooks/useProject';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
+import { initializeQuickBooks } from '../../api/fileMaker';
+import { useSnackBar } from '../../context/SnackBarContext';
 
 // Memoized project card component
 const ProjectCard = React.memo(function ProjectCard({
@@ -112,8 +114,29 @@ function CustomerDetails({
     const { darkMode } = useTheme();
     const { setLoading } = useAppStateOperations();
     const { projectRecords } = useProject();
+    const { showError } = useSnackBar();
+    const [isProcessingQB, setIsProcessingQB] = useState(false);
     //console.log(projectRecords)
     //console.log("customer",customer)
+
+    // Handler for QuickBooks initialization
+    const handleQuickBooksInit = useCallback(async () => {
+        if (!customer || !customer.id) {
+            showError('Customer information is missing');
+            return;
+        }
+        
+        setIsProcessingQB(true);
+        try {
+            await initializeQuickBooks(customer.id);
+            showError('QuickBooks processing initiated successfully');
+        } catch (error) {
+            console.error('QuickBooks initialization error:', error);
+            showError(`Error processing QuickBooks: ${error.message}`);
+        } finally {
+            setIsProcessingQB(false);
+        }
+    }, [customer, showError]);
 
     // Calculate stats for display
     const stats = useMemo(() => {
@@ -183,12 +206,27 @@ function CustomerDetails({
                             )}
                         </div>
                     </div>
-                    <button
-                        onClick={handleProjectCreate}
-                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
-                    >
-                        New Project
-                    </button>
+                    <div className="flex space-x-3">
+                        <button
+                            onClick={handleQuickBooksInit}
+                            disabled={isProcessingQB}
+                            className={`
+                                px-4 py-2 rounded-md flex items-center
+                                ${isProcessingQB
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-green-600 hover:bg-green-700 text-white'}
+                            `}
+                            title="Send unbilled records to QuickBooks"
+                        >
+                            <span>qb</span>
+                        </button>
+                        <button
+                            onClick={handleProjectCreate}
+                            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                        >
+                            New Project
+                        </button>
+                    </div>
                 </div>
 
                 {stats && (

@@ -11,10 +11,10 @@ export const APP_ACTIONS = {
     SET_SELECTED_CUSTOMER: 'SET_SELECTED_CUSTOMER',
     SET_SELECTED_PROJECT: 'SET_SELECTED_PROJECT',
     SET_SELECTED_TASK: 'SET_SELECTED_TASK',
+    SET_SHOW_FINANCIAL_ACTIVITY: 'SET_SHOW_FINANCIAL_ACTIVITY',
     CLEAR_ERROR: 'CLEAR_ERROR',
     RESET_STATE: 'RESET_STATE'
 };
-
 const initialState = {
     loading: true,
     error: null,
@@ -22,6 +22,7 @@ const initialState = {
     selectedCustomer: null,
     selectedProject: null,
     selectedTask: null,
+    showFinancialActivity: false,
     version: 1, // For state versioning
 };
 
@@ -52,6 +53,7 @@ function appReducer(state, action) {
                 selectedCustomer: action.payload,
                 selectedProject: null, // Clear related selections
                 selectedTask: null,
+                showFinancialActivity: false, // Hide financial activity when selecting a customer
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SELECTED_PROJECT:
@@ -59,12 +61,23 @@ function appReducer(state, action) {
                 ...state,
                 selectedProject: action.payload,
                 selectedTask: null, // Clear related selection
+                showFinancialActivity: false, // Hide financial activity when selecting a project
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SELECTED_TASK:
             return {
                 ...state,
                 selectedTask: action.payload,
+                showFinancialActivity: false, // Hide financial activity when selecting a task
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SHOW_FINANCIAL_ACTIVITY:
+            return {
+                ...state,
+                showFinancialActivity: action.payload,
+                selectedCustomer: null, // Clear selections when showing financial activity
+                selectedProject: null,
+                selectedTask: null,
                 version: state.version + 1
             };
         case APP_ACTIONS.CLEAR_ERROR:
@@ -147,6 +160,10 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.RESET_STATE });
     }, [dispatch]);
 
+    const setShowFinancialActivity = useCallback((show) => {
+        dispatch({ type: APP_ACTIONS.SET_SHOW_FINANCIAL_ACTIVITY, payload: show });
+    }, [dispatch]);
+
     return {
         setLoading,
         setError,
@@ -155,6 +172,7 @@ export function useAppStateOperations() {
         setSelectedCustomer,
         setSelectedProject,
         setSelectedTask,
+        setShowFinancialActivity,
         resetState
     };
 }

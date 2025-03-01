@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useTheme } from './AppLayout';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { useProject } from '../../hooks/useProject';
+import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
 
 // Memoized customer list item
 const CustomerListItem = React.memo(function CustomerListItem({
@@ -67,6 +68,8 @@ function Sidebar({
 }) {
     const { darkMode } = useTheme();
     const { projects, projectRecords } = useProject();
+    const { showFinancialActivity } = useAppState();
+    const { setShowFinancialActivity } = useAppStateOperations();
     //console.log(projectRecords)
 
     // Memoize customer grouping and stats
@@ -121,6 +124,22 @@ function Sidebar({
                         <span className="font-medium">{stats.unbilledHours}</span> unbilled hours
                     </div>
                 )}
+                
+                {/* Financial Activity Button */}
+                <button
+                    onClick={() => setShowFinancialActivity(true)}
+                    className={`
+                        mt-4 w-full flex items-center justify-center px-4 py-2 rounded-md
+                        ${showFinancialActivity
+                            ? (darkMode ? 'bg-blue-700 text-white' : 'bg-blue-100 text-blue-800')
+                            : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
+                    `}
+                >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                    </svg>
+                    Financial Activity
+                </button>
             </div>
 
             {/* Customer List */}

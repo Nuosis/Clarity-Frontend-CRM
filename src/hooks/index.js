@@ -68,6 +68,7 @@ export { useCustomer } from './useCustomer';
 export { useProject } from './useProject';
 export { useTask } from './useTask';
 export { useLink } from './useLink';
+export { useFinancialRecords } from './useFinancialRecords';
 
 /**
  * Hook for managing loading and error states

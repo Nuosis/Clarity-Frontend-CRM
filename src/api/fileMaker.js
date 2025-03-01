@@ -191,3 +191,37 @@ export const Actions = {
     METADATA: 'metaData',
     DUPLICATE: 'duplicate'
 };
+
+/**
+ * Initializes QuickBooks for a specific customer
+ * Sends unbilled records to QB for processing
+ *
+ * @param {string} customerId - The ID of the customer to process in QuickBooks
+ * @returns {Promise} A promise that resolves when the script completes
+ */
+export async function initializeQuickBooks(customerId) {
+    if (!customerId) {
+        throw new Error('Customer ID is required for QuickBooks initialization');
+    }
+    
+    return new Promise((resolve, reject) => {
+        try {
+            if (typeof FileMaker === "undefined" || !FileMaker.PerformScript) {
+                const error = new Error("FileMaker object is unavailable");
+                error.code = "FM_UNAVAILABLE";
+                reject(error);
+                return;
+            }
+            
+            // Call the FileMaker script with the customer ID as the payload
+            FileMaker.PerformScript("Initialize QB via JS", customerId);
+            
+            // Since this is a fire-and-forget operation, resolve immediately
+            resolve({ status: "success", message: "QuickBooks initialization requested" });
+        } catch (error) {
+            console.error("Error initializing QuickBooks:", error);
+            error.code = "QB_INIT_ERROR";
+            reject(error);
+        }
+    });
+}

@@ -3,9 +3,12 @@ import PropTypes from 'prop-types';
 import TaskTimer from './tasks/TaskTimer';
 import ProjectDetails from './projects/ProjectDetails';
 import CustomerDetails from './customers/CustomerDetails';
+import FinancialActivity from './financial/FinancialActivity';
 import ErrorBoundary from './ErrorBoundary';
 import Loading from './loading/Loading';
 import { useProject } from '../hooks/useProject';
+import { useAppState } from '../context/AppStateContext';
+import { useTheme } from './layout/AppLayout';
 const MainContent = React.memo(function MainContent({
     selectedTask = null,
     selectedProject = null,
@@ -19,6 +22,8 @@ const MainContent = React.memo(function MainContent({
     handlers
 }) {
     const { handleProjectSelect } = useProject();
+    const { showFinancialActivity } = useAppState();
+    const { darkMode } = useTheme();
 
     // Memoized project selection handler
     const handleProjectSelection = useCallback((project) => {
@@ -26,6 +31,16 @@ const MainContent = React.memo(function MainContent({
         handleProjectSelect(project);
         handlers.onProjectSelect(project);
     }, [handleProjectSelect, handlers.onProjectSelect]);
+    // Show Financial Activity if selected
+    if (showFinancialActivity) {
+        return (
+            <ErrorBoundary>
+                <FinancialActivity darkMode={darkMode} />
+            </ErrorBoundary>
+        );
+    }
+
+    // Show Task details if selected
     if (selectedTask) {
         return (
             <ErrorBoundary onReset={handlers.clearSelectedTask}>
