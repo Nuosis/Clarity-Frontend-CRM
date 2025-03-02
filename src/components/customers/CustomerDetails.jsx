@@ -6,6 +6,7 @@ import { useProject } from '../../hooks/useProject';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { initializeQuickBooks } from '../../api/fileMaker';
 import { useSnackBar } from '../../context/SnackBarContext';
+import TextInput from '../global/TextInput';
 
 // Memoized project card component
 const ProjectCard = React.memo(function ProjectCard({
@@ -116,6 +117,7 @@ function CustomerDetails({
     const { projectRecords } = useProject();
     const { showError } = useSnackBar();
     const [isProcessingQB, setIsProcessingQB] = useState(false);
+    const [showNewProjectInput, setShowNewProjectInput] = useState(false);
     //console.log(projectRecords)
     //console.log("customer",customer)
 
@@ -179,10 +181,29 @@ function CustomerDetails({
 
     // Memoized handlers
     const handleProjectCreate = useCallback(() => {
-        onProjectCreate({
-            customerId: customer.id,
-            customerName: customer.Name
+        // Show the project creation form instead of directly creating the project
+        setShowNewProjectInput(true);
+    }, []);
+    
+    // Handle project form submission
+    const handleProjectFormSubmit = useCallback((projectName) => {
+        console.log('Creating new project for customer:', {
+            id: customer.id,
+            name: customer.Name,
+            projectName
         });
+        
+        const projectData = {
+            customerId: customer.id,
+            customerName: customer.Name,
+            name: projectName,        // For formatProjectForFileMaker
+            projectName: projectName, // For validateProjectData
+            _custID: customer.id      // For validateProjectData
+        };
+        
+        console.log('Project data being passed to onProjectCreate:', projectData);
+        onProjectCreate(projectData);
+        setShowNewProjectInput(false);
     }, [customer, onProjectCreate]);
 
     return (
@@ -267,6 +288,19 @@ function CustomerDetails({
                     </div>
                 )}
             </div>
+
+            {/* Project Creation Form */}
+            {showNewProjectInput && (
+                <div className="mb-6">
+                    <TextInput
+                        title="Create New Project"
+                        placeholder="Enter project name..."
+                        submitLabel="Create"
+                        onSubmit={handleProjectFormSubmit}
+                        onCancel={() => setShowNewProjectInput(false)}
+                    />
+                </div>
+            )}
 
             {/* Error Display */}
             {groupingError && (

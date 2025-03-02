@@ -9,6 +9,7 @@ import {
     fetchProjectNotes
 } from '../api';
 import { useProjectRecords } from '../context/ProjectContext';
+import { useSnackBar } from '../context/SnackBarContext';
 import {
     processProjectData,
     validateProjectData,
@@ -28,6 +29,7 @@ export function useProject(customerId = null) {
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
     const projectRecords = useProjectRecords();
+    const { showError } = useSnackBar();
     // Load projects when customerId changes
     useEffect(() => {
         if (customerId) {
@@ -161,12 +163,19 @@ export function useProject(customerId = null) {
             setLoading(true);
             setError(null);
             
+            console.log('Project creation data received:', projectData);
+            
             const validation = validateProjectData(projectData);
+            console.log('Validation result:', validation);
+            
             if (!validation.isValid) {
+                console.log('Validation failed with errors:', validation.errors);
                 throw new Error(validation.errors.join(', '));
             }
             
             const formattedData = formatProjectForFileMaker(projectData);
+            console.log('Formatted data for FileMaker:', formattedData);
+            
             const result = await createProject(formattedData);
             
             // Reload projects to get updated list
@@ -176,7 +185,10 @@ export function useProject(customerId = null) {
         } catch (err) {
             setError(err.message);
             console.error('Error creating project:', err);
-            throw err;
+            showError(err.message);
+            console.log('Error displayed in snackbar:', err.message);
+            // Don't throw the error, handle it here
+            return { error: err.message };
         } finally {
             setLoading(false);
         }
