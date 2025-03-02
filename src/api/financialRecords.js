@@ -2,7 +2,7 @@ import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layou
 
 /**
  * Helper function to get current date information
- * @returns {Object} Object containing current month, quarter, and year
+ * @returns {Object} Object containing current date, week, month, quarter, and year
  */
 function getCurrentDateInfo() {
     const now = new Date();
@@ -10,7 +10,24 @@ function getCurrentDateInfo() {
     const year = now.getFullYear().toString();
     const quarter = Math.ceil((now.getMonth() + 1) / 3).toString();
     
-    return { month, year, quarter };
+    // Get current date in YYYY-MM-DD format
+    const date = now.toISOString().split('T')[0];
+    
+    // Get current week number
+    // ISO week starts on Monday, so we need to adjust
+    const dayOfWeek = now.getDay() || 7; // Convert Sunday (0) to 7
+    const thursdayDate = new Date(now);
+    thursdayDate.setDate(now.getDate() - dayOfWeek + 4); // Find the Thursday of this week
+    const firstDayOfYear = new Date(thursdayDate.getFullYear(), 0, 1);
+    const weekNumber = Math.ceil((((thursdayDate - firstDayOfYear) / 86400000) + 1) / 7);
+    
+    return {
+        date,
+        week: weekNumber.toString(),
+        month,
+        year,
+        quarter
+    };
 }
 
 /**
@@ -94,10 +111,31 @@ function buildFinancialQuery(options = {}) {
 export async function fetchFinancialRecords(timeframe, customerId = null, projectId = null) {
     validateParams({ timeframe }, ['timeframe']);
     
+    console.log(`[DEBUG] fetchFinancialRecords - Timeframe: ${timeframe}, Customer ID: ${customerId}, Project ID: ${projectId}`);
+    
     return handleFileMakerOperation(async () => {
         let query = [];
         
         switch (timeframe.toLowerCase()) {
+            case 'today': {
+                const { date } = getCurrentDateInfo();
+                query = [{
+                    "DateStart": date,
+                    ...(customerId && { "customers_Projects::_custID": customerId }),
+                    ...(projectId && { "_projectID": projectId })
+                }];
+                break;
+            }
+            case 'thisweek': {
+                const { week, year } = getCurrentDateInfo();
+                query = [{
+                    "weekNo": week,
+                    "year": year,
+                    ...(customerId && { "customers_Projects::_custID": customerId }),
+                    ...(projectId && { "_projectID": projectId })
+                }];
+                break;
+            }
             case 'thismonth': {
                 const { month, year } = getCurrentDateInfo();
                 query = buildFinancialQuery({ month, year, customerId, projectId });
@@ -113,9 +151,43 @@ export async function fetchFinancialRecords(timeframe, customerId = null, projec
                 break;
             }
             case 'thisquarter': {
-                const { quarter, year } = getCurrentDateInfo();
-                const months = getQuarterMonths(quarter, year);
-                query = months.map(monthObj => ({
+                // Get current date info
+                const now = new Date();
+                const currentMonth = now.getMonth() + 1; // 1-12
+                const currentYear = now.getFullYear();
+                
+                // Calculate the last three completed months
+                const lastThreeMonths = [];
+                for (let i = 1; i <= 3; i++) {
+                    let month = currentMonth - i;
+                    let year = currentYear;
+                    
+                    // Adjust for previous year if needed
+                    if (month <= 0) {
+                        month += 12;
+                        year -= 1;
+                    }
+                    
+                    lastThreeMonths.push({
+                        "month": month.toString(),
+                        "year": year.toString()
+                    });
+                }
+                
+                // Get the same three months from the previous year
+                const previousYearMonths = lastThreeMonths.map(monthObj => ({
+                    "month": monthObj.month,
+                    "year": (parseInt(monthObj.year) - 1).toString()
+                }));
+                
+                // Combine both sets of months
+                const allMonths = [...lastThreeMonths, ...previousYearMonths];
+                
+                console.log("API - Last three months:", JSON.stringify(lastThreeMonths));
+                console.log("API - Previous year months:", JSON.stringify(previousYearMonths));
+                console.log("API - All months:", JSON.stringify(allMonths));
+                
+                query = allMonths.map(monthObj => ({
                     ...monthObj,
                     ...(customerId && { "customers_Projects::_custID": customerId }),
                     ...(projectId && { "_projectID": projectId })
@@ -124,8 +196,19 @@ export async function fetchFinancialRecords(timeframe, customerId = null, projec
             }
             case 'thisyear': {
                 const { year } = getCurrentDateInfo();
-                const months = getYearMonths(year);
-                query = months.map(monthObj => ({
+                const currentYear = parseInt(year);
+                const lastYear = currentYear - 1;
+                
+                // Get months for current year
+                const currentYearMonths = getYearMonths(year);
+                
+                // Get months for last year
+                const lastYearMonths = getYearMonths(lastYear.toString());
+                
+                // Combine both sets of months
+                const allMonths = [...currentYearMonths, ...lastYearMonths];
+                
+                query = allMonths.map(monthObj => ({
                     ...monthObj,
                     ...(customerId && { "customers_Projects::_custID": customerId }),
                     ...(projectId && { "_projectID": projectId })

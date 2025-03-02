@@ -11,8 +11,10 @@ import PropTypes from 'prop-types';
  */
 function TimeframeSelector({ value, onChange, darkMode }) {
   const timeframes = [
+    { value: 'today', label: 'Today' },
+    { value: 'thisWeek', label: 'This Week' },
     { value: 'thisMonth', label: 'This Month' },
-    { value: 'unpaid', label: 'Unpaid' },
+    { value: 'unpaid', label: 'Unbilled' },
     { value: 'lastMonth', label: 'Last Month' },
     { value: 'thisQuarter', label: 'This Quarter' },
     { value: 'thisYear', label: 'This Year' }

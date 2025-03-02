@@ -15,14 +15,16 @@ import RecordModal from './RecordModal';
  */
 function FinancialActivity({ darkMode = false }) {
   // Local state for UI
-  const [timeframe, setTimeframe] = useState('thisMonth');
+  const [timeframe, setTimeframe] = useState('today');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState(null);
+  const [showProjects, setShowProjects] = useState(false);
+  const [showFullCustomerList, setShowFullCustomerList] = useState(true);
 
   // Use the financial records hook
-  const { 
+  const {
     records,
-    loading, 
+    loading,
     error,
     chartData,
     recordsByCustomer,
@@ -40,7 +42,8 @@ function FinancialActivity({ darkMode = false }) {
     selectProject,
     selectMonth,
     saveRecord,
-    fetchData
+    fetchData,
+    updateBilledStatus
   } = useFinancialRecords(timeframe);
 
   // Handle timeframe change
@@ -51,11 +54,33 @@ function FinancialActivity({ darkMode = false }) {
 
   // Handle customer selection
   const handleCustomerSelect = useCallback((customerId) => {
+    console.log("Customer selected:", customerId);
+    console.log("Current state - showProjects:", showProjects);
+    console.log("Selected customer before update:", selectedCustomer);
+    
+    // Just update the customer selection - no need to refetch data
     selectCustomer(customerId);
+    
+    setShowProjects(true);
+    setShowFullCustomerList(false); // Hide the full customer list when a customer is selected
+    console.log("Selected customer after update:", selectedCustomer);
+  }, [selectCustomer, showProjects, selectedCustomer]);
+
+  // Handle toggle projects visibility
+  const handleToggleProjects = useCallback((show) => {
+    setShowProjects(show);
+  }, []);
+  
+  // Handle back to customer list
+  const handleBackToCustomerList = useCallback(() => {
+    setShowFullCustomerList(true);
+    setShowProjects(false);
+    selectCustomer(null);
   }, [selectCustomer]);
 
   // Handle project selection
   const handleProjectSelect = useCallback((projectId) => {
+    // Just update the project selection - no need to refetch data
     selectProject(projectId);
   }, [selectProject]);
 
@@ -203,38 +228,93 @@ function FinancialActivity({ darkMode = false }) {
         )}
       </div>
       
-      {/* Customer and project lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Customer list */}
-        <div className="lg:col-span-1">
-          <CustomerList 
+      {/* Customer list or Selected Customer Info */}
+      <div className="mb-6">
+        {showFullCustomerList ? (
+          <CustomerList
             customers={recordsByCustomer}
+            projects={recordsByProject}
             selectedCustomerId={selectedCustomerId}
             onCustomerSelect={handleCustomerSelect}
+            onProjectSelect={handleProjectSelect}
+            showProjects={showProjects}
+            onToggleProjects={handleToggleProjects}
+            darkMode={darkMode}
+            updateBilledStatus={updateBilledStatus}
+          />
+        ) : (
+          <div className={`
+            rounded-lg border overflow-hidden
+            ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+          `}>
+            <div className={`
+              px-4 py-3 border-b flex justify-between items-center
+              ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}
+            `}>
+              <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Selected Customer
+              </h3>
+              <button
+                onClick={handleBackToCustomerList}
+                className={`
+                  text-xs px-2 py-1 rounded
+                  ${darkMode
+                    ? 'bg-blue-800 text-blue-100 hover:bg-blue-700'
+                    : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}
+                `}
+              >
+                Back to Customer List
+              </button>
+            </div>
+            
+            {selectedCustomer && (
+              <div className="p-4">
+                <div className="flex flex-col space-y-2">
+                  <div className="text-lg font-medium mb-2">
+                    {selectedCustomer.customerName}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Total Amount:
+                      </span>
+                      <div className={`text-base font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {formatCurrency(selectedCustomer.totalAmount)}
+                      </div>
+                    </div>
+                    <div>
+                      <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Total Hours:
+                      </span>
+                      <div className={`text-base font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {formatHours(selectedCustomer.totalHours)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* Project list - shown when a customer is selected and showProjects is true */}
+      {console.log("ProjectList rendering condition check:", {
+        selectedProjectId,
+        selectedCustomerId,
+        showProjects
+      })}
+      {selectedCustomerId && showProjects && !showFullCustomerList && (
+        <div>
+          <ProjectList
+            projects={recordsByProject}
+            selectedProjectId={selectedProjectId}
+            onProjectSelect={handleProjectSelect}
+            onEditRecord={handleEditRecord}
             darkMode={darkMode}
           />
         </div>
-        
-        {/* Project list */}
-        <div className="lg:col-span-2">
-          {selectedCustomerId ? (
-            <ProjectList 
-              projects={recordsByProject}
-              selectedProjectId={selectedProjectId}
-              onProjectSelect={handleProjectSelect}
-              onEditRecord={handleEditRecord}
-              darkMode={darkMode}
-            />
-          ) : (
-            <div className={`
-              p-6 rounded-lg border text-center
-              ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-white border-gray-200 text-gray-500'}
-            `}>
-              Select a customer to view projects
-            </div>
-          )}
-        </div>
-      </div>
+      )}
       
       {/* Edit modal */}
       {isEditModalOpen && recordToEdit && (

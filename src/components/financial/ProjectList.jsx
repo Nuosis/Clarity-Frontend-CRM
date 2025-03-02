@@ -12,6 +12,11 @@ import PropTypes from 'prop-types';
  * @returns {JSX.Element} Project list component
  */
 function ProjectList({ projects, selectedProjectId, onProjectSelect, onEditRecord, darkMode }) {
+  // Debug logs
+  console.log("ProjectList rendering with props:", {
+    projectsCount: Object.keys(projects).length,
+    selectedProjectId
+  });
   const [sortConfig, setSortConfig] = useState({
     key: 'totalAmount',
     direction: 'desc'

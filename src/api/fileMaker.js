@@ -196,10 +196,17 @@ export const Actions = {
  * Initializes QuickBooks for a specific customer
  * Sends unbilled records to QB for processing
  *
- * @param {string} customerId - The ID of the customer to process in QuickBooks
+ * @param {Object|string} params - Either a customer ID string or an object with customer and record details
+ * @param {string} params.custId - The ID of the customer to process in QuickBooks
+ * @param {Array} [params.records] - Array of record IDs to process in QuickBooks (legacy format)
+ * @param {Object} [params.recordsByProject] - Object mapping project IDs to arrays of record IDs
  * @returns {Promise} A promise that resolves when the script completes
  */
-export async function initializeQuickBooks(customerId) {
+export async function initializeQuickBooks(params) {
+    // Handle both string (backward compatibility) and object formats
+    const isObject = typeof params === 'object' && params !== null;
+    const customerId = isObject ? params.custId : params;
+    
     if (!customerId) {
         throw new Error('Customer ID is required for QuickBooks initialization');
     }
@@ -213,8 +220,20 @@ export async function initializeQuickBooks(customerId) {
                 return;
             }
             
-            // Call the FileMaker script with the customer ID as the payload
-            FileMaker.PerformScript("Initialize QB via JS", customerId);
+            // Prepare the payload based on the input format
+            let payload;
+            if (isObject) {
+                // New format: pass an object with customer ID and record IDs (grouped by project or flat)
+                payload = JSON.stringify(params);
+            } else {
+                // Legacy format: just pass the customer ID as a string
+                payload = customerId;
+            }
+            
+            console.log("Sending QuickBooks payload:", payload);
+            
+            // Call the FileMaker script with the payload
+            FileMaker.PerformScript("Initialize QB via JS", payload);
             
             // Since this is a fire-and-forget operation, resolve immediately
             resolve({ status: "success", message: "QuickBooks initialization requested" });

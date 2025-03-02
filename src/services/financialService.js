@@ -69,7 +69,7 @@ function calculateAmount(hours, rate) {
   const parsedRate = parseFloat(rate || 0);
   
   // Log calculation for debugging
-  console.log(`Calculating amount: ${parsedHours} hours * ${parsedRate} rate = ${parsedHours * parsedRate}`);
+  // console.log(`Calculating amount: ${parsedHours} hours * ${parsedRate} rate = ${parsedHours * parsedRate}`);
   
   return parsedHours * parsedRate;
 }
@@ -185,9 +185,18 @@ export function groupRecordsByCustomer(records) {
  * @returns {Object} Records grouped by project
  */
 export function groupRecordsByProject(records, customerId) {
-  const customerRecords = customerId 
+  console.log(`[DEBUG] groupRecordsByProject - Total records: ${records.length}, Customer ID: ${customerId}`);
+  
+  // Log billed vs unbilled counts
+  const billedCount = records.filter(r => r.billed).length;
+  const unbilledCount = records.filter(r => !r.billed).length;
+  console.log(`[DEBUG] Records by billed status - Billed: ${billedCount}, Unbilled: ${unbilledCount}`);
+  
+  const customerRecords = customerId
     ? records.filter(record => record.customerId === customerId)
     : records;
+  
+  console.log(`[DEBUG] Records for customer ${customerId}: ${customerRecords.length}`);
     
   return customerRecords.reduce((grouped, record) => {
     const projectId = record.projectId;
@@ -321,7 +330,7 @@ function getMonthLabel(month, year) {
 /**
  * Prepares data for chart visualization
  * @param {Array} records - Financial records
- * @param {string} chartType - Type of chart ("bar", "line", "stacked")
+ * @param {string} chartType - Type of chart ("bar", "line", "stacked", "quarterlyLine", "yearlyLine")
  * @returns {Object} Formatted chart data
  */
 export function prepareChartData(records, chartType) {
@@ -400,6 +409,179 @@ export function prepareChartData(records, chartType) {
             data: monthlyData.map(data => data.unbilledAmount),
             borderColor: 'rgba(255, 159, 64, 0.8)',
             backgroundColor: 'rgba(255, 159, 64, 0.1)',
+            fill: true,
+            tension: 0.4
+          }
+        ]
+      };
+    }
+    
+    case 'quarterlyline': {
+      // Line chart showing monthly totals for the last three completed months with comparison to last year
+      const monthlyData = calculateMonthlyTotals(records);
+      
+      // Get current date info
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1; // 1-12
+      const currentYear = currentDate.getFullYear();
+      const lastYear = currentYear - 1;
+      
+      // Calculate the last three completed months
+      const lastThreeMonths = [];
+      for (let i = 1; i <= 3; i++) {
+        let month = currentMonth - i;
+        let year = currentYear;
+        
+        // Adjust for previous year if needed
+        if (month <= 0) {
+          month += 12;
+          year -= 1;
+        }
+        
+        lastThreeMonths.push({
+          month,
+          year
+        });
+      }
+      
+      // Sort months chronologically
+      lastThreeMonths.sort((a, b) => {
+        if (a.year !== b.year) return a.year - b.year;
+        return a.month - b.month;
+      });
+      
+      console.log("Last three months:", JSON.stringify(lastThreeMonths));
+      console.log("All monthly data:", JSON.stringify(monthlyData.map(d => ({ month: d.month, year: d.year, amount: d.totalAmount }))));
+      
+      // Filter data for the last three months this year
+      const thisYearData = monthlyData.filter(data => {
+        return lastThreeMonths.some(m =>
+          m.month === data.month && m.year === data.year
+        );
+      });
+      
+      console.log("This year data:", JSON.stringify(thisYearData.map(d => ({ month: d.month, year: d.year, amount: d.totalAmount }))));
+      
+      // Filter data for the same three months last year
+      const lastYearData = monthlyData.filter(data => {
+        return lastThreeMonths.some(m =>
+          m.month === data.month && data.year === m.year - 1
+        );
+      });
+      
+      console.log("Last year data:", JSON.stringify(lastYearData.map(d => ({ month: d.month, year: d.year, amount: d.totalAmount }))));
+      
+      // Create labels for the last three months
+      const monthLabels = lastThreeMonths.map(m => {
+        const date = new Date(m.year, m.month - 1, 1);
+        return date.toLocaleDateString('en-US', { month: 'short' });
+      });
+      
+      return {
+        labels: monthLabels,
+        datasets: [
+          {
+            label: `This Year`,
+            data: lastThreeMonths.map(m => {
+              const monthData = thisYearData.find(data =>
+                data.month === m.month && data.year === m.year
+              );
+              return monthData ? monthData.totalAmount : 0;
+            }),
+            borderColor: 'rgba(54, 162, 235, 0.8)',
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            fill: true,
+            tension: 0.4
+          },
+          {
+            label: `Last Year`,
+            data: lastThreeMonths.map(m => {
+              const monthData = lastYearData.find(data =>
+                data.month === m.month && data.year === m.year - 1
+              );
+              return monthData ? monthData.totalAmount : 0;
+            }),
+            borderColor: 'rgba(75, 192, 192, 0.8)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            fill: true,
+            tension: 0.4
+          }
+        ]
+      };
+    }
+    
+    case 'yearlyline': {
+      // Line chart showing monthly totals for yearly view with financial year starting March 1
+      const monthlyData = calculateMonthlyTotals(records);
+      
+      // Get current year and last year
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const lastYear = currentYear - 1;
+      
+      // Sort monthly data by financial year (March to February)
+      const sortedMonthlyData = [...monthlyData].sort((a, b) => {
+        // Adjust month to financial year (March = 1, February = 12)
+        const getFinancialMonth = (month) => (month - 3 + 12) % 12 + 1;
+        
+        if (a.year !== b.year) return a.year - b.year;
+        return getFinancialMonth(a.month) - getFinancialMonth(b.month);
+      });
+      
+      // Filter data for current financial year (March 1 to Feb 28/29)
+      const currentFinancialYearData = sortedMonthlyData.filter(data => {
+        if (data.month >= 3 && data.year === currentYear) return true;
+        if (data.month < 3 && data.year === currentYear + 1) return true;
+        return false;
+      });
+      
+      // Filter data for last financial year
+      const lastFinancialYearData = sortedMonthlyData.filter(data => {
+        if (data.month >= 3 && data.year === lastYear) return true;
+        if (data.month < 3 && data.year === currentYear) return true;
+        return false;
+      });
+      
+      // Create labels for all months in the financial year
+      const financialYearLabels = [];
+      for (let i = 0; i < 12; i++) {
+        const month = (i + 2) % 12 + 1; // Start from March (3)
+        const year = month >= 3 ? currentYear : currentYear + 1;
+        const date = new Date(year, month - 1, 1);
+        financialYearLabels.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+      }
+      
+      // Create datasets for current and last financial years
+      return {
+        labels: financialYearLabels,
+        datasets: [
+          {
+            label: `${currentYear}/${currentYear + 1}`,
+            data: financialYearLabels.map((_, index) => {
+              const month = (index + 2) % 12 + 1; // Start from March (3)
+              const year = month >= 3 ? currentYear : currentYear + 1;
+              const monthData = currentFinancialYearData.find(
+                data => data.month === month && data.year === year
+              );
+              return monthData ? monthData.totalAmount : 0;
+            }),
+            borderColor: 'rgba(54, 162, 235, 0.8)',
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            fill: true,
+            tension: 0.4
+          },
+          {
+            label: `${lastYear}/${currentYear}`,
+            data: financialYearLabels.map((_, index) => {
+              const month = (index + 2) % 12 + 1; // Start from March (3)
+              const year = month >= 3 ? lastYear : currentYear;
+              const monthData = lastFinancialYearData.find(
+                data => data.month === month && data.year === year
+              );
+              return monthData ? monthData.totalAmount : 0;
+            }),
+            borderColor: 'rgba(75, 192, 192, 0.8)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
             fill: true,
             tension: 0.4
           }

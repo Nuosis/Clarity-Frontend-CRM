@@ -50,6 +50,7 @@ function FinancialChart({ data, timeframe, onMonthClick, darkMode }) {
     plugins: {
       legend: {
         position: 'top',
+        display: isLineChart, // Only show legend for line charts
         labels: {
           color: textColor,
           font: {

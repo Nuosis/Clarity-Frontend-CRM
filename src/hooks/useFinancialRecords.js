@@ -35,17 +35,14 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
   });
 
   /**
-   * Fetches financial records based on current filters
+   * Fetches financial records based on current timeframe
    */
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       console.log(`Fetching financial records for timeframe: ${timeframe}`);
-      const data = await fetchFinancialRecords(
-        timeframe,
-        selectedCustomerId,
-        selectedProjectId
-      );
+      // Fetch all records for the timeframe without customer or project filter
+      const data = await fetchFinancialRecords(timeframe);
       
       console.log("Raw FileMaker response structure:",
         JSON.stringify({
@@ -72,7 +69,7 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
       }
       
       setRecords(data); // Store raw data
-      setProcessedRecords(sortedData); // Store processed data
+      setProcessedRecords(sortedData); // Store all processed data
       setError(null);
     } catch (err) {
       console.error('Error fetching financial records:', err);
@@ -80,9 +77,9 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
     } finally {
       setLoading(false);
     }
-  }, [timeframe, selectedCustomerId, selectedProjectId, sortConfig]);
+  }, [timeframe, sortConfig]); // Remove selectedCustomerId and selectedProjectId dependencies
 
-  // Fetch records when dependencies change
+  // Fetch records when timeframe changes
   useEffect(() => {
     let isMounted = true;
     
@@ -103,7 +100,7 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
     return () => {
       isMounted = false;
     };
-  }, [fetchData, options.autoLoad]);
+  }, [timeframe, options.autoLoad]); // Only depend on timeframe, not selectedCustomerId or selectedProjectId
 
   /**
    * Changes the current timeframe and refetches data
@@ -120,9 +117,11 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
    * @param {string} customerId - The customer ID to select
    */
   const selectCustomer = useCallback((customerId) => {
+    console.log(`Selecting customer: ${customerId}`);
     setSelectedCustomerId(customerId);
     // Reset project selection when changing customer
     setSelectedProjectId(null);
+    // No need to refetch data, we'll filter the existing records
   }, []);
 
   /**
@@ -130,7 +129,9 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
    * @param {string} projectId - The project ID to select
    */
   const selectProject = useCallback((projectId) => {
+    console.log(`Selecting project: ${projectId}`);
     setSelectedProjectId(projectId);
+    // No need to refetch data, we'll filter the existing records
   }, []);
 
   /**
@@ -203,19 +204,72 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
     });
   }, []);
 
+  /**
+   * Optimistically updates the billed status of records
+   * @param {string} customerId - The customer ID
+   * @param {Array} recordIds - Array of record IDs to mark as billed
+   * @returns {boolean} Success status
+   */
+  const updateBilledStatus = useCallback((customerId, recordIds) => {
+    if (!customerId || !recordIds || recordIds.length === 0) {
+      return false;
+    }
+
+    setProcessedRecords(prevRecords => {
+      return prevRecords.map(record => {
+        // If this record belongs to the customer and is in the recordIds array
+        if (record.customerId === customerId && recordIds.includes(record.id)) {
+          return {
+            ...record,
+            billed: true
+          };
+        }
+        return record;
+      });
+    });
+
+    return true;
+  }, []);
+
   // Memoized derived data
   
   /**
-   * Chart data based on current records and timeframe
+   * Filtered records based on selected customer and project
+   */
+  const filteredRecords = useMemo(() => {
+    let filtered = [...processedRecords];
+    
+    // Filter by customer if one is selected
+    if (selectedCustomerId) {
+      filtered = filtered.filter(record => record.customerId === selectedCustomerId);
+    }
+    
+    // Filter by project if one is selected
+    if (selectedProjectId) {
+      filtered = filtered.filter(record => record.projectId === selectedProjectId);
+    }
+    
+    return filtered;
+  }, [processedRecords, selectedCustomerId, selectedProjectId]);
+  
+  /**
+   * Chart data based on filtered records and timeframe
    */
   const chartData = useMemo(() => {
-    const chartType = timeframe === "thisQuarter" || timeframe === "thisYear" 
-      ? "line" 
-      : "stacked";
+    let chartType;
     
-    return financialService.prepareChartData(processedRecords, chartType);
-  }, [processedRecords, timeframe]);
-  
+    if (timeframe === "thisquarter") {
+      chartType = "quarterlyline";
+    } else if (timeframe === "thisyear") {
+      chartType = "yearlyline";
+    } else {
+      // For today, thisweek, thismonth, lastmonth, and unpaid
+      chartType = "stacked";
+    }
+    
+    return financialService.prepareChartData(filteredRecords, chartType);
+  }, [filteredRecords, timeframe]);
+
   /**
    * Records grouped by customer
    */
@@ -228,22 +282,41 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
    */
   const recordsByProject = useMemo(() => {
     if (!selectedCustomerId) return {};
-    return financialService.groupRecordsByProject(processedRecords, selectedCustomerId);
-  }, [processedRecords, selectedCustomerId]);
+    
+    console.log(`[DEBUG] Timeframe: ${timeframe}, Records count before filtering: ${processedRecords.length}`);
+    
+    // Log the first few records to see their structure and if they match the timeframe
+    if (processedRecords.length > 0) {
+      console.log('[DEBUG] Sample record:', JSON.stringify(processedRecords[0], null, 2));
+    }
+    
+    // Check if we have any records with billed status matching the timeframe
+    if (timeframe === 'unpaid') {
+      const unbilledCount = processedRecords.filter(r => !r.billed).length;
+      console.log(`[DEBUG] Unbilled records: ${unbilledCount} out of ${processedRecords.length}`);
+    }
+    
+    // Get projects for the selected customer
+    const projects = financialService.groupRecordsByProject(processedRecords, selectedCustomerId);
+    
+    console.log(`[DEBUG] Projects count for customer ${selectedCustomerId}: ${Object.keys(projects).length}`);
+    
+    return projects;
+  }, [processedRecords, selectedCustomerId, timeframe]);
   
   /**
-   * Calculate totals for all records
+   * Calculate totals for filtered records
    */
   const totals = useMemo(() => {
-    return financialService.calculateTotals(processedRecords);
-  }, [processedRecords]);
+    return financialService.calculateTotals(filteredRecords);
+  }, [filteredRecords]);
   
   /**
    * Monthly totals for charting
    */
   const monthlyTotals = useMemo(() => {
-    return financialService.calculateMonthlyTotals(processedRecords);
-  }, [processedRecords]);
+    return financialService.calculateMonthlyTotals(filteredRecords);
+  }, [filteredRecords]);
   
   /**
    * Selected customer data
@@ -267,15 +340,16 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
   const selectedMonthRecords = useMemo(() => {
     if (!selectedMonth) return [];
     
-    return processedRecords.filter(record => 
-      record.month === selectedMonth.month && 
+    return filteredRecords.filter(record =>
+      record.month === selectedMonth.month &&
       record.year === selectedMonth.year
     );
-  }, [processedRecords, selectedMonth]);
+  }, [filteredRecords, selectedMonth]);
 
   return {
     // Data
-    records: processedRecords,
+    records: filteredRecords, // Use filtered records as the primary records
+    allRecords: processedRecords, // All processed records before filtering
     rawRecords: records,
     loading,
     error,
@@ -311,6 +385,7 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
     closeEditModal,
     saveRecord,
     updateSort,
+    updateBilledStatus,
     
     // Aliases for more intuitive API
     setTimeframe: changeTimeframe,

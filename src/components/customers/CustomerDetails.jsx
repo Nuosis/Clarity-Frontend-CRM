@@ -207,7 +207,7 @@ function CustomerDetails({
                         </div>
                     </div>
                     <div className="flex space-x-3">
-                        <button
+                        {/* <button
                             onClick={handleQuickBooksInit}
                             disabled={isProcessingQB}
                             className={`
@@ -219,7 +219,7 @@ function CustomerDetails({
                             title="Send unbilled records to QuickBooks"
                         >
                             <span>qb</span>
-                        </button>
+                        </button> */}
                         <button
                             onClick={handleProjectCreate}
                             className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
