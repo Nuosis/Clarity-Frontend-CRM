@@ -41,6 +41,7 @@ export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}
     setLoading(true);
     try {
       console.log(`Fetching financial records for timeframe: ${timeframe}`);
+      
       // Fetch all records for the timeframe without customer or project filter
       const data = await fetchFinancialRecords(timeframe);
       

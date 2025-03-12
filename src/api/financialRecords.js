@@ -111,16 +111,20 @@ function buildFinancialQuery(options = {}) {
 export async function fetchFinancialRecords(timeframe, customerId = null, projectId = null) {
     validateParams({ timeframe }, ['timeframe']);
     
-    console.log(`[DEBUG] fetchFinancialRecords - Timeframe: ${timeframe}, Customer ID: ${customerId}, Project ID: ${projectId}`);
-    
     return handleFileMakerOperation(async () => {
         let query = [];
         
         switch (timeframe.toLowerCase()) {
             case 'today': {
-                const { date } = getCurrentDateInfo();
+                // Get current date and format it as MM/DD/YYYY for FileMaker
+                const now = new Date();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const year = now.getFullYear();
+                const formattedDate = `${month}/${day}/${year}`;
+                
                 query = [{
-                    "DateStart": date,
+                    "DateStart": formattedDate,
                     ...(customerId && { "customers_Projects::_custID": customerId }),
                     ...(projectId && { "_projectID": projectId })
                 }];
