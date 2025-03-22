@@ -274,6 +274,7 @@ Response: {
 ### Common Parameters
 - `layout`: FileMaker layout name
 - `action`: CRUD operation type
+- `__ID`: Record UUID (used for relationships to foreign keys and finds)
 - `recordId`: Record identifier (for updates/deletes)
 - `fieldData`: Data payload for create/update operations
 - `query`: Search criteria for read operations
@@ -296,7 +297,7 @@ processTaskData(response)
 
 ### Field Mapping
 - `__ID`: Internal record identifier
-- `recordId`: FileMaker record ID
+- `recordId`: FileMaker record ID; a unique identifier automatically assigned by FileMaker to each record, used for tracking and reference in API operations.
 - `~creationTimestamp`: Record creation time
 - `~modificationTimestamp`: Record modification time
 

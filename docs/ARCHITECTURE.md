@@ -174,6 +174,37 @@ ClarityFrontend CRM is a React-based customer relationship management system tha
 2. Maintainability
    - Code documentation
    - Testing strategy
+   
+### Testing Strategy (FUTURE)
+
+A comprehensive testing strategy is crucial for ensuring the quality and reliability of the ClarityFrontend CRM. We should implement the following types of tests:
+
+1. **Unit Tests**: These tests verify the functionality of individual components and functions in isolation. They should cover all critical logic and edge cases.
+
+   *   Example: Testing the `calculateTotal` function in `src/services/financialService.js` to ensure it returns the correct total for a given set of financial records.
+
+2. **Integration Tests**: These tests verify the interaction between different parts of the system, such as the React components, the service layer, and the API layer.
+
+   *   Example: Testing the interaction between the `CustomerList` component and the `customerService.js` to ensure that the customer data is correctly fetched and displayed.
+
+3. **End-to-End (E2E) Tests**: These tests simulate real user scenarios and verify that the entire system works correctly from the user's perspective.
+
+   *   Example: Testing the complete flow of creating a new task, assigning it to a project, and tracking the time spent on it.
+
+#### FileMaker Integration Tests
+
+Since ClarityFrontend CRM integrates with FileMaker for data storage and retrieval, it is essential to implement integration tests that specifically target the FileMaker integration. These tests should verify the following:
+
+*   The API layer correctly sends requests to FileMaker.
+*   FileMaker returns the expected data in the correct format.
+*   The API layer correctly handles errors and retries.
+
+Example:
+
+1.  Create a test database in FileMaker with a known set of customer records.
+2.  Use the `fm-gofer` library to send a request to FileMaker to retrieve the customer records.
+3.  Verify that the API layer returns the correct customer data in the expected format.
+4.  Simulate a FileMaker error (e.g., by disconnecting the database) and verify that the API layer correctly handles the error and retries the request.
    - Dependency management
    - Version control
 
