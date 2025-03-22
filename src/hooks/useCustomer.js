@@ -5,6 +5,7 @@ import {
     updateCustomer,
     createCustomer,
     toggleCustomerStatus,
+    deleteCustomer,
 } from '../api';
 import {
     processCustomerData,
@@ -144,24 +145,25 @@ export function useCustomer() {
     /**
      * Toggles customer active status
      */
-    const handleCustomerStatusToggle = useCallback(async (customerId, active) => {
+    const handleCustomerStatusToggle = useCallback(async (recordId, active) => {
         try {
             setLoading(true);
             setError(null);
             
-            const result = await toggleCustomerStatus(customerId, active);
+            console.log(`Toggling customer status with recordId: ${recordId}, active: ${active}`);
+            const result = await toggleCustomerStatus(recordId, active);
             
-            // Update local state
-            setCustomers(prevCustomers => 
-                prevCustomers.map(customer => 
-                    customer.id === customerId
+            // Update local state - find customer by recordId
+            setCustomers(prevCustomers =>
+                prevCustomers.map(customer =>
+                    customer.recordId === recordId
                         ? { ...customer, isActive: active }
                         : customer
                 )
             );
             
             // Update selected customer if it's the one being toggled
-            if (selectedCustomer?.id === customerId) {
+            if (selectedCustomer?.recordId === recordId) {
                 setSelectedCustomer(prev => ({ ...prev, isActive: active }));
             }
             
@@ -169,6 +171,37 @@ export function useCustomer() {
         } catch (err) {
             setError(err.message);
             console.error('Error toggling customer status:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedCustomer]);
+
+    /**
+     * Deletes a customer
+     */
+    const handleCustomerDelete = useCallback(async (recordId) => {
+        try {
+            setLoading(true);
+            setError(null);
+            
+            console.log(`Deleting customer with recordId: ${recordId}`);
+            const result = await deleteCustomer(recordId);
+            
+            // Update local state - filter by recordId
+            setCustomers(prevCustomers =>
+                prevCustomers.filter(customer => customer.recordId !== recordId)
+            );
+            
+            // Clear selected customer if it's the one being deleted
+            if (selectedCustomer?.recordId === recordId) {
+                setSelectedCustomer(null);
+            }
+            
+            return result;
+        } catch (err) {
+            setError(err.message);
+            console.error('Error deleting customer:', err);
             throw err;
         } finally {
             setLoading(false);
@@ -192,6 +225,7 @@ export function useCustomer() {
         handleCustomerCreate,
         handleCustomerUpdate,
         handleCustomerStatusToggle,
+        handleCustomerDelete,
         
         // Utility functions
         clearError: () => setError(null),

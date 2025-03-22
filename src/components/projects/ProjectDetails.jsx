@@ -191,19 +191,36 @@ function ProjectDetails({
                         {project?.projectName}
                     </h2>
                     {project?.status && (
-                        <select
-                            value={project.status}
-                            onChange={handleStatusChange}
-                            className={`
-                                px-3 py-1 rounded-md text-sm font-medium
-                                ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
-                                border
-                                ${statusColors[project.status]}
-                            `}
-                        >
-                            <option value="Open">Open</option>
-                            <option value="Closed">Closed</option>
-                        </select>
+                        <div className="flex items-center">
+                            <span className={`mr-2 text-sm font-medium ${statusColors[project.status]}`}>
+                                {project.status}
+                            </span>
+                            <button
+                                onClick={() => {
+                                    const newStatus = project.status === "Open" ? "Closed" : "Open";
+                                    if (project?.__ID) {
+                                        onStatusChange(project.__ID, newStatus);
+                                    }
+                                }}
+                                className={`
+                                    relative inline-flex h-6 w-11 items-center rounded-full
+                                    ${project.status === "Open"
+                                        ? "bg-green-500"
+                                        : "bg-red-500"}
+                                    transition-colors duration-200 ease-in-out focus:outline-none
+                                `}
+                                aria-pressed={project.status === "Open"}
+                                aria-label="Toggle project status"
+                            >
+                                <span
+                                    className={`
+                                        inline-block h-4 w-4 transform rounded-full bg-white
+                                        transition-transform duration-200 ease-in-out
+                                        ${project.status === "Open" ? "translate-x-6" : "translate-x-1"}
+                                    `}
+                                />
+                            </button>
+                        </div>
                     )}
                 </div>
                 <div className={`mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>

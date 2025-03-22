@@ -35,6 +35,7 @@ function AppContent() {
         error: customerError,
         handleCustomerSelect,
         handleCustomerStatusToggle,
+        handleCustomerDelete,
         loadCustomers
     } = useCustomer();
 
@@ -241,6 +242,7 @@ function AppContent() {
     // Process customers data before passing to Sidebar
     const processedCustomers = customers.map(customer => ({
         id: customer.id || customer.fieldData?.__ID,
+        recordId: customer.recordId, // Include recordId for FileMaker operations
         Name: customer.Name || customer.fieldData?.Name,
         Email: customer.Email || customer.fieldData?.Email,
         isActive: customer.isActive ?? (customer.fieldData?.f_active === "1" || customer.fieldData?.f_active === 1)
@@ -249,6 +251,7 @@ function AppContent() {
     // Process selected customer if exists
     const processedSelectedCustomer = appState.selectedCustomer ? {
         id: appState.selectedCustomer.id || appState.selectedCustomer.fieldData?.__ID,
+        recordId: appState.selectedCustomer.recordId, // Include recordId for FileMaker operations
         Name: appState.selectedCustomer.Name || appState.selectedCustomer.fieldData?.Name,
         Email: appState.selectedCustomer.Email || appState.selectedCustomer.fieldData?.Email,
         isActive: appState.selectedCustomer.isActive ?? (appState.selectedCustomer.fieldData?.f_active === "1" || appState.selectedCustomer.fieldData?.f_active === 1)
@@ -262,6 +265,7 @@ function AppContent() {
                     selectedCustomer={processedSelectedCustomer}
                     onCustomerSelect={handlers.onCustomerSelect}
                     onCustomerStatusToggle={handleCustomerStatusToggle}
+                    onCustomerDelete={handleCustomerDelete}
                     customerStats={customers.length > 0 ? {
                         total: customers.length,
                         active: processedCustomers.filter(c => c.isActive).length,

@@ -15,7 +15,8 @@ export {
     updateCustomer,
     createCustomer,
     toggleCustomerStatus,
-    fetchActiveCustomers
+    fetchActiveCustomers,
+    deleteCustomer
 } from './customers';
 
 // Project operations

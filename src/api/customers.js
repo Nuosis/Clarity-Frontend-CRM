@@ -113,3 +113,22 @@ export async function fetchActiveCustomers() {
         return await fetchDataFromFileMaker(params);
     });
 }
+
+/**
+ * Deletes a customer record
+ * @param {string} customerId - The customer ID
+ * @returns {Promise<Object>} Result of the delete operation
+ */
+export async function deleteCustomer(customerId) {
+    validateParams({ customerId }, ['customerId']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.CUSTOMERS,
+            action: Actions.DELETE,
+            recordId: customerId
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}

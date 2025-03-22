@@ -13,7 +13,8 @@ export const APP_ACTIONS = {
     SET_SELECTED_TASK: 'SET_SELECTED_TASK',
     SET_SHOW_FINANCIAL_ACTIVITY: 'SET_SHOW_FINANCIAL_ACTIVITY',
     CLEAR_ERROR: 'CLEAR_ERROR',
-    RESET_STATE: 'RESET_STATE'
+    RESET_STATE: 'RESET_STATE',
+    SET_SHOW_CUSTOMER_FORM: 'SET_SHOW_CUSTOMER_FORM'
 };
 const initialState = {
     loading: true,
@@ -23,6 +24,7 @@ const initialState = {
     selectedProject: null,
     selectedTask: null,
     showFinancialActivity: false,
+    showCustomerForm: false,
     version: 1, // For state versioning
 };
 
@@ -78,6 +80,12 @@ function appReducer(state, action) {
                 selectedCustomer: null, // Clear selections when showing financial activity
                 selectedProject: null,
                 selectedTask: null,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SHOW_CUSTOMER_FORM:
+            return {
+                ...state,
+                showCustomerForm: action.payload,
                 version: state.version + 1
             };
         case APP_ACTIONS.CLEAR_ERROR:
@@ -164,6 +172,10 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_SHOW_FINANCIAL_ACTIVITY, payload: show });
     }, [dispatch]);
 
+    const setShowCustomerForm = useCallback((show) => {
+        dispatch({ type: APP_ACTIONS.SET_SHOW_CUSTOMER_FORM, payload: show });
+    }, [dispatch]);
+
     return {
         setLoading,
         setError,
@@ -173,6 +185,7 @@ export function useAppStateOperations() {
         setSelectedProject,
         setSelectedTask,
         setShowFinancialActivity,
+        setShowCustomerForm,
         resetState
     };
 }

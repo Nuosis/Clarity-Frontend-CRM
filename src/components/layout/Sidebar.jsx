@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from './AppLayout';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { useProject } from '../../hooks/useProject';
 import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
+import CustomerForm from '../customers/CustomerForm';
 
 // Memoized customer list item
 const CustomerListItem = React.memo(function CustomerListItem({
@@ -11,28 +12,57 @@ const CustomerListItem = React.memo(function CustomerListItem({
     isSelected,
     darkMode,
     onSelect,
-    onStatusToggle
+    onStatusToggle,
+    onDelete
 }) {
+    // State for delete confirmation dialog
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    
+    // Log customer data for debugging
+    console.log('CustomerListItem - customer data:', {
+        id: customer.id,
+        recordId: customer.recordId,
+        name: customer.Name,
+        isActive: customer.isActive
+    });
+
     const handleStatusToggle = (e) => {
         e.stopPropagation();
-        onStatusToggle(customer.id, !customer.isActive);
+        console.log('Toggling status for customer with recordId:', customer.recordId);
+        onStatusToggle(customer.recordId, !customer.isActive);
     };
-
+    
+    const handleDeleteClick = (e) => {
+        e.stopPropagation();
+        // Show confirmation dialog instead of deleting immediately
+        setShowDeleteConfirm(true);
+    };
+    
+    const confirmDelete = () => {
+        console.log('Deleting customer with recordId:', customer.recordId);
+        onDelete(customer.recordId);
+        setShowDeleteConfirm(false);
+    };
+    
+    const cancelDelete = (e) => {
+        if (e) e.stopPropagation();
+        setShowDeleteConfirm(false);
+    };
     return (
         <div
             onClick={() => onSelect(customer)}
             className={`
-                p-4 cursor-pointer border-b last:border-b-0
+                py-1 px-4 cursor-pointer border-b last:border-b-0 relative
                 ${darkMode ? 'border-gray-700' : 'border-gray-200'}
-                ${isSelected 
+                ${isSelected
                     ? (darkMode ? 'bg-gray-700' : 'bg-gray-100')
                     : (darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50')}
-                ${customer.isActive 
+                ${customer.isActive
                     ? ''
                     : (darkMode ? 'opacity-50' : 'opacity-60')}
             `}
         >
-            <div className="flex items-center">
+            <div className="flex items-center justify-between w-full relative">
                 <h3 className={`
                     font-medium
                     ${isSelected
@@ -41,7 +71,104 @@ const CustomerListItem = React.memo(function CustomerListItem({
                 `}>
                     {customer.Name}
                 </h3>
+                
+                {/* Action buttons - stacked vertically */}
+                <div className="flex flex-col">
+                    <button
+                        onClick={handleStatusToggle}
+                        className={`
+                            p-1 rounded-md flex items-center justify-center w-6 h-6
+                            ${darkMode
+                                ? 'text-gray-500 hover:bg-blue-800 hover:text-white'
+                                : 'text-gray-400 hover:bg-blue-100 hover:text-blue-800'}
+                            transition-colors duration-200 z-10
+                        `}
+                        onMouseOver={(e) => {
+                            e.currentTarget.classList.add(darkMode ? 'bg-blue-800' : 'bg-blue-100');
+                            e.currentTarget.classList.add(darkMode ? 'text-white' : 'text-blue-800');
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.classList.remove(darkMode ? 'bg-blue-800' : 'bg-blue-100');
+                            e.currentTarget.classList.remove(darkMode ? 'text-white' : 'text-blue-800');
+                        }}
+                        title={customer.isActive ? "Deactivate" : "Activate"}
+                    >
+                        {customer.isActive ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        )}
+                    </button>
+                    <button
+                        onClick={handleDeleteClick}
+                        className={`
+                            p-1 rounded-md flex items-center justify-center w-6 h-6
+                            ${darkMode
+                                ? 'text-gray-500 hover:bg-red-800 hover:text-white'
+                                : 'text-gray-400 hover:bg-red-100 hover:text-red-800'}
+                            transition-colors duration-200 z-10
+                        `}
+                        onMouseOver={(e) => {
+                            e.currentTarget.classList.add(darkMode ? 'bg-red-800' : 'bg-red-100');
+                            e.currentTarget.classList.add(darkMode ? 'text-white' : 'text-red-800');
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.classList.remove(darkMode ? 'bg-red-800' : 'bg-red-100');
+                            e.currentTarget.classList.remove(darkMode ? 'text-white' : 'text-red-800');
+                        }}
+                        title="Delete"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
             </div>
+            
+            {/* Delete confirmation dialog */}
+            {showDeleteConfirm && (
+                <div
+                    className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div
+                        className={`
+                            p-4 rounded-md shadow-lg
+                            ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}
+                        `}
+                    >
+                        <p className="mb-4">Are you sure you want to delete {customer.Name}?</p>
+                        <div className="flex justify-end space-x-2">
+                            <button
+                                onClick={cancelDelete}
+                                className={`
+                                    px-3 py-1 rounded-md
+                                    ${darkMode
+                                        ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                        : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
+                                `}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className={`
+                                    px-3 py-1 rounded-md
+                                    ${darkMode
+                                        ? 'bg-red-700 hover:bg-red-600 text-white'
+                                        : 'bg-red-500 hover:bg-red-600 text-white'}
+                                `}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 });
@@ -56,7 +183,8 @@ CustomerListItem.propTypes = {
     isSelected: PropTypes.bool.isRequired,
     darkMode: PropTypes.bool.isRequired,
     onSelect: PropTypes.func.isRequired,
-    onStatusToggle: PropTypes.func.isRequired
+    onStatusToggle: PropTypes.func.isRequired,
+    onDelete: PropTypes.func.isRequired
 };
 
 function Sidebar({
@@ -64,12 +192,13 @@ function Sidebar({
     selectedCustomer = null,
     customerStats = null,
     onCustomerSelect,
-    onCustomerStatusToggle
+    onCustomerStatusToggle,
+    onCustomerDelete
 }) {
     const { darkMode } = useTheme();
     const { projects, projectRecords } = useProject();
-    const { showFinancialActivity } = useAppState();
-    const { setShowFinancialActivity } = useAppStateOperations();
+    const { showFinancialActivity, showCustomerForm } = useAppState();
+    const { setShowFinancialActivity, setShowCustomerForm } = useAppStateOperations();
     //console.log(projectRecords)
 
     // Memoize customer grouping and stats
@@ -109,12 +238,28 @@ function Sidebar({
                 p-4 border-b
                 ${darkMode ? 'border-gray-700' : 'border-gray-200'}
             `}>
-                <h2 className={`
-                    text-lg font-semibold
-                    ${darkMode ? 'text-white' : 'text-gray-900'}
-                `}>
-                    Customers
-                </h2>
+                <div className="flex justify-between items-center">
+                    <h2 className={`
+                        text-lg font-semibold
+                        ${darkMode ? 'text-white' : 'text-gray-900'}
+                    `}>
+                        Customers
+                    </h2>
+                    <button
+                        onClick={() => setShowCustomerForm(true)}
+                        className={`
+                            p-1 rounded-md flex items-center justify-center
+                            ${darkMode
+                                ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
+                        `}
+                        title="Add new customer"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
+                </div>
                 {stats && (
                     <div className={`
                         mt-2 text-sm
@@ -153,6 +298,7 @@ function Sidebar({
                         darkMode={darkMode}
                         onSelect={() => onCustomerSelect(customer)}
                         onStatusToggle={onCustomerStatusToggle}
+                        onDelete={onCustomerDelete}
                     />
                 ))}
 
@@ -164,6 +310,7 @@ function Sidebar({
                         darkMode={darkMode}
                         onSelect={() => onCustomerSelect(customer)}
                         onStatusToggle={onCustomerStatusToggle}
+                        onDelete={onCustomerDelete}
                     />
                 ))}
 
@@ -177,6 +324,14 @@ function Sidebar({
                     </div>
                 )}
             </div>
+            
+            {/* Customer Form Modal */}
+            {showCustomerForm && (
+                <CustomerForm
+                    onClose={() => setShowCustomerForm(false)}
+                    darkMode={darkMode}
+                />
+            )}
         </div>
     );
 }
@@ -198,7 +353,8 @@ Sidebar.propTypes = {
         activePercentage: PropTypes.number.isRequired
     }),
     onCustomerSelect: PropTypes.func.isRequired,
-    onCustomerStatusToggle: PropTypes.func.isRequired
+    onCustomerStatusToggle: PropTypes.func.isRequired,
+    onCustomerDelete: PropTypes.func.isRequired
 };
 
 export default React.memo(Sidebar);
