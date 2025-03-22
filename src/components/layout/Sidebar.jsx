@@ -18,13 +18,13 @@ const CustomerListItem = React.memo(function CustomerListItem({
     // State for delete confirmation dialog
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
-    // Log customer data for debugging
-    console.log('CustomerListItem - customer data:', {
-        id: customer.id,
-        recordId: customer.recordId,
-        name: customer.Name,
-        isActive: customer.isActive
-    });
+    // // Log customer data for debugging
+    // console.log('CustomerListItem - customer data:', {
+    //     id: customer.id,
+    //     recordId: customer.recordId,
+    //     name: customer.Name,
+    //     isActive: customer.isActive
+    // });
 
     const handleStatusToggle = (e) => {
         e.stopPropagation();

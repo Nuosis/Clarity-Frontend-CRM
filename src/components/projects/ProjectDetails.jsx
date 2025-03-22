@@ -113,10 +113,17 @@ function ProjectDetails({
     const { darkMode } = useTheme();
     const [showNewNoteInput, setShowNewNoteInput] = useState(false);
     const [showNewLinkInput, setShowNewLinkInput] = useState(false);
+    const [localProject, setLocalProject] = useState(project);
     const { handleNoteCreate, loading: noteLoading } = useNote();
     const { handleLinkCreate, loading: linkLoading } = useLink();
     const { loadProjectDetails } = useProject();
-    console.log("Project in ProjectDetails:", project);
+    
+    // Update local project state when the project prop changes
+    useEffect(() => {
+        setLocalProject(project);
+    }, [project]);
+    
+    console.log("Project in ProjectDetails:", localProject || project);
 
     // Calculate project stats using service
     const stats = useMemo(() => {
@@ -126,8 +133,8 @@ function ProjectDetails({
 
     // Memoized handlers
     const handleStatusChange = useCallback((e) => {
-        if (project?.__ID) {
-            onStatusChange(project.__ID, e.target.value);
+        if (project?.recordId) {
+            onStatusChange(project.recordId, e.target.value);
         }
     }, [project, onStatusChange]);
 
@@ -192,31 +199,54 @@ function ProjectDetails({
                     </h2>
                     {project?.status && (
                         <div className="flex items-center">
-                            <span className={`mr-2 text-sm font-medium ${statusColors[project.status]}`}>
-                                {project.status}
-                            </span>
                             <button
                                 onClick={() => {
-                                    const newStatus = project.status === "Open" ? "Closed" : "Open";
-                                    if (project?.__ID) {
-                                        onStatusChange(project.__ID, newStatus);
+                                    console.log("Toggle clicked");
+                                    
+                                    // Use localProject if available, otherwise fall back to project
+                                    const currentProject = localProject || project;
+                                    
+                                    // Get the new status
+                                    const newStatus = currentProject.status === "Open" ? "Closed" : "Open";
+                                    console.log("New status:", newStatus);
+                                    
+                                    // Get the recordId
+                                    const recordId = currentProject?.recordId;
+                                    console.log("Project recordId:", recordId);
+                                    
+                                    if (recordId) {
+                                        // Create a copy of the project with the updated status for optimistic UI update
+                                        const updatedProject = { ...currentProject, status: newStatus };
+                                        
+                                        // Optimistically update the UI by setting the local project state
+                                        setLocalProject(updatedProject);
+                                        
+                                        // Call onStatusChange with the recordId and new status
+                                        console.log("Calling onStatusChange with:", recordId, newStatus);
+                                        onStatusChange(recordId, newStatus).catch(error => {
+                                            // If there's an error, revert the optimistic update
+                                            console.error("Error updating status:", error);
+                                            setLocalProject(currentProject);
+                                        });
+                                    } else {
+                                        console.error("Could not find a valid recordId in the project object");
                                     }
                                 }}
                                 className={`
                                     relative inline-flex h-6 w-11 items-center rounded-full
-                                    ${project.status === "Open"
+                                    ${(localProject || project).status === "Open"
                                         ? "bg-green-500"
                                         : "bg-red-500"}
                                     transition-colors duration-200 ease-in-out focus:outline-none
                                 `}
-                                aria-pressed={project.status === "Open"}
+                                aria-pressed={(localProject || project).status === "Open"}
                                 aria-label="Toggle project status"
                             >
                                 <span
                                     className={`
                                         inline-block h-4 w-4 transform rounded-full bg-white
                                         transition-transform duration-200 ease-in-out
-                                        ${project.status === "Open" ? "translate-x-6" : "translate-x-1"}
+                                        ${(localProject || project).status === "Open" ? "translate-x-6" : "translate-x-1"}
                                     `}
                                 />
                             </button>
@@ -272,10 +302,10 @@ function ProjectDetails({
             </div>
 
             {/* Tasks Section */}
-            {project?.__ID && (
+            {project?.recordId && (
                 <TaskList
                     tasks={tasks}
-                    projectId={project.__ID}
+                    projectId={project.recordId}
                     onTaskSelect={onTaskSelect}
                     onTaskStatusChange={onTaskStatusChange}
                     onTaskCreate={onTaskCreate}
@@ -304,9 +334,9 @@ function ProjectDetails({
                                 submitLabel="Create"
                                 onSubmit={async (noteContent) => {
                                     try {
-                                        const result = await handleNoteCreate(project.__ID, noteContent);
+                                        const result = await handleNoteCreate(project.recordId, noteContent);
                                         if (result) {
-                                            await loadProjectDetails(project.__ID);
+                                            await loadProjectDetails(project.recordId);
                                             setShowNewNoteInput(false);
                                         }
                                     } catch (error) {
@@ -356,9 +386,9 @@ function ProjectDetails({
                                 submitLabel="Create"
                                 onSubmit={async (url) => {
                                     try {
-                                        const result = await handleLinkCreate(project.__ID, url);
+                                        const result = await handleLinkCreate(project.recordId, url);
                                         if (result) {
-                                            await loadProjectDetails(project.__ID);
+                                            await loadProjectDetails(project.recordId);
                                             setShowNewLinkInput(false);
                                         }
                                     } catch (error) {
@@ -419,7 +449,7 @@ ProjectDetails.propTypes = {
     onTaskUpdate: PropTypes.func,
     onTaskStatusChange: PropTypes.func,
     project: PropTypes.shape({
-        __ID: PropTypes.string.isRequired,
+        recordId: PropTypes.string.isRequired,
         projectName: PropTypes.string.isRequired,
         status: PropTypes.string,
         estOfTime: PropTypes.string,

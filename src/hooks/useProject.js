@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import {
     fetchProjectsForCustomer,
@@ -202,13 +203,20 @@ export function useProject(customerId = null) {
             setLoading(true);
             setError(null);
             
+            // Find the project in the state to get its recordId
+            const project = projects.find(p => p.id === projectId);
+            if (!project) {
+                throw new Error('Project not found');
+            }
+            
             const validation = validateProjectData(projectData);
             if (!validation.isValid) {
                 throw new Error(validation.errors.join(', '));
             }
             
             const formattedData = formatProjectForFileMaker(projectData);
-            const result = await updateProject(projectId, formattedData);
+            // Use recordId instead of UUID for FileMaker update
+            const result = await updateProject(project.recordId, formattedData);
             
             // Update local state
             setProjects(prevProjects => 
@@ -242,19 +250,27 @@ export function useProject(customerId = null) {
             setLoading(true);
             setError(null);
             
+            // The projectId parameter is already the recordId from ProjectDetails.jsx
             const result = await updateProjectStatus(projectId, status);
             
-            // Update local state
-            setProjects(prevProjects => 
-                prevProjects.map(project => 
-                    project.id === projectId
+            // Find the project in the state by recordId to update local state
+            const project = projects.find(p => p.recordId === projectId);
+            if (!project) {
+                console.error('Project not found in state with recordId:', projectId);
+                // Continue with the update even if we can't find the project in the state
+            }
+            
+            // Update local state using recordId
+            setProjects(prevProjects =>
+                prevProjects.map(project =>
+                    project.recordId === projectId
                         ? { ...project, status }
                         : project
                 )
             );
             
             // Update selected project if it's the one being updated
-            if (selectedProject?.id === projectId) {
+            if (selectedProject?.recordId === projectId) {
                 setSelectedProject(prevProject => ({ ...prevProject, status }));
             }
             

@@ -15,7 +15,7 @@ export function processProjectData(projectData, relatedData = {}) {
 
     return projectData.response.data.map(project => {
         const projectId = project.fieldData.__ID;
-        const projectRecordId = project.recordID;
+        const projectRecordId = project.recordId; // recordId is at the same level as fieldData
         return {
             ...project.fieldData,
             id: projectId,
@@ -51,7 +51,7 @@ export function processProjectImages(images, projectId) {
         .filter(img => img.fieldData._projectID === projectId)
         .map(img => ({
             id: img.fieldData.__ID,
-            recordId: img.recordID,
+            recordId: img.recordId,
             url: img.fieldData.url,
             title: img.fieldData.title || '',
             description: img.fieldData.description || ''
@@ -73,7 +73,7 @@ export function processProjectLinks(links, projectId) {
         .filter(link => link.fieldData._fkID === projectId)
         .map(link => ({
             id: link.fieldData.__ID,
-            recordId: link.recordID,
+            recordId: link.recordId,
             url: link.fieldData.link,
             title: link.fieldData.title || new URL(link.fieldData.link).hostname
         }));
@@ -95,7 +95,7 @@ export function processProjectObjectives(objectives, projectId, steps) {
         .filter(obj => obj.fieldData._projectID === projectId)
         .map(obj => ({
             id: obj.fieldData.__ID,
-            recordId: obj.recordID,
+            recordId: obj.recordId,
             objective: obj.fieldData.projectObjective,
             order: obj.fieldData.order || 0,
             completed: obj.fieldData.f_completed === "1",
@@ -119,7 +119,7 @@ export function processObjectiveSteps(steps, objectiveId) {
         .filter(step => step.fieldData._objectiveID === objectiveId)
         .map(step => ({
             id: step.fieldData.__ID,
-            recordId: step.recordID,
+            recordId: step.recordId,
             step: step.fieldData.projectObjectiveStep,
             order: step.fieldData.order || 0,
             completed: step.fieldData.f_completed === "1"
@@ -223,7 +223,7 @@ export function validateProjectData(data) {
 export function formatProjectForDisplay(project) {
     return {
         id: project.id,
-        recordId: project.recordID,
+        recordId: project.recordId,
         name: project.projectName,
         status: project.status,
         timeEstimate: project.estOfTime || 'Not specified',
