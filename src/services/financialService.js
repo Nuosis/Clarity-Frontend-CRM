@@ -27,7 +27,7 @@ export function processFinancialData(data) {
     if (record === data.response.data[0]) {
       console.log("Field mapping for first record:", {
         id: fieldData.__ID,
-        customerId: fieldData["customers_Projects::_custID"],
+        customerId: fieldData["_custID"],
         customerName: fieldData["Customers::Name"],
         projectId: fieldData._projectID,
         projectName: projectName,
@@ -40,7 +40,7 @@ export function processFinancialData(data) {
     return {
       id: fieldData.__ID,
       recordId: record.recordId, // used for delete and patch
-      customerId: fieldData["customers_Projects::_custID"],
+      customerId: fieldData["_custID"],
       customerName: fieldData["Customers::Name"] || "Unknown Customer",
       projectId: fieldData._projectID,
       projectName: projectName,

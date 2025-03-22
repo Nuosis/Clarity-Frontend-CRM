@@ -121,7 +121,7 @@ export function useTask(projectId = null) {
             if (result?.response?.data?.[0]?.recordId) {
                 // Don't reload tasks, just update state directly
                 setTasks(prevTasks => [...prevTasks, {
-                    id: result.response.data[0].recordId,
+                    id: result.response.data[0].fieldData.__ID, // Use the UUID as the id
                     recordId: result.response.data[0].recordId,
                     task: taskData.taskName,
                     isCompleted: false,

@@ -90,7 +90,7 @@ function buildFinancialQuery(options = {}) {
     
     // Add customer filter
     if (options.customerId) {
-        query.push({ "customers_Projects::_custID": options.customerId });
+        query.push({ "_custID": options.customerId });
     }
     
     // Add project filter
@@ -125,7 +125,7 @@ export async function fetchFinancialRecords(timeframe, customerId = null, projec
                 
                 query = [{
                     "DateStart": formattedDate,
-                    ...(customerId && { "customers_Projects::_custID": customerId }),
+                    ...(customerId && { "_custID": customerId }),
                     ...(projectId && { "_projectID": projectId })
                 }];
                 break;
@@ -135,7 +135,7 @@ export async function fetchFinancialRecords(timeframe, customerId = null, projec
                 query = [{
                     "weekNo": week,
                     "year": year,
-                    ...(customerId && { "customers_Projects::_custID": customerId }),
+                    ...(customerId && { "_custID": customerId }),
                     ...(projectId && { "_projectID": projectId })
                 }];
                 break;
@@ -193,7 +193,7 @@ export async function fetchFinancialRecords(timeframe, customerId = null, projec
                 
                 query = allMonths.map(monthObj => ({
                     ...monthObj,
-                    ...(customerId && { "customers_Projects::_custID": customerId }),
+                    ...(customerId && { "_custID": customerId }),
                     ...(projectId && { "_projectID": projectId })
                 }));
                 break;
@@ -214,7 +214,7 @@ export async function fetchFinancialRecords(timeframe, customerId = null, projec
                 
                 query = allMonths.map(monthObj => ({
                     ...monthObj,
-                    ...(customerId && { "customers_Projects::_custID": customerId }),
+                    ...(customerId && { "_custID": customerId }),
                     ...(projectId && { "_projectID": projectId })
                 }));
                 break;
@@ -289,7 +289,7 @@ export async function fetchQuarterlyRecords(quarter, year, customerId = null) {
         const months = getQuarterMonths(quarter, year);
         const query = months.map(monthObj => ({
             ...monthObj,
-            ...(customerId && { "customers_Projects::_custID": customerId })
+            ...(customerId && { "_custID": customerId })
         }));
         
         const params = {
@@ -315,7 +315,7 @@ export async function fetchYearlyRecords(year, customerId = null) {
         const months = getYearMonths(year);
         const query = months.map(monthObj => ({
             ...monthObj,
-            ...(customerId && { "customers_Projects::_custID": customerId })
+            ...(customerId && { "_custID": customerId })
         }));
         
         const params = {

@@ -443,13 +443,13 @@ function TaskList({
         
         try {
             await handleTaskCreate({
-                projectId,
-                staffId: user.userID,
+                _projectID: projectId, // Use the correct field name
+                _staffID: user.userID, // Use the correct field name
                 taskName: taskName.trim(),
                 priority: "active"
             });
             console.log("setShowNewTaskInput ... ")
-            // thos should cause a rerender of the tasks. Since task as added to state it should load the new task
+            // this should cause a rerender of the tasks. Since task was added to state it should load the new task
             setShowNewTaskInput(false);
             // console.log("re-render tasks ")
             // loadTasks(projectId)

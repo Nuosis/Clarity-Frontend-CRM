@@ -28,7 +28,8 @@ export {
     updateProject,
     fetchAllProjectData,
     fetchProjectsForCustomers,
-    fetchProjectNotes
+    fetchProjectNotes,
+    deleteProject
 } from './projects';
 
 // Task operations

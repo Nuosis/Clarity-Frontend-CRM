@@ -1,6 +1,25 @@
 import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
 
 /**
+ * Deletes a project
+ * @param {string} recordId - The record ID of the project to delete
+ * @returns {Promise<Object>} Result of the delete operation
+ */
+export async function deleteProject(recordId) {
+    validateParams({ recordId }, ['recordId']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.PROJECTS,
+            action: Actions.DELETE,
+            recordId
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}
+
+/**
  * Fetches all projects for a customer
  * @param {string} customerId - The customer ID
  * @returns {Promise<Array>} Array of project records

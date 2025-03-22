@@ -122,6 +122,36 @@ export async function startTaskTimer(taskId, selectedTask) {
     validateParams({ taskId, selectedTask }, ['taskId', 'selectedTask']);
     
     return handleFileMakerOperation(async () => {
+        // Get the project details to access the customer ID
+        const projectParams = {
+            layout: Layouts.PROJECTS,
+            action: Actions.READ,
+            query: [{ "__ID": selectedTask._projectID }]
+        };
+        
+        // Try to get the project by ID first
+        let projectResult = await fetchDataFromFileMaker(projectParams);
+        let custID = null;
+        
+        // If no result, try using the recordId instead
+        if (!projectResult?.response?.data || projectResult.response.data.length === 0) {
+            const projectByRecordParams = {
+                layout: Layouts.PROJECTS,
+                action: Actions.READ,
+                recordId: selectedTask._projectID
+            };
+            
+            projectResult = await fetchDataFromFileMaker(projectByRecordParams);
+            
+            // If we found the project by recordId, use its _custID
+            if (projectResult?.response?.data && projectResult.response.data.length > 0) {
+                custID = projectResult.response.data[0].fieldData._custID;
+            }
+        } else {
+            // If we found the project by ID, use its _custID
+            custID = projectResult.response.data[0].fieldData._custID;
+        }
+        
         const params = {
             layout: Layouts.RECORDS,
             action: Actions.CREATE,
@@ -129,6 +159,7 @@ export async function startTaskTimer(taskId, selectedTask) {
                 _taskID: taskId,
                 _staffID: selectedTask._staffID,
                 _projectID: selectedTask._projectID,
+                _custID: custID, // Add customer ID to the timer record
                 TimeStart: new Date().toLocaleTimeString('en-US', {
                     hour: '2-digit',
                     minute: '2-digit',

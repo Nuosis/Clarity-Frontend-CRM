@@ -82,6 +82,7 @@ const MainContent = React.memo(function MainContent({
                     onTaskUpdate={handlers.handleTaskUpdate}
                     onTaskStatusChange={handlers.handleTaskStatusChange}
                     onProjectUpdate={handlers.handleProjectUpdate}
+                    onDelete={handlers.handleProjectDelete}
                     project={selectedProject}
                 />
             </ErrorBoundary>
@@ -202,6 +203,7 @@ MainContent.propTypes = {
         handleProjectStatusChange: PropTypes.func.isRequired,
         handleProjectCreate: PropTypes.func.isRequired,
         handleProjectUpdate: PropTypes.func.isRequired,
+        handleProjectDelete: PropTypes.func.isRequired,
         handleTimerStart: PropTypes.func.isRequired,
         handleTimerStop: PropTypes.func.isRequired,
         handleTimerPause: PropTypes.func.isRequired,

@@ -48,6 +48,7 @@ function AppContent() {
         handleProjectCreate,
         handleProjectUpdate,
         handleProjectStatusChange,
+        handleProjectDelete,
         clearSelectedProject,
         loadProjectDetails,
         projectRecords
@@ -120,6 +121,22 @@ function AppContent() {
         setSelectedCustomer(customer);
     }, [clearSelectedProject, clearSelectedTask, handleCustomerSelect, setSelectedCustomer]);
 
+    // Handler for project deletion
+    const onProjectDelete = useCallback(async (projectId) => {
+        try {
+            // Delete the project
+            await handleProjectDelete(projectId);
+            
+            // Clear the selected project in the app state
+            setSelectedProject(null);
+            
+            // No need to explicitly navigate back to customer details
+            // since clearing the selected project will cause MainContent to show customer details
+        } catch (error) {
+            console.error('Error deleting project:', error);
+        }
+    }, [handleProjectDelete, setSelectedProject]);
+
     const onProjectSelect = useCallback(async (project) => {
         clearSelectedTask();
         try {
@@ -181,6 +198,7 @@ function AppContent() {
         handleProjectStatusChange,
         handleProjectCreate,
         handleProjectUpdate,
+        handleProjectDelete: onProjectDelete, // Use the new onProjectDelete handler
         handleTimerStart,
         handleTimerStop,
         handleTimerPause,
@@ -197,6 +215,7 @@ function AppContent() {
         handleProjectStatusChange,
         handleProjectCreate,
         handleProjectUpdate,
+        onProjectDelete, // Use the new onProjectDelete handler
         handleTimerStart,
         handleTimerStop,
         handleTimerPause,

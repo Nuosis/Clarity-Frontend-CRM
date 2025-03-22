@@ -9,6 +9,7 @@ import {
     startTaskTimer as startTaskTimerAPI,
     stopTaskTimer as stopTaskTimerAPI
 } from '../api/tasks';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Loads tasks for a project with processing and sorting
@@ -359,13 +360,17 @@ export async function createNewTask(params) {
     //     throw new Error('Invalid task parameters');
     // }
 
-    const { projectId, staffId, taskName, type, priority = "active" } = params;
+    // Check for both old and new field name formats
+    const projectId = params._projectID || params.projectId;
+    const staffId = params._staffID || params.staffId;
+    const { taskName, type, priority = "active" } = params;
 
     if (!projectId || !staffId || !taskName) {
         throw new Error('Project ID, Staff ID, and Task Name are required');
     }
-    // Prepare task data
+    // Prepare task data with UUID
     const taskData = {
+        __ID: uuidv4(), // Generate a UUID for the task
         _projectID: projectId,
         _staffID: staffId,
         task: taskName.trim(),
@@ -388,13 +393,13 @@ export async function createNewTask(params) {
             throw new Error('Failed to create task: No record ID returned');
         }
         
-        // Return a properly formatted response
+        // Return a properly formatted response with the UUID
         return {
             response: {
                 data: [{
                     recordId: result.response.recordId,
                     modId: result.response.modId,
-                    fieldData: taskData
+                    fieldData: taskData // This includes the UUID in __ID field
                 }]
             },
             messages: result.messages

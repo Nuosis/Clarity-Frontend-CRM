@@ -1,5 +1,5 @@
-
 import { useState, useEffect, useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import {
     fetchProjectsForCustomer,
     fetchProjectRelatedData,
@@ -7,7 +7,8 @@ import {
     createProject,
     updateProject,
     fetchProjectsForCustomers,
-    fetchProjectNotes
+    fetchProjectNotes,
+    deleteProject
 } from '../api';
 import { useProjectRecords } from '../context/ProjectContext';
 import { useSnackBar } from '../context/SnackBarContext';
@@ -174,7 +175,16 @@ export function useProject(customerId = null) {
                 throw new Error(validation.errors.join(', '));
             }
             
-            const formattedData = formatProjectForFileMaker(projectData);
+            // Generate a UUID for the new project
+            const projectId = uuidv4();
+            
+            // Add the UUID to the project data
+            const dataWithId = {
+                ...projectData,
+                id: projectId
+            };
+            
+            const formattedData = formatProjectForFileMaker(dataWithId);
             console.log('Formatted data for FileMaker:', formattedData);
             
             const result = await createProject(formattedData);
@@ -292,6 +302,43 @@ export function useProject(customerId = null) {
         return project ? calculateProjectCompletion(project) : 0;
     }, [projects]);
 
+    /**
+     * Deletes a project
+     */
+    const handleProjectDelete = useCallback(async (projectId) => {
+        try {
+            setLoading(true);
+            setError(null);
+            
+            // Find the project in the state to get its recordId
+            const project = projects.find(p => p.id === projectId);
+            if (!project) {
+                throw new Error('Project not found');
+            }
+            
+            // Use recordId for FileMaker delete operation
+            const result = await deleteProject(project.recordId);
+            
+            // Update local state by removing the deleted project
+            setProjects(prevProjects =>
+                prevProjects.filter(p => p.id !== projectId)
+            );
+            
+            // Clear selected project if it was the one being deleted
+            if (selectedProject?.id === projectId) {
+                setSelectedProject(null);
+            }
+            
+            return result;
+        } catch (err) {
+            setError(err.message);
+            console.error('Error deleting project:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [projects, selectedProject]);
+
     return {
         // State
         loading,
@@ -310,6 +357,7 @@ export function useProject(customerId = null) {
         handleProjectCreate,
         handleProjectUpdate,
         handleProjectStatusChange,
+        handleProjectDelete,
         
         // Utilities
         getProjectCompletion,

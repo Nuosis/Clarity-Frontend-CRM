@@ -246,7 +246,8 @@ export function formatProjectForFileMaker(data) {
         projectName: data.name,
         _custID: data.customerId,
         estOfTime: data.timeEstimate,
-        status: data.status || 'Open'
+        status: data.status || 'Open',
+        __ID: data.id // Include the UUID in the data sent to FileMaker
     };
 }
 
@@ -370,7 +371,7 @@ export function calculateRecordsUnbilledHours(records, currentMonthOnly = false,
     const filteredRecords = records.filter(record => {
         // Check customer ID if provided
         const matchesCustomer = !customerId ||
-            record.fieldData["customers_Projects::_custID"] === customerId;
+            record.fieldData["_custID"] === customerId;
 
         // Check current month if required
         const matchesMonth = !currentMonthOnly || (() => {
