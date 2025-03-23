@@ -33,7 +33,7 @@ JSONSetElement ( ""
 # Delete
 JSONSetElement ( "" 
 	;[ "layouts" ;"log"; JSONString ]
-	;[ "action" ;"delete"; JSONString ] //read, metaData, create, update, delete, and duplicate
+	;[ "action" ;"delete"; JSONString ] 
 	;[ "version" ;"vLatest"; JSONString ]
 	;[ "recordId" ; "3" ; JSONString ]
 )
