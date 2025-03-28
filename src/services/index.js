@@ -10,6 +10,26 @@ export {
     calculateCustomerStats
 } from './customerService';
 
+// Team service exports
+export {
+    processTeamData,
+    processStaffData,
+    processTeamMemberData,
+    getTeams,
+    getTeamById,
+    getTeamStaff,
+    getTeamProjects,
+    createNewTeam,
+    updateExistingTeam,
+    deleteExistingTeam,
+    assignStaffMemberToTeam,
+    removeStaffMemberFromTeam,
+    assignProjectToExistingTeam,
+    removeProjectFromExistingTeam,
+    getAllStaff,
+    calculateTeamStats
+} from './teamService';
+
 // Project service exports
 export {
     processProjectData,

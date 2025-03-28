@@ -11,7 +11,7 @@ import { validateFinancialRecordData } from '../../services/financialService';
  * @param {boolean} props.darkMode - Whether dark mode is enabled
  * @returns {JSX.Element} Record modal component
  */
-function RecordModal({ record, onClose, onSave, darkMode }) {
+function RecordModal({ record, onClose, onSave, darkMode = false }) {
   const [formData, setFormData] = useState({
     id: '',
     recordId: '',
@@ -349,10 +349,6 @@ RecordModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onSave: PropTypes.func.isRequired,
   darkMode: PropTypes.bool
-};
-
-RecordModal.defaultProps = {
-  darkMode: false
 };
 
 export default RecordModal;

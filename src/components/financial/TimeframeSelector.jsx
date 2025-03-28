@@ -9,7 +9,7 @@ import PropTypes from 'prop-types';
  * @param {boolean} props.darkMode - Whether dark mode is enabled
  * @returns {JSX.Element} Timeframe selector component
  */
-function TimeframeSelector({ value, onChange, darkMode }) {
+function TimeframeSelector({ value, onChange, darkMode = false }) {
   const timeframes = [
     { value: 'today', label: 'Today' },
     { value: 'thisWeek', label: 'This Week' },
@@ -57,10 +57,6 @@ TimeframeSelector.propTypes = {
   value: PropTypes.string.isRequired,
   onChange: PropTypes.func.isRequired,
   darkMode: PropTypes.bool
-};
-
-TimeframeSelector.defaultProps = {
-  darkMode: false
 };
 
 export default React.memo(TimeframeSelector);

@@ -36,7 +36,7 @@ ChartJS.register(
  * @param {boolean} props.darkMode - Whether dark mode is enabled
  * @returns {JSX.Element} Financial chart component
  */
-function FinancialChart({ data, timeframe, onMonthClick, darkMode }) {
+function FinancialChart({ data, timeframe, onMonthClick, darkMode = false }) {
   const isLineChart = timeframe === 'thisQuarter' || timeframe === 'thisYear';
   
   // Set chart colors based on theme
@@ -188,10 +188,6 @@ FinancialChart.propTypes = {
   timeframe: PropTypes.string.isRequired,
   onMonthClick: PropTypes.func.isRequired,
   darkMode: PropTypes.bool
-};
-
-FinancialChart.defaultProps = {
-  darkMode: false
 };
 
 export default React.memo(FinancialChart);

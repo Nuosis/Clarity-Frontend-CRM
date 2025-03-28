@@ -19,6 +19,22 @@ export {
     deleteCustomer
 } from './customers';
 
+// Team operations
+export {
+    fetchTeams,
+    fetchTeamById,
+    fetchTeamStaff,
+    fetchTeamProjects,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    assignStaffToTeam,
+    removeStaffFromTeam,
+    assignProjectToTeam,
+    removeProjectFromTeam,
+    fetchAllStaff
+} from './teams';
+
 // Project operations
 export {
     fetchProjectsForCustomer,

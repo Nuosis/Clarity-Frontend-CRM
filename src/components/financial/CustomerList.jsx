@@ -20,12 +20,12 @@ import { useSnackBar } from '../../context/SnackBarContext';
 function CustomerList({
   customers,
   projects,
-  selectedCustomerId,
+  selectedCustomerId = null,
   onCustomerSelect,
   onProjectSelect,
-  showProjects,
+  showProjects = false,
   onToggleProjects,
-  darkMode,
+  darkMode = false,
   updateBilledStatus
 }) {
   const { showError } = useSnackBar();
@@ -332,12 +332,6 @@ CustomerList.propTypes = {
   onToggleProjects: PropTypes.func.isRequired,
   darkMode: PropTypes.bool,
   updateBilledStatus: PropTypes.func.isRequired
-};
-
-CustomerList.defaultProps = {
-  selectedCustomerId: null,
-  showProjects: false,
-  darkMode: false
 };
 
 export default React.memo(CustomerList);

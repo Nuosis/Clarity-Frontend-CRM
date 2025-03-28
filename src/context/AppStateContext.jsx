@@ -11,10 +11,13 @@ export const APP_ACTIONS = {
     SET_SELECTED_CUSTOMER: 'SET_SELECTED_CUSTOMER',
     SET_SELECTED_PROJECT: 'SET_SELECTED_PROJECT',
     SET_SELECTED_TASK: 'SET_SELECTED_TASK',
+    SET_SELECTED_TEAM: 'SET_SELECTED_TEAM',
     SET_SHOW_FINANCIAL_ACTIVITY: 'SET_SHOW_FINANCIAL_ACTIVITY',
     CLEAR_ERROR: 'CLEAR_ERROR',
     RESET_STATE: 'RESET_STATE',
-    SET_SHOW_CUSTOMER_FORM: 'SET_SHOW_CUSTOMER_FORM'
+    SET_SHOW_CUSTOMER_FORM: 'SET_SHOW_CUSTOMER_FORM',
+    SET_SHOW_TEAM_FORM: 'SET_SHOW_TEAM_FORM',
+    SET_SIDEBAR_MODE: 'SET_SIDEBAR_MODE'
 };
 const initialState = {
     loading: true,
@@ -23,8 +26,11 @@ const initialState = {
     selectedCustomer: null,
     selectedProject: null,
     selectedTask: null,
+    selectedTeam: null,
     showFinancialActivity: false,
     showCustomerForm: false,
+    showTeamForm: false,
+    sidebarMode: 'customer', // 'customer' or 'team'
     version: 1, // For state versioning
 };
 
@@ -56,6 +62,7 @@ function appReducer(state, action) {
                 selectedProject: null, // Clear related selections
                 selectedTask: null,
                 showFinancialActivity: false, // Hide financial activity when selecting a customer
+                sidebarMode: 'customer', // Switch to customer mode
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SELECTED_PROJECT:
@@ -73,6 +80,17 @@ function appReducer(state, action) {
                 showFinancialActivity: false, // Hide financial activity when selecting a task
                 version: state.version + 1
             };
+        case APP_ACTIONS.SET_SELECTED_TEAM:
+            return {
+                ...state,
+                selectedTeam: action.payload,
+                selectedCustomer: null, // Clear customer-related selections
+                selectedProject: null,
+                selectedTask: null,
+                showFinancialActivity: false, // Hide financial activity when selecting a team
+                sidebarMode: 'team', // Switch to team mode
+                version: state.version + 1
+            };
         case APP_ACTIONS.SET_SHOW_FINANCIAL_ACTIVITY:
             return {
                 ...state,
@@ -80,12 +98,27 @@ function appReducer(state, action) {
                 selectedCustomer: null, // Clear selections when showing financial activity
                 selectedProject: null,
                 selectedTask: null,
+                selectedTeam: null,
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SHOW_CUSTOMER_FORM:
             return {
                 ...state,
                 showCustomerForm: action.payload,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SHOW_TEAM_FORM:
+            return {
+                ...state,
+                showTeamForm: action.payload,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SIDEBAR_MODE:
+            return {
+                ...state,
+                sidebarMode: action.payload,
+                // Clear selections when switching modes
+                ...(action.payload === 'customer' ? { selectedTeam: null } : { selectedCustomer: null, selectedProject: null, selectedTask: null }),
                 version: state.version + 1
             };
         case APP_ACTIONS.CLEAR_ERROR:
@@ -164,6 +197,10 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_SELECTED_TASK, payload: task });
     }, [dispatch]);
 
+    const setSelectedTeam = useCallback((team) => {
+        dispatch({ type: APP_ACTIONS.SET_SELECTED_TEAM, payload: team });
+    }, [dispatch]);
+
     const resetState = useCallback(() => {
         dispatch({ type: APP_ACTIONS.RESET_STATE });
     }, [dispatch]);
@@ -176,6 +213,14 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_SHOW_CUSTOMER_FORM, payload: show });
     }, [dispatch]);
 
+    const setShowTeamForm = useCallback((show) => {
+        dispatch({ type: APP_ACTIONS.SET_SHOW_TEAM_FORM, payload: show });
+    }, [dispatch]);
+
+    const setSidebarMode = useCallback((mode) => {
+        dispatch({ type: APP_ACTIONS.SET_SIDEBAR_MODE, payload: mode });
+    }, [dispatch]);
+
     return {
         setLoading,
         setError,
@@ -184,8 +229,11 @@ export function useAppStateOperations() {
         setSelectedCustomer,
         setSelectedProject,
         setSelectedTask,
+        setSelectedTeam,
         setShowFinancialActivity,
         setShowCustomerForm,
+        setShowTeamForm,
+        setSidebarMode,
         resetState
     };
 }

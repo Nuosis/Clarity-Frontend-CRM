@@ -69,6 +69,7 @@ export { useProject } from './useProject';
 export { useTask } from './useTask';
 export { useLink } from './useLink';
 export { useFinancialRecords } from './useFinancialRecords';
+export { useTeam } from './useTeam';
 
 /**
  * Hook for managing loading and error states

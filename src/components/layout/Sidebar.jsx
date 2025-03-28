@@ -5,6 +5,7 @@ import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { useProject } from '../../hooks/useProject';
 import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
 import CustomerForm from '../customers/CustomerForm';
+import TeamForm from '../teams/TeamForm';
 
 // Memoized customer list item
 const CustomerListItem = React.memo(function CustomerListItem({
@@ -187,18 +188,153 @@ CustomerListItem.propTypes = {
     onDelete: PropTypes.func.isRequired
 };
 
+// Memoized team list item
+const TeamListItem = React.memo(function TeamListItem({
+    team,
+    isSelected,
+    darkMode,
+    onSelect,
+    onDelete
+}) {
+    // State for delete confirmation dialog
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    
+    const handleDeleteClick = (e) => {
+        e.stopPropagation();
+        // Show confirmation dialog instead of deleting immediately
+        setShowDeleteConfirm(true);
+    };
+    
+    const confirmDelete = () => {
+        console.log('Deleting team with recordId:', team.recordId);
+        onDelete(team.recordId);
+        setShowDeleteConfirm(false);
+    };
+    
+    const cancelDelete = (e) => {
+        if (e) e.stopPropagation();
+        setShowDeleteConfirm(false);
+    };
+    
+    return (
+        <div
+            onClick={() => onSelect(team)}
+            className={`
+                py-1 px-4 cursor-pointer border-b last:border-b-0 relative
+                ${darkMode ? 'border-gray-700' : 'border-gray-200'}
+                ${isSelected
+                    ? (darkMode ? 'bg-gray-700' : 'bg-gray-100')
+                    : (darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50')}
+            `}
+        >
+            <div className="flex items-center justify-between w-full relative">
+                <h3 className={`
+                    font-medium
+                    ${isSelected
+                        ? (darkMode ? 'text-white' : 'text-gray-900')
+                        : (darkMode ? 'text-gray-300' : 'text-gray-700')}
+                `}>
+                    {team.name}
+                </h3>
+                
+                {/* Delete button */}
+                <button
+                    onClick={handleDeleteClick}
+                    className={`
+                        p-1 rounded-md flex items-center justify-center w-6 h-6
+                        ${darkMode
+                            ? 'text-gray-500 hover:bg-red-800 hover:text-white'
+                            : 'text-gray-400 hover:bg-red-100 hover:text-red-800'}
+                        transition-colors duration-200 z-10
+                    `}
+                    onMouseOver={(e) => {
+                        e.currentTarget.classList.add(darkMode ? 'bg-red-800' : 'bg-red-100');
+                        e.currentTarget.classList.add(darkMode ? 'text-white' : 'text-red-800');
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.classList.remove(darkMode ? 'bg-red-800' : 'bg-red-100');
+                        e.currentTarget.classList.remove(darkMode ? 'text-white' : 'text-red-800');
+                    }}
+                    title="Delete"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+            </div>
+            
+            {/* Delete confirmation dialog */}
+            {showDeleteConfirm && (
+                <div
+                    className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div
+                        className={`
+                            p-4 rounded-md shadow-lg
+                            ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}
+                        `}
+                    >
+                        <p className="mb-4">Are you sure you want to delete {team.name}?</p>
+                        <div className="flex justify-end space-x-2">
+                            <button
+                                onClick={cancelDelete}
+                                className={`
+                                    px-3 py-1 rounded-md
+                                    ${darkMode
+                                        ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                        : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
+                                `}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className={`
+                                    px-3 py-1 rounded-md
+                                    ${darkMode
+                                        ? 'bg-red-700 hover:bg-red-600 text-white'
+                                        : 'bg-red-500 hover:bg-red-600 text-white'}
+                                `}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+});
+
+TeamListItem.propTypes = {
+    team: PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        recordId: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+    }).isRequired,
+    isSelected: PropTypes.bool.isRequired,
+    darkMode: PropTypes.bool.isRequired,
+    onSelect: PropTypes.func.isRequired,
+    onDelete: PropTypes.func.isRequired
+};
+
 function Sidebar({
     customers,
+    teams = [],
     selectedCustomer = null,
+    selectedTeam = null,
     customerStats = null,
     onCustomerSelect,
     onCustomerStatusToggle,
-    onCustomerDelete
+    onCustomerDelete,
+    onTeamSelect = () => {},
+    onTeamDelete = () => {}
 }) {
     const { darkMode } = useTheme();
     const { projects, projectRecords } = useProject();
-    const { showFinancialActivity, showCustomerForm } = useAppState();
-    const { setShowFinancialActivity, setShowCustomerForm } = useAppStateOperations();
+    const { showFinancialActivity, showCustomerForm, showTeamForm, sidebarMode } = useAppState();
+    const { setShowFinancialActivity, setShowCustomerForm, setShowTeamForm, setSidebarMode } = useAppStateOperations();
     //console.log(projectRecords)
 
     // Memoize customer grouping and stats
@@ -228,6 +364,11 @@ function Sidebar({
         };
     }, [customers, projects, projectRecords]);
 
+    // Toggle between customer and team modes
+    const toggleSidebarMode = () => {
+        setSidebarMode(sidebarMode === 'customer' ? 'team' : 'customer');
+    };
+
     return (
         <div className={`
             w-64 h-screen flex-shrink-0 border-r flex flex-col
@@ -239,28 +380,61 @@ function Sidebar({
                 ${darkMode ? 'border-gray-700' : 'border-gray-200'}
             `}>
                 <div className="flex justify-between items-center">
-                    <h2 className={`
-                        text-lg font-semibold
-                        ${darkMode ? 'text-white' : 'text-gray-900'}
-                    `}>
-                        Customers
-                    </h2>
-                    <button
-                        onClick={() => setShowCustomerForm(true)}
-                        className={`
-                            p-1 rounded-md flex items-center justify-center
-                            ${darkMode
-                                ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                                : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
-                        `}
-                        title="Add new customer"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                    </button>
+                    <div className="flex items-center">
+                        <h2 className={`
+                            text-lg font-semibold
+                            ${darkMode ? 'text-white' : 'text-gray-900'}
+                        `}>
+                            {sidebarMode === 'customer' ? 'Customers' : 'Teams'}
+                        </h2>
+                        <button
+                            onClick={toggleSidebarMode}
+                            className={`
+                                ml-2 p-1 rounded-md flex items-center justify-center
+                                ${darkMode
+                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
+                            `}
+                            title={`Switch to ${sidebarMode === 'customer' ? 'Teams' : 'Customers'}`}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                        </button>
+                    </div>
+                    {sidebarMode === 'customer' ? (
+                        <button
+                            onClick={() => setShowCustomerForm(true)}
+                            className={`
+                                p-1 rounded-md flex items-center justify-center
+                                ${darkMode
+                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
+                            `}
+                            title="Add new customer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => setShowTeamForm(true)}
+                            className={`
+                                p-1 rounded-md flex items-center justify-center
+                                ${darkMode
+                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
+                            `}
+                            title="Add new team"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
+                    )}
                 </div>
-                {stats && (
+                {sidebarMode === 'customer' && stats && (
                     <div className={`
                         mt-2 text-sm
                         ${darkMode ? 'text-gray-400' : 'text-gray-500'}
@@ -287,48 +461,83 @@ function Sidebar({
                 </button>
             </div>
 
-            {/* Customer List */}
+            {/* List Content */}
             <div className="flex-1 overflow-y-auto">
-                {/* Customer List */}
-                {activeCustomers.length > 0 && activeCustomers.map(customer => (
-                    <CustomerListItem
-                        key={customer.id}
-                        customer={customer}
-                        isSelected={selectedCustomer?.id === customer.id}
-                        darkMode={darkMode}
-                        onSelect={() => onCustomerSelect(customer)}
-                        onStatusToggle={onCustomerStatusToggle}
-                        onDelete={onCustomerDelete}
-                    />
-                ))}
+                {sidebarMode === 'customer' ? (
+                    /* Customer List */
+                    <>
+                        {activeCustomers.length > 0 && activeCustomers.map(customer => (
+                            <CustomerListItem
+                                key={customer.id}
+                                customer={customer}
+                                isSelected={selectedCustomer?.id === customer.id}
+                                darkMode={darkMode}
+                                onSelect={() => onCustomerSelect(customer)}
+                                onStatusToggle={onCustomerStatusToggle}
+                                onDelete={onCustomerDelete}
+                            />
+                        ))}
 
-                {inactiveCustomers.length > 0 && inactiveCustomers.map(customer => (
-                    <CustomerListItem
-                        key={customer.id}
-                        customer={customer}
-                        isSelected={selectedCustomer?.id === customer.id}
-                        darkMode={darkMode}
-                        onSelect={() => onCustomerSelect(customer)}
-                        onStatusToggle={onCustomerStatusToggle}
-                        onDelete={onCustomerDelete}
-                    />
-                ))}
+                        {inactiveCustomers.length > 0 && inactiveCustomers.map(customer => (
+                            <CustomerListItem
+                                key={customer.id}
+                                customer={customer}
+                                isSelected={selectedCustomer?.id === customer.id}
+                                darkMode={darkMode}
+                                onSelect={() => onCustomerSelect(customer)}
+                                onStatusToggle={onCustomerStatusToggle}
+                                onDelete={onCustomerDelete}
+                            />
+                        ))}
 
-                {/* Empty State */}
-                {customers.length === 0 && (
-                    <div className={`
-                        p-4 text-center
-                        ${darkMode ? 'text-gray-400' : 'text-gray-500'}
-                    `}>
-                        No customers found
-                    </div>
+                        {/* Empty State */}
+                        {customers.length === 0 && (
+                            <div className={`
+                                p-4 text-center
+                                ${darkMode ? 'text-gray-400' : 'text-gray-500'}
+                            `}>
+                                No customers found
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    /* Team List */
+                    <>
+                        {teams.length > 0 && teams.map(team => (
+                            <TeamListItem
+                                key={team.id}
+                                team={team}
+                                isSelected={selectedTeam?.id === team.id}
+                                darkMode={darkMode}
+                                onSelect={() => onTeamSelect(team)}
+                                onDelete={onTeamDelete}
+                            />
+                        ))}
+
+                        {/* Empty State */}
+                        {teams.length === 0 && (
+                            <div className={`
+                                p-4 text-center
+                                ${darkMode ? 'text-gray-400' : 'text-gray-500'}
+                            `}>
+                                No teams found
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
             
-            {/* Customer Form Modal */}
+            {/* Form Modals */}
             {showCustomerForm && (
                 <CustomerForm
                     onClose={() => setShowCustomerForm(false)}
+                    darkMode={darkMode}
+                />
+            )}
+            
+            {showTeamForm && (
+                <TeamForm
+                    onClose={() => setShowTeamForm(false)}
                     darkMode={darkMode}
                 />
             )}
@@ -343,7 +552,14 @@ Sidebar.propTypes = {
         Email: PropTypes.string,
         isActive: PropTypes.bool.isRequired
     })).isRequired,
+    teams: PropTypes.arrayOf(PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired
+    })),
     selectedCustomer: PropTypes.shape({
+        id: PropTypes.string.isRequired
+    }),
+    selectedTeam: PropTypes.shape({
         id: PropTypes.string.isRequired
     }),
     customerStats: PropTypes.shape({
@@ -354,7 +570,9 @@ Sidebar.propTypes = {
     }),
     onCustomerSelect: PropTypes.func.isRequired,
     onCustomerStatusToggle: PropTypes.func.isRequired,
-    onCustomerDelete: PropTypes.func.isRequired
+    onCustomerDelete: PropTypes.func.isRequired,
+    onTeamSelect: PropTypes.func,
+    onTeamDelete: PropTypes.func
 };
 
 export default React.memo(Sidebar);

@@ -11,7 +11,7 @@ import PropTypes from 'prop-types';
  * @param {boolean} props.darkMode - Whether dark mode is enabled
  * @returns {JSX.Element} Project list component
  */
-function ProjectList({ projects, selectedProjectId, onProjectSelect, onEditRecord, darkMode }) {
+function ProjectList({ projects, selectedProjectId = null, onProjectSelect, onEditRecord, darkMode = false }) {
   // Debug logs
   console.log("ProjectList rendering with props:", {
     projectsCount: Object.keys(projects).length,
@@ -273,11 +273,6 @@ ProjectList.propTypes = {
   onProjectSelect: PropTypes.func.isRequired,
   onEditRecord: PropTypes.func.isRequired,
   darkMode: PropTypes.bool
-};
-
-ProjectList.defaultProps = {
-  selectedProjectId: null,
-  darkMode: false
 };
 
 export default React.memo(ProjectList);

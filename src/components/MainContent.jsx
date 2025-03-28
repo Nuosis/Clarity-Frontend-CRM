@@ -3,26 +3,33 @@ import PropTypes from 'prop-types';
 import TaskTimer from './tasks/TaskTimer';
 import ProjectDetails from './projects/ProjectDetails';
 import CustomerDetails from './customers/CustomerDetails';
+import TeamDetails from './teams/TeamDetails';
 import FinancialActivity from './financial/FinancialActivity';
 import ErrorBoundary from './ErrorBoundary';
 import Loading from './loading/Loading';
 import { useProject } from '../hooks/useProject';
+import { useTeam } from '../hooks/useTeam';
 import { useAppState } from '../context/AppStateContext';
 import { useTheme } from './layout/AppLayout';
 const MainContent = React.memo(function MainContent({
     selectedTask = null,
     selectedProject = null,
     selectedCustomer = null,
+    selectedTeam = null,
     tasks = [],
     projects = [],
+    teamStaff = [],
+    teamProjects = [],
     taskStats = null,
     projectStats = null,
+    teamStats = null,
     timer = null,
     loading = false,
     handlers
 }) {
     const { handleProjectSelect } = useProject();
-    const { showFinancialActivity } = useAppState();
+    const { handleAssignStaffToTeam, handleRemoveStaffFromTeam, handleAssignProjectToTeam, handleRemoveProjectFromTeam } = useTeam();
+    const { showFinancialActivity, sidebarMode } = useAppState();
     const { darkMode } = useTheme();
 
     // Memoized project selection handler
@@ -103,9 +110,30 @@ const MainContent = React.memo(function MainContent({
         );
     }
 
+    if (selectedTeam) {
+        return (
+            <ErrorBoundary>
+                <TeamDetails
+                    team={selectedTeam}
+                    staff={teamStaff}
+                    projects={teamProjects}
+                    stats={teamStats}
+                    onProjectSelect={handleProjectSelection}
+                    onStaffRemove={handleRemoveStaffFromTeam}
+                    onProjectRemove={handleRemoveProjectFromTeam}
+                    onStaffAdd={handleAssignStaffToTeam}
+                    onProjectAdd={handleAssignProjectToTeam}
+                />
+            </ErrorBoundary>
+        );
+    }
+
     return (
         <div className="text-center text-gray-500 dark:text-gray-400">
-            Select a customer to view details
+            {sidebarMode === 'customer'
+                ? 'Select a customer to view details'
+                : 'Select a team to view details'
+            }
         </div>
     );
 });
@@ -158,10 +186,18 @@ MainContent.propTypes = {
         createdAt: PropTypes.string,
         modifiedAt: PropTypes.string
     }),
+    selectedTeam: PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        createdAt: PropTypes.string,
+        modifiedAt: PropTypes.string
+    }),
     
     // Lists
     tasks: PropTypes.arrayOf(PropTypes.object),
     projects: PropTypes.arrayOf(PropTypes.object),
+    teamStaff: PropTypes.arrayOf(PropTypes.object),
+    teamProjects: PropTypes.arrayOf(PropTypes.object),
     
     // Statistics
     taskStats: PropTypes.shape({
@@ -177,6 +213,11 @@ MainContent.propTypes = {
         open: PropTypes.number.isRequired,
         closed: PropTypes.number.isRequired,
         averageCompletion: PropTypes.number.isRequired
+    }),
+    teamStats: PropTypes.shape({
+        totalStaff: PropTypes.number,
+        totalProjects: PropTypes.number,
+        activeProjects: PropTypes.number
     }),
     
     // Timer
