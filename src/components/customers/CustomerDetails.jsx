@@ -207,7 +207,7 @@ function CustomerDetails({
     }, [customer, onProjectCreate]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-2">
             {/* Customer Header */}
             <div className={`
                 border-b pb-4
@@ -317,24 +317,26 @@ function CustomerDetails({
 
             {/* Active Projects */}
             <div>
-                <h3 className="text-lg font-semibold mb-4">Active Projects</h3>
+                <h3 className="text-lg font-semibold mb-4">Active Projects ({activeProjects.length})</h3>
                 {!groupingError && activeProjects.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-4">
-                        {activeProjects.map(project => (
-                            <ProjectCard
-                                key={project.id}
-                                project={project}
-                                darkMode={darkMode}
-                                onSelect={onProjectSelect}
-                                setLoading={setLoading}
-                            />
-                        ))}
+                    <div className="max-h-[400px] overflow-y-auto pr-2">
+                        <div className="grid grid-cols-2 gap-4">
+                            {activeProjects.map(project => (
+                                <ProjectCard
+                                    key={project.id}
+                                    project={project}
+                                    darkMode={darkMode}
+                                    onSelect={onProjectSelect}
+                                    setLoading={setLoading}
+                                />
+                            ))}
+                        </div>
                     </div>
                 ) : (
                     <div className={`
                         text-center py-8 rounded-lg border
-                        ${darkMode 
-                            ? 'bg-gray-800 border-gray-700 text-gray-400' 
+                        ${darkMode
+                            ? 'bg-gray-800 border-gray-700 text-gray-400'
                             : 'bg-gray-50 border-gray-200 text-gray-500'}
                     `}>
                         No active projects
@@ -345,17 +347,19 @@ function CustomerDetails({
             {/* Closed Projects */}
             {closedProjects.length > 0 && (
                 <div>
-                    <h3 className="text-lg font-semibold mb-4">Closed Projects</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        {closedProjects.map(project => (
-                            <ProjectCard
-                                key={project.id}
-                                project={project}
-                                darkMode={darkMode}
-                                onSelect={onProjectSelect}
-                                setLoading={setLoading}
-                            />
-                        ))}
+                    <h3 className="text-lg font-semibold mb-4">Closed Projects ({closedProjects.length})</h3>
+                    <div className="max-h-[300px] overflow-y-auto pr-2">
+                        <div className="grid grid-cols-2 gap-4">
+                            {closedProjects.map(project => (
+                                <ProjectCard
+                                    key={project.id}
+                                    project={project}
+                                    darkMode={darkMode}
+                                    onSelect={onProjectSelect}
+                                    setLoading={setLoading}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}

@@ -5,7 +5,7 @@ import Sidebar from './components/layout/Sidebar';
 import MainContent from './components/MainContent';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useTheme } from './components/layout/AppLayout';
-import { useCustomer, useProject, useTask, useFileMakerBridge } from './hooks';
+import { useCustomer, useProject, useTask, useFileMakerBridge, useTeam } from './hooks';
 import { initializationService } from './services/initializationService';
 import { loadingStateManager, useGlobalLoadingState } from './services/loadingStateManager';
 import { AppStateProvider, useAppState, useAppStateOperations } from './context/AppStateContext';
@@ -19,13 +19,14 @@ function AppContent() {
     const { darkMode } = useTheme();
     const { isReady: fmReady, error: fmError, status: fmStatus } = useFileMakerBridge();
     const appState = useAppState();
-    const { 
-        setLoading, 
-        setError, 
-        setUser, 
+    const {
+        setLoading,
+        setError,
+        setUser,
         setSelectedCustomer,
         setSelectedProject,
         setSelectedTask,
+        setSelectedTeam,
         resetState
     } = useAppStateOperations();
     const globalLoadingState = useGlobalLoadingState();
@@ -38,6 +39,19 @@ function AppContent() {
         handleCustomerDelete,
         loadCustomers
     } = useCustomer();
+
+    // Team state and handlers
+    const {
+        teams,
+        error: teamError,
+        selectedTeam: hookSelectedTeam,
+        teamStaff,
+        teamProjects,
+        stats: teamStats,
+        handleTeamSelect,
+        handleTeamDelete,
+        loadTeams
+    } = useTeam();
 
     // Project state and handlers
     const {
@@ -95,7 +109,10 @@ function AppContent() {
                 setUser(userContext);
                 
                 loadingStateManager.setLoading('initialization', true, 'Loading initial data...');
-                await initializationService.preloadData(loadCustomers);
+                await initializationService.preloadData(async () => {
+                    await loadCustomers();
+                    await loadTeams();
+                });
                 
                 loadingStateManager.clearLoadingState('initialization');
                 setLoading(false);
@@ -111,15 +128,49 @@ function AppContent() {
         if (fmReady) {
             initialize();
         }
-    }, [fmReady, loadCustomers, setError, setLoading, setUser]);
+    }, [fmReady, loadCustomers, loadTeams, setError, setLoading, setUser]);
 
     // Memoized handlers using useCallback
     const onCustomerSelect = useCallback(async (customer) => {
-        clearSelectedProject();
-        clearSelectedTask();
+        // If it's a different customer, clear selected project and task
+        if (!appState.selectedCustomer || appState.selectedCustomer.id !== customer.id) {
+            clearSelectedProject();
+            clearSelectedTask();
+        }
+        // Always reload customer data, even if it's the same customer
         await handleCustomerSelect(customer.id);
         setSelectedCustomer(customer);
-    }, [clearSelectedProject, clearSelectedTask, handleCustomerSelect, setSelectedCustomer]);
+    }, [appState.selectedCustomer, clearSelectedProject, clearSelectedTask, handleCustomerSelect, setSelectedCustomer]);
+
+    // Handler for team selection
+    const onTeamSelect = useCallback(async (team) => {
+        console.log('onTeamSelect called with team:', team);
+        
+        try {
+            // Always reload team data, even if it's the same team
+            console.log('Calling handleTeamSelect with team ID:', team.id);
+            const result = await handleTeamSelect(team.id);
+            console.log('handleTeamSelect returned result:', result);
+            
+            if (result) {
+                // Use the team data from the result
+                const teamData = result.team || team;
+                
+                // Set the selected team in app state
+                console.log('Setting selected team in app state:', teamData);
+                setSelectedTeam(teamData);
+                
+                console.log('Current teamStaff after handleTeamSelect:', teamStaff);
+            } else {
+                console.error('handleTeamSelect returned null or undefined result');
+                setSelectedTeam(team);
+            }
+        } catch (error) {
+            console.error('Error in onTeamSelect:', error);
+            // Still set the selected team even if there was an error
+            setSelectedTeam(team);
+        }
+    }, [handleTeamSelect, setSelectedTeam, teamStaff]);
 
     // Handler for project deletion
     const onProjectDelete = useCallback(async (projectId) => {
@@ -140,9 +191,20 @@ function AppContent() {
     const onProjectSelect = useCallback(async (project) => {
         clearSelectedTask();
         try {
+            // Set loading state to true
+            setLoading(true);
+            
             // Load project details including images, links, objectives, steps, and notes
             console.log("Loading project details for project:", project);
-            const details = await loadProjectDetails(project.__ID);
+            
+            // Get the project ID, handling different possible formats
+            const projectId = project.__ID || project.id || project.recordId;
+            if (!projectId) {
+                throw new Error("Project ID not found in project object");
+            }
+            
+            console.log("Using project ID:", projectId, "from project:", project);
+            const details = await loadProjectDetails(projectId);
             console.log("Project details loaded:", details);
 
             // Calculate stats using project records if they exist
@@ -156,7 +218,7 @@ function AppContent() {
                 links: details.links || [],
                 objectives: details.objectives || [],
                 notes: details.notes || [],
-                records: projectRecords ? projectRecords.filter(r => r.fieldData._projectID === project.__ID) : [],
+                records: projectRecords ? projectRecords.filter(r => r.fieldData._projectID === projectId) : [],
                 stats: {
                     totalHours: stats.totalHours,
                     unbilledHours: stats.unbilledHours,
@@ -164,11 +226,18 @@ function AppContent() {
                 }
             };
             console.log("Complete project object:", completeProject);
-            setSelectedProject(completeProject);
+            
+            // Use a setTimeout to ensure the state update happens in a separate tick
+            // This helps prevent React rendering issues with complex state updates
+            setTimeout(() => {
+                setSelectedProject(completeProject);
+                setLoading(false);
+            }, 0);
         } catch (error) {
             console.error('Error selecting project:', error);
+            setLoading(false);
         }
-    }, [clearSelectedTask, loadProjectDetails, projectRecords, setSelectedProject, calculateProjectDetailStats]);
+    }, [clearSelectedTask, loadProjectDetails, projectRecords, setSelectedProject, calculateProjectDetailStats, setLoading]);
 
     const onTaskSelect = useCallback((task) => {
         handleTaskSelect(task.id);
@@ -190,6 +259,7 @@ function AppContent() {
         onCustomerSelect,
         onProjectSelect,
         onTaskSelect,
+        onTeamSelect,
         clearSelectedTask: clearSelectedTaskHandler,
         clearSelectedProject: clearSelectedProjectHandler,
         handleTaskCreate,
@@ -207,6 +277,7 @@ function AppContent() {
         onCustomerSelect,
         onProjectSelect,
         onTaskSelect,
+        onTeamSelect,
         clearSelectedTaskHandler,
         clearSelectedProjectHandler,
         handleTaskCreate,
@@ -249,7 +320,7 @@ function AppContent() {
     }
 
     // Combined error handling
-    const error = customerError || projectError || taskError;
+    const error = customerError || projectError || taskError || teamError;
     if (error) {
         return (
             <div className="text-center text-red-600 p-4">
@@ -281,10 +352,14 @@ function AppContent() {
             <AppLayout>
                 <MemoizedSidebar
                     customers={processedCustomers}
+                    teams={teams}
                     selectedCustomer={processedSelectedCustomer}
+                    selectedTeam={appState.selectedTeam}
                     onCustomerSelect={handlers.onCustomerSelect}
                     onCustomerStatusToggle={handleCustomerStatusToggle}
                     onCustomerDelete={handleCustomerDelete}
+                    onTeamSelect={onTeamSelect}
+                    onTeamDelete={handleTeamDelete}
                     customerStats={customers.length > 0 ? {
                         total: customers.length,
                         active: processedCustomers.filter(c => c.isActive).length,
@@ -297,9 +372,13 @@ function AppContent() {
                     selectedTask={selectedTask}
                     selectedProject={appState.selectedProject}
                     selectedCustomer={processedSelectedCustomer}
+                    selectedTeam={appState.selectedTeam}
+                    teamStaff={teamStaff}
+                    teamProjects={teamProjects}
                     tasks={tasks}
                     taskStats={taskStats}
                     projectStats={projectStats}
+                    teamStats={teamStats}
                     timer={timer}
                     handlers={handlers}
                     projects={projects}

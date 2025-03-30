@@ -44,9 +44,9 @@ export function formatParams(params) {
  */
 export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true) {
     const timestamp = new Date().toISOString();
-    console.log(`[FileMaker API ${timestamp}] Fetching data:`, {
-        params
-    });
+    //console.log(`[FileMaker API ${timestamp}] Fetching data:`, {
+    //     params
+    // });
     
     return new Promise((resolve, reject) => {
        if (attempt >= 30) { // 30 retries = 3 seconds
@@ -85,8 +85,11 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
                     .then(result => handleScriptResult(layout, result, resolve, reject))
                     .catch(error => {
                         console.error("FileMaker script error:", error);
-                        error.code = "SCRIPT_ERROR";
-                        reject(error);
+                        // Create a new error object instead of modifying the existing one
+                        const scriptError = new Error(error.message || String(error));
+                        scriptError.code = "SCRIPT_ERROR";
+                        scriptError.originalError = error;
+                        reject(scriptError);
                     });
             } else {
                 // Use FileMaker.PerformScript for sync operations
@@ -95,8 +98,11 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
                     handleScriptResult(layout, result, resolve, reject);
                 } catch (error) {
                     console.error("FileMaker script error:", error);
-                    error.code = "SCRIPT_ERROR";
-                    reject(error);
+                    // Create a new error object instead of modifying the existing one
+                    const scriptError = new Error(error.message || String(error));
+                    scriptError.code = "SCRIPT_ERROR";
+                    scriptError.originalError = error;
+                    reject(scriptError);
                 }
             }
         } catch (error) {
@@ -117,7 +123,7 @@ function handleScriptResult(layout, result, resolve, reject) {
     }
     
     const parsedResult = JSON.parse(result);
-    console.log(`FileMaker ${layout} response:`, parsedResult);
+    //console.log(`FileMaker ${layout} response:`, parsedResult);
     
     if (parsedResult.error) {
         const error = new Error(parsedResult.message || "Unknown FileMaker error");
@@ -143,13 +149,12 @@ export async function handleFileMakerOperation(operation) {
             details: error.details
         });
         
-        // Rethrow with standardized format
-        throw {
-            error: true,
-            message: error.message,
-            code: error.code,
-            details: error.details
-        };
+        // Create a new error object with standardized format
+        const formattedError = new Error(error.message || String(error));
+        formattedError.error = true;
+        formattedError.code = error.code || 'UNKNOWN_ERROR';
+        formattedError.details = error.details;
+        throw formattedError;
     }
 }
 
@@ -207,6 +212,14 @@ export async function initializeQuickBooks(params) {
     const isObject = typeof params === 'object' && params !== null;
     const customerId = isObject ? params.custId : params;
     
+    console.log("QuickBooks initialization details:", {
+        customerId,
+        isObject,
+        paramsType: typeof params,
+        hasRecordsByProject: isObject && !!params.recordsByProject,
+        recordsByProjectKeys: isObject ? Object.keys(params.recordsByProject || {}) : []
+    });
+    
     if (!customerId) {
         throw new Error('Customer ID is required for QuickBooks initialization');
     }
@@ -232,8 +245,13 @@ export async function initializeQuickBooks(params) {
             
             console.log("Sending QuickBooks payload:", payload);
             
-            // Call the FileMaker script with the payload
-            FileMaker.PerformScript("Initialize QB via JS", payload);
+            try {
+                // Call the FileMaker script with the payload
+                FileMaker.PerformScript("Initialize QB via JS", payload);
+            } catch (scriptError) {
+                console.error("Error executing FileMaker script:", scriptError);
+                throw scriptError;
+            }
             
             // Since this is a fire-and-forget operation, resolve immediately
             resolve({ status: "success", message: "QuickBooks initialization requested" });

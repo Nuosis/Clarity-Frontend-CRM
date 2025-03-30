@@ -2,9 +2,9 @@ import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layou
 
 // Add Teams layout to Layouts if it doesn't exist
 const TeamLayouts = {
-    TEAMS: 'Teams',
-    TEAM_MEMBERS: 'TeamMembers',
-    STAFF: 'Staff',
+    TEAMS: 'devTeams',
+    TEAM_MEMBERS: 'devTeamMembers',
+    STAFF: 'devStaff',
     ...Layouts
 };
 
@@ -59,12 +59,25 @@ export async function fetchTeamStaff(teamId) {
             query: [{ "_teamID": teamId }]
         };
         
-        const teamMembers = await fetchDataFromFileMaker(teamMembersParams);
+        const teamMembersResult = await fetchDataFromFileMaker(teamMembersParams);
+        
+        // Extract team members from the response
+        let teamMembers = [];
+        if (teamMembersResult && teamMembersResult.response && Array.isArray(teamMembersResult.response.data)) {
+            teamMembers = teamMembersResult.response.data;
+        } else if (Array.isArray(teamMembersResult)) {
+            teamMembers = teamMembersResult;
+        }
         
         if (!teamMembers.length) return [];
         
         // Get the staff IDs from team members
-        const staffIds = teamMembers.map(member => member._staffID);
+        const staffIds = teamMembers.map(member => {
+            const fieldData = member.fieldData || member;
+            return fieldData._staffID;
+        }).filter(id => id); // Filter out any undefined or null IDs
+        
+        if (!staffIds.length) return teamMembers;
         
         // Fetch the actual staff records
         const staffParams = {
@@ -74,13 +87,34 @@ export async function fetchTeamStaff(teamId) {
             operator: 'or'
         };
         
-        const staffMembers = await fetchDataFromFileMaker(staffParams);
+        const staffResult = await fetchDataFromFileMaker(staffParams);
+        
+        // Extract staff members from the response
+        let staffMembers = [];
+        if (staffResult && staffResult.response && Array.isArray(staffResult.response.data)) {
+            staffMembers = staffResult.response.data;
+        } else if (Array.isArray(staffResult)) {
+            staffMembers = staffResult;
+        }
         
         // Combine the team member data with staff data
         return teamMembers.map(teamMember => {
-            const staffMember = staffMembers.find(staff => staff.__ID === teamMember._staffID);
+            const fieldData = teamMember.fieldData || teamMember;
+            const staffId = fieldData._staffID;
+            
+            // Find the corresponding staff member
+            const staffMember = staffMembers.find(staff => {
+                const staffFieldData = staff.fieldData || staff;
+                return staffFieldData.__ID === staffId;
+            });
+            
+            // Create a processed team member with ID
             return {
                 ...teamMember,
+                id: fieldData.__ID || teamMember.__ID || teamMember.id || teamMember.recordId,
+                teamId: fieldData._teamID || teamMember._teamID || teamMember.teamId,
+                staffId: staffId,
+                role: fieldData.role || teamMember.role || '',
                 staffDetails: staffMember || null
             };
         });
@@ -170,9 +204,10 @@ export async function deleteTeam(teamId) {
  * @param {string} teamId - The ID of the team
  * @param {string} staffId - The ID of the staff member
  * @param {string} role - The role of the staff member in the team
+ * @param {string} name - The name of the staff member (optional)
  * @returns {Promise<Object>} Created team member object
  */
-export async function assignStaffToTeam(teamId, staffId, role = '') {
+export async function assignStaffToTeam(teamId, staffId, role = '', name = '') {
     validateParams({ teamId, staffId }, ['teamId', 'staffId']);
     
     return handleFileMakerOperation(async () => {
@@ -182,7 +217,8 @@ export async function assignStaffToTeam(teamId, staffId, role = '') {
             fieldData: {
                 _teamID: teamId,
                 _staffID: staffId,
-                role
+                role,
+                name
             }
         };
         

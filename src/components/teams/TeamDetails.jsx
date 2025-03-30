@@ -1,9 +1,10 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useAppStateOperations } from '../../context/AppStateContext';
 import { useSnackBar } from '../../context/SnackBarContext';
-import TextInput from '../global/TextInput';
+import { useTeam } from '../../hooks/useTeam';
+import ProjectList from '../projects/ProjectList';
 
 // Memoized staff card component
 const StaffCard = React.memo(function StaffCard({
@@ -13,8 +14,8 @@ const StaffCard = React.memo(function StaffCard({
 }) {
     const handleRemove = useCallback((e) => {
         e.stopPropagation();
-        onRemove(staffMember.id);
-    }, [staffMember.id, onRemove]);
+        onRemove(staffMember.recordId || staffMember.id, staffMember);
+    }, [staffMember, staffMember.recordId, staffMember.id, onRemove]);
 
     return (
         <div
@@ -58,6 +59,7 @@ const StaffCard = React.memo(function StaffCard({
 StaffCard.propTypes = {
     staffMember: PropTypes.shape({
         id: PropTypes.string.isRequired,
+        recordId: PropTypes.string,
         role: PropTypes.string,
         staffDetails: PropTypes.shape({
             name: PropTypes.string,
@@ -66,96 +68,6 @@ StaffCard.propTypes = {
     }).isRequired,
     darkMode: PropTypes.bool.isRequired,
     onRemove: PropTypes.func.isRequired
-};
-
-// Memoized project card component
-const ProjectCard = React.memo(function ProjectCard({
-    project,
-    darkMode,
-    onSelect,
-    onRemove,
-    setLoading
-}) {
-    const handleRemove = useCallback((e) => {
-        e.stopPropagation();
-        onRemove(project.id);
-    }, [project.id, onRemove]);
-
-    return (
-        <div
-            onClick={(e) => {
-                setLoading(true);
-                onSelect(project);
-            }}
-            className={`
-                p-4 rounded-lg border cursor-pointer
-                ${darkMode 
-                    ? 'bg-gray-800 border-gray-700 hover:border-gray-600' 
-                    : 'bg-white border-gray-200 hover:border-gray-300'}
-                transition-colors duration-150
-            `}
-        >
-            <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">{project.projectName}</h3>
-                <div className="flex items-center space-x-2">
-                    <span className={`
-                        px-2 py-1 text-sm rounded-full
-                        ${project.status === 'Open'
-                            ? (darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800')
-                            : (darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800')}
-                    `}>
-                        {project.status}
-                    </span>
-                    <button
-                        onClick={handleRemove}
-                        className={`
-                            p-1 rounded-md
-                            ${darkMode
-                                ? 'text-gray-400 hover:bg-red-900 hover:text-white'
-                                : 'text-gray-500 hover:bg-red-100 hover:text-red-700'}
-                        `}
-                        title="Remove from team"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            
-            <div className="space-y-2">
-                {project.estOfTime && (
-                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Estimated Time: {project.estOfTime}
-                    </p>
-                )}
-                
-                <div className="flex space-x-4 text-sm">
-                    <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                        {project.objectives?.length || 0} Objectives
-                    </span>
-                    <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                        {project.tasks?.length || 0} Tasks
-                    </span>
-                </div>
-            </div>
-        </div>
-    );
-});
-
-ProjectCard.propTypes = {
-    project: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        projectName: PropTypes.string.isRequired,
-        status: PropTypes.string.isRequired,
-        estOfTime: PropTypes.string,
-        objectives: PropTypes.array,
-        tasks: PropTypes.array
-    }).isRequired,
-    darkMode: PropTypes.bool.isRequired,
-    onSelect: PropTypes.func.isRequired,
-    onRemove: PropTypes.func.isRequired,
-    setLoading: PropTypes.func.isRequired
 };
 
 function TeamDetails({
@@ -171,29 +83,227 @@ function TeamDetails({
     const { darkMode } = useTheme();
     const { setLoading } = useAppStateOperations();
     const { showError } = useSnackBar();
+    const { allStaff, loadAllStaff } = useTeam();
     const [showAddStaffModal, setShowAddStaffModal] = useState(false);
-    const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+    const [selectedStaffIds, setSelectedStaffIds] = useState([]);
+    const [existingStaffIds, setExistingStaffIds] = useState([]);
+    
+    // Local state to track team members for optimistic updates
+    const [localStaff, setLocalStaff] = useState(staff);
+    
+    // Track if we're in the middle of an optimistic update
+    const [isOptimisticUpdate, setIsOptimisticUpdate] = useState(false);
+    
+    // Update local staff when prop changes, but only if not in the middle of an optimistic update
+    useEffect(() => {
+        if (!isOptimisticUpdate) {
+            setLocalStaff(staff);
+        }
+    }, [staff, isOptimisticUpdate]);
+    
+    // Handle staff removal with optimistic update
+    const handleStaffRemove = useCallback((teamMemberId, staffMember) => {
+        // Set the optimistic update flag
+        setIsOptimisticUpdate(true);
+        
+        // Optimistically update the UI by removing the staff member from local state
+        setLocalStaff(prevStaff => prevStaff.filter(member => {
+            if (member.recordId) {
+                return member.recordId !== teamMemberId;
+            }
+            return member.id !== teamMemberId;
+        }));
+        
+        // Call the actual remove function
+        onStaffRemove(teamMemberId)
+            .then(() => {
+                // Reset the optimistic update flag after a short delay
+                setTimeout(() => {
+                    setIsOptimisticUpdate(false);
+                }, 500);
+            })
+            .catch(() => {
+                // If there's an error, reset the optimistic update flag
+                setIsOptimisticUpdate(false);
+            });
+    }, [onStaffRemove, setIsOptimisticUpdate]);
 
     // Calculate stats for display
     const stats = useMemo(() => {
         return {
-            totalStaff: staff.length,
+            totalStaff: localStaff.length,
             totalProjects: projects.length,
             activeProjects: projects.filter(p => p.status === 'Open').length
         };
-    }, [staff, projects]);
+    }, [localStaff, projects]);
 
     // Handlers for adding staff and projects
     const handleAddStaff = useCallback(() => {
-        setShowAddStaffModal(true);
-    }, []);
+        // Load all staff members when opening the modal
+        loadAllStaff()
+            .then(() => {
+                // Pre-select staff members who are already part of the team
+                if (staff && staff.length > 0 && allStaff && allStaff.length > 0) {
+                    // Extract staff IDs from current team staff
+                    const currentStaffIds = staff.map(teamMember => {
+                        // Staff ID could be in different places depending on the data structure
+                        const staffId = teamMember.staffId ||
+                            (teamMember.staffDetails && teamMember.staffDetails.id) ||
+                            (teamMember.staffDetails && teamMember.staffDetails.__ID) ||
+                            teamMember.id;
+                        
+                        return staffId;
+                    }).filter(id => id); // Filter out any undefined IDs
+                    
+                    // Set both selected and existing staff IDs
+                    setSelectedStaffIds(currentStaffIds);
+                    setExistingStaffIds(currentStaffIds);
+                } else {
+                    setSelectedStaffIds([]); // Reset if no staff
+                    setExistingStaffIds([]);
+                }
+                
+                setShowAddStaffModal(true);
+            })
+            .catch(err => {
+                showError('Failed to load staff members');
+                console.error('Error loading staff:', err);
+                setShowAddStaffModal(true);
+            });
+    }, [loadAllStaff, showError, staff, allStaff]);
 
-    const handleAddProject = useCallback(() => {
-        setShowAddProjectModal(true);
+    
+    // Handle staff selection
+    const handleStaffSelection = useCallback((staffId) => {
+        setSelectedStaffIds(prev => {
+            // If already selected, remove it; otherwise, add it
+            if (prev.includes(staffId)) {
+                return prev.filter(id => id !== staffId);
+            } else {
+                return [...prev, staffId];
+            }
+        });
     }, []);
+    
+    // Handle adding selected staff to team
+    const handleAddSelectedStaff = useCallback(async () => {
+        if (selectedStaffIds.length === 0) {
+            showError('Please select at least one staff member');
+            return;
+        }
+        
+        try {
+            // Extract staff IDs from current team staff
+            const currentStaffIds = localStaff.map(teamMember => {
+                if (teamMember.staffId) return teamMember.staffId;
+                if (teamMember.staffDetails && teamMember.staffDetails.id) return teamMember.staffDetails.id;
+                if (teamMember.staffDetails && teamMember.staffDetails.__ID) return teamMember.staffDetails.__ID;
+                return teamMember.id;
+            }).filter(id => id);
+            
+            // Filter out staff members who are already part of the team
+            const newStaffIds = selectedStaffIds.filter(id => !currentStaffIds.includes(id));
+            
+            if (newStaffIds.length === 0) {
+                showError('All selected staff members are already part of the team');
+                return;
+            }
+            
+            // Get the team ID
+            const teamId = team.id || team.recordId || (team.fieldData && team.fieldData.__ID);
+            if (!teamId) {
+                throw new Error('Invalid team ID in team prop');
+            }
+            
+            // Create an array of staff objects with their details
+            const staffToAdd = newStaffIds.map(staffId => {
+                // Find the staff member in allStaff
+                const staffMember = allStaff.find(s => {
+                    const fieldData = s.fieldData || s;
+                    return (
+                        s.id === staffId ||
+                        fieldData.__ID === staffId ||
+                        fieldData.id === staffId
+                    );
+                });
+                
+                if (!staffMember) {
+                    return { id: staffId, role: '' };
+                }
+                
+                const fieldData = staffMember.fieldData || staffMember;
+                return {
+                    id: staffId,
+                    name: fieldData.name || staffMember.name || 'Unknown Staff',
+                    role: fieldData.role || staffMember.role || ''
+                };
+            });
+            
+            // Create optimistic team member objects to update UI immediately
+            const optimisticTeamMembers = staffToAdd.map(staffItem => {
+                // Create a team member object that matches the structure expected by the UI
+                return {
+                    id: `temp-${staffItem.id}-${Date.now()}`, // Temporary ID that will be replaced when the server responds
+                    staffId: staffItem.id,
+                    role: staffItem.role || '',
+                    staffDetails: {
+                        id: staffItem.id,
+                        name: staffItem.name || 'Unknown Staff',
+                        role: staffItem.role || ''
+                    }
+                };
+            });
+            
+            // Set the optimistic update flag
+            setIsOptimisticUpdate(true);
+            
+            // Update local state optimistically
+            setLocalStaff(prevStaff => [...prevStaff, ...optimisticTeamMembers]);
+            
+            // Call the onStaffAdd function with the staff details
+            setLoading(true);
+            
+            // Close the modal immediately for better UX
+            setShowAddStaffModal(false);
+            
+            try {
+                const result = await onStaffAdd(staffToAdd, teamId);
+                
+                // Reset the optimistic update flag after a short delay
+                setTimeout(() => {
+                    setIsOptimisticUpdate(false);
+                }, 500);
+                
+                return result;
+            } catch (error) {
+                // If there's an error, reset the optimistic update flag
+                setIsOptimisticUpdate(false);
+                throw error;
+            }
+        } catch (error) {
+            console.error('Error adding staff to team:', error);
+            // Reset the optimistic update flag
+            setIsOptimisticUpdate(false);
+            
+            // Provide more specific error message based on the error
+            if (error.message === 'No team selected') {
+                showError('Failed to add staff: No team selected. Please try selecting the team again.');
+            } else if (error.message === 'Team selection failed') {
+                showError('Failed to add staff: Team selection process failed. Please refresh and try again.');
+            } else if (error.message === 'No team available') {
+                showError('Failed to add staff: No team available. Please try selecting the team again.');
+            } else if (error.message === 'Invalid team ID') {
+                showError('Failed to add staff: Invalid team ID. Please refresh and try again.');
+            } else {
+                showError(`Failed to add staff to team: ${error.message}`);
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedStaffIds, onStaffAdd, showError, setLoading, staff, team, allStaff, setIsOptimisticUpdate]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-2">
             {/* Team Header */}
             <div className={`
                 border-b pb-4
@@ -209,12 +319,6 @@ function TeamDetails({
                             className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
                         >
                             Add Staff
-                        </button>
-                        <button
-                            onClick={handleAddProject}
-                            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
-                        >
-                            Add Project
                         </button>
                     </div>
                 </div>
@@ -260,23 +364,27 @@ function TeamDetails({
 
             {/* Staff Section */}
             <div>
-                <h3 className="text-lg font-semibold mb-4">Team Members</h3>
-                {staff.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-4">
-                        {staff.map(staffMember => (
-                            <StaffCard
-                                key={staffMember.id}
-                                staffMember={staffMember}
-                                darkMode={darkMode}
-                                onRemove={onStaffRemove}
-                            />
-                        ))}
+                <h3 className="text-lg font-semibold mb-4">Team Members ({localStaff.length})</h3>
+                {localStaff.length > 0 ? (
+                    <div className="max-h-[300px] overflow-y-auto pr-2">
+                        <div className="grid grid-cols-2 gap-4">
+                            {localStaff.map(staffMember => {
+                                return (
+                                    <StaffCard
+                                        key={staffMember.id}
+                                        staffMember={staffMember}
+                                        darkMode={darkMode}
+                                        onRemove={handleStaffRemove}
+                                    />
+                                );
+                            })}
+                        </div>
                     </div>
                 ) : (
                     <div className={`
                         text-center py-8 rounded-lg border
-                        ${darkMode 
-                            ? 'bg-gray-800 border-gray-700 text-gray-400' 
+                        ${darkMode
+                            ? 'bg-gray-800 border-gray-700 text-gray-400'
                             : 'bg-gray-50 border-gray-200 text-gray-500'}
                     `}>
                         No staff members assigned to this team
@@ -286,30 +394,13 @@ function TeamDetails({
 
             {/* Projects Section */}
             <div>
-                <h3 className="text-lg font-semibold mb-4">Team Projects</h3>
-                {projects.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-4">
-                        {projects.map(project => (
-                            <ProjectCard
-                                key={project.id}
-                                project={project}
-                                darkMode={darkMode}
-                                onSelect={onProjectSelect}
-                                onRemove={onProjectRemove}
-                                setLoading={setLoading}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <div className={`
-                        text-center py-8 rounded-lg border
-                        ${darkMode 
-                            ? 'bg-gray-800 border-gray-700 text-gray-400' 
-                            : 'bg-gray-50 border-gray-200 text-gray-500'}
-                    `}>
-                        No projects assigned to this team
-                    </div>
-                )}
+                <h3 className="text-lg font-semibold mb-4">Team Projects ({projects.length})</h3>
+                <ProjectList
+                    projects={projects}
+                    onProjectSelect={onProjectSelect}
+                    onProjectRemove={onProjectRemove}
+                    maxHeight="400px"
+                />
             </div>
 
             {/* Add Staff Modal */}
@@ -337,25 +428,60 @@ function TeamDetails({
                         
                         <div className="mb-4">
                             <p className="text-sm mb-4">
-                                Select staff members to add to this team. Staff selection functionality would be implemented here.
+                                Select staff members to add to this team.
                             </p>
                             
-                            {/* This would be replaced with actual staff selection UI */}
-                            <div className="text-center py-8">
-                                <button
-                                    onClick={() => {
-                                        // Mock implementation - in real app, would pass selected staff
-                                        onStaffAdd();
-                                        setShowAddStaffModal(false);
-                                    }}
-                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
-                                >
-                                    Add Selected Staff
-                                </button>
+                            {/* Staff selection UI */}
+                            <div className={`
+                                border rounded-md p-3 mb-4 max-h-[200px] overflow-y-auto
+                                ${darkMode ? 'border-gray-700 bg-gray-700' : 'border-gray-300 bg-gray-50'}
+                            `}>
+                                {allStaff.length > 0 ? (
+                                    allStaff.map(staffMember => {
+                                        // Extract data from fieldData if present
+                                        const fieldData = staffMember.fieldData || staffMember;
+                                        const staffId = fieldData.__ID || staffMember.id || staffMember.recordId;
+                                        const staffName = fieldData.name || staffMember.name || 'Unnamed Staff';
+                                        const staffRole = fieldData.role || staffMember.role || '';
+                                        
+                                        return (
+                                            <div key={staffId} className={`
+                                                flex items-center mb-2 last:mb-0 p-1 rounded
+                                                ${selectedStaffIds.includes(staffId) ?
+                                                    (darkMode ? 'bg-gray-600' : 'bg-blue-50') : ''}
+                                            `}>
+                                                <input
+                                                    type="checkbox"
+                                                    id={`staff-${staffId}`}
+                                                    checked={selectedStaffIds.includes(staffId)}
+                                                    onChange={() => handleStaffSelection(staffId)}
+                                                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 rounded"
+                                                />
+                                                <label
+                                                    htmlFor={`staff-${staffId}`}
+                                                    className="text-sm flex-1"
+                                                >
+                                                    {staffName}
+                                                    {staffRole && ` (${staffRole})`}
+                                                    
+                                                    {existingStaffIds.includes(staffId) && (
+                                                        <span className={`ml-2 text-xs ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                                                            Already in team
+                                                        </span>
+                                                    )}
+                                                </label>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="text-center py-4 text-sm text-gray-500">
+                                        Loading staff members...
+                                    </div>
+                                )}
                             </div>
                         </div>
                         
-                        <div className="flex justify-end">
+                        <div className="flex justify-end space-x-3">
                             <button
                                 onClick={() => setShowAddStaffModal(false)}
                                 className={`
@@ -365,68 +491,24 @@ function TeamDetails({
                             >
                                 Cancel
                             </button>
+                            <button
+                                onClick={handleAddSelectedStaff}
+                                disabled={selectedStaffIds.length === 0}
+                                className={`
+                                    px-4 py-2 text-white rounded-md
+                                    ${selectedStaffIds.length === 0
+                                        ? 'bg-blue-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700'}
+                                `}
+                            >
+                                Add Selected Staff
+                                {selectedStaffIds.length > 0 && ` (${selectedStaffIds.length})`}
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Add Project Modal */}
-            {showAddProjectModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className={`
-                        p-6 rounded-lg max-w-md w-full mx-4
-                        ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}
-                    `}>
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-semibold">Add Project to Team</h2>
-                            <button
-                                onClick={() => setShowAddProjectModal(false)}
-                                className={`
-                                    p-1 rounded-full
-                                    ${darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-gray-200' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}
-                                `}
-                                aria-label="Close"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                        
-                        <div className="mb-4">
-                            <p className="text-sm mb-4">
-                                Select a project to add to this team. Project selection functionality would be implemented here.
-                            </p>
-                            
-                            {/* This would be replaced with actual project selection UI */}
-                            <div className="text-center py-8">
-                                <button
-                                    onClick={() => {
-                                        // Mock implementation - in real app, would pass selected project
-                                        onProjectAdd();
-                                        setShowAddProjectModal(false);
-                                    }}
-                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
-                                >
-                                    Add Selected Project
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div className="flex justify-end">
-                            <button
-                                onClick={() => setShowAddProjectModal(false)}
-                                className={`
-                                    px-4 py-2 rounded-md
-                                    ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}
-                                `}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

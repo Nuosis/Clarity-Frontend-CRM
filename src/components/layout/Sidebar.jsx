@@ -364,14 +364,9 @@ function Sidebar({
         };
     }, [customers, projects, projectRecords]);
 
-    // Toggle between customer and team modes
-    const toggleSidebarMode = () => {
-        setSidebarMode(sidebarMode === 'customer' ? 'team' : 'customer');
-    };
-
     return (
         <div className={`
-            w-64 h-screen flex-shrink-0 border-r flex flex-col
+            w-64 h-[calc(100vh-3.5rem)] flex-shrink-0 border-r flex flex-col overflow-hidden
             ${darkMode ? 'bg-gray-950 border-gray-700' : 'bg-gray-50 border-gray-200'}
         `}>
             {/* Header */}
@@ -380,28 +375,12 @@ function Sidebar({
                 ${darkMode ? 'border-gray-700' : 'border-gray-200'}
             `}>
                 <div className="flex justify-between items-center">
-                    <div className="flex items-center">
-                        <h2 className={`
-                            text-lg font-semibold
-                            ${darkMode ? 'text-white' : 'text-gray-900'}
-                        `}>
-                            {sidebarMode === 'customer' ? 'Customers' : 'Teams'}
-                        </h2>
-                        <button
-                            onClick={toggleSidebarMode}
-                            className={`
-                                ml-2 p-1 rounded-md flex items-center justify-center
-                                ${darkMode
-                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
-                            `}
-                            title={`Switch to ${sidebarMode === 'customer' ? 'Teams' : 'Customers'}`}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                            </svg>
-                        </button>
-                    </div>
+                    <h2 className={`
+                        text-lg font-semibold
+                        ${darkMode ? 'text-white' : 'text-gray-900'}
+                    `}>
+                        {sidebarMode === 'customer' ? 'Customers' : 'Teams'}
+                    </h2>
                     {sidebarMode === 'customer' ? (
                         <button
                             onClick={() => setShowCustomerForm(true)}

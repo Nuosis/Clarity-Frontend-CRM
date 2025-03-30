@@ -339,6 +339,48 @@ export function useProject(customerId = null) {
         }
     }, [projects, selectedProject]);
 
+    /**
+     * Updates a project's team assignment
+     */
+    const handleProjectTeamChange = useCallback(async (projectId, teamId) => {
+        try {
+            setLoading(true);
+            setError(null);
+            
+            // Find the project in the state by recordId
+            const project = projects.find(p => p.recordId === projectId);
+            if (!project) {
+                console.error('Project not found in state with recordId:', projectId);
+                throw new Error('Project not found');
+            }
+            
+            // Update the project in FileMaker
+            const result = await updateProject(projectId, { _teamID: teamId });
+            
+            // Update local state using recordId
+            setProjects(prevProjects =>
+                prevProjects.map(project =>
+                    project.recordId === projectId
+                        ? { ...project, _teamID: teamId }
+                        : project
+                )
+            );
+            
+            // Update selected project if it's the one being updated
+            if (selectedProject?.recordId === projectId) {
+                setSelectedProject(prevProject => ({ ...prevProject, _teamID: teamId }));
+            }
+            
+            return result;
+        } catch (err) {
+            setError(err.message);
+            console.error('Error updating project team:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedProject, projects]);
+
     return {
         // State
         loading,
@@ -358,6 +400,7 @@ export function useProject(customerId = null) {
         handleProjectUpdate,
         handleProjectStatusChange,
         handleProjectDelete,
+        handleProjectTeamChange,
         
         // Utilities
         getProjectCompletion,

@@ -17,6 +17,20 @@ export function processFinancialData(data) {
   console.log("Processing financial data. First record sample:",
     data.response.data[0] ? JSON.stringify(data.response.data[0].fieldData, null, 2) : "No records");
 
+  // Log customer IDs from the first few records to check for empty values
+  const customerIdSamples = data.response.data.slice(0, 5).map(record => ({
+    id: record.fieldData.__ID,
+    customerId: record.fieldData["_custID"],
+    customerName: record.fieldData["Customers::Name"]
+  }));
+  console.log("Customer ID samples from first 5 records:", customerIdSamples);
+
+  // Count records with empty customer IDs
+  const emptyCustomerIdCount = data.response.data.filter(record =>
+    !record.fieldData["_custID"] || record.fieldData["_custID"] === ""
+  ).length;
+  console.log(`Records with empty customer IDs: ${emptyCustomerIdCount} out of ${data.response.data.length}`);
+
   return data.response.data.map(record => {
     // Extract field data for logging
     const fieldData = record.fieldData;
@@ -140,12 +154,32 @@ function formatDate(dateString) {
  * @returns {Object} Records grouped by customer
  */
 export function groupRecordsByCustomer(records) {
+  // Log records with empty customer IDs
+  const recordsWithEmptyIds = records.filter(record => !record.customerId || record.customerId === "");
+  console.log(`groupRecordsByCustomer: Found ${recordsWithEmptyIds.length} records with empty customer IDs`);
+  
+  if (recordsWithEmptyIds.length > 0) {
+    console.log("Sample record with empty customer ID:", recordsWithEmptyIds[0]);
+  }
+  
+  // Check for "Whiskey Creek Marine" records specifically
+  const whiskeyCreekRecords = records.filter(record =>
+    record.customerName && record.customerName.includes("Whiskey Creek")
+  );
+  console.log(`Found ${whiskeyCreekRecords.length} records for Whiskey Creek Marine`);
+  
+  if (whiskeyCreekRecords.length > 0) {
+    console.log("First Whiskey Creek record:", whiskeyCreekRecords[0]);
+  }
+
   return records.reduce((grouped, record) => {
-    const customerId = record.customerId;
+    // Use customer name as the key if customer ID is empty
+    // This ensures each customer gets their own entry even with empty IDs
+    const groupKey = record.customerId || `name:${record.customerName}`;
     
-    if (!grouped[customerId]) {
-      grouped[customerId] = {
-        customerId,
+    if (!grouped[groupKey]) {
+      grouped[groupKey] = {
+        customerId: record.customerId,
         customerName: record.customerName,
         records: [],
         totalAmount: 0,
@@ -154,14 +188,14 @@ export function groupRecordsByCustomer(records) {
       };
     }
     
-    grouped[customerId].records.push(record);
-    grouped[customerId].totalAmount += record.amount;
-    grouped[customerId].totalHours += record.hours;
+    grouped[groupKey].records.push(record);
+    grouped[groupKey].totalAmount += record.amount;
+    grouped[groupKey].totalHours += record.hours;
     
     // Track projects within this customer
     const projectId = record.projectId;
-    if (!grouped[customerId].projects[projectId]) {
-      grouped[customerId].projects[projectId] = {
+    if (!grouped[groupKey].projects[projectId]) {
+      grouped[groupKey].projects[projectId] = {
         projectId,
         projectName: record.projectName,
         records: [],
@@ -170,9 +204,9 @@ export function groupRecordsByCustomer(records) {
       };
     }
     
-    grouped[customerId].projects[projectId].records.push(record);
-    grouped[customerId].projects[projectId].totalAmount += record.amount;
-    grouped[customerId].projects[projectId].totalHours += record.hours;
+    grouped[groupKey].projects[projectId].records.push(record);
+    grouped[groupKey].projects[projectId].totalAmount += record.amount;
+    grouped[groupKey].projects[projectId].totalHours += record.hours;
     
     return grouped;
   }, {});

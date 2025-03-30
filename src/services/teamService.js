@@ -14,69 +14,82 @@ import {
 } from '../api';
 
 /**
- * Processes team data from the API
- * @param {Object} team - Raw team data from API
- * @returns {Object} Processed team data
+ * Processes team data from the API.
+ *
+ * @param {Object} team Raw team data from API.
+ * @returns {Object} Processed team data.
  */
 export function processTeamData(team) {
     if (!team) return null;
     
+    // Check if data is in fieldData structure (common in FileMaker responses)
+    const fieldData = team.fieldData || team;
+    
     return {
         ...team,
-        id: team.__ID || team.id,
-        name: team.name || 'Unnamed Team',
-        createdAt: team['~CreationTimestamp'] || team.createdAt || new Date().toISOString(),
-        modifiedAt: team['~ModificationTimestamp'] || team.modifiedAt || new Date().toISOString(),
-        recordId: team['~recordId'] || team.recordId
+        id: fieldData.__ID || team.__ID || team.id,
+        name: fieldData.name || team.name || 'Unnamed Team',
+        createdAt: fieldData['~CreationTimestamp'] || team['~CreationTimestamp'] || team.createdAt || new Date().toISOString(),
+        modifiedAt: fieldData['~ModificationTimestamp'] || team['~ModificationTimestamp'] || team.modifiedAt || new Date().toISOString(),
+        recordId: team.recordId || fieldData.recordId
     };
 }
 
+
 /**
- * Processes staff data from the API
- * @param {Object} staff - Raw staff data from API
- * @returns {Object} Processed staff data
+ * Processes staff data from the API.
+ *
+ * @param {Object} staff Raw staff data from API.
+ * @returns {Object} Processed staff data.
  */
 export function processStaffData(staff) {
     if (!staff) return null;
+    // Check if data is in fieldData structure (common in FileMaker responses)
+    const fieldData = staff.fieldData || staff;
     
     return {
         ...staff,
-        id: staff.__ID || staff.id,
-        name: staff.name || 'Unnamed Staff',
-        role: staff.role || '',
-        image: staff.image_base64 || null,
-        createdAt: staff['~CreationTimestamp'] || staff.createdAt || new Date().toISOString(),
-        modifiedAt: staff['~ModificationTimestamp'] || staff.modifiedAt || new Date().toISOString(),
-        recordId: staff['~recordId'] || staff.recordId
+        id: fieldData.__ID || staff.__ID || staff.id,
+        name: fieldData.name || staff.name || 'Unnamed Staff',
+        role: fieldData.role || staff.role || '',
+        image: fieldData.image_base64 || staff.image_base64 || null,
+        createdAt: fieldData['~CreationTimestamp'] || staff['~CreationTimestamp'] || staff.createdAt || new Date().toISOString(),
+        modifiedAt: fieldData['~ModificationTimestamp'] || staff['~ModificationTimestamp'] || staff.modifiedAt || new Date().toISOString(),
+        recordId: staff.recordId || fieldData.recordId
     };
 }
 
+
 /**
- * Processes team member data from the API
- * @param {Object} teamMember - Raw team member data from API
- * @returns {Object} Processed team member data
+ * Processes team member data from the API.
+ *
+ * @param {Object} teamMember Raw team member data from API.
+ * @returns {Object} Processed team member data.
  */
 export function processTeamMemberData(teamMember) {
     if (!teamMember) return null;
+    // Check if data is in fieldData structure (common in FileMaker responses)
+    const fieldData = teamMember.fieldData || teamMember;
     
     const staffDetails = teamMember.staffDetails ? processStaffData(teamMember.staffDetails) : null;
     
     return {
         ...teamMember,
-        id: teamMember.__ID || teamMember.id,
-        teamId: teamMember._teamID || teamMember.teamId,
-        staffId: teamMember._staffID || teamMember.staffId,
-        role: teamMember.role || '',
+        id: fieldData.__ID || teamMember.__ID || teamMember.id,
+        teamId: fieldData._teamID || teamMember._teamID || teamMember.teamId,
+        staffId: fieldData._staffID || teamMember._staffID || teamMember.staffId,
+        role: fieldData.role || teamMember.role || '',
         staffDetails,
-        createdAt: teamMember['~CreationTimestamp'] || teamMember.createdAt || new Date().toISOString(),
-        modifiedAt: teamMember['~ModificationTimestamp'] || teamMember.modifiedAt || new Date().toISOString(),
-        recordId: teamMember['~recordId'] || teamMember.recordId
+        createdAt: fieldData['~CreationTimestamp'] || teamMember['~CreationTimestamp'] || teamMember.createdAt || new Date().toISOString(),
+        modifiedAt: fieldData['~ModificationTimestamp'] || teamMember['~ModificationTimestamp'] || teamMember.modifiedAt || new Date().toISOString(),
+        recordId: teamMember.recordId || fieldData.recordId
     };
 }
 
 /**
- * Fetches and processes all teams
- * @returns {Promise<Array>} Array of processed team objects
+ * Fetches and processes all teams.
+ *
+ * @returns {Promise<Array>} Array of processed team objects.
  */
 export async function getTeams() {
     try {
@@ -89,9 +102,10 @@ export async function getTeams() {
 }
 
 /**
- * Fetches and processes a specific team by ID
- * @param {string} teamId - The ID of the team to fetch
- * @returns {Promise<Object>} Processed team object
+ * Fetches and processes a specific team by ID.
+ *
+ * @param {string} teamId The ID of the team to fetch.
+ * @returns {Promise<Object>} Processed team object.
  */
 export async function getTeamById(teamId) {
     try {
@@ -104,9 +118,10 @@ export async function getTeamById(teamId) {
 }
 
 /**
- * Fetches and processes staff members assigned to a team
- * @param {string} teamId - The ID of the team
- * @returns {Promise<Array>} Array of processed staff member objects
+ * Fetches and processes staff members assigned to a team.
+ *
+ * @param {string} teamId The ID of the team.
+ * @returns {Promise<Array>} Array of processed staff member objects.
  */
 export async function getTeamStaff(teamId) {
     try {
@@ -119,9 +134,10 @@ export async function getTeamStaff(teamId) {
 }
 
 /**
- * Fetches and processes projects assigned to a team
- * @param {string} teamId - The ID of the team
- * @returns {Promise<Array>} Array of processed project objects
+ * Fetches and processes projects assigned to a team.
+ *
+ * @param {string} teamId The ID of the team.
+ * @returns {Promise<Array>} Array of processed project objects.
  */
 export async function getTeamProjects(teamId) {
     try {
@@ -136,9 +152,10 @@ export async function getTeamProjects(teamId) {
 }
 
 /**
- * Creates a new team
- * @param {Object} teamData - The team data
- * @returns {Promise<Object>} Processed created team object
+ * Creates a new team.
+ *
+ * @param {Object} teamData The team data.
+ * @returns {Promise<Object>} Processed created team object.
  */
 export async function createNewTeam(teamData) {
     try {
@@ -151,10 +168,11 @@ export async function createNewTeam(teamData) {
 }
 
 /**
- * Updates an existing team
- * @param {string} teamId - The ID of the team to update
- * @param {Object} teamData - The updated team data
- * @returns {Promise<Object>} Processed updated team object
+ * Updates an existing team.
+ *
+ * @param {string} teamId The ID of the team to update.
+ * @param {Object} teamData The updated team data.
+ * @returns {Promise<Object>} Processed updated team object.
  */
 export async function updateExistingTeam(teamId, teamData) {
     try {
@@ -167,9 +185,10 @@ export async function updateExistingTeam(teamId, teamData) {
 }
 
 /**
- * Deletes a team
- * @param {string} teamId - The ID of the team to delete
- * @returns {Promise<boolean>} Success status
+ * Deletes a team.
+ *
+ * @param {string} teamId The ID of the team to delete.
+ * @returns {Promise<boolean>} Success status.
  */
 export async function deleteExistingTeam(teamId) {
     try {
@@ -181,11 +200,12 @@ export async function deleteExistingTeam(teamId) {
 }
 
 /**
- * Assigns a staff member to a team
- * @param {string} teamId - The ID of the team
- * @param {string} staffId - The ID of the staff member
- * @param {string} role - The role of the staff member in the team
- * @returns {Promise<Object>} Processed created team member object
+ * Assigns a staff member to a team.
+ *
+ * @param {string} teamId The ID of the team.
+ * @param {string} staffId The ID of the staff member.
+ * @param {string} role The role of the staff member in the team.
+ * @returns {Promise<Object>} Processed created team member object.
  */
 export async function assignStaffMemberToTeam(teamId, staffId, role = '') {
     try {
@@ -198,9 +218,10 @@ export async function assignStaffMemberToTeam(teamId, staffId, role = '') {
 }
 
 /**
- * Removes a staff member from a team
- * @param {string} teamMemberId - The ID of the team member record to remove
- * @returns {Promise<boolean>} Success status
+ * Removes a staff member from a team.
+ *
+ * @param {string} teamMemberId The ID of the team member record to remove.
+ * @returns {Promise<boolean>} Success status.
  */
 export async function removeStaffMemberFromTeam(teamMemberId) {
     try {
@@ -212,10 +233,11 @@ export async function removeStaffMemberFromTeam(teamMemberId) {
 }
 
 /**
- * Assigns a project to a team
- * @param {string} projectId - The ID of the project
- * @param {string} teamId - The ID of the team
- * @returns {Promise<Object>} Updated project object
+ * Assigns a project to a team.
+ *
+ * @param {string} projectId The ID of the project.
+ * @param {string} teamId The ID of the team.
+ * @returns {Promise<Object>} Updated project object.
  */
 export async function assignProjectToExistingTeam(projectId, teamId) {
     try {
@@ -227,9 +249,10 @@ export async function assignProjectToExistingTeam(projectId, teamId) {
 }
 
 /**
- * Removes a project from a team
- * @param {string} projectId - The ID of the project to remove from the team
- * @returns {Promise<Object>} Updated project object
+ * Removes a project from a team.
+ *
+ * @param {string} projectId The ID of the project to remove from the team.
+ * @returns {Promise<Object>} Updated project object.
  */
 export async function removeProjectFromExistingTeam(projectId) {
     try {
@@ -241,8 +264,9 @@ export async function removeProjectFromExistingTeam(projectId) {
 }
 
 /**
- * Fetches and processes all staff members
- * @returns {Promise<Array>} Array of processed staff member objects
+ * Fetches and processes all staff members.
+ *
+ * @returns {Promise<Array>} Array of processed staff member objects.
  */
 export async function getAllStaff() {
     try {
@@ -255,15 +279,19 @@ export async function getAllStaff() {
 }
 
 /**
- * Calculates statistics for a team
- * @param {Array} staff - Array of staff members
- * @param {Array} projects - Array of projects
- * @returns {Object} Team statistics
+ * Calculates statistics for a team.
+ *
+ * @param {Array} staff Array of staff members.
+ * @param {Array} projects Array of projects.
+ * @returns {Object} Team statistics.
  */
 export function calculateTeamStats(staff = [], projects = []) {
+    // Ensure projects is an array
+    const projectsArray = Array.isArray(projects) ? projects : [];
+    
     return {
         totalStaff: staff.length,
-        totalProjects: projects.length,
-        activeProjects: projects.filter(project => project.status === 'Open').length
+        totalProjects: projectsArray.length,
+        activeProjects: projectsArray.filter(project => project && project.status === 'Open').length
     };
 }

@@ -27,14 +27,20 @@ const MainContent = React.memo(function MainContent({
     loading = false,
     handlers
 }) {
-    const { handleProjectSelect } = useProject();
-    const { handleAssignStaffToTeam, handleRemoveStaffFromTeam, handleAssignProjectToTeam, handleRemoveProjectFromTeam } = useTeam();
+    const { handleProjectSelect, handleProjectTeamChange } = useProject();
+    const {
+        handleAssignStaffToTeam,
+        handleRemoveStaffFromTeam,
+        handleAssignProjectToTeam,
+        handleRemoveProjectFromTeam,
+        handleTeamSelect,
+        loadAllStaff
+    } = useTeam();
     const { showFinancialActivity, sidebarMode } = useAppState();
     const { darkMode } = useTheme();
 
     // Memoized project selection handler
     const handleProjectSelection = useCallback((project) => {
-        console.log('Project selection handler called in MainContent');
         handleProjectSelect(project);
         handlers.onProjectSelect(project);
     }, [handleProjectSelect, handlers.onProjectSelect]);
@@ -90,6 +96,7 @@ const MainContent = React.memo(function MainContent({
                     onTaskStatusChange={handlers.handleTaskStatusChange}
                     onProjectUpdate={handlers.handleProjectUpdate}
                     onDelete={handlers.handleProjectDelete}
+                    onTeamChange={handleProjectTeamChange}
                     project={selectedProject}
                 />
             </ErrorBoundary>
@@ -110,7 +117,72 @@ const MainContent = React.memo(function MainContent({
         );
     }
 
+    // Create a wrapper for staff assignment to ensure team is selected first
+    const handleStaffAssignment = useCallback(async (staffData, teamId) => {
+        try {
+            // Use the provided teamId if available, otherwise get it from selectedTeam
+            let effectiveTeamId = teamId;
+            
+            if (!effectiveTeamId) {
+                if (!selectedTeam) {
+                    console.error('No team available in selectedTeam prop and no teamId provided');
+                    throw new Error('No team available');
+                }
+                
+                // Get the team ID from the selectedTeam prop
+                effectiveTeamId = selectedTeam.id ||
+                              (selectedTeam.fieldData && selectedTeam.fieldData.__ID) ||
+                              selectedTeam.recordId;
+                
+                if (!effectiveTeamId) {
+                    console.error('Cannot find team ID in selectedTeam:', selectedTeam);
+                    throw new Error('Invalid team ID');
+                }
+            }
+            
+            // First ensure the team is selected in the hook and get the team data
+            const teamData = await handleTeamSelect(effectiveTeamId);
+            
+            if (!teamData) {
+                console.error('No team data returned from handleTeamSelect');
+                throw new Error('Team selection failed');
+            }
+            
+            // Extract the team ID from the teamData
+            const teamDataId = teamData && teamData.team ?
+                (teamData.team.id ||
+                (teamData.team.fieldData && teamData.team.fieldData.__ID) ||
+                teamData.team.recordId) : effectiveTeamId;
+            
+            // Process each staff member
+            const results = [];
+            
+            // Handle both array of staff objects and single staff object
+            const staffArray = Array.isArray(staffData) ? staffData : [staffData];
+            
+            for (const staff of staffArray) {
+                // Extract staff ID, name, and role
+                const staffId = staff.id;
+                const staffName = staff.name || '';
+                const role = staff.role || '';
+                
+                // Add the staff member to the team - pass the entire staff object
+                // so the hook can extract the name
+                const result = await handleAssignStaffToTeam(staff, role, teamDataId);
+                
+                results.push(result);
+            }
+            
+            return results.length === 1 ? results[0] : results;
+        } catch (error) {
+            console.error('Error in staff assignment process:', error);
+            throw error;
+        }
+    }, [selectedTeam, handleTeamSelect, handleAssignStaffToTeam]);
+
     if (selectedTeam) {
+        // No need for this logging
+        
         return (
             <ErrorBoundary>
                 <TeamDetails
@@ -121,7 +193,7 @@ const MainContent = React.memo(function MainContent({
                     onProjectSelect={handleProjectSelection}
                     onStaffRemove={handleRemoveStaffFromTeam}
                     onProjectRemove={handleRemoveProjectFromTeam}
-                    onStaffAdd={handleAssignStaffToTeam}
+                    onStaffAdd={handleStaffAssignment}
                     onProjectAdd={handleAssignProjectToTeam}
                 />
             </ErrorBoundary>

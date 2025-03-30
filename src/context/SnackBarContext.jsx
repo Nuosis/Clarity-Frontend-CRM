@@ -13,20 +13,38 @@ export const useSnackBar = () => {
 };
 
 export const SnackBarProvider = ({ children }) => {
-  const [error, setError] = useState(null);
+  const [notification, setNotification] = useState(null);
 
-  const showError = useCallback((message) => {
-    setError(message);
+  const showNotification = useCallback((message, type = 'error') => {
+    setNotification({ message, type });
   }, []);
 
-  const clearError = useCallback(() => {
-    setError(null);
+  const showError = useCallback((message) => {
+    showNotification(message, 'error');
+  }, [showNotification]);
+
+  const showSuccess = useCallback((message) => {
+    showNotification(message, 'success');
+  }, [showNotification]);
+
+  const showInfo = useCallback((message) => {
+    showNotification(message, 'info');
+  }, [showNotification]);
+
+  const clearNotification = useCallback(() => {
+    setNotification(null);
   }, []);
 
   return (
-    <SnackBarContext.Provider value={{ showError }}>
+    <SnackBarContext.Provider value={{ showError, showSuccess, showInfo }}>
       {children}
-      {error && <SnackBar message={error} onClose={clearError} />}
+      {notification && (
+        <SnackBar
+          message={notification.message}
+          type={notification.type}
+          onClose={clearNotification}
+        />
+      )}
     </SnackBarContext.Provider>
   );
 };

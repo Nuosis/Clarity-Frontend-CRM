@@ -257,8 +257,13 @@ export function formatProjectForFileMaker(data) {
  * @returns {number} Completion percentage
  */
 export function calculateProjectCompletion(project) {
+    // Check if project has objectives
+    if (!project || !project.objectives || !Array.isArray(project.objectives)) {
+        return 0;
+    }
+    
     const totalSteps = project.objectives.reduce(
-        (total, obj) => total + obj.steps.length,
+        (total, obj) => total + (obj.steps && Array.isArray(obj.steps) ? obj.steps.length : 0),
         0
     );
     
@@ -267,7 +272,9 @@ export function calculateProjectCompletion(project) {
     }
 
     const completedSteps = project.objectives.reduce(
-        (total, obj) => total + obj.steps.filter(step => step.completed).length,
+        (total, obj) => total + (obj.steps && Array.isArray(obj.steps)
+            ? obj.steps.filter(step => step && step.completed).length
+            : 0),
         0
     );
 
@@ -402,8 +409,12 @@ export function calculateProjectDetailStats(project, records) {
         };
     }
 
+    // Handle different ID formats
+    const projectId = project.__ID || project.id || project.recordId;
+    
     const projectRecords = records.filter(r =>
-        r.fieldData._projectID === project.id
+        r.fieldData && r.fieldData._projectID &&
+        (r.fieldData._projectID === projectId)
     );
     
     return {
