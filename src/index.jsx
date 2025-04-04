@@ -5,7 +5,8 @@ import Sidebar from './components/layout/Sidebar';
 import MainContent from './components/MainContent';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useTheme } from './components/layout/AppLayout';
-import { useCustomer, useProject, useTask, useFileMakerBridge, useTeam } from './hooks';
+import { useCustomer, useProject, useTask, useFileMakerBridge } from './hooks';
+import { TeamProvider, useTeamContext } from './context/TeamContext';
 import { initializationService } from './services/initializationService';
 import { loadingStateManager, useGlobalLoadingState } from './services/loadingStateManager';
 import { AppStateProvider, useAppState, useAppStateOperations } from './context/AppStateContext';
@@ -40,7 +41,7 @@ function AppContent() {
         loadCustomers
     } = useCustomer();
 
-    // Team state and handlers
+    // Use the TeamContext instead of calling useTeam directly
     const {
         teams,
         error: teamError,
@@ -51,7 +52,7 @@ function AppContent() {
         handleTeamSelect,
         handleTeamDelete,
         loadTeams
-    } = useTeam();
+    } = useTeamContext();
 
     // Project state and handlers
     const {
@@ -389,15 +390,7 @@ function AppContent() {
 }
 
 function App() {
-    return (
-        <ThemeProvider>
-            <AppStateProvider>
-                <ProjectProvider>
-                    <AppContent />
-                </ProjectProvider>
-            </AppStateProvider>
-        </ThemeProvider>
-    );
+    return <AppContent />;
 }
 
 export default App;

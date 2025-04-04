@@ -83,7 +83,6 @@ export function useProject(customerId = null) {
             // Process each type of data
             const processedImages = processProjectImages(images, projectId);
             const processedLinks = processProjectLinks(links, projectId);
-            console.log("processedLinks: ",processedLinks)
             const processedObjectives = processProjectObjectives(
                 objectives,
                 projectId,

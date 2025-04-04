@@ -4,6 +4,9 @@ import App from './index';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AppStateProvider } from './context/AppStateContext';
 import { SnackBarProvider } from './context/SnackBarContext';
+import { TeamProvider } from './context/TeamContext';
+import { ProjectProvider } from './context/ProjectContext';
+import { ThemeProvider } from './components/layout/AppLayout';
 import './index.css';
 import './style.css';
 import 'tailwindcss/tailwind.css';
@@ -29,9 +32,15 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
     <AppStateProvider>
         <SnackBarProvider>
-            <ErrorBoundary>
-                <App />
-            </ErrorBoundary>
+            <TeamProvider>
+                <ProjectProvider>
+                    <ThemeProvider>
+                        <ErrorBoundary>
+                            <App />
+                        </ErrorBoundary>
+                    </ThemeProvider>
+                </ProjectProvider>
+            </TeamProvider>
         </SnackBarProvider>
     </AppStateProvider>
 );

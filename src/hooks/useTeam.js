@@ -24,6 +24,7 @@ import {
  * Hook for managing team state and operations
  */
 export function useTeam() {
+    
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [teams, setTeams] = useState([]);
@@ -42,6 +43,7 @@ export function useTeam() {
     
     // Log when teamStaff changes
     useEffect(() => {
+        console.log('[useTeam] teamStaff changed:', teamStaff);
     }, [teamStaff]);
 
     /**
@@ -59,7 +61,6 @@ export function useTeam() {
             let processedTeams = [];
             if (result && result.response && Array.isArray(result.response.data)) {
                 // Handle FileMaker API response format
-                console.log('Processing FileMaker response data array');
                 processedTeams = result.response.data.map(team => {
                     // Make sure each team has an id property
                     const fieldData = team.fieldData || {};
@@ -542,7 +543,7 @@ export function useTeam() {
         }
     }, []);
 
-    return {
+    const returnValue = {
         // State
         loading,
         error,
@@ -574,4 +575,6 @@ export function useTeam() {
             setStats(null);
         }
     };
+    
+    return returnValue;
 }

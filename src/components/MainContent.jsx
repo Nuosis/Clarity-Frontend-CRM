@@ -8,7 +8,7 @@ import FinancialActivity from './financial/FinancialActivity';
 import ErrorBoundary from './ErrorBoundary';
 import Loading from './loading/Loading';
 import { useProject } from '../hooks/useProject';
-import { useTeam } from '../hooks/useTeam';
+import { useTeamContext } from '../context/TeamContext';
 import { useAppState } from '../context/AppStateContext';
 import { useTheme } from './layout/AppLayout';
 const MainContent = React.memo(function MainContent({
@@ -34,8 +34,10 @@ const MainContent = React.memo(function MainContent({
         handleAssignProjectToTeam,
         handleRemoveProjectFromTeam,
         handleTeamSelect,
-        loadAllStaff
-    } = useTeam();
+        loadAllStaff,
+        allStaff,
+        teams
+    } = useTeamContext();
     const { showFinancialActivity, sidebarMode } = useAppState();
     const { darkMode } = useTheme();
 
@@ -44,6 +46,70 @@ const MainContent = React.memo(function MainContent({
         handleProjectSelect(project);
         handlers.onProjectSelect(project);
     }, [handleProjectSelect, handlers.onProjectSelect]);
+    
+    // Create a wrapper for staff assignment to ensure team is selected first
+    // MOVED FROM BELOW to ensure consistent hook order
+    const handleStaffAssignment = useCallback(async (staffData, teamId) => {
+        try {
+            // Use the provided teamId if available, otherwise get it from selectedTeam
+            let effectiveTeamId = teamId;
+            
+            if (!effectiveTeamId) {
+                if (!selectedTeam) {
+                    console.error('No team available in selectedTeam prop and no teamId provided');
+                    throw new Error('No team available');
+                }
+                
+                // Get the team ID from the selectedTeam prop
+                effectiveTeamId = selectedTeam.id ||
+                              (selectedTeam.fieldData && selectedTeam.fieldData.__ID) ||
+                              selectedTeam.recordId;
+                
+                if (!effectiveTeamId) {
+                    console.error('Cannot find team ID in selectedTeam:', selectedTeam);
+                    throw new Error('Invalid team ID');
+                }
+            }
+            
+            // First ensure the team is selected in the hook and get the team data
+            const teamData = await handleTeamSelect(effectiveTeamId);
+            
+            if (!teamData) {
+                console.error('No team data returned from handleTeamSelect');
+                throw new Error('Team selection failed');
+            }
+            
+            // Extract the team ID from the teamData
+            const teamDataId = teamData && teamData.team ?
+                (teamData.team.id ||
+                (teamData.team.fieldData && teamData.team.fieldData.__ID) ||
+                teamData.team.recordId) : effectiveTeamId;
+            
+            // Process each staff member
+            const results = [];
+            
+            // Handle both array of staff objects and single staff object
+            const staffArray = Array.isArray(staffData) ? staffData : [staffData];
+            
+            for (const staff of staffArray) {
+                // Extract staff ID, name, and role
+                const staffId = staff.id;
+                const staffName = staff.name || '';
+                const role = staff.role || '';
+                
+                // Add the staff member to the team - pass the entire staff object
+                // so the hook can extract the name
+                const result = await handleAssignStaffToTeam(staff, role, teamDataId);
+                
+                results.push(result);
+            }
+            
+            return results.length === 1 ? results[0] : results;
+        } catch (error) {
+            console.error('Error in staff assignment process:', error);
+            throw error;
+        }
+    }, [selectedTeam, handleTeamSelect, handleAssignStaffToTeam]);
     // Show Financial Activity if selected
     if (showFinancialActivity) {
         return (
@@ -116,73 +182,10 @@ const MainContent = React.memo(function MainContent({
             </ErrorBoundary>
         );
     }
-
-    // Create a wrapper for staff assignment to ensure team is selected first
-    const handleStaffAssignment = useCallback(async (staffData, teamId) => {
-        try {
-            // Use the provided teamId if available, otherwise get it from selectedTeam
-            let effectiveTeamId = teamId;
-            
-            if (!effectiveTeamId) {
-                if (!selectedTeam) {
-                    console.error('No team available in selectedTeam prop and no teamId provided');
-                    throw new Error('No team available');
-                }
-                
-                // Get the team ID from the selectedTeam prop
-                effectiveTeamId = selectedTeam.id ||
-                              (selectedTeam.fieldData && selectedTeam.fieldData.__ID) ||
-                              selectedTeam.recordId;
-                
-                if (!effectiveTeamId) {
-                    console.error('Cannot find team ID in selectedTeam:', selectedTeam);
-                    throw new Error('Invalid team ID');
-                }
-            }
-            
-            // First ensure the team is selected in the hook and get the team data
-            const teamData = await handleTeamSelect(effectiveTeamId);
-            
-            if (!teamData) {
-                console.error('No team data returned from handleTeamSelect');
-                throw new Error('Team selection failed');
-            }
-            
-            // Extract the team ID from the teamData
-            const teamDataId = teamData && teamData.team ?
-                (teamData.team.id ||
-                (teamData.team.fieldData && teamData.team.fieldData.__ID) ||
-                teamData.team.recordId) : effectiveTeamId;
-            
-            // Process each staff member
-            const results = [];
-            
-            // Handle both array of staff objects and single staff object
-            const staffArray = Array.isArray(staffData) ? staffData : [staffData];
-            
-            for (const staff of staffArray) {
-                // Extract staff ID, name, and role
-                const staffId = staff.id;
-                const staffName = staff.name || '';
-                const role = staff.role || '';
-                
-                // Add the staff member to the team - pass the entire staff object
-                // so the hook can extract the name
-                const result = await handleAssignStaffToTeam(staff, role, teamDataId);
-                
-                results.push(result);
-            }
-            
-            return results.length === 1 ? results[0] : results;
-        } catch (error) {
-            console.error('Error in staff assignment process:', error);
-            throw error;
-        }
-    }, [selectedTeam, handleTeamSelect, handleAssignStaffToTeam]);
+    // The handleStaffAssignment hook has been moved to the top of the component
+    // to ensure consistent hook order across all render paths
 
     if (selectedTeam) {
-        // No need for this logging
-        
         return (
             <ErrorBoundary>
                 <TeamDetails

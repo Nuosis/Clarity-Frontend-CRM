@@ -4,7 +4,7 @@ import { useTheme } from '../layout/AppLayout';
 import { useProject } from '../../hooks/useProject';
 import { useNote } from '../../hooks/useNote';
 import { useLink } from '../../hooks/useLink';
-import { useTeam } from '../../hooks/useTeam';
+import { useTeamContext } from '../../context/TeamContext';
 import TaskList from '../tasks/TaskList';
 import TextInput from '../global/TextInput';
 
@@ -122,11 +122,19 @@ function ProjectDetails({
     const { handleNoteCreate, loading: noteLoading } = useNote();
     const { handleLinkCreate, loading: linkLoading } = useLink();
     const { loadProjectDetails } = useProject();
-    const { teams, loading: teamsLoading, loadTeams } = useTeam();
+    
+    // Use TeamContext instead of props
+    const teamContext = useTeamContext();
+    // Get teams and loadTeams from context with fallbacks
+    const { teams = [], loadTeams = (() => Promise.resolve([])) } = teamContext || {};
     
     // Load teams when component mounts
     useEffect(() => {
-        loadTeams();
+        if (loadTeams && typeof loadTeams === 'function') {
+            loadTeams().catch(err => {
+                console.error('Error loading teams:', err);
+            });
+        }
     }, [loadTeams]);
     
     // Update local project state when the project prop changes
@@ -134,7 +142,11 @@ function ProjectDetails({
         setLocalProject(project);
     }, [project]);
     
-    console.log("Project in ProjectDetails:", localProject || project);
+    // Update local project state when the project prop changes
+    useEffect(() => {
+        setLocalProject(project);
+    }, [project]);
+    
 
     // Calculate project stats using service
     const stats = useMemo(() => {
@@ -381,9 +393,9 @@ function ProjectDetails({
                         p-4 rounded-lg border
                         ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
                     `}>
-                        {teams.find(team => team.id === localProject._teamID) ? (
+                        {teams && teams.find(team => team && team.id === localProject._teamID) ? (
                             <div className="flex items-center">
-                                <h4 className="font-medium">{teams.find(team => team.id === localProject._teamID)?.name}</h4>
+                                <h4 className="font-medium">{teams.find(team => team && team.id === localProject._teamID)?.name}</h4>
                             </div>
                         ) : (
                             <div className="text-center py-2">

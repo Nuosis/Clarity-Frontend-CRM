@@ -3,8 +3,11 @@ import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useAppStateOperations } from '../../context/AppStateContext';
 import { useSnackBar } from '../../context/SnackBarContext';
-import { useTeam } from '../../hooks/useTeam';
+import { useTeamContext } from '../../context/TeamContext';
 import ProjectList from '../projects/ProjectList';
+
+// Log when the module is loaded
+console.log('[TeamDetails] Module loaded');
 
 // Memoized staff card component
 const StaffCard = React.memo(function StaffCard({
@@ -12,6 +15,7 @@ const StaffCard = React.memo(function StaffCard({
     darkMode,
     onRemove
 }) {
+    console.log('[StaffCard] Rendering for staff member:', staffMember?.id);
     const handleRemove = useCallback((e) => {
         e.stopPropagation();
         onRemove(staffMember.recordId || staffMember.id, staffMember);
@@ -80,10 +84,15 @@ function TeamDetails({
     onStaffAdd = () => {},
     onProjectAdd = () => {}
 }) {
+    console.log('[TeamDetails] Rendering with team:', team?.id, 'staff count:', staff?.length);
+    
     const { darkMode } = useTheme();
     const { setLoading } = useAppStateOperations();
     const { showError } = useSnackBar();
-    const { allStaff, loadAllStaff } = useTeam();
+    
+    // Use TeamContext instead of props
+    console.log('[TeamDetails] Using team data and functions from TeamContext');
+    const { allStaff, loadAllStaff } = useTeamContext();
     const [showAddStaffModal, setShowAddStaffModal] = useState(false);
     const [selectedStaffIds, setSelectedStaffIds] = useState([]);
     const [existingStaffIds, setExistingStaffIds] = useState([]);
@@ -139,6 +148,7 @@ function TeamDetails({
 
     // Handlers for adding staff and projects
     const handleAddStaff = useCallback(() => {
+        console.log('[TeamDetails] handleAddStaff called, using loadAllStaff from props');
         // Load all staff members when opening the modal
         loadAllStaff()
             .then(() => {
@@ -302,6 +312,17 @@ function TeamDetails({
         }
     }, [selectedStaffIds, onStaffAdd, showError, setLoading, staff, team, allStaff, setIsOptimisticUpdate]);
 
+    // Check if team is defined before rendering
+    if (!team) {
+        console.log('[TeamDetails] Early return - no team provided');
+        return (
+            <div className="p-4 text-center">
+                <p className="text-gray-500">Select a team to view details</p>
+            </div>
+        );
+    }
+    
+    console.log('[TeamDetails] Rendering main component with team:', team.id);
     return (
         <div className="space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-2">
             {/* Team Header */}

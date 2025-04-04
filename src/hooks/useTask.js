@@ -68,13 +68,6 @@ export function useTask(projectId = null) {
                 return;
             }
             const result = await loadProjectTasks(projId);
-            console.log('Tasks loaded in useTask:', result);
-            console.log('Checking if tasks contain team data:', result?.map(task => ({
-                hasTeamData: !!task.teamData,
-                hasStaffInfo: !!task.staffDetails || !!task._staffID,
-                staffId: task._staffID,
-                staffDetails: task.staffDetails
-            })));
             setTasks(result || []);
         } catch (err) {
             showError('Failed to load tasks. Please try refreshing the page.');
