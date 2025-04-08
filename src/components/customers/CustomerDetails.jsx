@@ -6,6 +6,7 @@ import { useProject } from '../../hooks/useProject';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { initializeQuickBooks } from '../../api/fileMaker';
 import { useSnackBar } from '../../context/SnackBarContext';
+import { sendEmailWithAttachment, isMailjetConfigured } from '../../services/mailjetService';
 import {
     fetchCustomerActivityData,
     processActivityData,
@@ -120,7 +121,7 @@ function CustomerDetails({
     const { darkMode } = useTheme();
     const { setLoading } = useAppStateOperations();
     const { projectRecords } = useProject();
-    const { showError } = useSnackBar();
+    const { showError, showSuccess } = useSnackBar();
     const [isProcessingQB, setIsProcessingQB] = useState(false);
     const [showNewProjectInput, setShowNewProjectInput] = useState(false);
     const [showActivityReport, setShowActivityReport] = useState(false);
@@ -581,22 +582,55 @@ function CustomerDetails({
                                 Close
                             </button>
                             <button
-                                onClick={() => {
+                                onClick={(e) => {
                                     console.log("Export Report button clicked");
                                     console.log("Activity data:", activityData);
                                     
+                                    // Set a flag to prevent multiple clicks
+                                    const exportButton = e.currentTarget;
+                                    if (exportButton.disabled) return;
+                                    exportButton.disabled = true;
+                                    
                                     try {
-                                        // Use the new pdfReportService which can handle any type of records
-                                        Promise.all([
-                                            import('../../utils/pdfReportService'),
-                                            import('../../utils/pdfUtils')
-                                        ]).then(([{ generateCustomerProjectReport }, { downloadPdf }]) => {
+                                        // Directly import from pdfReport.js instead of using pdfReportService
+                                        import('../../utils/pdfReport.js').then(({ generateProjectActivityReport }) => {
                                             console.log("Imported PDF utilities");
                                             
+                                            // Process the activity data to match the format expected by generateProjectActivityReport
+                                            const processedData = {};
+                                            
+                                            // Group by project
+                                            activityData.forEach(record => {
+                                                const projectId = record.projectId;
+                                                if (!processedData[projectId]) {
+                                                    processedData[projectId] = {
+                                                        projectId,
+                                                        projectName: record.projectName,
+                                                        customerName: customer.Name,
+                                                        totalHours: 0,
+                                                        totalAmount: 0,
+                                                        records: []
+                                                    };
+                                                }
+                                                
+                                                // Create a modified record with numeric hours and amount
+                                                const modifiedRecord = {
+                                                    ...record,
+                                                    hours: record.rawHours,
+                                                    amount: record.rawAmount
+                                                };
+                                                processedData[projectId].records.push(modifiedRecord);
+                                                processedData[projectId].totalAmount += record.rawAmount;
+                                                processedData[projectId].totalHours += record.rawHours;
+                                            });
+                                            
                                             // Generate the report using the activity data
-                                            generateCustomerProjectReport(
-                                                activityData,
-                                                customer.id,
+                                            const fileName = `${customer.Name.replace(/\s+/g, '-').toLowerCase()}-activity-report.pdf`;
+                                            console.log(`Generating report with filename: ${fileName}`);
+                                            
+                                            // Generate the report with options
+                                            generateProjectActivityReport(
+                                                processedData,
                                                 {
                                                     title: `Activity Report: ${customer.Name}`,
                                                     dateRange: activityTimeframe === 'unbilled'
@@ -604,24 +638,89 @@ function CustomerDetails({
                                                         : activityTimeframe === 'lastMonth'
                                                             ? 'Last Month'
                                                             : 'Custom Date Range',
-                                                    fileName: `${customer.Name.replace(/\s+/g, '-').toLowerCase()}-activity-report.pdf`
+                                                    fileName: fileName
                                                 }
                                             ).then(report => {
-                                                // Download the PDF using the utility function
-                                                return downloadPdf(report).then(() => {
-                                                    console.log("PDF report saved");
+                                                console.log("Report generated, preparing to send to FileMaker");
+                                                
+                                                // Get the PDF as bytes and convert to base64
+                                                return report.output('bytes').then(pdfBytes => {
+                                                    // Convert bytes to base64
+                                                    const base64Data = btoa(
+                                                        new Uint8Array(pdfBytes)
+                                                            .reduce((data, byte) => data + String.fromCharCode(byte), '')
+                                                    );
+                                                    
+                                                    // First try to send via email if Mailjet is configured
+                                                    if (isMailjetConfigured()) {
+                                                        console.log("Mailjet is configured, attempting to send email");
+                                                        
+                                                        // Prepare email options
+                                                        const emailOptions = {
+                                                            to: customer.Email || '', // Use customer email if available
+                                                            subject: `Activity Report: ${customer.Name}`,
+                                                            text: `Please find attached the activity report for ${customer.Name}.`,
+                                                            customerName: customer.Name,
+                                                            attachment: {
+                                                                filename: fileName,
+                                                                content: base64Data
+                                                            }
+                                                        };
+                                                        
+                                                        // Send email with attachment
+                                                        return sendEmailWithAttachment(emailOptions).then(result => {
+                                                            if (result.success) {
+                                                                console.log("Email sent successfully");
+                                                                showSuccess("PDF report sent via email");
+                                                                
+                                                                // Re-enable the button after a short delay
+                                                                setTimeout(() => {
+                                                                    exportButton.disabled = false;
+                                                                }, 1000);
+                                                            } else {
+                                                                console.error("Failed to send email:", result.error);
+                                                                
+                                                                // Show confirmation dialog for fallback
+                                                                if (confirm(`Failed to send email: ${result.error}. Would you like to save the report using FileMaker instead?`)) {
+                                                                    // Fallback to FileMaker workflow
+                                                                    sendToFileMaker(base64Data, fileName, customer.id, exportButton);
+                                                                } else {
+                                                                    showError(`Failed to send email: ${result.error}`);
+                                                                    exportButton.disabled = false;
+                                                                }
+                                                            }
+                                                        }).catch(error => {
+                                                            console.error("Error sending email:", error);
+                                                            
+                                                            // Show confirmation dialog for fallback
+                                                            if (confirm(`Error sending email: ${error.message}. Would you like to save the report using FileMaker instead?`)) {
+                                                                // Fallback to FileMaker workflow
+                                                                sendToFileMaker(base64Data, fileName, customer.id, exportButton);
+                                                            } else {
+                                                                showError(`Error sending email: ${error.message}`);
+                                                                exportButton.disabled = false;
+                                                            }
+                                                        });
+                                                    } else {
+                                                        console.log("Mailjet is not configured, using FileMaker workflow");
+                                                        // Use FileMaker workflow directly
+                                                        sendToFileMaker(base64Data, fileName, customer.id, exportButton);
+                                                    }
                                                 });
                                             }).catch(error => {
                                                 console.error("Error generating report:", error);
                                                 showError(`Error generating report: ${error.message}`);
+                                                exportButton.disabled = false;
                                             });
                                         }).catch(error => {
-                                            console.error("Error importing PDF modules:", error);
-                                            showError(`Error importing PDF modules: ${error.message}`);
+                                            console.error("Error importing PDF module:", error);
+                                            showError(`Error importing PDF module: ${error.message}`);
+                                            exportButton.disabled = false;
                                         });
                                     } catch (error) {
                                         console.error("Error generating PDF report:", error);
                                         showError(`Error generating PDF: ${error.message}`);
+                                        exportButton.disabled = false;
                                     }
                                 }}
                                 className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors duration-150"
@@ -696,6 +795,40 @@ function CustomerDetails({
             )}
         </div>
     );
+}
+
+// Helper function to send PDF to FileMaker
+function sendToFileMaker(base64Data, fileName, customerId, exportButton) {
+    // Check if FileMaker is available
+    if (typeof FileMaker === "undefined" || !FileMaker.PerformScript) {
+        console.error("FileMaker object is unavailable");
+        showError("FileMaker object is unavailable");
+        exportButton.disabled = false;
+        return;
+    }
+    
+    try {
+        // Call the FileMaker script with the base64 data and filename
+        const payload = JSON.stringify({
+            name: fileName,
+            base64: base64Data,
+            customerId: customerId,
+            format: "email"
+        });
+        
+        FileMaker.PerformScript("save base64 from JS", payload);
+        console.log("PDF data sent to FileMaker");
+        showSuccess("PDF report sent to FileMaker");
+        
+        // Re-enable the button after a short delay
+        setTimeout(() => {
+            exportButton.disabled = false;
+        }, 1000);
+    } catch (error) {
+        console.error("Error sending PDF to FileMaker:", error);
+        showError(`Error sending PDF to FileMaker: ${error.message}`);
+        exportButton.disabled = false;
+    }
 }
 
 CustomerDetails.propTypes = {

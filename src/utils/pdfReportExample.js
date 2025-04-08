@@ -1,6 +1,6 @@
 /**
  * PDF Report Generation Example
- * 
+ *
  * This file demonstrates how to use the PDF report generation module.
  */
 
@@ -8,8 +8,9 @@ import { generateProjectActivityReport, generateDetailedProjectReport } from './
 
 /**
  * Example function demonstrating how to generate a PDF report from project activity data
+ * @returns {Promise<Object>} Object containing the generated reports
  */
-export function generateExampleReport() {
+export async function generateExampleReport() {
   // Sample project activity data grouped by project
   const sampleProjectData = {
     'project-123': {
@@ -81,7 +82,7 @@ export function generateExampleReport() {
   };
 
   // Generate a multi-project report
-  const multiProjectReport = generateProjectActivityReport(sampleProjectData, {
+  const multiProjectReport = await generateProjectActivityReport(sampleProjectData, {
     title: 'Monthly Project Activity Report',
     dateRange: 'March 1, 2025 - March 31, 2025',
     fileName: 'monthly-project-report.pdf'
@@ -89,7 +90,7 @@ export function generateExampleReport() {
 
   // Generate a detailed report for a single project
   const singleProject = sampleProjectData['project-123'];
-  const detailedReport = generateDetailedProjectReport(singleProject, {
+  const detailedReport = await generateDetailedProjectReport(singleProject, {
     dateRange: 'March 1, 2025 - March 31, 2025',
     includeBilled: true,
     includeUnbilled: true,
@@ -105,12 +106,12 @@ export function generateExampleReport() {
 
 /**
  * Example of how to use the report generation with real data from the application
- * 
+ *
  * @param {Object} projectsData - Projects data from the application
  * @param {string} dateRange - Date range for the report
- * @returns {Object} Generated PDF report
+ * @returns {Promise<Object>} Generated PDF report
  */
-export function generateReportFromAppData(projectsData, dateRange) {
+export async function generateReportFromAppData(projectsData, dateRange) {
   // Format the data for the report generator
   const formattedData = {};
   
@@ -136,7 +137,7 @@ export function generateReportFromAppData(projectsData, dateRange) {
   });
   
   // Generate the report
-  return generateProjectActivityReport(formattedData, {
+  return await generateProjectActivityReport(formattedData, {
     title: 'Project Activity Report',
     dateRange: dateRange,
     fileName: 'project-activity-report.pdf'
@@ -145,12 +146,12 @@ export function generateReportFromAppData(projectsData, dateRange) {
 
 /**
  * Example of how to integrate with the financial service
- * 
+ *
  * @param {Array} financialRecords - Financial records from the financial service
  * @param {string} dateRange - Date range for the report
- * @returns {Object} Generated PDF report
+ * @returns {Promise<Object>} Generated PDF report
  */
-export function generateReportFromFinancialRecords(financialRecords, dateRange) {
+export async function generateReportFromFinancialRecords(financialRecords, dateRange) {
   // Import the groupRecordsByProject function from the financial service
   // This is just for demonstration - in a real implementation, you would
   // import this function from the financial service
@@ -160,7 +161,7 @@ export function generateReportFromFinancialRecords(financialRecords, dateRange) 
   const groupedByProject = groupRecordsByProject(financialRecords);
   
   // Generate the report
-  return generateProjectActivityReport(groupedByProject, {
+  return await generateProjectActivityReport(groupedByProject, {
     title: 'Financial Activity Report',
     dateRange: dateRange,
     fileName: 'financial-activity-report.pdf'

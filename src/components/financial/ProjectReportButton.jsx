@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { generateCustomerProjectReport, generateSingleProjectReport } from '../../utils/pdfReportService';
+import { generateCustomerProjectReport, generateSingleProjectReport } from '../../services/pdfReportService';
 import { downloadPdf } from '../../utils/pdfUtils';
 
 /**
@@ -31,6 +31,7 @@ function ProjectReportButton({
     if (loading || !financialRecords) return;
     
     setLoading(true);
+    console.log('Starting PDF report generation process');
     
     try {
       // Prepare the financial records in the format expected by the report generator
@@ -40,10 +41,17 @@ function ProjectReportButton({
         }
       };
       
+      console.log('Financial records prepared for report', {
+        recordCount: financialRecords.length,
+        customerId,
+        projectId
+      });
+      
       let report;
       
       // Generate either a single project report or a customer projects report
       if (projectId) {
+        console.log(`Generating single project report for project ID: ${projectId}`);
         report = await generateSingleProjectReport(
           formattedRecords,
           projectId,
@@ -54,6 +62,7 @@ function ProjectReportButton({
           }
         );
       } else {
+        console.log(`Generating customer projects report for customer ID: ${customerId}`);
         report = await generateCustomerProjectReport(
           formattedRecords,
           customerId,
@@ -64,8 +73,16 @@ function ProjectReportButton({
         );
       }
       
+      console.log('PDF report generated successfully', {
+        hasBlob: !!report.blob,
+        fileName: report.fileName,
+        blobType: report.blob?.type
+      });
+      
       // Download the PDF using the utility function
+      console.log('Initiating PDF download');
       await downloadPdf(report);
+      console.log('PDF download completed');
       
       // Call the success callback
       if (onSuccess) {

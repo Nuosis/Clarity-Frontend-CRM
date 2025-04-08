@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>PDF Test with FileMaker Bypass</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      button {
+        background-color: #4CAF50;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 20px 0;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      h1 {
+        color: #333;
+      }
+      .container {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      #status {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .success {
+        background-color: #dff0d8;
+        color: #3c763d;
+      }
+      .error {
+        background-color: #f2dede;
+        color: #a94442;
+      }
+      pre {
+        background-color: #f8f8f8;
+        padding: 10px;
+        border-radius: 4px;
+        overflow: auto;
+        max-height: 200px;
+      }
+    </style>
+    <!-- Import pdf-lib directly -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>PDF Test with FileMaker Bypass</h1>
+      <p>This page tests the application's PDF generation code with a FileMaker bypass to ensure it works in a client-side environment.</p>
+      
+      <!-- Button to trigger PDF generation and download -->
+      <button id="generate-pdf">Generate PDF</button>
+      
+      <!-- Status display area -->
+      <div id="status"></div>
+      
+      <!-- Log display area -->
+      <h3>Console Output:</h3>
+      <pre id="log"></pre>
+    </div>
+    
+    <script>
+      // Set up logging to display in the page
+      const logElement = document.getElementById('log');
+      const originalConsoleLog = console.log;
+      const originalConsoleError = console.error;
+      
+      console.log = function() {
+        const args = Array.from(arguments);
+        originalConsoleLog.apply(console, args);
+        logElement.textContent += args.map(arg => 
+          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ') + '\n';
+        logElement.scrollTop = logElement.scrollHeight;
+      };
+      
+      console.error = function() {
+        const args = Array.from(arguments);
+        originalConsoleError.apply(console, args);
+        logElement.textContent += 'ERROR: ' + args.map(arg => 
+          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ') + '\n';
+        logElement.scrollTop = logElement.scrollHeight;
+      };
+      
+      // Mock FileMaker object to prevent connection attempts
+      window.FileMaker = {
+        isAvailable: true,
+        PerformScript: function(scriptName, param) {
+          console.log(`Mock FileMaker.PerformScript called: ${scriptName}`, param);
+          return JSON.stringify({status: "success", data: []});
+        }
+      };
+      
+      // Mock formatCurrency function from services
+      const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD'
+        }).format(amount);
+      };
+      
+      // PDF Utilities Module
+      const createPdf = async (options = {}) => {
+        console.log('Creating PDF with options:', options);
+        
+        // Create a new PDF document
+        const pdfDoc = await PDFLib.PDFDocument.create();
+        
+        // Set default options
+        const defaultOptions = {
+          orientation: 'portrait',
+          format: 'a4'
+        };
+        
+        const mergedOptions = { ...defaultOptions, ...options };
+        
+        // Set up page size based on format and orientation
+        let pageSize = PDFLib.PageSizes.A4;
+        if (mergedOptions.format === 'letter') {
+          pageSize = PDFLib.PageSizes.Letter;
+        }
+        
+        // Adjust for landscape orientation
+        if (mergedOptions.orientation === 'landscape') {
+          pageSize = [pageSize[1], pageSize[0]]; // Swap width and height
+        }
+        
+        // Add the first page
+        pdfDoc.addPage(pageSize);
+        
+        // Embed standard fonts
+        const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+        const helveticaBoldFont = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+        
+        // Return document with helper methods
+        return {
+          pdfDoc,
+          pageSize,
+          fonts: {
+            helvetica: helveticaFont,
+            helveticaBold: helveticaBoldFont
+          },
+          currentPage: 0,
+          
+          // Helper method to add a new page
+          addPage() {
+            pdfDoc.addPage(pageSize);
+            this.currentPage = pdfDoc.getPageCount() - 1;
+            return this.currentPage;
+          },
+          
+          // Helper method to get the current page
+          getPage(pageIndex = null) {
+            const index = pageIndex !== null ? pageIndex : this.currentPage;
+            return pdfDoc.getPage(index);
+          },
+          
+          // Helper method to draw text
+          drawText(text, x, y, options = {}) {
+            const page = this.getPage();
+            const {
+              font = 'helvetica',
+              size = 12,
+              color = PDFLib.rgb(0, 0, 0),
+              align = 'left'
+            } = options;
+            
+            const fontObj = this.fonts[font] || this.fonts.helvetica;
+            
+            // Handle text alignment
+            let xPos = x;
+            if (align === 'center') {
+              const textWidth = fontObj.widthOfTextAtSize(text, size);
+              xPos = x - (textWidth / 2);
+            } else if (align === 'right') {
+              const textWidth = fontObj.widthOfTextAtSize(text, size);
+              xPos = x - textWidth;
+            }
+            
+            page.drawText(text, {
+              x: xPos,
+              y: y,
+              size: size,
+              font: fontObj,
+              color: color
+            });
+          },
+          
+          // Helper method to draw a line
+          drawLine(x1, y1, x2, y2, options = {}) {
+            const page = this.getPage();
+            const {
+              thickness = 1,
+              color = PDFLib.rgb(0, 0, 0)
+            } = options;
+            
+            page.drawLine({
+              start: { x: x1, y: y1 },
+              end: { x: x2, y: y2 },
+              thickness,
+              color
+            });
+          },
+          
+          // Helper method to draw a rectangle
+          drawRectangle(x, y, width, height, options = {}) {
+            const page = this.getPage();
+            const {
+              borderColor = PDFLib.rgb(0, 0, 0),
+              borderWidth = 1,
+              fillColor = null
+            } = options;
+            
+            if (fillColor) {
+              page.drawRectangle({
+                x,
+                y,
+                width,
+                height,
+                color: fillColor
+              });
+            }
+            
+            if (borderWidth > 0) {
+              // Draw border as four lines
+              page.drawLine({
+                start: { x, y },
+                end: { x: x + width, y },
+                thickness: borderWidth,
+                color: borderColor
+              });
+              
+              page.drawLine({
+                start: { x: x + width, y },
+                end: { x: x + width, y: y + height },
+                thickness: borderWidth,
+                color: borderColor
+              });
+              
+              page.drawLine({
+                start: { x: x + width, y: y + height },
+                end: { x, y: y + height },
+                thickness: borderWidth,
+                color: borderColor
+              });
+              
+              page.drawLine({
+                start: { x, y: y + height },
+                end: { x, y },
+                thickness: borderWidth,
+                color: borderColor
+              });
+            }
+          },
+          
+          // Helper method to save the PDF
+          async save(fileName = 'document.pdf') {
+            const pdfBytes = await pdfDoc.save();
+            return {
+              blob: new Blob([pdfBytes], { type: 'application/pdf' }),
+              buffer: pdfBytes.buffer,
+              fileName: fileName,
+              bytes: pdfBytes
+            };
+          }
+        };
+      };
+      
+      const downloadPdf = (pdfData) => {
+        return new Promise((resolve, reject) => {
+          try {
+            console.log('Starting PDF download process', {
+              hasBlob: !!pdfData.blob,
+              fileName: pdfData.fileName,
+              blobType: pdfData.blob?.type
+            });
+            
+            // Ensure we have a proper blob with the correct MIME type
+            let blob = pdfData.blob;
+            
+            // If the blob doesn't have the correct type, create a new one
+            if (!blob.type || blob.type !== 'application/pdf') {
+              console.log('Creating new blob with correct MIME type');
+              blob = new Blob([blob], { type: 'application/pdf' });
+            }
+            
+            // Ensure filename has .pdf extension
+            const fileName = pdfData.fileName || 'document.pdf';
+            const fileNameWithExt = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+            console.log(`Using filename: ${fileNameWithExt}`);
+            
+            // Create a URL for the blob
+            const url = URL.createObjectURL(blob);
+            
+            // Create a link with the URL
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileNameWithExt;
+            
+            // Append to document, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            
+            // Clean up
+            setTimeout(() => {
+              URL.revokeObjectURL(url);
+              document.body.removeChild(link);
+              console.log('Download process completed successfully');
+              resolve(true);
+            }, 100);
+          } catch (error) {
+            console.error('Error downloading PDF:', error);
+            reject(error);
+          }
+        });
+      };
+      
+      // Sample project data for testing
+      const sampleProjectData = {
+        "project-1": {
+          projectId: "project-1",
+          projectName: "Test Project",
+          customerName: "Test Customer",
+          totalHours: 10,
+          totalAmount: 1000,
+          records: [
+            {
+              id: "record-1",
+              date: "2025-04-07",
+              hours: 2.5,
+              amount: 250,
+              billed: false,
+              description: "Test work item"
+            },
+            {
+              id: "record-2",
+              date: "2025-04-08",
+              hours: 3.5,
+              amount: 350,
+              billed: true,
+              description: "Another test work item"
+            }
+          ]
+        }
+      };
+      
+      // Function to update status
+      function updateStatus(message, isError = false) {
+        const statusElement = document.getElementById('status');
+        statusElement.textContent = message;
+        statusElement.className = isError ? 'error' : 'success';
+      }
+      
+      // Function to generate PDF using the application's code
+      async function generatePDF() {
+        try {
+          updateStatus("Generating PDF...");
+          
+          // Import the PDF generation module
+          const { generateProjectActivityReport } = await import('/src/utils/pdfReport.js');
+          
+          console.log("Generating PDF report with sample data");
+          
+          // Generate the PDF report
+          const report = await generateProjectActivityReport(sampleProjectData);
+          
+          console.log("PDF generated successfully");
+          
+          // Trigger the save method that creates a download link
+          await report.save();
+          
+          console.log("PDF download initiated");
+          updateStatus("PDF generated and downloaded successfully!");
+        } catch (error) {
+          console.error("Error generating PDF:", error);
+          updateStatus(`Error generating PDF: ${error.message}`, true);
+        }
+      }
+      
+      // Add click event listener to the button
+      document.getElementById('generate-pdf').addEventListener('click', generatePDF);
+    </script>
+  </body>
+</html>

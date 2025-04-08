@@ -11,11 +11,11 @@ export {
   generateDetailedProjectReport
 } from './pdfReport';
 
-// Export PDF report test functions
+// Export PDF report service functions
 export {
   generateCustomerProjectReport,
   generateSingleProjectReport
-} from './pdfReportTest';
+} from '../services/pdfReportService';
 
 // Export PDF report example functions
 export {

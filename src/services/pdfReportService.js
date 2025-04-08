@@ -4,13 +4,8 @@
  * This file provides service functions to generate PDF reports using data
  * from any context, without depending on specific data sources.
  */
-import { jsPDF } from 'jspdf';
-import { generateProjectActivityReport, generateDetailedProjectReport } from './pdfReport';
-import { ensureAutoTableAvailable, downloadPdf } from './pdfUtils';
-
-// Ensure autoTable is available on the jsPDF prototype
-ensureAutoTableAvailable();
-import { generateProjectActivityReport, generateDetailedProjectReport } from './pdfReport';
+import { generateProjectActivityReport, generateDetailedProjectReport } from '../utils/pdfReport';
+import { downloadPdf } from '../utils/pdfUtils';
 
 /**
  * Generates a PDF report from activity records for a specific customer
@@ -18,7 +13,7 @@ import { generateProjectActivityReport, generateDetailedProjectReport } from './
  * @param {Array|Object} records - Records from any source (can be raw API response or processed records)
  * @param {string} customerId - Customer ID to filter records (optional)
  * @param {Object} options - Report generation options
- * @returns {Object} Generated PDF report
+ * @returns {Promise<Object>} Generated PDF report
  */
 export async function generateCustomerProjectReport(records, customerId, options = {}) {
   try {
@@ -42,7 +37,7 @@ export async function generateCustomerProjectReport(records, customerId, options
     };
     
     // Generate the report
-    return generateProjectActivityReport(groupedByProject, { ...defaultOptions, ...options });
+    return await generateProjectActivityReport(groupedByProject, { ...defaultOptions, ...options });
   } catch (error) {
     console.error('Error generating customer project report:', error);
     throw new Error(`Failed to generate PDF report: ${error.message}`);
@@ -135,7 +130,7 @@ function groupByProject(records, customerId) {
  * @param {Array|Object} records - Records from any source (can be raw API response or processed records)
  * @param {string} projectId - Project ID to generate report for
  * @param {Object} options - Report generation options
- * @returns {Object} Generated PDF report
+ * @returns {Promise<Object>} Generated PDF report
  */
 export async function generateSingleProjectReport(records, projectId, options = {}) {
   try {
@@ -150,7 +145,7 @@ export async function generateSingleProjectReport(records, projectId, options = 
     const projectRecords = processedRecords.filter(record => record.projectId === projectId);
     
     if (projectRecords.length === 0) {
-      throw new Error(`No records found for project ID: ${projectId}`);
+      throw new Error(`Failed to generate PDF report: No records found for project ID: ${projectId}`);
     }
     
     // Get project details from the first record
@@ -178,7 +173,7 @@ export async function generateSingleProjectReport(records, projectId, options = 
     };
     
     // Generate the detailed report
-    return generateDetailedProjectReport(projectData, { ...defaultOptions, ...options });
+    return await generateDetailedProjectReport(projectData, { ...defaultOptions, ...options });
   } catch (error) {
     console.error('Error generating single project report:', error);
     throw new Error(`Failed to generate PDF report: ${error.message}`);
@@ -187,7 +182,7 @@ export async function generateSingleProjectReport(records, projectId, options = 
 
 /**
  * Determines the date range from a set of financial records
- * 
+ *
  * @param {Array} records - Processed financial records
  * @returns {string} Formatted date range string
  */
@@ -220,31 +215,31 @@ function getDateRangeFromRecords(records) {
  *
  * // Example with financial records
  * import { useFinancialRecords } from '../hooks/useFinancialRecords';
- * import { generateCustomerProjectReport } from '../utils/pdfReportService';
+ * import { generateCustomerProjectReport } from '../services/pdfReportService';
  *
  * function FinancialReportButton({ customerId }) {
  *   const { financialRecords, loading } = useFinancialRecords();
  *
  *   const handleGenerateReport = async () => {
  *     if (loading || !financialRecords) return;
- *     
+ *
  *     try {
  *       const report = await generateCustomerProjectReport(
  *         { response: { data: financialRecords } },
  *         customerId,
  *         { includeBilled: true, includeUnbilled: true }
  *       );
- *       
+ *
  *       // Save the PDF file
- *       report.save();
+ *       await report.save();
  *     } catch (error) {
  *       console.error('Error generating report:', error);
  *       // Show error message to user
  *     }
  *   };
- *   
+ *
  *   return (
- *     <button 
+ *     <button
  *       onClick={handleGenerateReport}
  *       disabled={loading}
  *       className="px-4 py-2 bg-primary text-white rounded-md"
@@ -255,7 +250,7 @@ function getDateRangeFromRecords(records) {
  * }
  *
  * // Example with customer activity records
- * import { generateCustomerProjectReport } from '../utils/pdfReportService';
+ * import { generateCustomerProjectReport } from '../services/pdfReportService';
  *
  * function ActivityReportButton({ customerId, activityData }) {
  *   const handleGenerateReport = async () => {
@@ -273,7 +268,7 @@ function getDateRangeFromRecords(records) {
  *       );
  *
  *       // Save the PDF file
- *       report.save();
+ *       await report.save();
  *     } catch (error) {
  *       console.error('Error generating activity report:', error);
  *       // Show error message to user
