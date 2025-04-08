@@ -1,12 +1,12 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
-import { useAppStateOperations } from '../../context/AppStateContext';
+import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
 import { useProject } from '../../hooks/useProject';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { initializeQuickBooks } from '../../api/fileMaker';
 import { useSnackBar } from '../../context/SnackBarContext';
-import { sendEmailWithAttachment, isMailjetConfigured } from '../../services/mailjetService';
+import { sendEmailWithAttachment, isMailjetConfigured, createHtmlEmailTemplate } from '../../services/mailjetService';
 import {
     fetchCustomerActivityData,
     processActivityData,
@@ -122,6 +122,11 @@ function CustomerDetails({
     const { setLoading } = useAppStateOperations();
     const { projectRecords } = useProject();
     const { showError, showSuccess } = useSnackBar();
+    const { user } = useAppState(); // Move useAppState hook to the top level
+    
+    // Log user data at component initialization to validate our fix
+    console.log("[DEBUG] CustomerDetails - User data from top-level hook:", user);
+    
     const [isProcessingQB, setIsProcessingQB] = useState(false);
     const [showNewProjectInput, setShowNewProjectInput] = useState(false);
     const [showActivityReport, setShowActivityReport] = useState(false);
@@ -641,7 +646,7 @@ function CustomerDetails({
                                                     fileName: fileName
                                                 }
                                             ).then(report => {
-                                                console.log("Report generated, preparing to send to FileMaker");
+                                                console.log("Report generated, preparing to send");
                                                 
                                                 // Get the PDF as bytes and convert to base64
                                                 return report.output('bytes').then(pdfBytes => {
@@ -656,11 +661,24 @@ function CustomerDetails({
                                                         console.log("Mailjet is configured, attempting to send email");
                                                         
                                                         // Prepare email options
+                                                        // Use the user data from the top-level hook
+                                                        console.log("[DEBUG] Export Report - Using user data:", user);
+                                                        
+                                                        // Create HTML content using the template function
+                                                        const htmlContent = createHtmlEmailTemplate({
+                                                            title: `Activity Report: ${customer.Name}`,
+                                                            mainText: `Please find attached the activity report for ${customer.Name}.\n\nThis report contains a summary of all project activities for the selected time period.`,
+                                                            footerText: "This report was generated automatically by the Clarity CRM system."
+                                                        });
+                                                        
                                                         const emailOptions = {
                                                             to: customer.Email || '', // Use customer email if available
                                                             subject: `Activity Report: ${customer.Name}`,
-                                                            text: `Please find attached the activity report for ${customer.Name}.`,
+                                                            text: `Please find attached the activity report for ${customer.Name}.\n\nThis report contains a summary of all project activities for the selected time period.`,
+                                                            html: htmlContent,
                                                             customerName: customer.Name,
+                                                            senderName: user?.userName || user?.name || 'Charlie - AI Assistant',
+                                                            senderEmail: user?.userEmail || user?.email || 'noreply@claritybusinesssolutions.ca',
                                                             attachment: {
                                                                 filename: fileName,
                                                                 content: base64Data
@@ -683,7 +701,7 @@ function CustomerDetails({
                                                                 // Show confirmation dialog for fallback
                                                                 if (confirm(`Failed to send email: ${result.error}. Would you like to save the report using FileMaker instead?`)) {
                                                                     // Fallback to FileMaker workflow
-                                                                    sendToFileMaker(base64Data, fileName, customer.id, exportButton);
+                                                                    sendToFileMaker(base64Data, fileName, customer.id, exportButton, showError, showSuccess);
                                                                 } else {
                                                                     showError(`Failed to send email: ${result.error}`);
                                                                     exportButton.disabled = false;
@@ -695,7 +713,7 @@ function CustomerDetails({
                                                             // Show confirmation dialog for fallback
                                                             if (confirm(`Error sending email: ${error.message}. Would you like to save the report using FileMaker instead?`)) {
                                                                 // Fallback to FileMaker workflow
-                                                                sendToFileMaker(base64Data, fileName, customer.id, exportButton);
+                                                                sendToFileMaker(base64Data, fileName, customer.id, exportButton, showError, showSuccess);
                                                             } else {
                                                                 showError(`Error sending email: ${error.message}`);
                                                                 exportButton.disabled = false;
@@ -704,7 +722,7 @@ function CustomerDetails({
                                                     } else {
                                                         console.log("Mailjet is not configured, using FileMaker workflow");
                                                         // Use FileMaker workflow directly
-                                                        sendToFileMaker(base64Data, fileName, customer.id, exportButton);
+                                                        sendToFileMaker(base64Data, fileName, customer.id, exportButton, showError, showSuccess);
                                                     }
                                                 });
                                             }).catch(error => {
@@ -798,7 +816,8 @@ function CustomerDetails({
 }
 
 // Helper function to send PDF to FileMaker
-function sendToFileMaker(base64Data, fileName, customerId, exportButton) {
+// Pass showError and showSuccess as parameters to avoid using hooks inside this function
+function sendToFileMaker(base64Data, fileName, customerId, exportButton, showError, showSuccess) {
     // Check if FileMaker is available
     if (typeof FileMaker === "undefined" || !FileMaker.PerformScript) {
         console.error("FileMaker object is unavailable");
@@ -813,7 +832,13 @@ function sendToFileMaker(base64Data, fileName, customerId, exportButton) {
             name: fileName,
             base64: base64Data,
             customerId: customerId,
-            format: "email"
+            format: "email",
+            action: "create" // Add required action key for FMGopher
+        });
+        
+        console.log("[DEBUG] Sending payload to FileMaker:", {
+            scriptName: "save base64 from JS",
+            payloadKeys: Object.keys(JSON.parse(payload))
         });
         
         FileMaker.PerformScript("save base64 from JS", payload);
