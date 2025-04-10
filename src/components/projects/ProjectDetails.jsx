@@ -502,26 +502,69 @@ function ProjectDetails({
                                 submitLabel="Create"
                                 onSubmit={async (url) => {
                                     try {
-                                        const result = await handleLinkCreate(project.recordId, url);
+                                        // Create a temporary link object with a temporary ID
+                                        const tempLink = {
+                                            id: `temp-${Date.now()}`,
+                                            url: url.trim(),
+                                            title: new URL(url.trim()).hostname
+                                        };
+                                        
+                                        // Optimistically update the UI by adding the new link to the local project state
+                                        const updatedProject = {
+                                            ...localProject || project,
+                                            links: [...(localProject?.links || project?.links || []), tempLink]
+                                        };
+                                        setLocalProject(updatedProject);
+                                        
+                                        // Hide the input form
+                                        setShowNewLinkInput(false);
+                                        
+                                        // Make the actual API call
+                                        const result = await handleLinkCreate(project.__ID, url);
+                                        
                                         if (result) {
-                                            await loadProjectDetails(project.recordId);
-                                            setShowNewLinkInput(false);
+                                            // On success, refresh the project details to get the actual link data
+                                            await loadProjectDetails(project.__ID);
+                                        } else {
+                                            // If the API call failed, revert the optimistic update
+                                            const revertedLinks = (localProject?.links || project?.links || [])
+                                                .filter(link => link.id !== tempLink.id);
+                                            
+                                            setLocalProject({
+                                                ...localProject || project,
+                                                links: revertedLinks
+                                            });
                                         }
                                     } catch (error) {
                                         console.error('Error creating link:', error);
+                                        
+                                        // If there's an error, revert the optimistic update
+                                        if (localProject?.links) {
+                                            const revertedLinks = localProject.links
+                                                .filter(link => !link.id.startsWith('temp-'));
+                                            
+                                            setLocalProject({
+                                                ...localProject,
+                                                links: revertedLinks
+                                            });
+                                        }
                                     }
                                 }}
                                 onCancel={() => setShowNewLinkInput(false)}
                             />
                         </div>
                     )}
-                    {project.links?.length > 0 && (
+                    {(localProject?.links || project?.links)?.length > 0 ? (
                         <ResourceGrid
-                            items={project.links}
+                            items={localProject?.links || project?.links}
                             renderItem={renderLink}
                             darkMode={darkMode}
                             emptyMessage="No links added yet"
                         />
+                    ) : (
+                        <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            No links added yet
+                        </div>
                     )}
                 </div>
             )}
