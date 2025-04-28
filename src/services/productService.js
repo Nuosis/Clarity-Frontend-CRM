@@ -34,20 +34,38 @@ export async function fetchProductsByOrganization(organizationId) {
       }
     });
 
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch products');
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : []
+    };
+
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to fetch products');
     }
 
-    // Process the data to handle any stringified JSON
-    const processedProducts = result.data.map(product => {
-      // Parse any stringified fields if needed
+    // Handle null or undefined data gracefully
+    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
+      console.log(`No products found for organization: ${organizationId}`);
       return {
-        ...product,
-        id: parseStringifiedJson(product.id),
-        organization_id: parseStringifiedJson(product.organization_id),
-        price: typeof product.price === 'string' ? parseFloat(product.price) : product.price
+        success: true,
+        data: []
       };
-    });
+    }
+
+    // Ensure price is always a number for each product
+    const processedProducts = processedResult.data.map(product => {
+      if (!product) return null;
+      
+      // Convert price to number if it's a string
+      if (product.price !== undefined && product.price !== null) {
+        product.price = typeof product.price === 'string'
+          ? parseFloat(product.price)
+          : product.price;
+      }
+      
+      return product;
+    }).filter(product => product !== null); // Filter out null products
 
     return {
       success: true,
@@ -84,13 +102,22 @@ export async function createProduct(productData) {
 
     const result = await insert('products', productData);
     
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to create product');
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : null
+    };
+    
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to create product');
     }
 
+    // Return the processed data
     return {
       success: true,
-      data: result.data[0]
+      data: Array.isArray(processedResult.data) && processedResult.data.length > 0
+        ? processedResult.data[0]
+        : null
     };
   } catch (error) {
     console.error('Error creating product:', error);
@@ -123,13 +150,22 @@ export async function updateProduct(productId, productData) {
 
     const result = await update('products', productData, { id: productId });
     
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to update product');
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : null
+    };
+    
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to update product');
     }
 
+    // Return the processed data
     return {
       success: true,
-      data: result.data[0]
+      data: Array.isArray(processedResult.data) && processedResult.data.length > 0
+        ? processedResult.data[0]
+        : null
     };
   } catch (error) {
     console.error('Error updating product:', error);
@@ -153,12 +189,20 @@ export async function deleteProduct(productId) {
 
     const result = await remove('products', { id: productId });
     
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to delete product');
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : null
+    };
+    
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to delete product');
     }
 
+    // Return the processed data
     return {
-      success: true
+      success: true,
+      data: processedResult.data
     };
   } catch (error) {
     console.error('Error deleting product:', error);
@@ -201,15 +245,18 @@ export function validateProductData(data) {
  * @returns {Object} - Formatted product data
  */
 export function formatProductForDisplay(product) {
+  // Process any stringified JSON in the product data first
+  const processedProduct = processJsonData(product);
+  
   return {
-    id: product.id,
-    name: product.name,
-    price: typeof product.price === 'number' 
-      ? product.price.toFixed(2) 
-      : parseFloat(product.price).toFixed(2),
-    description: product.description || 'No description available',
-    created: new Date(product.created_at).toLocaleDateString(),
-    updated: new Date(product.updated_at).toLocaleDateString()
+    id: processedProduct.id,
+    name: processedProduct.name,
+    price: typeof processedProduct.price === 'number'
+      ? processedProduct.price.toFixed(2)
+      : parseFloat(processedProduct.price).toFixed(2),
+    description: processedProduct.description || 'No description available',
+    created: new Date(processedProduct.created_at).toLocaleDateString(),
+    updated: new Date(processedProduct.updated_at).toLocaleDateString()
   };
 }
 
@@ -224,9 +271,12 @@ function parseStringifiedJson(value) {
   }
   
   try {
-    // Check if the string starts with '{' or '[' indicating it might be JSON
-    if (value.startsWith('{') || value.startsWith('[')) {
-      return JSON.parse(value);
+    // Check if the string looks like it might be JSON
+    // Trim whitespace and check if it starts with { or [ and ends with } or ]
+    const trimmed = value.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      return JSON.parse(trimmed);
     }
     return value;
   } catch (e) {
@@ -236,12 +286,57 @@ function parseStringifiedJson(value) {
 }
 
 /**
+ * Recursively processes an object or array to parse any stringified JSON values
+ * @param {any} data - The data to process
+ * @returns {any} - Processed data with parsed JSON values
+ */
+function processJsonData(data) {
+  // Handle null or undefined
+  if (data == null) {
+    return Array.isArray(data) ? [] : data;
+  }
+  
+  // Parse the value if it's a string that might be JSON
+  if (typeof data === 'string') {
+    return parseStringifiedJson(data);
+  }
+  
+  // Handle arrays - process each item and filter out nulls
+  if (Array.isArray(data)) {
+    return data
+      .map(item => item != null ? processJsonData(item) : null)
+      .filter(item => item != null);
+  }
+  
+  // Handle objects - process each property
+  if (typeof data === 'object') {
+    const result = {};
+    for (const key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        const value = processJsonData(data[key]);
+        // Only add non-null values to the result
+        if (value != null) {
+          result[key] = value;
+        }
+      }
+    }
+    return result;
+  }
+  
+  // Return primitives as is
+  return data;
+}
+
+/**
  * Groups products by price range
  * @param {Array} products - Array of product records
  * @returns {Object} - Grouped products by price range
  */
 export function groupProductsByPriceRange(products) {
-  return products.reduce((groups, product) => {
+  // Process any stringified JSON in the products array first
+  const processedProducts = Array.isArray(products) ? processJsonData(products) : [];
+  
+  return processedProducts.reduce((groups, product) => {
     const price = typeof product.price === 'number' ? product.price : parseFloat(product.price);
     
     if (price < 50) {
@@ -262,7 +357,10 @@ export function groupProductsByPriceRange(products) {
  * @returns {Object} - Product statistics
  */
 export function calculateProductStats(products) {
-  if (!products || products.length === 0) {
+  // Process any stringified JSON in the products array first
+  const processedProducts = Array.isArray(products) ? processJsonData(products) : [];
+  
+  if (!processedProducts || processedProducts.length === 0) {
     return {
       total: 0,
       averagePrice: 0,
@@ -271,7 +369,7 @@ export function calculateProductStats(products) {
     };
   }
 
-  const prices = products.map(product => 
+  const prices = processedProducts.map(product =>
     typeof product.price === 'number' ? product.price : parseFloat(product.price)
   );
   
@@ -292,8 +390,12 @@ export function calculateProductStats(products) {
  * @returns {Promise<Object>} - Object containing success status and products data
  */
 export async function loadOrganizationProducts(organizationId, setProducts, setLoading, setError) {
+  // Handle null or undefined organizationId gracefully
   if (!organizationId) {
-    console.error('Cannot load products: Organization ID is missing');
+    console.log('Cannot load products: Organization ID is missing or null');
+    if (setProducts) setProducts([]);
+    if (setError) setError('Organization ID is required');
+    if (setLoading) setLoading(false);
     return {
       success: false,
       error: 'Organization ID is required',
@@ -302,7 +404,7 @@ export async function loadOrganizationProducts(organizationId, setProducts, setL
   }
 
   try {
-    setLoading(true);
+    if (setLoading) setLoading(true);
     
     const result = await fetchProductsByOrganization(organizationId);
     
@@ -310,13 +412,17 @@ export async function loadOrganizationProducts(organizationId, setProducts, setL
       throw new Error(result.error || 'Failed to load products');
     }
     
-    // Update the app state with the products
-    setProducts(result.data);
-    setLoading(false);
+    // The data is already processed by fetchProductsByOrganization
+    const productsData = result.data || [];
     
+    // Update the app state with the products if setProducts function is provided
+    if (setProducts) setProducts(productsData);
+    if (setLoading) setLoading(false);
+    
+    // Return the already processed data
     return {
       success: true,
-      data: result.data
+      data: productsData
     };
   } catch (error) {
     console.error('Error loading products:', error);

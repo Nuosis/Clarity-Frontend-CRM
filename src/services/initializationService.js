@@ -1,6 +1,7 @@
 import { fetchDataFromFileMaker } from '../api/fileMaker';
 import { query, adminQuery } from './supabaseService';
 import { loadOrganizationProducts } from './productService';
+// Note: We don't directly import useProducts here since hooks can only be used in React components
 
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff delays in ms
 
@@ -176,6 +177,17 @@ class InitializationService {
      * @param {Function} setError - Function to update the error state
      * @returns {Promise<Object>} - Object containing success status and products data
      */
+    /**
+     * Loads products for the current user's organization
+     * This method is kept for backward compatibility
+     * New components should use the useProducts hook directly
+     *
+     * @param {string} organizationId - The organization ID to load products for
+     * @param {Function} setProducts - Function to update the products state
+     * @param {Function} setLoading - Function to update the loading state
+     * @param {Function} setError - Function to update the error state
+     * @returns {Promise<Object>} - Object containing success status and products data
+     */
     async loadProducts(organizationId, setProducts, setLoading, setError) {
         this.currentPhase = 'loading_products';
         try {
@@ -189,6 +201,8 @@ class InitializationService {
             }
 
             console.log(`Loading products for organization: ${organizationId}`);
+            // The useProducts hook will handle this more gracefully in React components,
+            // but we keep this method for backward compatibility
             return await loadOrganizationProducts(organizationId, setProducts, setLoading, setError);
         } catch (error) {
             console.error('Error loading products:', error);
