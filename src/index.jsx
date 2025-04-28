@@ -5,7 +5,7 @@ import Sidebar from './components/layout/Sidebar';
 import MainContent from './components/MainContent';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useTheme } from './components/layout/AppLayout';
-import { useCustomer, useProject, useTask, useFileMakerBridge } from './hooks';
+import { useCustomer, useProject, useTask, useFileMakerBridge, useProducts } from './hooks';
 import { TeamProvider, useTeamContext } from './context/TeamContext';
 import { initializationService } from './services/initializationService';
 import { loadingStateManager, useGlobalLoadingState } from './services/loadingStateManager';
@@ -87,6 +87,7 @@ function AppContent() {
         handleTimerAdjust,
         clearSelectedTask
     } = useTask(appState.selectedProject?.id);
+    const { loadProductsForOrganization } = useProducts();
 
     // Initialization effect
     useEffect(() => {
@@ -113,7 +114,13 @@ function AppContent() {
                 // Fetch Supabase user ID if user context is available
                 if (userContext && userContext.userEmail) {
                     loadingStateManager.setLoading('initialization', true, 'Retrieving Supabase user ID...');
-                    await initializationService.fetchSupabaseUserId(userContext, setUser);
+                    const supabaseIds = await initializationService.fetchSupabaseUserId(userContext, setUser);
+
+                    // Load products if organization ID is available
+                    if (supabaseIds && supabaseIds.supabaseOrgId) {
+                        loadingStateManager.setLoading('initialization', true, 'Loading products...');
+                        await loadProductsForOrganization(supabaseIds.supabaseOrgId);
+                    }
                 }
                 
                 loadingStateManager.setLoading('initialization', true, 'Loading initial data...');
@@ -136,7 +143,7 @@ function AppContent() {
         if (fmReady) {
             initialize();
         }
-    }, [fmReady, loadCustomers, loadTeams, setError, setLoading, setUser]);
+    }, [fmReady, loadCustomers, loadTeams, setError, setLoading, setUser, loadProductsForOrganization]);
 
     // Memoized handlers using useCallback
     const onCustomerSelect = useCallback(async (customer) => {

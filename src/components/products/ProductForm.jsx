@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
+import { useProducts } from '../../hooks/useProducts';
+import { useSnackBar } from '../../context/SnackBarContext';
 
 function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
   const { darkMode } = useTheme();
+  const { handleProductCreate, handleProductUpdate } = useProducts();
+  const { showError, showSuccess } = useSnackBar();
+  
   const [formData, setFormData] = useState({
-    id: product?.id || `prod-${Date.now()}`,
+    // Only include ID if editing an existing product
+    ...(isEditing && product?.id ? { id: product.id } : {}),
     name: product?.name || '',
     price: product?.price || 0,
     description: product?.description || ''
   });
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -50,11 +57,42 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (validate()) {
-      onSubmit(formData);
+      setIsSubmitting(true);
+      try {
+        if (isEditing) {
+          // If editing, use the update function
+          const result = await handleProductUpdate(formData.id, formData);
+          if (result.success) {
+            showSuccess(`Product "${formData.name}" updated successfully`);
+            onSubmit(result.data || formData);
+          } else {
+            showError(result.error || 'Failed to update product');
+          }
+        } else {
+          // If creating, use the create function
+          const result = await handleProductCreate(formData);
+          if (result.success) {
+            showSuccess(`Product "${formData.name}" created successfully`);
+            onSubmit(result.data || formData);
+          } else {
+            showError(result.error || 'Failed to create product');
+          }
+        }
+      } catch (error) {
+        showError(error.message || 'An error occurred');
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      // Show validation errors using SnackBar
+      const errorMessage = Object.values(errors).filter(Boolean)[0];
+      if (errorMessage) {
+        showError(errorMessage);
+      }
     }
   };
 
@@ -146,14 +184,19 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
             type="button"
             onClick={onCancel}
             className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+            disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             type="submit"
             className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+            disabled={isSubmitting}
           >
-            {isEditing ? 'Update' : 'Add'} Product
+            {isSubmitting 
+              ? (isEditing ? 'Updating...' : 'Creating...') 
+              : (isEditing ? 'Update' : 'Add') + ' Product'
+            }
           </button>
         </div>
       </form>

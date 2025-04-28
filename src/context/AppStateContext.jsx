@@ -43,13 +43,7 @@ const initialState = {
     showProductForm: false,
     sidebarMode: 'customer', // 'customer', 'team', or 'product'
     // Initial product data
-    products: [
-        { id: 'prod-1', name: 'Premium CRM License', price: 299.99, description: 'Annual license for premium CRM features' },
-        { id: 'prod-2', name: 'Basic CRM License', price: 149.99, description: 'Annual license for basic CRM features' },
-        { id: 'prod-3', name: 'Mobile App Add-on', price: 49.99, description: 'Mobile application add-on for CRM' },
-        { id: 'prod-4', name: 'API Integration Package', price: 199.99, description: 'Custom API integration services' },
-        { id: 'prod-5', name: 'Support Package', price: 99.99, description: 'Premium support package' }
-    ],
+    products: [],
     version: 1, // For state versioning
 };
 

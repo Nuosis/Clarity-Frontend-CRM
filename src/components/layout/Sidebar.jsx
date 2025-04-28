@@ -485,7 +485,10 @@ function Sidebar({
                         </button>
                     ) : sidebarMode === 'product' ? (
                         <button
-                            onClick={() => contextSetShowProductForm(true)}
+                            onClick={() => {
+                                setSelectedProduct(null);
+                                contextSetShowProductForm(true);
+                            }}
                             className={`
                                 p-1 rounded-md flex items-center justify-center
                                 ${darkMode

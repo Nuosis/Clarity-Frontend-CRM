@@ -252,8 +252,9 @@ const MainContent = React.memo(function MainContent({
         setSelectedProduct(null);
     };
 
-    const handleProductCreate = (newProduct) => {
-        setProducts([...products, newProduct]);
+    const handleProductFormSubmit = (newProduct) => {
+        // The product has already been created/updated in the database by the ProductForm
+        // We just need to update the UI state
         setShowProductForm(false);
         setSelectedProduct(newProduct);
     };
@@ -276,7 +277,7 @@ const MainContent = React.memo(function MainContent({
         return (
             <ErrorBoundary>
                 <ProductForm
-                    onSubmit={handleProductCreate}
+                    onSubmit={handleProductFormSubmit}
                     onCancel={() => setShowProductForm(false)}
                 />
             </ErrorBoundary>

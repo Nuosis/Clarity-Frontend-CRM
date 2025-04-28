@@ -378,6 +378,80 @@ export const adminInsert = async (table, data) => {
   }
 };
 
+/**
+ * Update data in a table with admin privileges (bypassing RLS)
+ * @param {string} table - Table name
+ * @param {Object} data - Data to update
+ * @param {Object} match - Match condition
+ * @returns {Promise<Object>} - Update response
+ */
+export const adminUpdate = async (table, data, match) => {
+  if (!supabaseAdmin) {
+    console.error('Admin update failed: Supabase admin client not initialized');
+    return {
+      success: false,
+      error: 'Supabase admin client not initialized'
+    };
+  }
+
+  try {
+    const { data: result, error } = await supabaseAdmin
+      .from(table)
+      .update(data)
+      .match(match)
+      .select();
+    
+    if (error) throw error;
+    
+    return {
+      success: true,
+      data: result
+    };
+  } catch (error) {
+    console.error(`Error in admin update for table ${table}:`, error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+/**
+ * Delete data from a table with admin privileges (bypassing RLS)
+ * @param {string} table - Table name
+ * @param {Object} match - Match condition
+ * @returns {Promise<Object>} - Delete response
+ */
+export const adminRemove = async (table, match) => {
+  if (!supabaseAdmin) {
+    console.error('Admin remove failed: Supabase admin client not initialized');
+    return {
+      success: false,
+      error: 'Supabase admin client not initialized'
+    };
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from(table)
+      .delete()
+      .match(match);
+    
+    if (error) throw error;
+    
+    return {
+      success: true,
+      data
+    };
+  } catch (error) {
+    console.error(`Error in admin remove for table ${table}:`, error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
 export default {
   getSupabaseClient,
   getSupabaseUrl,
@@ -394,5 +468,7 @@ export default {
   insert,
   adminInsert,
   update,
-  remove
+  adminUpdate,
+  remove,
+  adminRemove
 };

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
+import { useProducts } from '../../hooks/useProducts';
 import ProductForm from './ProductForm';
 
 function ProductDetails({ product, onUpdate, onDelete }) {
   const { darkMode } = useTheme();
+  const { handleProductUpdate, handleProductDelete } = useProducts();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -17,6 +19,8 @@ function ProductDetails({ product, onUpdate, onDelete }) {
   };
 
   const handleUpdateProduct = (updatedProduct) => {
+    // The ProductForm component already calls handleProductUpdate from useProducts
+    // We just need to call the onUpdate prop to update the UI in MainContent
     onUpdate(updatedProduct);
     setIsEditing(false);
   };
@@ -25,9 +29,22 @@ function ProductDetails({ product, onUpdate, onDelete }) {
     setShowDeleteConfirm(true);
   };
 
-  const handleConfirmDelete = () => {
-    onDelete(product.id);
-    setShowDeleteConfirm(false);
+  const handleConfirmDelete = async () => {
+    try {
+      const result = await handleProductDelete(product.id);
+      if (result.success) {
+        // Call the onDelete prop to update the UI in MainContent
+        onDelete(product.id);
+        setShowDeleteConfirm(false);
+      } else {
+        // Handle error
+        console.error('Failed to delete product:', result.error);
+        alert(`Failed to delete product: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert(`Error deleting product: ${error.message}`);
+    }
   };
 
   const handleCancelDelete = () => {
