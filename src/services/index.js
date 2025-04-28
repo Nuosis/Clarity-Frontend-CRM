@@ -92,6 +92,19 @@ export {
     remove
 } from './supabaseService';
 
+// Product service exports
+export {
+    fetchProductsByOrganization,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    validateProductData,
+    formatProductForDisplay,
+    groupProductsByPriceRange,
+    calculateProductStats,
+    loadOrganizationProducts
+} from './productService';
+
 // Service version
 export const SERVICES_VERSION = '1.0.0';
 

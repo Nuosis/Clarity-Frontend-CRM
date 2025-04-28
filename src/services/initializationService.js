@@ -1,5 +1,6 @@
 import { fetchDataFromFileMaker } from '../api/fileMaker';
 import { query, adminQuery } from './supabaseService';
+import { loadOrganizationProducts } from './productService';
 
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff delays in ms
 
@@ -164,6 +165,41 @@ class InitializationService {
         } catch (error) {
             console.error('Error fetching Supabase user ID:', error);
             return null;
+        }
+    }
+
+    /**
+     * Loads products for the current user's organization
+     * @param {string} organizationId - The organization ID to load products for
+     * @param {Function} setProducts - Function to update the products state
+     * @param {Function} setLoading - Function to update the loading state
+     * @param {Function} setError - Function to update the error state
+     * @returns {Promise<Object>} - Object containing success status and products data
+     */
+    async loadProducts(organizationId, setProducts, setLoading, setError) {
+        this.currentPhase = 'loading_products';
+        try {
+            if (!organizationId) {
+                console.warn('Cannot load products: Organization ID is missing');
+                return {
+                    success: false,
+                    error: 'Organization ID is required',
+                    data: []
+                };
+            }
+
+            console.log(`Loading products for organization: ${organizationId}`);
+            return await loadOrganizationProducts(organizationId, setProducts, setLoading, setError);
+        } catch (error) {
+            console.error('Error loading products:', error);
+            if (setError) {
+                setError(`Failed to load products: ${error.message}`);
+            }
+            return {
+                success: false,
+                error: error.message,
+                data: []
+            };
         }
     }
 
