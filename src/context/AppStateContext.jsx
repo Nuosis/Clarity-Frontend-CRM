@@ -13,6 +13,7 @@ export const APP_ACTIONS = {
     SET_SELECTED_TASK: 'SET_SELECTED_TASK',
     SET_SELECTED_TEAM: 'SET_SELECTED_TEAM',
     SET_SHOW_FINANCIAL_ACTIVITY: 'SET_SHOW_FINANCIAL_ACTIVITY',
+    SET_SHOW_FILEMAKER_EXAMPLE: 'SET_SHOW_FILEMAKER_EXAMPLE',
     CLEAR_ERROR: 'CLEAR_ERROR',
     RESET_STATE: 'RESET_STATE',
     SET_SHOW_CUSTOMER_FORM: 'SET_SHOW_CUSTOMER_FORM',
@@ -28,6 +29,7 @@ const initialState = {
     selectedTask: null,
     selectedTeam: null,
     showFinancialActivity: false,
+    showFileMakerExample: false,
     showCustomerForm: false,
     showTeamForm: false,
     sidebarMode: 'customer', // 'customer' or 'team'
@@ -99,6 +101,17 @@ function appReducer(state, action) {
                 selectedProject: null,
                 selectedTask: null,
                 selectedTeam: null,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SHOW_FILEMAKER_EXAMPLE:
+            return {
+                ...state,
+                showFileMakerExample: action.payload,
+                selectedCustomer: null, // Clear selections when showing FileMaker example
+                selectedProject: null,
+                selectedTask: null,
+                selectedTeam: null,
+                showFinancialActivity: false, // Hide financial activity
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SHOW_CUSTOMER_FORM:
@@ -209,6 +222,10 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_SHOW_FINANCIAL_ACTIVITY, payload: show });
     }, [dispatch]);
 
+    const setShowFileMakerExample = useCallback((show) => {
+        dispatch({ type: APP_ACTIONS.SET_SHOW_FILEMAKER_EXAMPLE, payload: show });
+    }, [dispatch]);
+
     const setShowCustomerForm = useCallback((show) => {
         dispatch({ type: APP_ACTIONS.SET_SHOW_CUSTOMER_FORM, payload: show });
     }, [dispatch]);
@@ -231,6 +248,7 @@ export function useAppStateOperations() {
         setSelectedTask,
         setSelectedTeam,
         setShowFinancialActivity,
+        setShowFileMakerExample,
         setShowCustomerForm,
         setShowTeamForm,
         setSidebarMode,

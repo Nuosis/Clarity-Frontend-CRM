@@ -225,7 +225,7 @@ export function downloadPdf(pdfData) {
       link.setAttribute('rel', 'noopener noreferrer');
       
       // In test environments, just simulate the click without DOM manipulation
-      if (process.env.NODE_ENV === 'test') {
+      if (import.meta.env?.MODE === 'test') {
         // For test environments, just simulate the click
         link.click();
         URL.revokeObjectURL(url);

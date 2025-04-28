@@ -15,13 +15,17 @@
     "openfile": "node ./scripts/openFileOnServer",
     "docs:bundle": "node ./scripts/generate-docs-bundle.js",
     "docs": "node ./scripts/generate-docs.js",
-    "test": "jest"
+    "test": "jest",
+    "deploy:edge-function": "node ./scripts/deploy-edge-function.js",
+    "test:edge-function": "node ./scripts/test-edge-function.js"
   },
   "dependencies": {
     "chart.js": "^4.4.8",
+    "dotenv": "^16.3.1",
     "fm-gofer": "^1.10.0",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
+    "node-fetch": "^3.3.2",
     "node-mailjet": "^6.0.8",
     "pdf-lib": "^1.17.1",
     "react": "^18.2.0",

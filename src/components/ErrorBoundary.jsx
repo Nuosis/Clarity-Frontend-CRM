@@ -71,7 +71,7 @@ class ErrorBoundaryFallback extends React.Component {
                             <div className="text-gray-600 dark:text-gray-300 mb-6">
                                 {this.state.error?.message || 'An unexpected error occurred'}
                             </div>
-                            {process.env.NODE_ENV === 'development' && (
+                            {import.meta.env?.MODE === 'development' && (
                                 <pre className="text-left bg-gray-100 dark:bg-gray-700 p-4 rounded mb-6 overflow-auto text-sm">
                                     {this.state.errorInfo?.componentStack}
                                 </pre>
