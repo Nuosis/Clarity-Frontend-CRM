@@ -123,8 +123,18 @@ erDiagram
     text code
     uuid user_id
   }
+  products {
+    uuid id
+    text name
+    numeric price
+    text description
+    uuid organization_id
+    timestamptz created_at
+    timestamptz updated_at
+  }
 
   licenses }o--|| organizations : organization_id
+  products }o--|| organizations : organization_id
   license_modules }o--|| licenses : license_id
   customer_email }o--|| customers : customer_id
   customer_phone }o--|| customers : customer_id

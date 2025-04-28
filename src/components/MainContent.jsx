@@ -4,6 +4,8 @@ import TaskTimer from './tasks/TaskTimer';
 import ProjectDetails from './projects/ProjectDetails';
 import CustomerDetails from './customers/CustomerDetails';
 import TeamDetails from './teams/TeamDetails';
+import ProductDetails from './products/ProductDetails';
+import ProductForm from './products/ProductForm';
 import FinancialActivity from './financial/FinancialActivity';
 import FileMakerExample from './examples/FileMakerExample';
 import SupabaseExample from './examples/SupabaseExample';
@@ -11,7 +13,7 @@ import ErrorBoundary from './ErrorBoundary';
 import Loading from './loading/Loading';
 import { useProject } from '../hooks/useProject';
 import { useTeamContext } from '../context/TeamContext';
-import { useAppState } from '../context/AppStateContext';
+import { useAppState, useAppStateOperations } from '../context/AppStateContext';
 import { useTheme } from './layout/AppLayout';
 const MainContent = React.memo(function MainContent({
     selectedTask = null,
@@ -40,7 +42,20 @@ const MainContent = React.memo(function MainContent({
         allStaff,
         teams
     } = useTeamContext();
-    const { showFinancialActivity, showFileMakerExample, showSupabaseExample, sidebarMode } = useAppState();
+    const {
+        showFinancialActivity,
+        showFileMakerExample,
+        showSupabaseExample,
+        sidebarMode,
+        selectedProduct,
+        products,
+        showProductForm
+    } = useAppState();
+    const {
+        setSelectedProduct,
+        setProducts,
+        setShowProductForm
+    } = useAppStateOperations();
     const { darkMode } = useTheme();
 
     // Memoized project selection handler
@@ -223,11 +238,58 @@ const MainContent = React.memo(function MainContent({
         );
     }
 
+    // Handle product operations
+    const handleProductUpdate = (updatedProduct) => {
+        const updatedProducts = products.map(product =>
+            product.id === updatedProduct.id ? updatedProduct : product
+        );
+        setProducts(updatedProducts);
+    };
+
+    const handleProductDelete = (productId) => {
+        const updatedProducts = products.filter(product => product.id !== productId);
+        setProducts(updatedProducts);
+        setSelectedProduct(null);
+    };
+
+    const handleProductCreate = (newProduct) => {
+        setProducts([...products, newProduct]);
+        setShowProductForm(false);
+        setSelectedProduct(newProduct);
+    };
+
+    // Show product details if selected
+    if (selectedProduct) {
+        return (
+            <ErrorBoundary>
+                <ProductDetails
+                    product={selectedProduct}
+                    onUpdate={handleProductUpdate}
+                    onDelete={handleProductDelete}
+                />
+            </ErrorBoundary>
+        );
+    }
+
+    // Show product form if active
+    if (showProductForm) {
+        return (
+            <ErrorBoundary>
+                <ProductForm
+                    onSubmit={handleProductCreate}
+                    onCancel={() => setShowProductForm(false)}
+                />
+            </ErrorBoundary>
+        );
+    }
+
     return (
         <div className="text-center text-gray-500 dark:text-gray-400">
             {sidebarMode === 'customer'
                 ? 'Select a customer to view details'
-                : 'Select a team to view details'
+                : sidebarMode === 'team'
+                ? 'Select a team to view details'
+                : 'Select a product to view details'
             }
         </div>
     );

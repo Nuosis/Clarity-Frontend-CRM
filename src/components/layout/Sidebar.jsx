@@ -7,6 +7,71 @@ import { useAppState, useAppStateOperations } from '../../context/AppStateContex
 import CustomerForm from '../customers/CustomerForm';
 import TeamForm from '../teams/TeamForm';
 
+// Feature flags
+const SHOW_FM_API = import.meta.env.VITE_SHOW_FM_API === 'true';
+const SHOW_SPB_API = import.meta.env.VITE_SHOW_SPB_API === 'true';
+
+// Log feature flag values for debugging
+console.log('Feature Flags:', {
+  VITE_SHOW_FM_API: import.meta.env.VITE_SHOW_FM_API,
+  VITE_SHOW_SPB_API: import.meta.env.VITE_SHOW_SPB_API,
+  SHOW_FM_API,
+  SHOW_SPB_API
+});
+
+// Memoized product list item
+const ProductListItem = React.memo(function ProductListItem({
+    product,
+    isSelected,
+    darkMode,
+    onSelect
+}) {
+    return (
+        <div
+            onClick={() => onSelect(product)}
+            className={`
+                py-1 px-4 cursor-pointer border-b last:border-b-0 relative
+                ${darkMode ? 'border-gray-700' : 'border-gray-200'}
+                ${isSelected
+                    ? (darkMode ? 'bg-gray-700' : 'bg-gray-100')
+                    : (darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50')}
+            `}
+        >
+            <div className="flex items-center justify-between w-full relative">
+                <h3 className={`
+                    font-medium
+                    ${isSelected
+                        ? (darkMode ? 'text-white' : 'text-gray-900')
+                        : (darkMode ? 'text-gray-300' : 'text-gray-700')}
+                `}>
+                    {product.name}
+                </h3>
+                
+                <div className="flex items-center">
+                    <span className={`
+                        text-xs px-2 py-1 rounded-full
+                        ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}
+                    `}>
+                        ${product.price.toFixed(2)}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+ProductListItem.propTypes = {
+    product: PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        price: PropTypes.number.isRequired,
+        description: PropTypes.string
+    }).isRequired,
+    isSelected: PropTypes.bool.isRequired,
+    darkMode: PropTypes.bool.isRequired,
+    onSelect: PropTypes.func.isRequired
+};
+
 // Memoized customer list item
 const CustomerListItem = React.memo(function CustomerListItem({
     customer,
@@ -325,17 +390,24 @@ function Sidebar({
     selectedCustomer = null,
     selectedTeam = null,
     customerStats = null,
+    products = [],
+    selectedProduct = null,
     onCustomerSelect,
     onCustomerStatusToggle,
     onCustomerDelete,
     onTeamSelect = () => {},
-    onTeamDelete = () => {}
+    onTeamDelete = () => {},
+    setShowProductForm
 }) {
     const { darkMode } = useTheme();
     const { projects, projectRecords } = useProject();
-    const { showFinancialActivity, showFileMakerExample, showSupabaseExample, showCustomerForm, showTeamForm, sidebarMode } = useAppState();
-    const { setShowFinancialActivity, setShowFileMakerExample, setShowSupabaseExample, setShowCustomerForm, setShowTeamForm, setSidebarMode } = useAppStateOperations();
-    //console.log(projectRecords)
+    const { showFinancialActivity, showFileMakerExample, showSupabaseExample, showCustomerForm, showTeamForm, sidebarMode, showProductForm } = useAppState();
+    const { setShowFinancialActivity, setShowFileMakerExample, setShowSupabaseExample, setShowCustomerForm, setShowTeamForm, setSidebarMode, setSelectedProduct, setShowProductForm: contextSetShowProductForm } = useAppStateOperations();
+    
+    // Handle product selection
+    const handleProductSelect = (product) => {
+        setSelectedProduct(product);
+    };
 
     // Memoize customer grouping and stats
     const { activeCustomers, inactiveCustomers, stats } = useMemo(() => {
@@ -379,7 +451,7 @@ function Sidebar({
                         text-lg font-semibold
                         ${darkMode ? 'text-white' : 'text-gray-900'}
                     `}>
-                        {sidebarMode === 'customer' ? 'Customers' : 'Teams'}
+                        {sidebarMode === 'customer' ? 'Customers' : sidebarMode === 'team' ? 'Teams' : 'Products'}
                     </h2>
                     {sidebarMode === 'customer' ? (
                         <button
@@ -396,7 +468,7 @@ function Sidebar({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
                         </button>
-                    ) : (
+                    ) : sidebarMode === 'team' ? (
                         <button
                             onClick={() => setShowTeamForm(true)}
                             className={`
@@ -411,7 +483,22 @@ function Sidebar({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
                         </button>
-                    )}
+                    ) : sidebarMode === 'product' ? (
+                        <button
+                            onClick={() => contextSetShowProductForm(true)}
+                            className={`
+                                p-1 rounded-md flex items-center justify-center
+                                ${darkMode
+                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
+                            `}
+                            title="Add new product"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
+                    ) : null}
                 </div>
                 {sidebarMode === 'customer' && stats && (
                     <div className={`
@@ -439,37 +526,41 @@ function Sidebar({
                     Financial Activity
                 </button>
                 
-                {/* FileMaker API Example Button */}
-                <button
-                    onClick={() => setShowFileMakerExample(true)}
-                    className={`
-                        mt-2 w-full flex items-center justify-center px-4 py-2 rounded-md
-                        ${showFileMakerExample
-                            ? (darkMode ? 'bg-purple-700 text-white' : 'bg-purple-100 text-purple-800')
-                            : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
-                    `}
-                >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    FileMaker API
-                </button>
+                {/* FileMaker API Example Button - Only shown when VITE_SHOW_FM_API is true */}
+                {SHOW_FM_API && (
+                    <button
+                        onClick={() => setShowFileMakerExample(true)}
+                        className={`
+                            mt-2 w-full flex items-center justify-center px-4 py-2 rounded-md
+                            ${showFileMakerExample
+                                ? (darkMode ? 'bg-purple-700 text-white' : 'bg-purple-100 text-purple-800')
+                                : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
+                        `}
+                    >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        FileMaker API
+                    </button>
+                )}
                 
-                {/* Supabase Example Button */}
-                <button
-                    onClick={() => setShowSupabaseExample(true)}
-                    className={`
-                        mt-2 w-full flex items-center justify-center px-4 py-2 rounded-md
-                        ${showSupabaseExample
-                            ? (darkMode ? 'bg-green-700 text-white' : 'bg-green-100 text-green-800')
-                            : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
-                    `}
-                >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                    </svg>
-                    Supabase API
-                </button>
+                {/* Supabase Example Button - Only shown when VITE_SHOW_SPB_API is true */}
+                {SHOW_SPB_API && (
+                    <button
+                        onClick={() => setShowSupabaseExample(true)}
+                        className={`
+                            mt-2 w-full flex items-center justify-center px-4 py-2 rounded-md
+                            ${showSupabaseExample
+                                ? (darkMode ? 'bg-green-700 text-white' : 'bg-green-100 text-green-800')
+                                : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
+                        `}
+                    >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                        </svg>
+                        Supabase API
+                    </button>
+                )}
             </div>
 
             {/* List Content */}
@@ -511,7 +602,7 @@ function Sidebar({
                             </div>
                         )}
                     </>
-                ) : (
+                ) : sidebarMode === 'team' ? (
                     /* Team List */
                     <>
                         {teams.length > 0 && teams.map(team => (
@@ -534,6 +625,19 @@ function Sidebar({
                                 No teams found
                             </div>
                         )}
+                    </>
+                ) : (
+                    /* Product List */
+                    <>
+                        {products.map(product => (
+                            <ProductListItem
+                                key={product.id}
+                                product={product}
+                                isSelected={selectedProduct?.id === product.id}
+                                darkMode={darkMode}
+                                onSelect={handleProductSelect}
+                            />
+                        ))}
                     </>
                 )}
             </div>
@@ -567,11 +671,23 @@ Sidebar.propTypes = {
         id: PropTypes.string.isRequired,
         name: PropTypes.string.isRequired
     })),
+    products: PropTypes.arrayOf(PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        price: PropTypes.number.isRequired,
+        description: PropTypes.string
+    })),
     selectedCustomer: PropTypes.shape({
         id: PropTypes.string.isRequired
     }),
     selectedTeam: PropTypes.shape({
         id: PropTypes.string.isRequired
+    }),
+    selectedProduct: PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        price: PropTypes.number.isRequired,
+        description: PropTypes.string
     }),
     customerStats: PropTypes.shape({
         total: PropTypes.number.isRequired,
@@ -583,7 +699,8 @@ Sidebar.propTypes = {
     onCustomerStatusToggle: PropTypes.func.isRequired,
     onCustomerDelete: PropTypes.func.isRequired,
     onTeamSelect: PropTypes.func,
-    onTeamDelete: PropTypes.func
+    onTeamDelete: PropTypes.func,
+    setShowProductForm: PropTypes.func
 };
 
 export default React.memo(Sidebar);

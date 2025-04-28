@@ -12,6 +12,7 @@ export const APP_ACTIONS = {
     SET_SELECTED_PROJECT: 'SET_SELECTED_PROJECT',
     SET_SELECTED_TASK: 'SET_SELECTED_TASK',
     SET_SELECTED_TEAM: 'SET_SELECTED_TEAM',
+    SET_SELECTED_PRODUCT: 'SET_SELECTED_PRODUCT',
     SET_CUSTOMER_DETAILS: 'SET_CUSTOMER_DETAILS',
     SET_SHOW_FINANCIAL_ACTIVITY: 'SET_SHOW_FINANCIAL_ACTIVITY',
     SET_SHOW_FILEMAKER_EXAMPLE: 'SET_SHOW_FILEMAKER_EXAMPLE',
@@ -20,7 +21,9 @@ export const APP_ACTIONS = {
     RESET_STATE: 'RESET_STATE',
     SET_SHOW_CUSTOMER_FORM: 'SET_SHOW_CUSTOMER_FORM',
     SET_SHOW_TEAM_FORM: 'SET_SHOW_TEAM_FORM',
-    SET_SIDEBAR_MODE: 'SET_SIDEBAR_MODE'
+    SET_SHOW_PRODUCT_FORM: 'SET_SHOW_PRODUCT_FORM',
+    SET_SIDEBAR_MODE: 'SET_SIDEBAR_MODE',
+    SET_PRODUCTS: 'SET_PRODUCTS'
 };
 const initialState = {
     loading: true,
@@ -30,13 +33,23 @@ const initialState = {
     selectedProject: null,
     selectedTask: null,
     selectedTeam: null,
+    selectedProduct: null,
     customerDetails: null, // Will store Supabase customer details
     showFinancialActivity: false,
     showFileMakerExample: false,
     showSupabaseExample: false,
     showCustomerForm: false,
     showTeamForm: false,
-    sidebarMode: 'customer', // 'customer' or 'team'
+    showProductForm: false,
+    sidebarMode: 'customer', // 'customer', 'team', or 'product'
+    // Initial product data
+    products: [
+        { id: 'prod-1', name: 'Premium CRM License', price: 299.99, description: 'Annual license for premium CRM features' },
+        { id: 'prod-2', name: 'Basic CRM License', price: 149.99, description: 'Annual license for basic CRM features' },
+        { id: 'prod-3', name: 'Mobile App Add-on', price: 49.99, description: 'Mobile application add-on for CRM' },
+        { id: 'prod-4', name: 'API Integration Package', price: 199.99, description: 'Custom API integration services' },
+        { id: 'prod-5', name: 'Support Package', price: 99.99, description: 'Premium support package' }
+    ],
     version: 1, // For state versioning
 };
 
@@ -104,6 +117,13 @@ function appReducer(state, action) {
                 sidebarMode: 'team', // Switch to team mode
                 version: state.version + 1
             };
+        case APP_ACTIONS.SET_SELECTED_PRODUCT:
+            return {
+                ...state,
+                selectedProduct: action.payload,
+                showFinancialActivity: false,
+                version: state.version + 1
+            };
         case APP_ACTIONS.SET_SHOW_FINANCIAL_ACTIVITY:
             return {
                 ...state,
@@ -150,12 +170,24 @@ function appReducer(state, action) {
                 showTeamForm: action.payload,
                 version: state.version + 1
             };
+        case APP_ACTIONS.SET_SHOW_PRODUCT_FORM:
+            return {
+                ...state,
+                showProductForm: action.payload,
+                version: state.version + 1
+            };
         case APP_ACTIONS.SET_SIDEBAR_MODE:
             return {
                 ...state,
                 sidebarMode: action.payload,
                 // Clear selections when switching modes
                 ...(action.payload === 'customer' ? { selectedTeam: null } : { selectedCustomer: null, selectedProject: null, selectedTask: null }),
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_PRODUCTS:
+            return {
+                ...state,
+                products: action.payload,
                 version: state.version + 1
             };
         case APP_ACTIONS.CLEAR_ERROR:
@@ -247,6 +279,10 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_SELECTED_TEAM, payload: team });
     }, [dispatch]);
 
+    const setSelectedProduct = useCallback((product) => {
+        dispatch({ type: APP_ACTIONS.SET_SELECTED_PRODUCT, payload: product });
+    }, [dispatch]);
+
     const resetState = useCallback(() => {
         dispatch({ type: APP_ACTIONS.RESET_STATE });
     }, [dispatch]);
@@ -271,6 +307,14 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_SHOW_TEAM_FORM, payload: show });
     }, [dispatch]);
 
+    const setShowProductForm = useCallback((show) => {
+        dispatch({ type: APP_ACTIONS.SET_SHOW_PRODUCT_FORM, payload: show });
+    }, [dispatch]);
+
+    const setProducts = useCallback((products) => {
+        dispatch({ type: APP_ACTIONS.SET_PRODUCTS, payload: products });
+    }, [dispatch]);
+
     const setSidebarMode = useCallback((mode) => {
         dispatch({ type: APP_ACTIONS.SET_SIDEBAR_MODE, payload: mode });
     }, [dispatch]);
@@ -284,13 +328,16 @@ export function useAppStateOperations() {
         setSelectedProject,
         setSelectedTask,
         setSelectedTeam,
+        setSelectedProduct,
         setCustomerDetails,
         setShowFinancialActivity,
         setShowFileMakerExample,
         setShowSupabaseExample,
         setShowCustomerForm,
         setShowTeamForm,
+        setShowProductForm,
         setSidebarMode,
+        setProducts,
         resetState
     };
 }

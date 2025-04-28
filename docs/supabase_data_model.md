@@ -18,6 +18,7 @@ CREATE TABLE public.organizations (
 -- licenses.organization_id → organizations.id
 -- customer_organization.organization_id → organizations.id
 -- user_profile.organization_id → organizations.id
+-- products.organization_id → organizations.id
 ```
 
 ---
@@ -281,6 +282,25 @@ CREATE TABLE public.functions (
 );
 -- Relationships:
 -- functions.user_id → users.id
+```
+
+---
+
+## Table: products (public)
+
+```sql
+CREATE TABLE public.products (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  price numeric(10, 2) NOT NULL CHECK (price > 0),
+  description text,
+  organization_id uuid NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  PRIMARY KEY (id)
+);
+-- Relationships:
+-- products.organization_id → organizations.id
 ```
 
 ---

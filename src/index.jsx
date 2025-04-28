@@ -28,6 +28,7 @@ function AppContent() {
         setSelectedProject,
         setSelectedTask,
         setSelectedTeam,
+        setShowProductForm,
         resetState
     } = useAppStateOperations();
     const globalLoadingState = useGlobalLoadingState();
@@ -367,6 +368,9 @@ function AppContent() {
                     onCustomerDelete={handleCustomerDelete}
                     onTeamSelect={onTeamSelect}
                     onTeamDelete={handleTeamDelete}
+                    products={appState.products}
+                    selectedProduct={appState.selectedProduct}
+                    setShowProductForm={setShowProductForm}
                     customerStats={customers.length > 0 ? {
                         total: customers.length,
                         active: processedCustomers.filter(c => c.isActive).length,
