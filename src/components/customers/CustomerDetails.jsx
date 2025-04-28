@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
@@ -7,6 +7,7 @@ import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { initializeQuickBooks } from '../../api/fileMaker';
 import { useSnackBar } from '../../context/SnackBarContext';
 import { sendEmailWithAttachment, isMailjetConfigured, createHtmlEmailTemplate } from '../../services/mailjetService';
+import { adminQuery, adminInsert } from '../../services/supabaseService';
 import {
     fetchCustomerActivityData,
     processActivityData,
@@ -119,13 +120,10 @@ function CustomerDetails({
     onProjectCreate = () => {}
 }) {
     const { darkMode } = useTheme();
-    const { setLoading } = useAppStateOperations();
+    const { setLoading, setCustomerDetails } = useAppStateOperations();
     const { projectRecords } = useProject();
     const { showError, showSuccess } = useSnackBar();
-    const { user } = useAppState(); // Move useAppState hook to the top level
-    
-    // Log user data at component initialization to validate our fix
-    console.log("[DEBUG] CustomerDetails - User data from top-level hook:", user);
+    const { user, customerDetails } = useAppState(); // Get user and customerDetails from state
     
     const [isProcessingQB, setIsProcessingQB] = useState(false);
     const [showNewProjectInput, setShowNewProjectInput] = useState(false);
@@ -134,8 +132,10 @@ function CustomerDetails({
     const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
     const [activityData, setActivityData] = useState([]);
     const [loadingActivity, setLoadingActivity] = useState(false);
-    //console.log(projectRecords)
-    //console.log("customer",customer)
+    
+    // Use useRef instead of state to track customer creation attempts
+    // This prevents re-renders and potential infinite loops
+    const customerCreationAttemptedRef = useRef(false);
 
     // Handler for QuickBooks initialization
     const handleQuickBooksInit = useCallback(async () => {
@@ -203,12 +203,6 @@ function CustomerDetails({
     
     // Handle project form submission
     const handleProjectFormSubmit = useCallback((projectName) => {
-        console.log('Creating new project for customer:', {
-            id: customer.id,
-            name: customer.Name,
-            projectName
-        });
-        
         const projectData = {
             customerId: customer.id,
             customerName: customer.Name,
@@ -217,19 +211,12 @@ function CustomerDetails({
             _custID: customer.id      // For validateProjectData
         };
         
-        console.log('Project data being passed to onProjectCreate:', projectData);
         onProjectCreate(projectData);
         setShowNewProjectInput(false);
     }, [customer, onProjectCreate]);
 
     // Function to fetch activity data based on the selected timeframe
     const fetchActivityData = useCallback(async () => {
-        console.log('[DEBUG] fetchActivityData called with:', {
-            customerId: customer?.id,
-            timeframe: activityTimeframe,
-            customDateRange
-        });
-        
         if (!customer || !customer.id) {
             showError('Customer information is missing');
             return;
@@ -246,12 +233,6 @@ function CustomerDetails({
             } else if (activityTimeframe === 'custom') {
                 apiTimeframe = 'custom';
             }
-
-            console.log('[DEBUG] Calling fetchCustomerActivityData with:', {
-                apiTimeframe,
-                customerId: customer.id,
-                dateRange: activityTimeframe === 'custom' ? customDateRange : null
-            });
             
             // Fetch activity data using the dedicated function with proper AND query
             const data = await fetchCustomerActivityData(
@@ -262,7 +243,6 @@ function CustomerDetails({
             
             // Process the raw data using our dedicated activity data processor
             const processedData = processActivityData(data);
-            console.log('[DEBUG] Processed data length:', processedData.length);
             
             // Format records for display using our dedicated formatter
             const formattedRecords = processedData.map(record => formatActivityRecordForDisplay(record));
@@ -279,16 +259,237 @@ function CustomerDetails({
 
     // Fetch activity data when the modal is opened or timeframe changes
     useEffect(() => {
-        console.log('[DEBUG] Activity Report useEffect triggered:', {
-            showActivityReport,
-            customerId: customer?.id,
-            activityTimeframe
-        });
-        
         if (showActivityReport && customer?.id) {
             fetchActivityData();
         }
-    }, [showActivityReport, activityTimeframe, customer]);
+    }, [showActivityReport, activityTimeframe, customer, fetchActivityData]);
+
+    // Memoized function to parse JSON data from Supabase
+    const parseSupabaseData = useCallback((data) => {
+        if (!data) return data;
+        
+        return data.map(item => {
+            const parsedItem = { ...item };
+            Object.keys(parsedItem).forEach(key => {
+                if (typeof parsedItem[key] === 'string' &&
+                    (parsedItem[key].startsWith('{') || parsedItem[key].startsWith('['))) {
+                    try {
+                        parsedItem[key] = JSON.parse(parsedItem[key]);
+                    } catch (e) {
+                        // If parsing fails, keep the original value
+                    }
+                }
+            });
+            return parsedItem;
+        });
+    }, []);
+
+    // Fetch or create customer details in Supabase when component mounts
+    useEffect(() => {
+        async function fetchOrCreateCustomerInSupabase() {
+            if (!customer || !customer.Name || !user || !user.supabaseOrgID) {
+                return;
+            }
+
+            try {
+                // Query the customers table to find the customer with matching business_name
+                const result = await adminQuery('customers', {
+                    select: '*',
+                    filter: {
+                        column: 'business_name',
+                        operator: 'eq',
+                        value: customer.Name
+                    }
+                });
+
+                // Parse the result data if it's stringified JSON
+                let parsedResultData = result.data;
+                if (result.success && result.data) {
+                    parsedResultData = parseSupabaseData(result.data);
+                }
+
+                let customerData;
+
+                // If customer doesn't exist in Supabase, create it
+                if (!result.success || !parsedResultData || parsedResultData.length === 0) {
+                    // Only attempt to create the customer if we haven't tried before
+                    if (!customerCreationAttemptedRef.current) {
+                        customerCreationAttemptedRef.current = true; // Mark that we've attempted creation
+                        
+                        // Create the customer in Supabase
+                        const newCustomer = await createCustomerInSupabase(customer, user);
+                        
+                        if (newCustomer.success) {
+                            customerData = newCustomer.data;
+                        } else {
+                            console.error("[ERROR] Failed to create customer in Supabase:", newCustomer.error);
+                            showError(`Error creating customer in Supabase: ${newCustomer.error}`);
+                            return;
+                        }
+                    } else {
+                        return;
+                    }
+                } else {
+                    // Check if the customer is already linked to the organization
+                    const orgResult = await adminQuery('customer_organization', {
+                        select: '*',
+                        filter: {
+                            column: 'customer_id',
+                            operator: 'eq',
+                            value: parsedResultData[0].id
+                        }
+                    });
+
+                    // Parse the orgResult data if it's stringified JSON
+                    let parsedOrgData = orgResult.data;
+                    if (orgResult.success && orgResult.data) {
+                        parsedOrgData = parseSupabaseData(orgResult.data);
+                    }
+
+                    const isLinkedToOrg = orgResult.success &&
+                                         parsedOrgData &&
+                                         parsedOrgData.some(link => {
+                                             // Parse organization_id if it's a string
+                                             let orgId = link.organization_id;
+                                             if (typeof orgId === 'string' && orgId.startsWith('{')) {
+                                                 try {
+                                                     orgId = JSON.parse(orgId);
+                                                 } catch (e) {
+                                                     // If parsing fails, keep the original value
+                                                 }
+                                             }
+                                             return orgId === user.supabaseOrgID;
+                                         });
+
+                    if (!isLinkedToOrg) {
+                        // Link the customer to the organization
+                        await linkCustomerToOrganization(parsedResultData[0].id, user.supabaseOrgID);
+                    }
+
+                    customerData = parsedResultData[0];
+                }
+                
+                // Save the customer details to state
+                setCustomerDetails(customerData);
+            } catch (error) {
+                console.error("[ERROR] Failed to fetch/create customer details in Supabase:", error);
+                showError(`Error with customer details in Supabase: ${error.message}`);
+            }
+        }
+
+        fetchOrCreateCustomerInSupabase();
+    }, [customer, user, setCustomerDetails, showError, parseSupabaseData]);
+
+    // Function to create a new customer in Supabase
+    async function createCustomerInSupabase(customer, user) {
+        try {
+            // 1. Create customer record
+            const customerResult = await adminInsert('customers', {
+                business_name: customer.Name // Store the full customer name in the business_name field
+            });
+            
+            if (!customerResult.success) {
+                throw new Error(`Failed to create customer: ${customerResult.error}`);
+            }
+            
+            // Parse the customer result data if needed
+            let parsedCustomerData = customerResult.data[0];
+            let supabaseCustomerId = parsedCustomerData.id;
+            
+            // Check if the ID is a stringified JSON and parse it
+            if (typeof supabaseCustomerId === 'string' && supabaseCustomerId.startsWith('{')) {
+                try {
+                    supabaseCustomerId = JSON.parse(supabaseCustomerId);
+                } catch (e) {
+                    // If parsing fails, keep the original value
+                }
+            }
+            
+            // 2. Link customer to organization
+            await linkCustomerToOrganization(supabaseCustomerId, user.supabaseOrgID);
+            
+            // 3. Add customer email if available
+            if (customer.Email) {
+                const emailResult = await adminInsert('customer_email', {
+                    customer_id: supabaseCustomerId,
+                    email: customer.Email,
+                    is_primary: true
+                });
+                
+                if (!emailResult.success) {
+                    console.error("[ERROR] Failed to create customer email:", emailResult.error);
+                }
+            }
+            
+            // 4. Add customer phone if available
+            if (customer.Phone) {
+                const phoneResult = await adminInsert('customer_phone', {
+                    customer_id: supabaseCustomerId,
+                    phone: customer.Phone,
+                    is_primary: true
+                });
+                
+                if (!phoneResult.success) {
+                    console.error("[ERROR] Failed to create customer phone:", phoneResult.error);
+                }
+            }
+            
+            // 5. Add customer address if available
+            if (customer.City && customer.State) {
+                const addressResult = await adminInsert('customer_address', {
+                    customer_id: supabaseCustomerId,
+                    address_line1: customer.Address || '',
+                    city: customer.City || '',
+                    state: customer.State || '',
+                    postal_code: customer.PostalCode || '',
+                    country: customer.Country || ''
+                });
+                
+                if (!addressResult.success) {
+                    console.error("[ERROR] Failed to create customer address:", addressResult.error);
+                }
+            }
+            
+            return {
+                success: true,
+                data: parsedCustomerData
+            };
+        } catch (error) {
+            console.error("[ERROR] Error creating customer in Supabase:", error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+    
+    // Function to link a customer to an organization
+    async function linkCustomerToOrganization(customerId, organizationId) {
+        try {
+            const linkResult = await adminInsert('customer_organization', {
+                customer_id: customerId,
+                organization_id: organizationId
+            });
+            
+            if (!linkResult.success) {
+                throw new Error(`Failed to link customer to organization: ${linkResult.error}`);
+            }
+            
+            // Parse the link result data if needed
+            let parsedLinkData = linkResult.data[0];
+            
+            return {
+                success: true,
+                data: parsedLinkData
+            };
+        } catch (error) {
+            console.error("[ERROR] Error linking customer to organization:", error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
 
     return (
         <div className="space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-2">
@@ -588,9 +789,6 @@ function CustomerDetails({
                             </button>
                             <button
                                 onClick={(e) => {
-                                    console.log("Export Report button clicked");
-                                    console.log("Activity data:", activityData);
-                                    
                                     // Set a flag to prevent multiple clicks
                                     const exportButton = e.currentTarget;
                                     if (exportButton.disabled) return;
@@ -599,7 +797,6 @@ function CustomerDetails({
                                     try {
                                         // Directly import from pdfReport.js instead of using pdfReportService
                                         import('../../utils/pdfReport.js').then(({ generateProjectActivityReport }) => {
-                                            console.log("Imported PDF utilities");
                                             
                                             // Process the activity data to match the format expected by generateProjectActivityReport
                                             const processedData = {};
@@ -660,10 +857,6 @@ function CustomerDetails({
                                                     if (isMailjetConfigured()) {
                                                         console.log("Mailjet is configured, attempting to send email");
                                                         
-                                                        // Prepare email options
-                                                        // Use the user data from the top-level hook
-                                                        console.log("[DEBUG] Export Report - Using user data:", user);
-                                                        
                                                         // Create HTML content using the template function
                                                         const htmlContent = createHtmlEmailTemplate({
                                                             title: `Activity Report: ${customer.Name}`,
@@ -688,7 +881,6 @@ function CustomerDetails({
                                                         // Send email with attachment
                                                         return sendEmailWithAttachment(emailOptions).then(result => {
                                                             if (result.success) {
-                                                                console.log("Email sent successfully");
                                                                 showSuccess("PDF report sent via email");
                                                                 
                                                                 // Re-enable the button after a short delay
@@ -696,7 +888,6 @@ function CustomerDetails({
                                                                     exportButton.disabled = false;
                                                                 }, 1000);
                                                             } else {
-                                                                console.error("Failed to send email:", result.error);
                                                                 
                                                                 // Show confirmation dialog for fallback
                                                                 if (confirm(`Failed to send email: ${result.error}. Would you like to save the report using FileMaker instead?`)) {
@@ -708,8 +899,6 @@ function CustomerDetails({
                                                                 }
                                                             }
                                                         }).catch(error => {
-                                                            console.error("Error sending email:", error);
-                                                            
                                                             // Show confirmation dialog for fallback
                                                             if (confirm(`Error sending email: ${error.message}. Would you like to save the report using FileMaker instead?`)) {
                                                                 // Fallback to FileMaker workflow
@@ -720,23 +909,19 @@ function CustomerDetails({
                                                             }
                                                         });
                                                     } else {
-                                                        console.log("Mailjet is not configured, using FileMaker workflow");
                                                         // Use FileMaker workflow directly
                                                         sendToFileMaker(base64Data, fileName, customer.id, exportButton, showError, showSuccess);
                                                     }
                                                 });
                                             }).catch(error => {
-                                                console.error("Error generating report:", error);
                                                 showError(`Error generating report: ${error.message}`);
                                                 exportButton.disabled = false;
                                             });
                                         }).catch(error => {
-                                            console.error("Error importing PDF module:", error);
                                             showError(`Error importing PDF module: ${error.message}`);
                                             exportButton.disabled = false;
                                         });
                                     } catch (error) {
-                                        console.error("Error generating PDF report:", error);
                                         showError(`Error generating PDF: ${error.message}`);
                                         exportButton.disabled = false;
                                     }
@@ -820,7 +1005,6 @@ function CustomerDetails({
 function sendToFileMaker(base64Data, fileName, customerId, exportButton, showError, showSuccess) {
     // Check if FileMaker is available
     if (typeof FileMaker === "undefined" || !FileMaker.PerformScript) {
-        console.error("FileMaker object is unavailable");
         showError("FileMaker object is unavailable");
         exportButton.disabled = false;
         return;
@@ -836,13 +1020,7 @@ function sendToFileMaker(base64Data, fileName, customerId, exportButton, showErr
             action: "create" // Add required action key for FMGopher
         });
         
-        console.log("[DEBUG] Sending payload to FileMaker:", {
-            scriptName: "save base64 from JS",
-            payloadKeys: Object.keys(JSON.parse(payload))
-        });
-        
         FileMaker.PerformScript("save base64 from JS", payload);
-        console.log("PDF data sent to FileMaker");
         showSuccess("PDF report sent to FileMaker");
         
         // Re-enable the button after a short delay
@@ -850,7 +1028,6 @@ function sendToFileMaker(base64Data, fileName, customerId, exportButton, showErr
             exportButton.disabled = false;
         }, 1000);
     } catch (error) {
-        console.error("Error sending PDF to FileMaker:", error);
         showError(`Error sending PDF to FileMaker: ${error.message}`);
         exportButton.disabled = false;
     }

@@ -6,6 +6,7 @@ import CustomerDetails from './customers/CustomerDetails';
 import TeamDetails from './teams/TeamDetails';
 import FinancialActivity from './financial/FinancialActivity';
 import FileMakerExample from './examples/FileMakerExample';
+import SupabaseExample from './examples/SupabaseExample';
 import ErrorBoundary from './ErrorBoundary';
 import Loading from './loading/Loading';
 import { useProject } from '../hooks/useProject';
@@ -39,7 +40,7 @@ const MainContent = React.memo(function MainContent({
         allStaff,
         teams
     } = useTeamContext();
-    const { showFinancialActivity, showFileMakerExample, sidebarMode } = useAppState();
+    const { showFinancialActivity, showFileMakerExample, showSupabaseExample, sidebarMode } = useAppState();
     const { darkMode } = useTheme();
 
     // Memoized project selection handler
@@ -125,6 +126,15 @@ const MainContent = React.memo(function MainContent({
         return (
             <ErrorBoundary>
                 <FileMakerExample />
+            </ErrorBoundary>
+        );
+    }
+    
+    // Show Supabase Example if selected
+    if (showSupabaseExample) {
+        return (
+            <ErrorBoundary>
+                <SupabaseExample />
             </ErrorBoundary>
         );
     }

@@ -109,6 +109,12 @@ function AppContent() {
                 const userContext = await initializationService.loadUserContext();
                 setUser(userContext);
                 
+                // Fetch Supabase user ID if user context is available
+                if (userContext && userContext.userEmail) {
+                    loadingStateManager.setLoading('initialization', true, 'Retrieving Supabase user ID...');
+                    await initializationService.fetchSupabaseUserId(userContext, setUser);
+                }
+                
                 loadingStateManager.setLoading('initialization', true, 'Loading initial data...');
                 await initializationService.preloadData(async () => {
                     await loadCustomers();

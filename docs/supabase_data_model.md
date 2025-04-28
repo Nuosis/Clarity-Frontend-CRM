@@ -30,8 +30,8 @@ CREATE TABLE public.customers (
   name text NOT NULL,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  first_name text NOT NULL,
-  last_name text NOT NULL,
+  first_name text,
+  last_name text,
   PRIMARY KEY (id)
 );
 -- Relationships:

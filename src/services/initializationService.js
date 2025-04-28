@@ -1,4 +1,5 @@
 import { fetchDataFromFileMaker } from '../api/fileMaker';
+import { query, adminQuery } from './supabaseService';
 
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff delays in ms
 
@@ -47,6 +48,122 @@ class InitializationService {
             await loadCustomers();
         } catch (error) {
             throw new Error(`Failed to preload data: ${error.message}`);
+        }
+    }
+
+    /**
+     * Retrieves the Supabase user_id for the current user by querying the database
+     * @param {Object} user - The user object containing email
+     * @param {Function} setUser - Function to update the user state
+     * @returns {Promise<string|null>} - The Supabase user_id or null if not found
+     */
+    async fetchSupabaseUserId(user, setUser) {
+        if (!user || !user.userEmail) {
+            console.error('Cannot fetch Supabase user ID: User or user email is missing');
+            return null;
+        }
+
+        this.currentPhase = 'fetching_supabase_user_id';
+        try {
+            console.log(`Fetching Supabase user ID for email: ${user.userEmail}`);
+            
+            // Use adminQuery to bypass RLS restrictions
+            // Query the customer_email table to find the customer with matching email
+            const emailResult = await adminQuery('customer_email', {
+                select: 'customer_id',
+                eq: {
+                    column: 'email',
+                    value: user.userEmail
+                }
+            });
+
+            console.log('Email query result:', emailResult);
+
+            if (!emailResult.success || !emailResult.data || emailResult.data.length === 0) {
+                console.error('No customer found with the provided email:', user.userEmail);
+                return null;
+            }
+
+            // Parse the customer_id if it's a stringified JSON
+            let customerId;
+            try {
+                const customerIdData = emailResult.data[0].customer_id;
+                customerId = typeof customerIdData === 'string' && customerIdData.startsWith('{')
+                    ? JSON.parse(customerIdData)
+                    : customerIdData;
+            } catch (e) {
+                // If parsing fails, use the original value
+                customerId = emailResult.data[0].customer_id;
+            }
+            console.log(`Found customer ID: ${customerId}`);
+
+            // Use adminQuery to bypass RLS restrictions
+            // Query the customer_user table to get the user_id for this customer
+            const userResult = await adminQuery('customer_user', {
+                select: 'user_id',
+                eq: {
+                    column: 'customer_id',
+                    value: customerId
+                }
+            });
+
+            if (!userResult.success || !userResult.data || userResult.data.length === 0) {
+                console.error('No user mapping found for customer ID:', customerId);
+                return null;
+            }
+
+            // Parse the user_id if it's a stringified JSON
+            let supabaseUserId;
+            try {
+                const userIdData = userResult.data[0].user_id;
+                supabaseUserId = typeof userIdData === 'string' && userIdData.startsWith('{')
+                    ? JSON.parse(userIdData)
+                    : userIdData;
+            } catch (e) {
+                // If parsing fails, use the original value
+                supabaseUserId = userResult.data[0].user_id;
+            }
+            console.log(`Found Supabase user ID: ${supabaseUserId}`);
+
+            // Query the customer_organization table to get the organization_id for this customer
+            const orgResult = await adminQuery('customer_organization', {
+                select: 'organization_id',
+                eq: {
+                    column: 'customer_id',
+                    value: customerId
+                }
+            });
+
+            // Parse the organization_id if it's a stringified JSON
+            let supabaseOrgId = null;
+            if (orgResult.success && orgResult.data && orgResult.data.length > 0) {
+                try {
+                    const orgIdData = orgResult.data[0].organization_id;
+                    supabaseOrgId = typeof orgIdData === 'string' && orgIdData.startsWith('{')
+                        ? JSON.parse(orgIdData)
+                        : orgIdData;
+                    console.log(`Found Supabase organization ID: ${supabaseOrgId}`);
+                } catch (e) {
+                    // If parsing fails, use the original value
+                    supabaseOrgId = orgResult.data[0].organization_id;
+                }
+            } else {
+                console.warn('No organization mapping found for customer ID:', customerId);
+            }
+
+            // Update the user state with the Supabase user ID and organization ID
+            if (setUser && supabaseUserId) {
+                setUser({
+                    ...user,
+                    supabaseUserID: supabaseUserId,
+                    supabaseOrgID: supabaseOrgId
+                });
+            }
+
+            return { supabaseUserId, supabaseOrgId };
+        } catch (error) {
+            console.error('Error fetching Supabase user ID:', error);
+            return null;
         }
     }
 

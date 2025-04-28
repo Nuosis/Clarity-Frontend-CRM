@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 
 const AppStateContext = createContext();
 const AppDispatchContext = createContext();
@@ -12,8 +12,10 @@ export const APP_ACTIONS = {
     SET_SELECTED_PROJECT: 'SET_SELECTED_PROJECT',
     SET_SELECTED_TASK: 'SET_SELECTED_TASK',
     SET_SELECTED_TEAM: 'SET_SELECTED_TEAM',
+    SET_CUSTOMER_DETAILS: 'SET_CUSTOMER_DETAILS',
     SET_SHOW_FINANCIAL_ACTIVITY: 'SET_SHOW_FINANCIAL_ACTIVITY',
     SET_SHOW_FILEMAKER_EXAMPLE: 'SET_SHOW_FILEMAKER_EXAMPLE',
+    SET_SHOW_SUPABASE_EXAMPLE: 'SET_SHOW_SUPABASE_EXAMPLE',
     CLEAR_ERROR: 'CLEAR_ERROR',
     RESET_STATE: 'RESET_STATE',
     SET_SHOW_CUSTOMER_FORM: 'SET_SHOW_CUSTOMER_FORM',
@@ -23,13 +25,15 @@ export const APP_ACTIONS = {
 const initialState = {
     loading: true,
     error: null,
-    user: null,
+    user: null, // Will include userID, userEmail, userName, teamID, supabaseUserID, and supabaseOrgID
     selectedCustomer: null,
     selectedProject: null,
     selectedTask: null,
     selectedTeam: null,
+    customerDetails: null, // Will store Supabase customer details
     showFinancialActivity: false,
     showFileMakerExample: false,
+    showSupabaseExample: false,
     showCustomerForm: false,
     showTeamForm: false,
     sidebarMode: 'customer', // 'customer' or 'team'
@@ -63,8 +67,15 @@ function appReducer(state, action) {
                 selectedCustomer: action.payload,
                 selectedProject: null, // Clear related selections
                 selectedTask: null,
+                customerDetails: null, // Clear customer details when selecting a new customer
                 showFinancialActivity: false, // Hide financial activity when selecting a customer
                 sidebarMode: 'customer', // Switch to customer mode
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_CUSTOMER_DETAILS:
+            return {
+                ...state,
+                customerDetails: action.payload,
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SELECTED_PROJECT:
@@ -112,6 +123,19 @@ function appReducer(state, action) {
                 selectedTask: null,
                 selectedTeam: null,
                 showFinancialActivity: false, // Hide financial activity
+                showSupabaseExample: false, // Hide Supabase example
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SHOW_SUPABASE_EXAMPLE:
+            return {
+                ...state,
+                showSupabaseExample: action.payload,
+                selectedCustomer: null, // Clear selections when showing Supabase example
+                selectedProject: null,
+                selectedTask: null,
+                selectedTeam: null,
+                showFinancialActivity: false, // Hide financial activity
+                showFileMakerExample: false, // Hide FileMaker example
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SHOW_CUSTOMER_FORM:
@@ -152,6 +176,11 @@ function appReducer(state, action) {
 
 export function AppStateProvider({ children }) {
     const [state, dispatch] = useReducer(appReducer, initialState);
+
+    // Expose state to window object for debugging
+    useEffect(() => {
+        window.state = state;
+    }, [state]);
 
     return (
         <AppStateContext.Provider value={state}>
@@ -201,6 +230,10 @@ export function useAppStateOperations() {
     const setSelectedCustomer = useCallback((customer) => {
         dispatch({ type: APP_ACTIONS.SET_SELECTED_CUSTOMER, payload: customer });
     }, [dispatch]);
+    
+    const setCustomerDetails = useCallback((details) => {
+        dispatch({ type: APP_ACTIONS.SET_CUSTOMER_DETAILS, payload: details });
+    }, [dispatch]);
 
     const setSelectedProject = useCallback((project) => {
         dispatch({ type: APP_ACTIONS.SET_SELECTED_PROJECT, payload: project });
@@ -225,6 +258,10 @@ export function useAppStateOperations() {
     const setShowFileMakerExample = useCallback((show) => {
         dispatch({ type: APP_ACTIONS.SET_SHOW_FILEMAKER_EXAMPLE, payload: show });
     }, [dispatch]);
+    
+    const setShowSupabaseExample = useCallback((show) => {
+        dispatch({ type: APP_ACTIONS.SET_SHOW_SUPABASE_EXAMPLE, payload: show });
+    }, [dispatch]);
 
     const setShowCustomerForm = useCallback((show) => {
         dispatch({ type: APP_ACTIONS.SET_SHOW_CUSTOMER_FORM, payload: show });
@@ -247,8 +284,10 @@ export function useAppStateOperations() {
         setSelectedProject,
         setSelectedTask,
         setSelectedTeam,
+        setCustomerDetails,
         setShowFinancialActivity,
         setShowFileMakerExample,
+        setShowSupabaseExample,
         setShowCustomerForm,
         setShowTeamForm,
         setSidebarMode,

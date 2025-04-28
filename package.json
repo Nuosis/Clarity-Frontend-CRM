@@ -17,9 +17,11 @@
     "docs": "node ./scripts/generate-docs.js",
     "test": "jest",
     "deploy:edge-function": "node ./scripts/deploy-edge-function.js",
-    "test:edge-function": "node ./scripts/test-edge-function.js"
+    "test:edge-function": "node ./scripts/test-edge-function.js",
+    "test:supabase": "node ./scripts/test-supabase-service.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
     "chart.js": "^4.4.8",
     "dotenv": "^16.3.1",
     "fm-gofer": "^1.10.0",

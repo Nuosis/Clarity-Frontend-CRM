@@ -75,6 +75,23 @@ export {
     filterRecordsByBilledStatus
 } from './financialService';
 
+// Supabase service exports
+export {
+    getSupabaseClient,
+    getSupabaseUrl,
+    getSupabaseKey,
+    createSupabaseClient,
+    isSupabaseConfigured,
+    getProjectId,
+    signInWithEmail,
+    signOut,
+    getSession,
+    query,
+    insert,
+    update,
+    remove
+} from './supabaseService';
+
 // Service version
 export const SERVICES_VERSION = '1.0.0';
 
