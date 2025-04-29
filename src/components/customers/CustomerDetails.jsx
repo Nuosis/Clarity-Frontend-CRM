@@ -41,20 +41,24 @@ function CustomerDetails({
     
     // Calculate total sales for this customer
     let totalSales = 0;
-    if (sales && sales.length > 0 && customerDetails?.id) {
-      const customerSales = sales.filter(sale => sale.customer_id === customerDetails.id);
+    const customerId = customer?.id;
+    const customerSPId = customerDetails?.id ;
+    
+    if (sales && sales.length > 0 && customerSPId ) {
+      const customerSales = sales.filter(sale => sale.customer_id === customerSPId );
+      console.log('Customer Sales:', customerSales);
       totalSales = customerSales.reduce((sum, sale) => {
-        const amount = typeof sale.amount === 'number' ? sale.amount : parseFloat(sale.amount || 0);
+        const amount = typeof sale.total_price === 'number' ? sale.total_price : parseFloat(sale.total_price || 0);
         return sum + amount;
       }, 0);
     }
     
     return {
       open: activeProjects.length,
-      unbilledHours: calculateRecordsUnbilledHours(projectRecords, true, customerDetails?.id || customer?.id),
+      unbilledHours: calculateRecordsUnbilledHours(projectRecords, true, customerId),
       totalSales: totalSales
     };
-  }, [projects, projectRecords, customerDetails?.id, sales]);
+  }, [projects, projectRecords, customerDetails?.id, customer?.id, sales]);
 
   // Memoized project grouping with error handling
   const { activeProjects, closedProjects } = useMemo(() => {
@@ -113,10 +117,11 @@ function CustomerDetails({
   
   // Load sales data for this customer when customerDetails changes
   useEffect(() => {
-    if (customerDetails && customerDetails.id && !sales.some(sale => sale.customer_id === customerDetails.id)) {
-      loadSalesForCustomer(customerDetails.id);
+    const customerId = customerDetails?.id || customer?.id;
+    if (customerId) {
+      loadSalesForCustomer(customerId);
     }
-  }, [customerDetails?.id, loadSalesForCustomer, sales]);
+  }, [customerDetails?.id, customer?.id, loadSalesForCustomer]);
 
   return (
     <div className="space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-2">

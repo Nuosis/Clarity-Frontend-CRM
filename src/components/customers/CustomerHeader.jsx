@@ -66,7 +66,7 @@ function CustomerHeader({
               Unbilled Hours
             </div>
             <div className="text-2xl font-semibold mt-1">
-              {stats.unbilledHours} hrs
+              {stats.unbilledHours}
             </div>
           </div>
           <div className={`
@@ -77,7 +77,7 @@ function CustomerHeader({
               Total Sales
             </div>
             <div className="text-2xl font-semibold mt-1">
-              ${stats.totalSales || '0.00'}
+              ${typeof stats.totalSales === 'number' ? stats.totalSales.toFixed(2) : stats.totalSales || '0.00'}
             </div>
           </div>
         </div>

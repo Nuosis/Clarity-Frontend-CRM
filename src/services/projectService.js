@@ -392,11 +392,14 @@ export function calculateRecordsUnbilledHours(records, currentMonthOnly = false,
     });
 
     // Calculate unbilled hours from filtered records
-    return filteredRecords
+    const unbilledHours = filteredRecords
         .filter(record => record.fieldData.f_billed === "0")
         .reduce((total, record) =>
             total + (parseFloat(record.fieldData.Billable_Time_Rounded) || 0), 0
-        ).toFixed(1);
+        );
+    
+    // Return as a formatted string with 1 decimal place
+    return unbilledHours.toFixed(1) + " hrs";
 }
 
 // Calculate detailed stats for a single project
