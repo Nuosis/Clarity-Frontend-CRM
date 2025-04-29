@@ -13,6 +13,7 @@ export const APP_ACTIONS = {
     SET_SELECTED_TASK: 'SET_SELECTED_TASK',
     SET_SELECTED_TEAM: 'SET_SELECTED_TEAM',
     SET_SELECTED_PRODUCT: 'SET_SELECTED_PRODUCT',
+    SET_SELECTED_SALE: 'SET_SELECTED_SALE',
     SET_CUSTOMER_DETAILS: 'SET_CUSTOMER_DETAILS',
     SET_SHOW_FINANCIAL_ACTIVITY: 'SET_SHOW_FINANCIAL_ACTIVITY',
     SET_SHOW_FILEMAKER_EXAMPLE: 'SET_SHOW_FILEMAKER_EXAMPLE',
@@ -23,7 +24,8 @@ export const APP_ACTIONS = {
     SET_SHOW_TEAM_FORM: 'SET_SHOW_TEAM_FORM',
     SET_SHOW_PRODUCT_FORM: 'SET_SHOW_PRODUCT_FORM',
     SET_SIDEBAR_MODE: 'SET_SIDEBAR_MODE',
-    SET_PRODUCTS: 'SET_PRODUCTS'
+    SET_PRODUCTS: 'SET_PRODUCTS',
+    SET_SALES: 'SET_SALES'
 };
 const initialState = {
     loading: true,
@@ -34,6 +36,7 @@ const initialState = {
     selectedTask: null,
     selectedTeam: null,
     selectedProduct: null,
+    selectedSale: null,
     customerDetails: null, // Will store Supabase customer details
     showFinancialActivity: false,
     showFileMakerExample: false,
@@ -42,8 +45,9 @@ const initialState = {
     showTeamForm: false,
     showProductForm: false,
     sidebarMode: 'customer', // 'customer', 'team', or 'product'
-    // Initial product data
+    // Initial data
     products: [],
+    sales: [],
     version: 1, // For state versioning
 };
 
@@ -118,6 +122,12 @@ function appReducer(state, action) {
                 showFinancialActivity: false,
                 version: state.version + 1
             };
+        case APP_ACTIONS.SET_SELECTED_SALE:
+            return {
+                ...state,
+                selectedSale: action.payload,
+                version: state.version + 1
+            };
         case APP_ACTIONS.SET_SHOW_FINANCIAL_ACTIVITY:
             return {
                 ...state,
@@ -182,6 +192,12 @@ function appReducer(state, action) {
             return {
                 ...state,
                 products: action.payload,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SALES:
+            return {
+                ...state,
+                sales: action.payload,
                 version: state.version + 1
             };
         case APP_ACTIONS.CLEAR_ERROR:
@@ -277,6 +293,10 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_SELECTED_PRODUCT, payload: product });
     }, [dispatch]);
 
+    const setSelectedSale = useCallback((sale) => {
+        dispatch({ type: APP_ACTIONS.SET_SELECTED_SALE, payload: sale });
+    }, [dispatch]);
+
     const resetState = useCallback(() => {
         dispatch({ type: APP_ACTIONS.RESET_STATE });
     }, [dispatch]);
@@ -309,6 +329,10 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_PRODUCTS, payload: products });
     }, [dispatch]);
 
+    const setSales = useCallback((sales) => {
+        dispatch({ type: APP_ACTIONS.SET_SALES, payload: sales });
+    }, [dispatch]);
+
     const setSidebarMode = useCallback((mode) => {
         dispatch({ type: APP_ACTIONS.SET_SIDEBAR_MODE, payload: mode });
     }, [dispatch]);
@@ -323,6 +347,7 @@ export function useAppStateOperations() {
         setSelectedTask,
         setSelectedTeam,
         setSelectedProduct,
+        setSelectedSale,
         setCustomerDetails,
         setShowFinancialActivity,
         setShowFileMakerExample,
@@ -332,6 +357,7 @@ export function useAppStateOperations() {
         setShowProductForm,
         setSidebarMode,
         setProducts,
+        setSales,
         resetState
     };
 }

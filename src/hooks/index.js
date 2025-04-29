@@ -71,6 +71,7 @@ export { useLink } from './useLink';
 export { useFinancialRecords } from './useFinancialRecords';
 export { useTeam } from './useTeam';
 export { useProducts } from './useProducts';
+export { useSales } from './useSales';
 
 /**
  * Hook for managing loading and error states

@@ -105,6 +105,19 @@ export {
     loadOrganizationProducts
 } from './productService';
 
+// Sales service exports
+export {
+    fetchSalesByOrganization,
+    fetchSalesByCustomer,
+    createSale,
+    updateSale,
+    deleteSale,
+    validateSaleData,
+    formatSaleForDisplay,
+    calculateSalesStats,
+    loadOrganizationSales
+} from './salesService';
+
 // Service version
 export const SERVICES_VERSION = '1.0.0';
 

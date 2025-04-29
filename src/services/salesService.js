@@ -22,7 +22,7 @@ export async function fetchSalesByOrganization(organizationId) {
     console.log(`Fetching sales for organization: ${organizationId}`);
     
     // Use adminQuery to bypass RLS restrictions
-    const result = await adminQuery('sales', {
+    const result = await adminQuery('customer_sales', {
       select: '*',
       eq: {
         column: 'organization_id',
@@ -100,7 +100,7 @@ export async function fetchSalesByCustomer(customerId) {
     console.log(`Fetching sales for customer: ${customerId}`);
     
     // Use adminQuery to bypass RLS restrictions
-    const result = await adminQuery('sales', {
+    const result = await adminQuery('customer_sales', {
       select: '*',
       eq: {
         column: 'customer_id',
@@ -182,7 +182,7 @@ export async function createSale(saleData) {
       };
     }
 
-    const result = await adminInsert('sales', saleData);
+    const result = await adminInsert('customer_sales', saleData);
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
@@ -230,7 +230,7 @@ export async function updateSale(saleId, saleData) {
       };
     }
 
-    const result = await adminUpdate('sales', saleData, { id: saleId });
+    const result = await adminUpdate('customer_sales', saleData, { id: saleId });
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
@@ -269,7 +269,7 @@ export async function deleteSale(saleId) {
       throw new Error('Sale ID is required');
     }
 
-    const result = await adminRemove('sales', { id: saleId });
+    const result = await adminRemove('customer_sales', { id: saleId });
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
