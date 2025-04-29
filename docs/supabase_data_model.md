@@ -304,3 +304,26 @@ CREATE TABLE public.products (
 ```
 
 ---
+
+## Table: customer_sales (public)
+
+```sql
+CREATE TABLE public.customer_sales (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  customer_id uuid NOT NULL,
+  product_id uuid,
+  product_name text NOT NULL,
+  sale_date timestamptz NOT NULL,
+  quantity numeric NOT NULL DEFAULT 1,
+  unit_price numeric(10, 2) NOT NULL,
+  total_price numeric(10, 2) NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  PRIMARY KEY (id)
+);
+-- Relationships:
+-- customer_sales.customer_id → customers.id
+-- customer_sales.product_id → products.id
+```
+
+---

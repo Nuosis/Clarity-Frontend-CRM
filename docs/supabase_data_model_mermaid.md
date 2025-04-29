@@ -132,6 +132,18 @@ erDiagram
     timestamptz created_at
     timestamptz updated_at
   }
+  customer_sales {
+    uuid id
+    uuid customer_id
+    uuid product_id
+    text product_name
+    timestamptz sale_date
+    numeric quantity
+    numeric unit_price
+    numeric total_price
+    timestamptz created_at
+    timestamptz updated_at
+  }
 
   licenses }o--|| organizations : organization_id
   products }o--|| organizations : organization_id
@@ -150,3 +162,5 @@ erDiagram
   conversations }o--|| users : user_id
   chat_messages }o--|| conversations : conversation_id
   functions }o--|| users : user_id
+  customer_sales }o--|| customers : customer_id
+  customer_sales }o--|| products : product_id
