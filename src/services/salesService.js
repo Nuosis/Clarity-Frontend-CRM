@@ -342,9 +342,9 @@ export function formatSaleForDisplay(sale) {
     id: processedSale.id,
     product_id: processedSale.product_id,
     customer_id: processedSale.customer_id,
-    amount: typeof processedSale.amount === 'number'
-      ? processedSale.amount.toFixed(2)
-      : parseFloat(processedSale.amount).toFixed(2),
+    amount: typeof processedSale.total_price === 'number'
+      ? processedSale.total_price.toFixed(2)
+      : parseFloat(processedSale.total_price).toFixed(2),
     date: new Date(processedSale.date).toLocaleDateString(),
     created: new Date(processedSale.created_at).toLocaleDateString(),
     updated: new Date(processedSale.updated_at).toLocaleDateString()
@@ -512,21 +512,26 @@ export async function loadOrganizationSales(organizationId, setSales, setLoading
  * Creates customer_sales records from unbilled financial records
  * @returns {Promise<Object>} - Object containing success status and created sales data
  */
-export async function createSalesFromUnbilledFinancials() {
+export async function createSalesFromUnbilledFinancials(organizationId) {
   try {
     // Import required functions
     const { fetchUnpaidRecords } = await import('../api/financialRecords');
     const { processFinancialData } = await import('./financialService');
 
-    // Fetch all unbilled financial records
+    // Fetch all unbilled financial records using the "unpaid" timeframe
+    // This approach is consistent with how useFinancialRecords successfully fetches unbilled records
     const result = await fetchUnpaidRecords();
+
+    // console.log('Fetched unbilled financial records:', result.messages[0].message);
     
-    if (!result.success) {
+    if (result.messages[0].message !=='OK') {
       throw new Error(result.error || 'Failed to fetch unbilled financial records');
     }
     
     // Process the financial data
-    const financialRecords = processFinancialData(result.data);
+    const financialRecords = processFinancialData(result);
+
+    // console.log(`Fetched ${financialRecords.length} unbilled financial records`);
     
     if (!financialRecords || financialRecords.length === 0) {
       console.log('No unbilled financial records found');
@@ -550,6 +555,20 @@ export async function createSalesFromUnbilledFinancials() {
           continue;
         }
         
+        // First, check if a record already exists for this financial_id
+        const existingRecordResult = await adminQuery('customer_sales', {
+          select: '*',
+          eq: {
+            column: 'financial_id',
+            value: record.id
+          }
+        });
+        
+        // If a record already exists, silently skip
+        if (existingRecordResult.success && existingRecordResult.data && existingRecordResult.data.length > 0) {
+          continue;
+        }
+        
         // Format the product/service field according to the specified rules
         let productService = '';
         
@@ -565,18 +584,71 @@ export async function createSalesFromUnbilledFinancials() {
         // Concatenate with a colon
         productService = `${customerNameFormatted}:${projectNameFirstWord}`;
         
-        // Create the sale data
+        // Look up if a customer exists where business_name = record.customerName and organization_id = organizationId
+        let supabaseCustomerId = null;
+        
+        const customerResult = await adminQuery('customers', {
+          select: '*',
+          eq: {
+            column: 'business_name',
+            value: record.customerName
+          }
+        });
+        
+        if (customerResult.success && customerResult.data && customerResult.data.length > 0) {
+          // Customer exists, check if linked to organization
+          supabaseCustomerId = customerResult.data[0].id;
+          
+          // Check if customer is linked to organization
+          const linkResult = await adminQuery('customer_organization', {
+            select: '*',
+            filter: {
+              column: 'customer_id',
+              operator: 'eq',
+              value: supabaseCustomerId
+            }
+          });
+          
+          const isLinked = linkResult.success &&
+                          linkResult.data &&
+                          linkResult.data.some(link => link.organization_id === organizationId);
+          
+          if (!isLinked) {
+            // Link customer to organization
+            await adminInsert('customer_organization', {
+              customer_id: supabaseCustomerId,
+              organization_id: organizationId
+            });
+          }
+        } else {
+          // Customer doesn't exist, create it
+          const newCustomerResult = await adminInsert('customers', {
+            business_name: record.customerName
+          });
+          
+          if (!newCustomerResult.success) {
+            throw new Error(`Failed to create customer: ${newCustomerResult.error}`);
+          }
+          
+          supabaseCustomerId = newCustomerResult.data[0].id;
+          
+          // Link customer to organization
+          await adminInsert('customer_organization', {
+            customer_id: supabaseCustomerId,
+            organization_id: organizationId
+          });
+        }
+        
+        // Create the sale data with the Supabase customer ID
         const saleData = {
           financial_id: record.id,
-          customer_id: record.customerId,
-          organization_id: record.organizationId || '1', // Default organization ID if not available
-          product_id: productService,
+          customer_id: supabaseCustomerId,
+          organization_id: organizationId,
+          product_name: productService,
           quantity: record.hours,
           unit_price: record.rate,
-          amount: record.amount,
-          date: record.date,
-          description: record.description || `Time entry for ${record.customerName}`,
-          status: 'active'
+          total_price: record.amount,
+          date: record.date
         };
         
         // Insert the sale record into Supabase

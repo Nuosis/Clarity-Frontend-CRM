@@ -95,7 +95,7 @@ CustomerHeader.propTypes = {
   }).isRequired,
   stats: PropTypes.shape({
     open: PropTypes.number,
-    unbilledHours: PropTypes.number,
+    unbilledHours: PropTypes.string,
     totalSales: PropTypes.number
   }),
   onNewProject: PropTypes.func.isRequired,

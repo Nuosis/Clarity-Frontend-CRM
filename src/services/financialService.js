@@ -41,6 +41,7 @@ export function processFinancialData(data) {
     if (record === data.response.data[0]) {
       console.log("Field mapping for first record:", {
         id: fieldData.__ID,
+        date: fieldData.DateStart,
         customerId: fieldData["_custID"],
         customerName: fieldData["Customers::Name"],
         projectId: fieldData._projectID,

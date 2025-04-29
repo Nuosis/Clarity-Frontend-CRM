@@ -122,6 +122,17 @@ function AppContent() {
                         loadingStateManager.setLoading('initialization', true, 'Loading products...');
                         await loadProductsForOrganization(supabaseIds.supabaseOrgId);
                         
+                        // Create sales from unbilled financials before loading sales data
+                        loadingStateManager.setLoading('initialization', true, 'Processing unbilled financials...');
+                        try {
+                            const { createSalesFromUnbilledFinancials } = await import('./services/salesService');
+                            await createSalesFromUnbilledFinancials(supabaseIds.supabaseOrgId);
+                            console.log('Successfully created sales from unbilled financials');
+                        } catch (unbilledError) {
+                            console.error('Error creating sales from unbilled financials:', unbilledError);
+                            // Continue with loading sales even if this fails
+                        }
+                        
                         loadingStateManager.setLoading('initialization', true, 'Loading sales...');
                         await loadSalesForOrganization(supabaseIds.supabaseOrgId);
                     }

@@ -6,6 +6,7 @@ import { useProject } from '../../hooks/useProject';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { useSnackBar } from '../../context/SnackBarContext';
 import { useSupabaseCustomer } from '../../hooks/useSupabaseCustomer';
+import { useSales } from '../../hooks/useSales';
 
 // Import our new components
 import CustomerHeader from './CustomerHeader';
@@ -24,8 +25,9 @@ function CustomerDetails({
   const { setLoading, setCustomerDetails } = useAppStateOperations();
   const { projectRecords } = useProject();
   const { showError } = useSnackBar();
-  const { user } = useAppState();
+  const { user, customerDetails } = useAppState();
   const { fetchOrCreateCustomerInSupabase } = useSupabaseCustomer();
+  const { sales, loadSalesForCustomer } = useSales();
   
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
   const [showActivityReport, setShowActivityReport] = useState(false);
@@ -36,12 +38,23 @@ function CustomerDetails({
     if (!projects || !projectRecords) return null;
     
     const activeProjects = projects.filter(p => p.status === 'Open');
+    
+    // Calculate total sales for this customer
+    let totalSales = 0;
+    if (sales && sales.length > 0 && customerDetails?.id) {
+      const customerSales = sales.filter(sale => sale.customer_id === customerDetails.id);
+      totalSales = customerSales.reduce((sum, sale) => {
+        const amount = typeof sale.amount === 'number' ? sale.amount : parseFloat(sale.amount || 0);
+        return sum + amount;
+      }, 0);
+    }
+    
     return {
       open: activeProjects.length,
-      unbilledHours: calculateRecordsUnbilledHours(projectRecords, true, customer.id),
-      totalSales: 0 // Placeholder for total sales
+      unbilledHours: calculateRecordsUnbilledHours(projectRecords, true, customerDetails?.id || customer?.id),
+      totalSales: totalSales
     };
-  }, [projects, projectRecords, customer.id]);
+  }, [projects, projectRecords, customerDetails?.id, sales]);
 
   // Memoized project grouping with error handling
   const { activeProjects, closedProjects } = useMemo(() => {
@@ -97,6 +110,13 @@ function CustomerDetails({
         });
     }
   }, [customer, user, fetchOrCreateCustomerInSupabase, setCustomerDetails, showError]);
+  
+  // Load sales data for this customer when customerDetails changes
+  useEffect(() => {
+    if (customerDetails && customerDetails.id && !sales.some(sale => sale.customer_id === customerDetails.id)) {
+      loadSalesForCustomer(customerDetails.id);
+    }
+  }, [customerDetails?.id, loadSalesForCustomer, sales]);
 
   return (
     <div className="space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-2">
@@ -146,7 +166,7 @@ function CustomerDetails({
       />
       
       {/* Customer Information Tabs */}
-      <CustomerTabs customer={customer} />
+      <CustomerTabs />
     </div>
   );
 }
