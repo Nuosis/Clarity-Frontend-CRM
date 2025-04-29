@@ -507,3 +507,190 @@ export async function loadOrganizationSales(organizationId, setSales, setLoading
     };
   }
 }
+
+/**
+ * Creates customer_sales records from unbilled financial records
+ * @returns {Promise<Object>} - Object containing success status and created sales data
+ */
+export async function createSalesFromUnbilledFinancials() {
+  try {
+    // Import required functions
+    const { fetchUnpaidRecords } = await import('../api/financialRecords');
+    const { processFinancialData } = await import('./financialService');
+
+    // Fetch all unbilled financial records
+    const result = await fetchUnpaidRecords();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch unbilled financial records');
+    }
+    
+    // Process the financial data
+    const financialRecords = processFinancialData(result.data);
+    
+    if (!financialRecords || financialRecords.length === 0) {
+      console.log('No unbilled financial records found');
+      return {
+        success: true,
+        data: [],
+        message: 'No unbilled financial records found'
+      };
+    }
+    
+    console.log(`Processing ${financialRecords.length} unbilled financial records`);
+    
+    // Create customer_sales records for each financial record
+    const createdSales = [];
+    const errors = [];
+    
+    for (const record of financialRecords) {
+      try {
+        // Skip records that are already billed
+        if (record.billed) {
+          continue;
+        }
+        
+        // Format the product/service field according to the specified rules
+        let productService = '';
+        
+        // Extract capital letters and numbers from customer name
+        const customerNameFormatted = (record.customerName || '')
+          .replace(/[^A-Z0-9]/g, '')  // Keep only capital letters and numbers
+          .trim();
+        
+        // Get the first word of the project name
+        const projectNameFirstWord = record.projectName ?
+          record.projectName.split(' ')[0] : '';
+        
+        // Concatenate with a colon
+        productService = `${customerNameFormatted}:${projectNameFirstWord}`;
+        
+        // Create the sale data
+        const saleData = {
+          financial_id: record.id,
+          customer_id: record.customerId,
+          organization_id: record.organizationId || '1', // Default organization ID if not available
+          product_id: productService,
+          quantity: record.hours,
+          unit_price: record.rate,
+          amount: record.amount,
+          date: record.date,
+          description: record.description || `Time entry for ${record.customerName}`,
+          status: 'active'
+        };
+        
+        // Insert the sale record into Supabase
+        const insertResult = await adminInsert('customer_sales', saleData);
+        
+        if (!insertResult.success) {
+          throw new Error(insertResult.error || 'Failed to create sale record');
+        }
+        
+        createdSales.push(insertResult.data[0]);
+        
+      } catch (error) {
+        console.error(`Error creating sale for financial record ${record.id}:`, error);
+        errors.push({
+          financialId: record.id,
+          error: error.message
+        });
+      }
+    }
+    
+    return {
+      success: true,
+      data: createdSales,
+      errors: errors.length > 0 ? errors : null,
+      message: `Created ${createdSales.length} sales records from unbilled financials`
+    };
+  } catch (error) {
+    console.error('Error creating sales from unbilled financials:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Updates a customer_sales record based on a financial record ID
+ * @param {string} financialId - The financial record ID (__ID) to find the corresponding customer_sales record
+ * @param {Object} financialRecord - The financial record data containing the fields to update
+ * @returns {Promise<Object>} - Object containing success status and updated sale data
+ */
+export async function updateFinancialRecord(financialId, financialRecord) {
+  try {
+    if (!financialId) {
+      throw new Error('Financial record ID is required');
+    }
+
+    if (!financialRecord) {
+      throw new Error('Financial record data is required');
+    }
+
+    // First, find the customer_sales record with this financial_id
+    const findResult = await adminQuery('customer_sales', {
+      select: '*',
+      eq: {
+        column: 'financial_id',
+        value: financialId
+      }
+    });
+
+    if (!findResult.success || !findResult.data || findResult.data.length === 0) {
+      throw new Error(`No customer_sales record found with financial_id: ${financialId}`);
+    }
+
+    const saleRecord = findResult.data[0];
+    
+    // Format the product/service field according to the specified rules
+    let productService = '';
+    
+    // Extract capital letters and numbers from customer name
+    const customerNameFormatted = (financialRecord["Customers::Name"] || '')
+      .replace(/[^A-Z0-9]/g, '')  // Keep only capital letters and numbers
+      .trim();
+    
+    // Get the first word of the project name
+    const projectNameFirstWord = financialRecord["customers_Projects::projectName"] ?
+      financialRecord["customers_Projects::projectName"].split(' ')[0] : '';
+    
+    // Concatenate with a colon
+    productService = `${customerNameFormatted}:${projectNameFirstWord}`;
+
+    // Prepare the update data
+    const updateData = {
+      quantity: financialRecord.Billable_Time_Rounded,
+      date: financialRecord.DateStart,
+      unit_price: financialRecord.Hourly_Rate,
+      product_name: productService
+    };
+
+    // Update the customer_sales record
+    const result = await adminUpdate('customer_sales', updateData, { id: saleRecord.id });
+    
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : null
+    };
+    
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to update sale');
+    }
+
+    // Return the processed data
+    return {
+      success: true,
+      data: Array.isArray(processedResult.data) && processedResult.data.length > 0
+        ? processedResult.data[0]
+        : null
+    };
+  } catch (error) {
+    console.error('Error updating sale from financial record:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
