@@ -73,7 +73,7 @@ export {
     sortRecordsByAmount,
     filterRecordsByDateRange,
     filterRecordsByBilledStatus
-} from './financialService';
+} from './billableHoursService';
 
 // Supabase service exports
 export {

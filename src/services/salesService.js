@@ -518,10 +518,10 @@ export async function createSalesFromUnbilledFinancials(organizationId) {
   try {
     // Import required functions
     const { fetchUnpaidRecords } = await import('../api/financialRecords');
-    const { processFinancialData } = await import('./financialService');
+    const { processFinancialData } = await import('./billableHoursService');
 
     // Fetch all unbilled financial records using the "unpaid" timeframe
-    // This approach is consistent with how useFinancialRecords successfully fetches unbilled records
+    // This approach is consistent with how useBillableHours successfully fetches unbilled records
     const result = await fetchUnpaidRecords();
 
     // console.log('Fetched unbilled financial records:', result.messages[0].message);

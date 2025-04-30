@@ -97,10 +97,10 @@ report.save();
 
 ```javascript
 import { generateCustomerProjectReport } from '../utils/pdfReportTest';
-import { useFinancialRecords } from '../hooks/useFinancialRecords';
+import { useBillableHours } from '../hooks/useBillableHours';
 
 function ReportButton({ customerId }) {
-  const { financialRecords, loading } = useFinancialRecords();
+  const { financialRecords, loading } = useBillableHours();
   
   const handleGenerateReport = async () => {
     if (loading || !financialRecords) return;

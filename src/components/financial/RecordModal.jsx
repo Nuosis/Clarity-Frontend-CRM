@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { validateFinancialRecordData } from '../../services/financialService';
+import { validateFinancialRecordData } from '../../services/billableHoursService';
 
 /**
  * Modal component for editing financial records

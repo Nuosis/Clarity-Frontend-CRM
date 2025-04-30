@@ -155,7 +155,7 @@ export async function generateReportFromFinancialRecords(financialRecords, dateR
   // Import the groupRecordsByProject function from the financial service
   // This is just for demonstration - in a real implementation, you would
   // import this function from the financial service
-  const { groupRecordsByProject } = require('../services/financialService');
+  const { groupRecordsByProject } = require('../services/billableHoursService');
   
   // Group the records by project
   const groupedByProject = groupRecordsByProject(financialRecords);

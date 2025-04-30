@@ -500,44 +500,36 @@ export function prepareChartData(records, chartType) {
       // Filter data for the same three months last year
       const lastYearData = monthlyData.filter(data => {
         return lastThreeMonths.some(m =>
-          m.month === data.month && data.year === m.year - 1
+          m.month === data.month && m.year === lastYear
         );
       });
       
       console.log("Last year data:", JSON.stringify(lastYearData.map(d => ({ month: d.month, year: d.year, amount: d.totalAmount }))));
       
-      // Create labels for the last three months
-      const monthLabels = lastThreeMonths.map(m => {
-        const date = new Date(m.year, m.month - 1, 1);
-        return date.toLocaleDateString('en-US', { month: 'short' });
-      });
+      // Prepare labels and data
+      const labels = thisYearData.map(data => data.label);
       
       return {
-        labels: monthLabels,
+        labels,
         datasets: [
           {
-            label: `This Year`,
-            data: lastThreeMonths.map(m => {
-              const monthData = thisYearData.find(data =>
-                data.month === m.month && data.year === m.year
-              );
-              return monthData ? monthData.totalAmount : 0;
-            }),
+            label: 'This Year',
+            data: thisYearData.map(data => data.totalAmount),
             borderColor: 'rgba(54, 162, 235, 0.8)',
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
             fill: true,
             tension: 0.4
           },
           {
-            label: `Last Year`,
-            data: lastThreeMonths.map(m => {
-              const monthData = lastYearData.find(data =>
-                data.month === m.month && data.year === m.year - 1
-              );
-              return monthData ? monthData.totalAmount : 0;
+            label: 'Last Year',
+            data: lastYearData.map((data, index) => {
+              // Find the corresponding month from this year
+              const thisYearMonth = thisYearData[index]?.month;
+              // Find last year's data for the same month
+              return lastYearData.find(d => d.month === thisYearMonth)?.totalAmount || 0;
             }),
-            borderColor: 'rgba(75, 192, 192, 0.8)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 0.8)',
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
             fill: true,
             tension: 0.4
           }
@@ -546,77 +538,35 @@ export function prepareChartData(records, chartType) {
     }
     
     case 'yearlyline': {
-      // Line chart showing monthly totals for yearly view with financial year starting March 1
+      // Line chart showing monthly totals for the current year
       const monthlyData = calculateMonthlyTotals(records);
       
-      // Get current year and last year
+      // Get current year
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
-      const lastYear = currentYear - 1;
       
-      // Sort monthly data by financial year (March to February)
-      const sortedMonthlyData = [...monthlyData].sort((a, b) => {
-        // Adjust month to financial year (March = 1, February = 12)
-        const getFinancialMonth = (month) => (month - 3 + 12) % 12 + 1;
-        
-        if (a.year !== b.year) return a.year - b.year;
-        return getFinancialMonth(a.month) - getFinancialMonth(b.month);
-      });
+      // Filter data for the current year
+      const thisYearData = monthlyData.filter(data => data.year === currentYear);
       
-      // Filter data for current financial year (March 1 to Feb 28/29)
-      const currentFinancialYearData = sortedMonthlyData.filter(data => {
-        if (data.month >= 3 && data.year === currentYear) return true;
-        if (data.month < 3 && data.year === currentYear + 1) return true;
-        return false;
-      });
+      // Prepare labels and data
+      const labels = thisYearData.map(data => data.label);
       
-      // Filter data for last financial year
-      const lastFinancialYearData = sortedMonthlyData.filter(data => {
-        if (data.month >= 3 && data.year === lastYear) return true;
-        if (data.month < 3 && data.year === currentYear) return true;
-        return false;
-      });
-      
-      // Create labels for all months in the financial year
-      const financialYearLabels = [];
-      for (let i = 0; i < 12; i++) {
-        const month = (i + 2) % 12 + 1; // Start from March (3)
-        const year = month >= 3 ? currentYear : currentYear + 1;
-        const date = new Date(year, month - 1, 1);
-        financialYearLabels.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
-      }
-      
-      // Create datasets for current and last financial years
       return {
-        labels: financialYearLabels,
+        labels,
         datasets: [
           {
-            label: `${currentYear}/${currentYear + 1}`,
-            data: financialYearLabels.map((_, index) => {
-              const month = (index + 2) % 12 + 1; // Start from March (3)
-              const year = month >= 3 ? currentYear : currentYear + 1;
-              const monthData = currentFinancialYearData.find(
-                data => data.month === month && data.year === year
-              );
-              return monthData ? monthData.totalAmount : 0;
-            }),
+            label: 'Total Amount',
+            data: thisYearData.map(data => data.totalAmount),
             borderColor: 'rgba(54, 162, 235, 0.8)',
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
             fill: true,
             tension: 0.4
           },
           {
-            label: `${lastYear}/${currentYear}`,
-            data: financialYearLabels.map((_, index) => {
-              const month = (index + 2) % 12 + 1; // Start from March (3)
-              const year = month >= 3 ? lastYear : currentYear;
-              const monthData = lastFinancialYearData.find(
-                data => data.month === month && data.year === year
-              );
-              return monthData ? monthData.totalAmount : 0;
-            }),
+            label: 'Billed Amount',
+            data: thisYearData.map(data => data.billedAmount),
             borderColor: 'rgba(75, 192, 192, 0.8)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
             fill: true,
             tension: 0.4
           }
@@ -625,65 +575,54 @@ export function prepareChartData(records, chartType) {
     }
     
     default:
-      throw new Error(`Unsupported chart type: ${chartType}`);
+      return {
+        labels: [],
+        datasets: []
+      };
   }
 }
 
 /**
- * Validates financial record data before creation/update
+ * Validates financial record data
  * @param {Object} data - Financial record data to validate
- * @returns {Object} Validation result { isValid, errors }
+ * @returns {Object} Validation result
  */
 export function validateFinancialRecordData(data) {
-  const errors = [];
+  const errors = {};
   
-  try {
-    validateRequired(data, ['customerId', 'projectId', 'hours', 'rate', 'date']);
-  } catch (error) {
-    errors.push(error.message);
-  }
-  
-  if (data.hours && (isNaN(parseFloat(data.hours)) || parseFloat(data.hours) < 0)) {
-    errors.push('Hours must be a positive number');
-  }
-  
-  if (data.rate && (isNaN(parseFloat(data.rate)) || parseFloat(data.rate) < 0)) {
-    errors.push('Rate must be a positive number');
-  }
-  
-  if (data.date && isNaN(new Date(data.date).getTime())) {
-    errors.push('Invalid date format');
-  }
+  // Required fields
+  validateRequired(errors, data, 'customerId', 'Customer is required');
+  validateRequired(errors, data, 'projectId', 'Project is required');
+  validateRequired(errors, data, 'hours', 'Hours are required');
+  validateRequired(errors, data, 'date', 'Date is required');
   
   return {
-    isValid: errors.length === 0,
+    isValid: Object.keys(errors).length === 0,
     errors
   };
 }
 
 /**
- * Formats financial record data for FileMaker
- * @param {Object} data - Financial record data to format
+ * Formats financial record for FileMaker
+ * @param {Object} data - Financial record data
  * @returns {Object} Formatted data for FileMaker
  */
 export function formatFinancialRecordForFileMaker(data) {
-  const date = new Date(data.date);
-  
+  // Convert to FileMaker field names
   return {
+    __ID: data.id,
+    _custID: data.customerId,
     _projectID: data.projectId,
     Billable_Time_Rounded: data.hours.toString(),
-    Hourly_Rate: data.rate.toString(),
     DateStart: data.date,
-    month: (date.getMonth() + 1).toString(),
-    year: date.getFullYear().toString(),
     f_billed: data.billed ? "1" : "0",
     "Work Performed": data.description || ""
   };
 }
 
 /**
- * Sorts financial records by date
- * @param {Array} records - Financial records to sort
+ * Sorts records by date
+ * @param {Array} records - Financial records
  * @param {string} direction - Sort direction ('asc' or 'desc')
  * @returns {Array} Sorted records
  */
@@ -691,42 +630,54 @@ export function sortRecordsByDate(records, direction = 'desc') {
   return [...records].sort((a, b) => {
     const dateA = new Date(a.date);
     const dateB = new Date(b.date);
-    return direction === 'asc' ? dateA - dateB : dateB - dateA;
+    
+    return direction === 'asc' 
+      ? dateA - dateB 
+      : dateB - dateA;
   });
 }
 
 /**
- * Sorts financial records by amount
- * @param {Array} records - Financial records to sort
+ * Sorts records by amount
+ * @param {Array} records - Financial records
  * @param {string} direction - Sort direction ('asc' or 'desc')
  * @returns {Array} Sorted records
  */
 export function sortRecordsByAmount(records, direction = 'desc') {
   return [...records].sort((a, b) => {
-    return direction === 'asc' ? a.amount - b.amount : b.amount - a.amount;
+    return direction === 'asc' 
+      ? a.amount - b.amount 
+      : b.amount - a.amount;
   });
 }
 
 /**
- * Filters financial records by date range
- * @param {Array} records - Financial records to filter
- * @param {Date} startDate - Start date
- * @param {Date} endDate - End date
+ * Filters records by billed status
+ * @param {Array} records - Financial records
+ * @param {boolean} billed - Billed status to filter by (true for billed, false for unbilled)
+ * @returns {Array} Filtered records
+ */
+export function filterRecordsByBilledStatus(records, billed = false) {
+  return records.filter(record => record.billed === billed);
+}
+
+/**
+ * Filters records by date range
+ * @param {Array} records - Financial records
+ * @param {string} startDate - Start date string
+ * @param {string} endDate - End date string
  * @returns {Array} Filtered records
  */
 export function filterRecordsByDateRange(records, startDate, endDate) {
+  const start = startDate ? new Date(startDate) : null;
+  const end = endDate ? new Date(endDate) : null;
+  
   return records.filter(record => {
     const recordDate = new Date(record.date);
-    return recordDate >= startDate && recordDate <= endDate;
+    
+    if (start && recordDate < start) return false;
+    if (end && recordDate > end) return false;
+    
+    return true;
   });
-}
-
-/**
- * Filters financial records by billed status
- * @param {Array} records - Financial records to filter
- * @param {boolean} billed - Billed status to filter by
- * @returns {Array} Filtered records
- */
-export function filterRecordsByBilledStatus(records, billed) {
-  return records.filter(record => record.billed === billed);
 }

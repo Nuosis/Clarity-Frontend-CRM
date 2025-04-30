@@ -214,11 +214,11 @@ function getDateRangeFromRecords(records) {
  * Example usage in a component:
  *
  * // Example with financial records
- * import { useFinancialRecords } from '../hooks/useFinancialRecords';
+ * import { useBillableHours } from '../hooks/useBillableHours';
  * import { generateCustomerProjectReport } from '../services/pdfReportService';
  *
  * function FinancialReportButton({ customerId }) {
- *   const { financialRecords, loading } = useFinancialRecords();
+ *   const { financialRecords, loading } = useBillableHours();
  *
  *   const handleGenerateReport = async () => {
  *     if (loading || !financialRecords) return;

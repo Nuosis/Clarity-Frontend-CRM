@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { useFinancialRecords } from '../../hooks/useFinancialRecords';
+import { useBillableHours } from '../../hooks/useBillableHours';
 import TimeframeSelector from './TimeframeSelector';
 import FinancialChart from './FinancialChart';
 import CustomerList from './CustomerList';
@@ -33,7 +33,7 @@ function FinancialActivity({ darkMode = false }) {
     selectedCustomerId,
     selectedCustomer,
     selectedProjectId,
-    selectedProject,
+    //selectedProject,
     selectedMonth,
     selectedMonthRecords,
     monthlyTotals,
@@ -44,7 +44,7 @@ function FinancialActivity({ darkMode = false }) {
     saveRecord,
     fetchData,
     updateBilledStatus
-  } = useFinancialRecords(timeframe);
+  } = useBillableHours(timeframe);
 
   // Handle timeframe change
   const handleTimeframeChange = useCallback((newTimeframe) => {

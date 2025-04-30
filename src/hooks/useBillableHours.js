@@ -1,17 +1,17 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { fetchFinancialRecords } from '../api/financialRecords';
-import * as financialService from '../services/financialService';
+import * as financialService from '../services/billableHoursService';
 
 /**
- * Custom hook for managing financial record data
+ * Custom hook for managing billable hours data
  * @param {string} initialTimeframe - The timeframe to fetch ("thisMonth", "unpaid", "lastMonth", "thisQuarter", "thisYear")
  * @param {Object} options - Optional configuration options
  * @param {string} options.customerId - Initial customer ID to filter by
  * @param {string} options.projectId - Initial project ID to filter by
  * @param {boolean} options.autoLoad - Whether to load data automatically (default: true)
- * @returns {Object} Financial data and methods
+ * @returns {Object} Billable hours data and methods
  */
-export function useFinancialRecords(initialTimeframe = "thisMonth", options = {}) {
+export function useBillableHours(initialTimeframe = "thisMonth", options = {}) {
   // State for records and filters
   const [records, setRecords] = useState([]);
   const [processedRecords, setProcessedRecords] = useState([]);

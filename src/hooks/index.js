@@ -68,7 +68,7 @@ export { useCustomer } from './useCustomer';
 export { useProject } from './useProject';
 export { useTask } from './useTask';
 export { useLink } from './useLink';
-export { useFinancialRecords } from './useFinancialRecords';
+export { useBillableHours } from './useBillableHours';
 export { useTeam } from './useTeam';
 export { useProducts } from './useProducts';
 export { useSales } from './useSales';
