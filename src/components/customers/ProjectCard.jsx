@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 
 // Project card component
@@ -8,6 +8,28 @@ function ProjectCard({
   onSelect,
   setLoading
 }) {
+  // Determine project type
+  const getProjectType = () => {
+    if (project.f_fixedPrice) return 'Fixed Cost';
+    if (project.f_subscription) return 'Subscription';
+    return 'Billable';
+  };
+
+  // Get appropriate badge color based on project type
+  const getTypeColor = (type) => {
+    switch (type) {
+      case 'Fixed Cost':
+        return darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800';
+      case 'Subscription':
+        return darkMode ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-800';
+      default: // Billable
+        return darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800';
+    }
+  };
+
+  const projectType = getProjectType();
+  const typeColor = getTypeColor(projectType);
+
   return (
     <div
       onClick={(e) => {
@@ -34,12 +56,64 @@ function ProjectCard({
         </span>
       </div>
       
+      <div className="mt-2 mb-3">
+        <span className={`
+          px-2 py-1 text-xs rounded-full ${typeColor}
+        `}>
+          {projectType}
+        </span>
+      </div>
+      
       <div className="space-y-2">
+        {/* Show estimated time for all project types */}
         {project.estOfTime && (
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Estimated Time: {project.estOfTime}
           </p>
         )}
+        
+        {/* Show value and payment structure for fixed price projects */}
+        {project.f_fixedPrice && project.value > 0 && (
+          <div className="mt-2">
+            <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Fixed Value: ${project.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            </p>
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              • 50% (${(project.value / 2).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}) to sellable at start
+            </p>
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              • 50% (${(project.value / 2).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}) to sales at completion
+            </p>
+          </div>
+        )}
+        
+        {/* Show value and payment structure for subscription projects */}
+        {project.f_subscription && project.value > 0 && (
+          <div className="mt-2">
+            <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Monthly Value: ${project.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            </p>
+          </div>
+        )}
+        
+        {/* Show relevant dates based on project type */}
+        <div className="mt-2">
+          {project.dateStart && (
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              {project.f_fixedPrice ? 'Start Date (50% payment):' :
+               project.f_subscription ? 'Subscription Start:' :
+               'Start Date:'} {new Date(project.dateStart).toLocaleDateString()}
+            </p>
+          )}
+          
+          {project.dateEnd && (
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              {project.f_fixedPrice ? 'End Date (50% payment):' :
+               project.f_subscription ? 'Subscription End:' :
+               'End Date:'} {new Date(project.dateEnd).toLocaleDateString()}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -49,7 +123,12 @@ ProjectCard.propTypes = {
   project: PropTypes.shape({
     projectName: PropTypes.string.isRequired,
     status: PropTypes.string.isRequired,
-    estOfTime: PropTypes.string
+    estOfTime: PropTypes.string,
+    f_fixedPrice: PropTypes.bool,
+    f_subscription: PropTypes.bool,
+    value: PropTypes.number,
+    dateStart: PropTypes.string,
+    dateEnd: PropTypes.string
   }).isRequired,
   darkMode: PropTypes.bool.isRequired,
   onSelect: PropTypes.func.isRequired,

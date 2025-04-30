@@ -211,6 +211,80 @@ export async function createSale(saleData) {
 }
 
 /**
+ * Creates multiple sales entries in a batch
+ * @param {Array} salesDataArray - Array of sale data objects to create
+ * @returns {Promise<Object>} - Object containing success status and created sales data
+ */
+export async function createSalesBatch(salesDataArray) {
+  try {
+    if (!Array.isArray(salesDataArray) || salesDataArray.length === 0) {
+      return {
+        success: true,
+        data: [],
+        message: 'No sales to create'
+      };
+    }
+
+    const results = [];
+    const errors = [];
+
+    // Process each sale in the batch
+    for (const saleData of salesDataArray) {
+      if (!saleData.organization_id) {
+        errors.push('Organization ID is required for all sales');
+        continue;
+      }
+
+      if (!saleData.customer_id) {
+        errors.push(`Customer ID is required for sale: ${JSON.stringify(saleData)}`);
+        continue;
+      }
+
+      const validation = validateSaleData(saleData);
+      if (!validation.isValid) {
+        errors.push(`Validation failed for sale: ${validation.errors.join(', ')}`);
+        continue;
+      }
+
+      try {
+        const result = await adminInsert('customer_sales', saleData);
+        
+        // Process JSON data immediately after receiving the response
+        const processedResult = {
+          ...result,
+          data: result.success && result.data ? processJsonData(result.data) : null
+        };
+        
+        if (!processedResult.success) {
+          errors.push(`Failed to create sale: ${processedResult.error || 'Unknown error'}`);
+          continue;
+        }
+
+        // Add the created sale to results
+        if (Array.isArray(processedResult.data) && processedResult.data.length > 0) {
+          results.push(processedResult.data[0]);
+        }
+      } catch (err) {
+        errors.push(`Error creating sale: ${err.message}`);
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      data: results,
+      errors: errors.length > 0 ? errors : null
+    };
+  } catch (error) {
+    console.error('Error creating sales batch:', error);
+    return {
+      success: false,
+      error: error.message,
+      data: []
+    };
+  }
+}
+
+/**
  * Updates an existing sale
  * @param {string} saleId - The ID of the sale to update
  * @param {Object} saleData - The updated sale data
@@ -305,15 +379,18 @@ export function validateSaleData(data) {
 
   //console.log('Validating sale data:', data);
 
-  if (!data.product_id) {
-    errors.push('Product ID is required');
+  // Product ID is not required for project-generated sales (fixed price or subscription)
+  if (!data.product_id && !data.project_id) {
+    errors.push('Either Product ID or Project ID is required');
   }
 
   if (!data.customer_id) {
     errors.push('Customer ID is required');
   }
 
-  if (data.total_price === undefined || data.total_price === null || isNaN(parseFloat(data.total_price)) || parseFloat(data.total_price) <= 0) {
+  // Check for amount or total_price (support both field names)
+  const price = data.total_price !== undefined ? data.total_price : data.amount;
+  if (price === undefined || price === null || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
     errors.push('Sale amount must be a positive number');
   }
 
@@ -340,14 +417,23 @@ export function formatSaleForDisplay(sale) {
   // Process any stringified JSON in the sale data first
   const processedSale = processJsonData(sale);
   
+  // Determine the amount from either total_price or amount field
+  const rawAmount = processedSale.total_price !== undefined ?
+    processedSale.total_price : processedSale.amount;
+  
+  const formattedAmount = typeof rawAmount === 'number'
+    ? rawAmount.toFixed(2)
+    : parseFloat(rawAmount).toFixed(2);
+  
   return {
     id: processedSale.id,
-    product_id: processedSale.product_id,
+    product_id: processedSale.product_id || null,
+    project_id: processedSale.project_id || null,
     customer_id: processedSale.customer_id,
-    amount: typeof processedSale.total_price === 'number'
-      ? processedSale.total_price.toFixed(2)
-      : parseFloat(processedSale.total_price).toFixed(2),
+    amount: formattedAmount,
     date: new Date(processedSale.date).toLocaleDateString(),
+    description: processedSale.description || '',
+    type: processedSale.type || 'sales', // 'sales', 'sellable', etc.
     created: new Date(processedSale.created_at).toLocaleDateString(),
     updated: new Date(processedSale.updated_at).toLocaleDateString()
   };
@@ -435,22 +521,42 @@ export function calculateSalesStats(sales) {
       totalAmount: 0,
       averageAmount: 0,
       minAmount: 0,
-      maxAmount: 0
+      maxAmount: 0,
+      byType: {
+        sales: 0,
+        sellable: 0
+      }
     };
   }
 
-  const amounts = processedSales.map(sale =>
-    typeof sale.amount === 'number' ? sale.amount : parseFloat(sale.amount)
-  );
+  // Extract amounts, handling both total_price and amount fields
+  const amounts = processedSales.map(sale => {
+    const amount = sale.total_price !== undefined ? sale.total_price : sale.amount;
+    return typeof amount === 'number' ? amount : parseFloat(amount);
+  });
   
   const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0);
+  
+  // Calculate amounts by type
+  const byType = processedSales.reduce((acc, sale) => {
+    const type = sale.type || 'sales';
+    const amount = sale.total_price !== undefined ? sale.total_price : sale.amount;
+    const numAmount = typeof amount === 'number' ? amount : parseFloat(amount);
+    
+    acc[type] = (acc[type] || 0) + numAmount;
+    return acc;
+  }, {});
   
   return {
     total: sales.length,
     totalAmount: totalAmount.toFixed(2),
     averageAmount: (totalAmount / amounts.length).toFixed(2),
     minAmount: Math.min(...amounts).toFixed(2),
-    maxAmount: Math.max(...amounts).toFixed(2)
+    maxAmount: Math.max(...amounts).toFixed(2),
+    byType: {
+      sales: (byType.sales || 0).toFixed(2),
+      sellable: (byType.sellable || 0).toFixed(2)
+    }
   };
 }
 
@@ -514,6 +620,66 @@ export async function loadOrganizationSales(organizationId, setSales, setLoading
  * Creates customer_sales records from unbilled financial records
  * @returns {Promise<Object>} - Object containing success status and created sales data
  */
+/**
+ * Creates sales entries from project value based on fixed price or subscription settings
+ * @param {Object} project - The project data
+ * @param {string} organizationId - The organization ID
+ * @returns {Promise<Object>} - Object containing success status and created sales data
+ */
+export async function createSalesFromProjectValue(project, organizationId) {
+  try {
+    if (!project) {
+      return {
+        success: false,
+        error: 'Project data is required',
+        data: []
+      };
+    }
+
+    if (!organizationId) {
+      return {
+        success: false,
+        error: 'Organization ID is required',
+        data: []
+      };
+    }
+
+    // Import the processProjectValue function from projectService
+    // Note: In a real implementation, you would import this at the top of the file
+    // For this example, we'll assume the function is available
+    const { processProjectValue } = await import('./projectService');
+    
+    // Process the project to determine what sales entries to create
+    const { salesToCreate } = processProjectValue(project);
+    
+    if (!salesToCreate || salesToCreate.length === 0) {
+      return {
+        success: true,
+        message: 'No sales to create for this project',
+        data: []
+      };
+    }
+    
+    // Add organization_id to each sale
+    const salesWithOrg = salesToCreate.map(sale => ({
+      ...sale,
+      organization_id: organizationId
+    }));
+    
+    // Create the sales in batch
+    const result = await createSalesBatch(salesWithOrg);
+    
+    return result;
+  } catch (error) {
+    console.error('Error creating sales from project value:', error);
+    return {
+      success: false,
+      error: error.message,
+      data: []
+    };
+  }
+}
+
 export async function createSalesFromUnbilledFinancials(organizationId) {
   try {
     // Import required functions

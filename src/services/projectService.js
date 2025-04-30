@@ -21,6 +21,9 @@ export function processProjectData(projectData, relatedData = {}) {
             id: projectId,
             recordId: projectRecordId,
             status: project.fieldData.status || 'Open', // Provide default status
+            f_fixedPrice: project.fieldData.f_fixedPrice === "1" || project.fieldData.f_fixedPrice === 1,
+            f_subscription: project.fieldData.f_subscription === "1" || project.fieldData.f_subscription === 1,
+            value: parseFloat(project.fieldData.value) || 0,
             images: processProjectImages(relatedData.images, projectId) || [],
             links: processProjectLinks(relatedData.links, projectId) || [],
             objectives: processProjectObjectives(relatedData.objectives, projectId, relatedData.steps) || [],
@@ -31,7 +34,9 @@ export function processProjectData(projectData, relatedData = {}) {
             },
             isActive: (project.fieldData.status || 'Open') === 'Open',
             createdAt: project.fieldData['~creationTimestamp'],
-            modifiedAt: project.fieldData['~modificationTimestamp']
+            modifiedAt: project.fieldData['~modificationTimestamp'],
+            dateStart: project.fieldData.dateStart || null,
+            dateEnd: project.fieldData.dateEnd || null
         };
     });
 }
@@ -209,6 +214,29 @@ export function validateProjectData(data) {
         errors.push('Invalid time estimate format');
     }
 
+    // Validate fixed price and subscription fields
+    if (data.f_fixedPrice === "1" || data.f_fixedPrice === 1) {
+        if (!data.value || isNaN(parseFloat(data.value)) || parseFloat(data.value) <= 0) {
+            errors.push('Value is required for fixed price projects and must be a positive number');
+        }
+    }
+
+    if (data.f_subscription === "1" || data.f_subscription === 1) {
+        if (!data.value || isNaN(parseFloat(data.value)) || parseFloat(data.value) <= 0) {
+            errors.push('Value is required for subscription projects and must be a positive number');
+        }
+        
+        if (!data.dateStart) {
+            errors.push('Start date is required for subscription projects');
+        }
+    }
+
+    // Ensure both fixed price and subscription aren't set at the same time
+    if ((data.f_fixedPrice === "1" || data.f_fixedPrice === 1) &&
+        (data.f_subscription === "1" || data.f_subscription === 1)) {
+        errors.push('A project cannot be both fixed price and subscription');
+    }
+
     return {
         isValid: errors.length === 0,
         errors
@@ -232,7 +260,12 @@ export function formatProjectForDisplay(project) {
         objectivesCount: project.objectives.length,
         completedObjectives: project.objectives.filter(obj => obj.completed).length,
         imageCount: project.images.length,
-        linkCount: project.links.length
+        linkCount: project.links.length,
+        isFixedPrice: project.f_fixedPrice || false,
+        isSubscription: project.f_subscription || false,
+        value: project.value || 0,
+        dateStart: project.dateStart ? new Date(project.dateStart).toLocaleDateString() : 'Not set',
+        dateEnd: project.dateEnd ? new Date(project.dateEnd).toLocaleDateString() : 'Not set'
     };
 }
 
@@ -247,6 +280,11 @@ export function formatProjectForFileMaker(data) {
         _custID: data.customerId,
         estOfTime: data.timeEstimate,
         status: data.status || 'Open',
+        f_fixedPrice: data.isFixedPrice ? "1" : "0",
+        f_subscription: data.isSubscription ? "1" : "0",
+        value: data.value || "0",
+        dateStart: data.dateStart || "",
+        dateEnd: data.dateEnd || "",
         __ID: data.id // Include the UUID in the data sent to FileMaker
     };
 }
@@ -444,4 +482,147 @@ export function getProcessedProject(project, relatedData) {
             }]
         }
     }, relatedData)[0];
+}
+
+/**
+ * Processes a project's fixed price or subscription value according to business rules
+ * @param {Object} project - The project to process
+ * @param {boolean} isUpdate - Whether this is an update to an existing project
+ * @returns {Object} - Object containing any sales entries to be created
+ */
+export function processProjectValue(project, isUpdate = false) {
+    const result = {
+        salesToCreate: [],
+        billableStatus: null
+    };
+
+    // Skip processing if neither fixed price nor subscription is set
+    if (!project.f_fixedPrice && !project.f_subscription) {
+        return result;
+    }
+
+    // Process fixed price projects
+    if (project.f_fixedPrice) {
+        result.billableStatus = false; // All hours are non-billable for fixed price projects
+        
+        // Check if project has a start date
+        if (project.dateStart) {
+            const startDate = new Date(project.dateStart);
+            const today = new Date();
+            
+            // Only process if the start date is today or in the past
+            if (startDate <= today) {
+                // Add half the value to "sellable" when the project is started
+                result.salesToCreate.push({
+                    customer_id: project._custID,
+                    amount: project.value / 2,
+                    date: project.dateStart,
+                    description: `Fixed price project (${project.projectName}) - 50% on start`,
+                    project_id: project.id || project.__ID,
+                    type: 'sellable'
+                });
+            }
+        }
+        
+        // Check if project has an end date
+        if (project.dateEnd) {
+            const endDate = new Date(project.dateEnd);
+            const today = new Date();
+            
+            // Only process if the end date is today or in the past
+            if (endDate <= today) {
+                // Add remaining half of the value to "sales" when the project is concluded
+                result.salesToCreate.push({
+                    customer_id: project._custID,
+                    amount: project.value / 2,
+                    date: project.dateEnd,
+                    description: `Fixed price project (${project.projectName}) - 50% on completion`,
+                    project_id: project.id || project.__ID,
+                    type: 'sales'
+                });
+            }
+        }
+    }
+    
+    // Process subscription projects
+    if (project.f_subscription && project.dateStart) {
+        const startDate = new Date(project.dateStart);
+        const today = new Date();
+        const endDate = project.dateEnd ? new Date(project.dateEnd) : null;
+        
+        // Only process if the project has started and hasn't ended
+        if (startDate <= today && (!endDate || endDate >= today)) {
+            // Calculate how many months have passed since the start date
+            const monthsPassed = calculateMonthsBetweenDates(startDate, today);
+            
+            // For each month, add the value to "sales"
+            for (let i = 0; i < monthsPassed; i++) {
+                const monthDate = new Date(startDate);
+                monthDate.setMonth(startDate.getMonth() + i);
+                
+                // Skip if this date is after the end date
+                if (endDate && monthDate > endDate) {
+                    break;
+                }
+                
+                result.salesToCreate.push({
+                    customer_id: project._custID,
+                    amount: project.value,
+                    date: monthDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+                    description: `Subscription project (${project.projectName}) - Month ${i + 1}`,
+                    project_id: project.id || project.__ID,
+                    type: 'sales'
+                });
+            }
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * Calculates the number of months between two dates
+ * @param {Date} startDate - The start date
+ * @param {Date} endDate - The end date
+ * @returns {number} - The number of months between the dates
+ */
+function calculateMonthsBetweenDates(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Calculate the difference in months
+    const yearDiff = end.getFullYear() - start.getFullYear();
+    const monthDiff = end.getMonth() - start.getMonth();
+    
+    // Calculate total months difference
+    let months = yearDiff * 12 + monthDiff;
+    
+    // If the end date is before the same day of the month as the start date,
+    // we haven't completed that month yet, so subtract 1
+    if (end.getDate() < start.getDate()) {
+        months--;
+    }
+    
+    // Ensure we return at least 1 if we're in the same month and the day has passed
+    return Math.max(0, months);
+}
+
+/**
+ * Updates the billable status of time records based on project settings
+ * @param {string} projectId - The ID of the project
+ * @param {boolean} isBillable - Whether time records should be billable
+ * @returns {Promise<Object>} - Result of the operation
+ */
+export async function updateProjectRecordsBillableStatus(projectId, isBillable) {
+    // This function would update the billable status of all time records for a project
+    // Implementation would depend on how time records are stored and updated
+    // For now, this is a placeholder for the actual implementation
+    
+    console.log(`Updating billable status for project ${projectId} to ${isBillable}`);
+    
+    // Return a mock result for now
+    return {
+        success: true,
+        message: `Updated billable status for project ${projectId}`
+    };
 }

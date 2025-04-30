@@ -12,6 +12,7 @@ import {
 } from '../api';
 import { useProjectRecords } from '../context/ProjectContext';
 import { useSnackBar } from '../context/SnackBarContext';
+import { useAppState } from '../context/AppStateContext';
 import {
     processProjectData,
     validateProjectData,
@@ -19,8 +20,11 @@ import {
     calculateProjectCompletion,
     processProjectImages,
     processProjectLinks,
-    processProjectObjectives
+    processProjectObjectives,
+    processProjectValue,
+    updateProjectRecordsBillableStatus
 } from '../services/projectService';
+import { createSalesFromProjectValue } from '../services/salesService';
 
 /**
  * Hook for managing project state and operations
@@ -32,6 +36,7 @@ export function useProject(customerId = null) {
     const [selectedProject, setSelectedProject] = useState(null);
     const projectRecords = useProjectRecords();
     const { showError } = useSnackBar();
+    const { user } = useAppState();
     // Load projects when customerId changes
     useEffect(() => {
         if (customerId) {
@@ -188,6 +193,36 @@ export function useProject(customerId = null) {
             
             const result = await createProject(formattedData);
             
+            // Process fixed price or subscription logic if applicable
+            if ((projectData.f_fixedPrice === "1" || projectData.f_fixedPrice === 1 ||
+                 projectData.isFixedPrice) ||
+                (projectData.f_subscription === "1" || projectData.f_subscription === 1 ||
+                 projectData.isSubscription)) {
+                
+                // Process the project value according to business rules
+                const projectWithId = {
+                    ...projectData,
+                    id: projectId,
+                    __ID: projectId,
+                    f_fixedPrice: projectData.f_fixedPrice === "1" || projectData.f_fixedPrice === 1 || projectData.isFixedPrice,
+                    f_subscription: projectData.f_subscription === "1" || projectData.f_subscription === 1 || projectData.isSubscription,
+                    value: parseFloat(projectData.value) || 0
+                };
+                
+                // Process the project value and create sales entries if needed
+                const { billableStatus } = processProjectValue(projectWithId, false);
+                
+                // Update billable status for all time records if needed
+                if (billableStatus !== null) {
+                    await updateProjectRecordsBillableStatus(projectId, billableStatus);
+                }
+                
+                // Create sales entries if the user has an organization ID
+                if (user?.supabaseOrgID) {
+                    await createSalesFromProjectValue(projectWithId, user.supabaseOrgID);
+                }
+            }
+            
             // Reload projects to get updated list
             await loadProjects(projectData.customerId);
             
@@ -227,9 +262,43 @@ export function useProject(customerId = null) {
             // Use recordId instead of UUID for FileMaker update
             const result = await updateProject(project.recordId, formattedData);
             
+            // Process fixed price or subscription logic if applicable
+            const isFixedPrice = projectData.f_fixedPrice === "1" || projectData.f_fixedPrice === 1 ||
+                                projectData.isFixedPrice || project.f_fixedPrice;
+            const isSubscription = projectData.f_subscription === "1" || projectData.f_subscription === 1 ||
+                                  projectData.isSubscription || project.f_subscription;
+            
+            if (isFixedPrice || isSubscription) {
+                // Merge the existing project with the update data for processing
+                const updatedProject = {
+                    ...project,
+                    ...projectData,
+                    id: projectId,
+                    __ID: projectId,
+                    f_fixedPrice: isFixedPrice,
+                    f_subscription: isSubscription,
+                    value: parseFloat(projectData.value || project.value) || 0,
+                    dateStart: projectData.dateStart || project.dateStart,
+                    dateEnd: projectData.dateEnd || project.dateEnd
+                };
+                
+                // Process the project value and create sales entries if needed
+                const { billableStatus } = processProjectValue(updatedProject, true);
+                
+                // Update billable status for all time records if needed
+                if (billableStatus !== null) {
+                    await updateProjectRecordsBillableStatus(projectId, billableStatus);
+                }
+                
+                // Create sales entries if the user has an organization ID
+                if (user?.supabaseOrgID) {
+                    await createSalesFromProjectValue(updatedProject, user.supabaseOrgID);
+                }
+            }
+            
             // Update local state
-            setProjects(prevProjects => 
-                prevProjects.map(project => 
+            setProjects(prevProjects =>
+                prevProjects.map(project =>
                     project.id === projectId
                         ? { ...project, ...projectData }
                         : project
