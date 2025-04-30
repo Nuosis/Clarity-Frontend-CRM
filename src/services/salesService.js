@@ -303,6 +303,8 @@ export async function deleteSale(saleId) {
 export function validateSaleData(data) {
   const errors = [];
 
+  //console.log('Validating sale data:', data);
+
   if (!data.product_id) {
     errors.push('Product ID is required');
   }
@@ -311,7 +313,7 @@ export function validateSaleData(data) {
     errors.push('Customer ID is required');
   }
 
-  if (data.amount === undefined || data.amount === null || isNaN(parseFloat(data.amount)) || parseFloat(data.amount) <= 0) {
+  if (data.total_price === undefined || data.total_price === null || isNaN(parseFloat(data.total_price)) || parseFloat(data.total_price) <= 0) {
     errors.push('Sale amount must be a positive number');
   }
 

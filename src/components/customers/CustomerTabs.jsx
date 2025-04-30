@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../layout/AppLayout';
 import { useSales } from '../../hooks/useSales';
 import { useAppState } from '../../context/AppStateContext';
+import SalesModal from './SalesModal';
 
 function CustomerTabs() {
   const { darkMode } = useTheme();
@@ -10,6 +11,7 @@ function CustomerTabs() {
   const { customerDetails } = useAppState();
   const [customerSales, setCustomerSales] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState({});
+  const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
 
   // Filter sales for the current customer
   useEffect(() => {
@@ -178,7 +180,22 @@ function CustomerTabs() {
         {/* Customer Sales Tab */}
         {activeTab === 'sales' && (
           <div>
-            <h4 className="text-lg font-medium mb-4">Products and Services</h4>
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-medium">Products and Services</h4>
+              <button
+                onClick={() => setIsSalesModalOpen(true)}
+                className={`
+                  flex items-center justify-center w-8 h-8 rounded-full
+                  ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}
+                  transition-colors duration-150
+                `}
+                title="Add new sale"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
@@ -366,6 +383,15 @@ function CustomerTabs() {
           </div>
         )}
       </div>
+      
+      {/* Sales Modal */}
+      {customerDetails && (
+        <SalesModal
+          customer={customerDetails}
+          isOpen={isSalesModalOpen}
+          onClose={() => setIsSalesModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
