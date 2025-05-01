@@ -18,6 +18,7 @@ export const APP_ACTIONS = {
     SET_SHOW_FINANCIAL_ACTIVITY: 'SET_SHOW_FINANCIAL_ACTIVITY',
     SET_SHOW_FILEMAKER_EXAMPLE: 'SET_SHOW_FILEMAKER_EXAMPLE',
     SET_SHOW_SUPABASE_EXAMPLE: 'SET_SHOW_SUPABASE_EXAMPLE',
+    SET_SHOW_QBO_TEST_PANEL: 'SET_SHOW_QBO_TEST_PANEL',
     CLEAR_ERROR: 'CLEAR_ERROR',
     RESET_STATE: 'RESET_STATE',
     SET_SHOW_CUSTOMER_FORM: 'SET_SHOW_CUSTOMER_FORM',
@@ -41,6 +42,7 @@ const initialState = {
     showFinancialActivity: false,
     showFileMakerExample: false,
     showSupabaseExample: false,
+    showQboTestPanel: false,
     showCustomerForm: false,
     showTeamForm: false,
     showProductForm: false,
@@ -160,6 +162,19 @@ function appReducer(state, action) {
                 selectedTeam: null,
                 showFinancialActivity: false, // Hide financial activity
                 showFileMakerExample: false, // Hide FileMaker example
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SHOW_QBO_TEST_PANEL:
+            return {
+                ...state,
+                showQboTestPanel: action.payload,
+                selectedCustomer: null, // Clear selections when showing QBO test panel
+                selectedProject: null,
+                selectedTask: null,
+                selectedTeam: null,
+                showFinancialActivity: false, // Hide financial activity
+                showFileMakerExample: false, // Hide FileMaker example
+                showSupabaseExample: false, // Hide Supabase example
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SHOW_CUSTOMER_FORM:
@@ -312,6 +327,10 @@ export function useAppStateOperations() {
     const setShowSupabaseExample = useCallback((show) => {
         dispatch({ type: APP_ACTIONS.SET_SHOW_SUPABASE_EXAMPLE, payload: show });
     }, [dispatch]);
+    
+    const setShowQboTestPanel = useCallback((show) => {
+        dispatch({ type: APP_ACTIONS.SET_SHOW_QBO_TEST_PANEL, payload: show });
+    }, [dispatch]);
 
     const setShowCustomerForm = useCallback((show) => {
         dispatch({ type: APP_ACTIONS.SET_SHOW_CUSTOMER_FORM, payload: show });
@@ -352,6 +371,7 @@ export function useAppStateOperations() {
         setShowFinancialActivity,
         setShowFileMakerExample,
         setShowSupabaseExample,
+        setShowQboTestPanel,
         setShowCustomerForm,
         setShowTeamForm,
         setShowProductForm,

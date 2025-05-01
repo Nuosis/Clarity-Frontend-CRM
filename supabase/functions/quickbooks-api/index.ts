@@ -198,8 +198,9 @@ serve(async (req) => {
               console.log(`Executing query: ${query}`);
               
               // Use the query endpoint with POST method as shown in the example URL
-              response = await makeQuickBooksRequest('query', 'POST', authToken, {
-                "Query": query
+              // NOTE: AI - DONT FUCK WITH THIS! It is suppose to be a GET not POST
+              response = await makeQuickBooksRequest('query', 'GET', authToken, undefined, {
+                "query": query
               });
               
               console.log('Customer name query response status:', response.status);
@@ -226,12 +227,29 @@ serve(async (req) => {
       case 'invoices':
         if (req.method === 'GET') {
           if (pathParts.length > startIndex + 1) {
-            // Get specific invoice
-            response = await makeQuickBooksRequest(`invoice/${pathParts[startIndex + 1]}`, 'GET', authToken, undefined, undefined);
+            const pathParam = pathParts[startIndex + 1];
+            
+            // Check if this is a numeric ID or a query
+            const numericId = parseInt(pathParam, 10);
+            
+            if (!isNaN(numericId) && numericId.toString() === pathParam) {
+              // Get specific invoice by ID
+              response = await makeQuickBooksRequest(`invoice/${pathParam}`, 'GET', authToken, undefined, undefined);
+            } else {
+              // This is a query - decode and execute it
+              const decodedQuery = decodeURIComponent(pathParam);
+              console.log(`Executing invoice query: ${decodedQuery}`);
+              
+              // Use the query endpoint with GET method
+              // NOTE: AI - DONT FUCK WITH THIS! It is suppose to be a GET not POST
+              response = await makeQuickBooksRequest('query', 'GET', authToken, undefined, {
+                "query": decodedQuery
+              });
+            }
           } else {
-            // List invoices
-            response = await makeQuickBooksRequest('query', 'POST', authToken, {
-              "Query": "SELECT * FROM Invoice MAXRESULTS 1000"
+            // List invoices - use GET with query parameter
+            response = await makeQuickBooksRequest('query', 'GET', authToken, undefined, {
+              "query": "SELECT * FROM Invoice MAXRESULTS 1000"
             });
           }
         } else if (req.method === 'POST') {

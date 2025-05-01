@@ -9,6 +9,7 @@ import ProductForm from './products/ProductForm';
 import FinancialActivity from './financial/FinancialActivity';
 import FileMakerExample from './examples/FileMakerExample';
 import SupabaseExample from './examples/SupabaseExample';
+import QboTestPanel from './financial/QboTestPanel';
 import ErrorBoundary from './ErrorBoundary';
 import Loading from './loading/Loading';
 import { useProject } from '../hooks/useProject';
@@ -46,6 +47,7 @@ const MainContent = React.memo(function MainContent({
         showFinancialActivity,
         showFileMakerExample,
         showSupabaseExample,
+        showQboTestPanel,
         sidebarMode,
         selectedProduct,
         products,
@@ -150,6 +152,15 @@ const MainContent = React.memo(function MainContent({
         return (
             <ErrorBoundary>
                 <SupabaseExample />
+            </ErrorBoundary>
+        );
+    }
+    
+    // Show QBO Test Panel if selected
+    if (showQboTestPanel) {
+        return (
+            <ErrorBoundary>
+                <QboTestPanel darkMode={darkMode} />
             </ErrorBoundary>
         );
     }

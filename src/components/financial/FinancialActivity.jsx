@@ -2,8 +2,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useSalesActivity } from '../../hooks/useSalesActivity';
 import { useAppState } from '../../context/AppStateContext';
-import { listQBOCustomerByName } from '../../api/quickbooksEdgeFunction';
-import { executeScript } from '../../api/fileMakerEdgeFunction';
 import TimeframeSelector from './TimeframeSelector';
 import FinancialChart from './FinancialChart';
 import CustomerList from './CustomerList';
@@ -22,16 +20,6 @@ function FinancialActivity({ darkMode = false }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState(null);
   const [showFullCustomerList, setShowFullCustomerList] = useState(true);
-  const [showQboTestPanel, setShowQboTestPanel] = useState(false);
-  const [qboQueryResults, setQboQueryResults] = useState(null);
-  const [isQboQueryLoading, setIsQboQueryLoading] = useState(false);
-  const [qboQueryError, setQboQueryError] = useState(null);
-  const [fmHealthResults, setFmHealthResults] = useState(null);
-  const [isFmHealthLoading, setIsFmHealthLoading] = useState(false);
-  const [fmHealthError, setFmHealthError] = useState(null);
-  
-  // Check if QBO test flag is enabled
-  const isQboTestEnabled = import.meta.env.VITE_TEST_QB === 'true';
 
   // Use the sales activity hook
   const {
@@ -134,62 +122,6 @@ function FinancialActivity({ darkMode = false }) {
     };
   }, [chartData, monthlyTotals, timeframe]);
 
-  // Handle QBO test button click
-  const handleQboTestClick = useCallback(() => {
-    setShowQboTestPanel(prev => !prev);
-    // Reset results when toggling the panel
-    if (showQboTestPanel) {
-      setQboQueryResults(null);
-      setQboQueryError(null);
-    }
-  }, [showQboTestPanel]);
-  
-  // Execute QBO customer query
-  const executeCustomerQuery = useCallback(async () => {
-    setIsQboQueryLoading(true);
-    setQboQueryError(null);
-    setQboQueryResults(null);
-
-    console.log(selectedCustomer)
-    
-    try {
-      // Use the listQBOCustomers function to get all customers
-      const result = await listQBOCustomerByName('AL3');
-      setQboQueryResults(result);
-    } catch (error) {
-      console.error("Error executing QBO query:", error);
-      setQboQueryError(error.message || "Failed to execute QBO query");
-    } finally {
-      setIsQboQueryLoading(false);
-    }
-  }, []);
-  
-  // Reset all test results
-  const resetTestResults = useCallback(() => {
-    setQboQueryResults(null);
-    setQboQueryError(null);
-    setFmHealthResults(null);
-    setFmHealthError(null);
-  }, []);
-  
-  // Execute FileMaker health check script
-  const executeFmHealthCheck = useCallback(async () => {
-    setIsFmHealthLoading(true);
-    setFmHealthError(null);
-    setFmHealthResults(null);
-    
-    try {
-      const layout = 'dapiRecordDetails';
-      const scriptName = 'health';
-      const result = await executeScript(layout, scriptName);
-      setFmHealthResults(result);
-    } catch (error) {
-      console.error("Error executing FileMaker health check:", error);
-      setFmHealthError(error.message || "Failed to execute FileMaker health check");
-    } finally {
-      setIsFmHealthLoading(false);
-    }
-  }, []);
 
   return (
     <div className="flex flex-col space-y-6" >
@@ -212,149 +144,6 @@ function FinancialActivity({ darkMode = false }) {
         />
       </div>
       
-      {/* QBO Test Button - Only shown when test flag is enabled */}
-      {isQboTestEnabled && (
-        <div className={`
-          p-4 rounded-lg border
-          ${darkMode ? 'bg-purple-900 bg-opacity-30 border-purple-800' : 'bg-purple-50 border-purple-200'}
-        `}>
-          <div className="flex justify-between items-center">
-            <h3 className={`font-medium ${darkMode ? 'text-purple-200' : 'text-purple-800'}`}>
-              QuickBooks Online Testing
-            </h3>
-            <button
-              onClick={handleQboTestClick}
-              className={`
-                text-xs px-2 py-1 rounded
-                ${darkMode
-                  ? 'bg-purple-800 text-purple-100 hover:bg-purple-700'
-                  : 'bg-purple-100 text-purple-800 hover:bg-purple-200'}
-              `}
-            >
-              {showQboTestPanel ? 'Hide QBO Test' : 'QBO Test'}
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* QBO Test Panel */}
-      {isQboTestEnabled && showQboTestPanel && (
-        <div className={`
-          p-4 rounded-lg border
-          ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
-        `}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              QBO Customer Query Test
-            </h3>
-            
-            {/* Reset Button - Only shown when there are results */}
-            {(qboQueryResults || fmHealthResults || qboQueryError || fmHealthError) && (
-              <button
-                onClick={resetTestResults}
-                className={`
-                  text-xs px-2 py-1 rounded
-                  ${darkMode
-                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}
-                `}
-              >
-                Reset Results
-              </button>
-            )}
-          </div>
-          
-          <div className="flex space-x-4 mb-4">
-            {/* FileMaker Health Check Button */}
-            <button
-              onClick={executeFmHealthCheck}
-              disabled={isFmHealthLoading}
-              className={`
-                px-4 py-2 rounded font-medium
-                ${isFmHealthLoading
-                  ? (darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')
-                  : (darkMode
-                    ? 'bg-green-800 text-green-100 hover:bg-green-700'
-                    : 'bg-green-600 text-white hover:bg-green-700')}
-              `}
-            >
-              {isFmHealthLoading ? 'Loading...' : 'FileMaker Health Check'}
-            </button>
-            
-            {/* QBO Customer Query Button */}
-            <button
-              onClick={executeCustomerQuery}
-              disabled={isQboQueryLoading}
-              className={`
-                px-4 py-2 rounded font-medium
-                ${isQboQueryLoading
-                  ? (darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')
-                  : (darkMode
-                    ? 'bg-blue-800 text-blue-100 hover:bg-blue-700'
-                    : 'bg-blue-600 text-white hover:bg-blue-700')}
-              `}
-            >
-              {isQboQueryLoading ? 'Loading...' : 'Test Customer Query'}
-            </button>
-          </div>
-          
-          {qboQueryError && (
-            <div className={`
-              p-3 rounded-lg border mb-4
-              ${darkMode ? 'bg-red-900 bg-opacity-30 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-800'}
-            `}>
-              <p className="text-sm font-medium">Error executing query</p>
-              <p className="text-xs mt-1">{qboQueryError}</p>
-            </div>
-          )}
-          
-          {/* FileMaker Health Check Results */}
-          {fmHealthError && (
-            <div className={`
-              p-3 rounded-lg border mb-4
-              ${darkMode ? 'bg-red-900 bg-opacity-30 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-800'}
-            `}>
-              <p className="text-sm font-medium">Error executing FileMaker health check</p>
-              <p className="text-xs mt-1">{fmHealthError}</p>
-            </div>
-          )}
-          
-          {fmHealthResults && (
-            <div className={`
-              p-3 rounded-lg border mb-4
-              ${darkMode ? 'bg-green-900 bg-opacity-30 border-green-800' : 'bg-green-50 border-green-200'}
-            `}>
-              <h4 className={`font-medium mb-2 ${darkMode ? 'text-green-200' : 'text-green-800'}`}>
-                FileMaker Health Check Results
-              </h4>
-              <div className={`
-                p-3 rounded-lg border overflow-auto max-h-96
-                ${darkMode ? 'bg-gray-900 border-gray-800 text-gray-300' : 'bg-white border-gray-300 text-gray-800'}
-              `} style={{ fontFamily: 'monospace' }}>
-                <pre>{JSON.stringify(fmHealthResults, null, 2)}</pre>
-              </div>
-            </div>
-          )}
-          
-          {/* QBO Query Results */}
-          {qboQueryResults && (
-            <div className={`
-              p-3 rounded-lg border
-              ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}
-            `}>
-              <h4 className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Query Results
-              </h4>
-              <div className={`
-                p-3 rounded-lg border overflow-auto max-h-96
-                ${darkMode ? 'bg-gray-900 border-gray-800 text-gray-300' : 'bg-white border-gray-300 text-gray-800'}
-              `} style={{ fontFamily: 'monospace' }}>
-                <pre>{JSON.stringify(qboQueryResults, null, 2)}</pre>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
       
       {/* Error message */}
       {error && (

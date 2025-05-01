@@ -133,6 +133,15 @@ export const getQBOInvoice = async (invoiceId) => {
 };
 
 /**
+ * Get a specific subset of invoices
+ * @param {string} query - The select query string (e.g., "SELECT * FROM Invoice WHERE Id = '123'")
+ * @returns {Promise<Object>} - The invoice information
+ */
+export const getQBOInvoiceByQuery = async (query) => {
+  return await makeRequest(`invoices/${query}`);
+};
+
+/**
  * Create a new invoice
  * @param {Object} invoiceData - The invoice data
  * @returns {Promise<Object>} - The created invoice
@@ -214,6 +223,7 @@ export default {
   updateQBOCustomer,
   listQBOInvoices,
   getQBOInvoice,
+  getQBOInvoiceByQuery,
   createQBOInvoice,
   updateQBOInvoice,
   listQBOAccounts,

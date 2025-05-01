@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { createQBOCustomer, createQBOInvoice, listQBOCustomerByName, executeQBOQuery } from '../../api/quickbooksEdgeFunction';
 import { adminUpdate } from '../../services/supabaseService';
+import CreateQBOCustomerModal from './CreateQBOCustomerModal';
 
 /**
  * Component to display individual sales lines for a customer
@@ -19,6 +20,7 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
     key: 'date',
     direction: 'desc'
   });
+  const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
   const customerName = records.length > 0 ? records[0].customers?.business_name : 'Unknown Customer';
 
   // Sort records based on current sort configuration
@@ -147,36 +149,19 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         throw new Error(`Failed to query QuickBooks customers: ${qboCustomersResult.Fault.Error[0]}`);
       }
       
-      const qboCustomers = qboCustomersResult.data.QueryResponse.Customer || [];
+      const qboCustomers = qboCustomersResult.QueryResponse.Customer || [];
       
       if (qboCustomers.length === 0) {
-        // No matching customer found, ask to create one
-        const createCustomer = window.confirm(`No matching customer found in QuickBooks for "${customerName}". Would you like to create this customer in QuickBooks?`);
-        
-        if (createCustomer) {
-          // Create customer in QBO
-          const customerData = {
-            DisplayName: customerName,
-            CompanyName: customerName,
-            // Add other customer fields as needed
-          };
-          
-          const result = await createQBOCustomer(customerData);
-          
-          if (!result.success) {
-            throw new Error(`Failed to create customer in QuickBooks: ${result.error}`);
-          }
-          
-          qboCustomerId = result.data.Id;
-          console.log(`Customer created in QBO with ID: ${qboCustomerId}`);
-        } else {
-          alert('Cannot proceed without a QuickBooks customer');
-          return;
-        }
+        // No matching customer found, show modal to create one
+        setShowCreateCustomerModal(true);
+        return; // Exit the function here, it will be resumed after customer creation
       } else if (qboCustomers.length === 1) {
         // Exactly one matching customer found
         qboCustomerId = qboCustomers[0].Id;
-        console.log(`Found matching QBO customer: ${qboCustomers[0].DisplayName} (ID: ${qboCustomerId})`);
+        qboCustomerCurrencyRef = qboCustomers[0].CurrencyRef.value;
+
+        console.log(`Found matching QBO customer: ${qboCustomers[0].DisplayName} (ID: ${qboCustomerId}) (CURRENCY: ${qboCustomerCurrencyRef})`);
+
       } else {
         // Multiple matching customers found, ask user to select one
         let customerOptions = '';
@@ -195,7 +180,8 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         }
         
         qboCustomerId = qboCustomers[parseInt(selectedIndex) - 1].Id;
-        console.log(`Selected QBO customer: ${qboCustomers[parseInt(selectedIndex) - 1].DisplayName} (ID: ${qboCustomerId})`);
+        qboCustomerCurrencyRef = qboCustomers[parseInt(selectedIndex) - 1].CurrencyRef.value;
+        console.log(`Found matching QBO customer: ${qboCustomers[0].DisplayName} (ID: ${qboCustomerId}) (CURRENCY: ${qboCustomerCurrencyRef})`);
       }
 
       // Filter out records that are already invoiced
@@ -206,6 +192,8 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         return;
       }
 
+      const ItemRef = `Development Income:Development ${qboCustomerCurrencyRef}`
+
       // Prepare invoice data for QBO
       const invoiceData = {
         CustomerRef: {
@@ -215,13 +203,13 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
           DetailType: 'SalesItemLineDetail',
           SalesItemLineDetail: {
             ItemRef: {
-              name: record.product_name || 'Development USD'
+              name: ItemRef
             },
             Qty: record.quantity || 1,
             UnitPrice: record.unit_price || 0
           },
           Amount: record.total_price || 0,
-          Description: record.product_name || 'Development USD'
+          Description: record.product_name || 'Development'
         }))
       };
 
@@ -300,6 +288,36 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       setIsProcessing(false);
     }
   }, [records]);
+  
+  // Handle creating a customer in QBO
+  const handleCreateCustomer = async (customerData) => {
+    try {
+      setIsProcessing(true);
+      
+      console.log('Creating customer with data:', customerData);
+      const result = await createQBOCustomer(customerData);
+      
+      if (!result.success) {
+        throw new Error(`Failed to create customer in QuickBooks: ${result.error}`);
+      }
+      
+      const qboCustomerId = result.Customer.Id;
+      console.log(`Customer created in QBO with ID: ${qboCustomerId}`);
+      
+      // Close the modal
+      setShowCreateCustomerModal(false);
+      
+      // Continue with invoice creation
+      handleQboInvoiceClick();
+      
+      return result;
+    } catch (error) {
+      console.error('Error creating QBO customer:', error);
+      throw error;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className={`
@@ -472,6 +490,16 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
             </tbody>
           </table>
         </div>
+      )}
+      
+      {/* Create Customer Modal */}
+      {showCreateCustomerModal && (
+        <CreateQBOCustomerModal
+          customerName={customerName}
+          onClose={() => setShowCreateCustomerModal(false)}
+          onSave={handleCreateCustomer}
+          darkMode={darkMode}
+        />
       )}
     </div>
   );

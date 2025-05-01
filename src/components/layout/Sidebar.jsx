@@ -10,6 +10,7 @@ import TeamForm from '../teams/TeamForm';
 // Feature flags
 const SHOW_FM_API = import.meta.env.VITE_SHOW_FM_API === 'true';
 const SHOW_SPB_API = import.meta.env.VITE_SHOW_SPB_API === 'true';
+const SHOW_QBO_TEST = import.meta.env.VITE_TEST_QB === 'true';
 
 // Log feature flag values for debugging
 console.log('Feature Flags:', {
@@ -401,8 +402,8 @@ function Sidebar({
 }) {
     const { darkMode } = useTheme();
     const { projects, projectRecords } = useProject();
-    const { showFinancialActivity, showFileMakerExample, showSupabaseExample, showCustomerForm, showTeamForm, sidebarMode, showProductForm } = useAppState();
-    const { setShowFinancialActivity, setShowFileMakerExample, setShowSupabaseExample, setShowCustomerForm, setShowTeamForm, setSidebarMode, setSelectedProduct, setShowProductForm: contextSetShowProductForm } = useAppStateOperations();
+    const { showFinancialActivity, showFileMakerExample, showSupabaseExample, showQboTestPanel, showCustomerForm, showTeamForm, sidebarMode, showProductForm } = useAppState();
+    const { setShowFinancialActivity, setShowFileMakerExample, setShowSupabaseExample, setShowQboTestPanel, setShowCustomerForm, setShowTeamForm, setSidebarMode, setSelectedProduct, setShowProductForm: contextSetShowProductForm } = useAppStateOperations();
     
     // Handle product selection
     const handleProductSelect = (product) => {
@@ -562,6 +563,24 @@ function Sidebar({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
                         </svg>
                         Supabase API
+                    </button>
+                )}
+                
+                {/* QBO Test Panel Button - Only shown when VITE_TEST_QB is true */}
+                {SHOW_QBO_TEST && (
+                    <button
+                        onClick={() => setShowQboTestPanel(true)}
+                        className={`
+                            mt-2 w-full flex items-center justify-center px-4 py-2 rounded-md
+                            ${showQboTestPanel
+                                ? (darkMode ? 'bg-indigo-700 text-white' : 'bg-indigo-100 text-indigo-800')
+                                : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
+                        `}
+                    >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                        QBO Test Panel
                     </button>
                 )}
             </div>
