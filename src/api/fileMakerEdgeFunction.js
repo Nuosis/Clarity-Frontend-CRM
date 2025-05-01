@@ -15,8 +15,8 @@ const EDGE_FUNCTION_URL = `${supabaseUrl}/functions/v1/filemaker-api`;
  * This is needed to authenticate requests to the edge function
  */
 const getAuthToken = () => {
-  // Replace this with your actual token retrieval logic
-  return localStorage.getItem('supabase.auth.token');
+  // Use the service role key for edge function authentication
+  return import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 };
 
 /**
@@ -39,9 +39,15 @@ export const listRecords = async (layout, options = {}) => {
   
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
   
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const response = await fetch(`${EDGE_FUNCTION_URL}/records/${layout}${queryString}`, {
     headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     }
   });
   
@@ -55,9 +61,15 @@ export const listRecords = async (layout, options = {}) => {
  * @returns {Promise<Object>} - The API response
  */
 export const getRecord = async (layout, recordId) => {
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const response = await fetch(`${EDGE_FUNCTION_URL}/records/${layout}/${recordId}`, {
     headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     }
   });
   
@@ -71,11 +83,17 @@ export const getRecord = async (layout, recordId) => {
  * @returns {Promise<Object>} - The API response
  */
 export const findRecords = async (layout, query) => {
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const response = await fetch(`${EDGE_FUNCTION_URL}/records/${layout}?_find=true`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify(query)
   });
@@ -90,11 +108,17 @@ export const findRecords = async (layout, query) => {
  * @returns {Promise<Object>} - The API response
  */
 export const createRecord = async (layout, fieldData) => {
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const response = await fetch(`${EDGE_FUNCTION_URL}/records/${layout}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
       fieldData
@@ -112,11 +136,17 @@ export const createRecord = async (layout, fieldData) => {
  * @returns {Promise<Object>} - The API response
  */
 export const updateRecord = async (layout, recordId, fieldData) => {
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const response = await fetch(`${EDGE_FUNCTION_URL}/records/${layout}/${recordId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
       fieldData
@@ -133,10 +163,16 @@ export const updateRecord = async (layout, recordId, fieldData) => {
  * @returns {Promise<Object>} - The API response
  */
 export const deleteRecord = async (layout, recordId) => {
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const response = await fetch(`${EDGE_FUNCTION_URL}/records/${layout}/${recordId}`, {
     method: 'DELETE',
     headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     }
   });
   
@@ -163,9 +199,15 @@ export const executeScript = async (layout, scriptName, scriptParam = '') => {
   
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
   
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const response = await fetch(`${EDGE_FUNCTION_URL}/scripts/${layout}/${scriptName}${queryString}`, {
     headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     }
   });
   
@@ -185,9 +227,15 @@ export const executeScript = async (layout, scriptName, scriptParam = '') => {
  * @returns {Promise<Blob>} - The file blob
  */
 export const downloadContainer = async (layout, recordId, fieldName, repetition = '1') => {
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const response = await fetch(`${EDGE_FUNCTION_URL}/containers/${layout}/${recordId}/${fieldName}/${repetition}`, {
     headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     }
   });
   
@@ -207,10 +255,16 @@ export const uploadContainer = async (layout, recordId, fieldName, file, repetit
   const formData = new FormData();
   formData.append('file', file);
   
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const response = await fetch(`${EDGE_FUNCTION_URL}/containers/${layout}/${recordId}/${fieldName}/${repetition}`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     },
     body: formData
   });

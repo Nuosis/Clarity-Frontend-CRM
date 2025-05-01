@@ -8,10 +8,10 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
 // FileMaker script details
 const FM_LAYOUT = 'dapiRecordDetails';
 const FM_SCRIPT = 'qb . refreshToken';
-const FM_URL = "server.selectjanitorial.com" ; 
-const FM_UN ="Dev";
-const FM_PQ = "NatureNeedsNurture";
-const FM_DB = "ClarityData";
+const FM_USER = Deno.env.get('FM_USER') || '';
+const FM_PASSWORD = Deno.env.get('FM_PASSWORD') || '';
+const FM_URL = Deno.env.get('FM_URL') || 'https://server.selectjanitorial.com/fmi/data/v1';
+const FM_DATABASE = Deno.env.get('FM_DATABASE') || '';
 
 /**
  * Get QuickBooks credentials from FileMaker
@@ -21,10 +21,10 @@ async function getQuickBooksCredentials(authToken: string): Promise<{ realmId: s
   try {
     // Prepare the script parameters
     const scriptParams = JSON.stringify({
-      "auth.fileName": FM_DB,
+      "auth.fileName": FM_DATABASE,
       "auth.serverAddress": FM_URL,
-      "auth.userName": FM_UN,
-      "auth.password": FM_PQ,
+      "auth.userName": FM_USER,
+      "auth.password": FM_PASSWORD,
       "logout": 1
     });
     

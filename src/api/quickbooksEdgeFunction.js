@@ -15,8 +15,8 @@ const EDGE_FUNCTION_URL = `${supabaseUrl}/functions/v1/quickbooks-api`;
  * This is needed to authenticate requests to the edge function
  */
 const getAuthToken = () => {
-  // Replace this with your actual token retrieval logic
-  return localStorage.getItem('supabase.auth.token');
+  // Use the service role key for edge function authentication
+  return import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 };
 
 /**
@@ -27,10 +27,16 @@ const getAuthToken = () => {
  * @returns {Promise<Object>} - The API response
  */
 const makeRequest = async (endpoint, method = 'GET', data = null) => {
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Service role key not available. Check environment variables.');
+  }
+  
   const options = {
     method,
     headers: {
-      'Authorization': `Bearer ${getAuthToken()}`
+      'Authorization': `Bearer ${token}`
     }
   };
 
