@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useSalesActivity } from '../../hooks/useSalesActivity';
 import { useAppState } from '../../context/AppStateContext';
-import { executeQBOQuery } from '../../api/quickbooksEdgeFunction';
+import { listQBOCustomers } from '../../api/quickbooksEdgeFunction';
 import { executeScript } from '../../api/fileMakerEdgeFunction';
 import TimeframeSelector from './TimeframeSelector';
 import FinancialChart from './FinancialChart';
@@ -153,8 +153,8 @@ function FinancialActivity({ darkMode = false }) {
     setQboQueryResults(null);
     
     try {
-      const query = "SELECT * FROM Customer MAXRESULTS 1000";
-      const result = await executeQBOQuery(query);
+      // Use the listQBOCustomers function to get all customers
+      const result = await listQBOCustomers();
       setQboQueryResults(result);
     } catch (error) {
       console.error("Error executing QBO query:", error);
