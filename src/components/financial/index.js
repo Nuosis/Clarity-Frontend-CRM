@@ -8,3 +8,4 @@ export { default as CustomerList } from './CustomerList';
 export { default as ProjectList } from './ProjectList';
 export { default as TimeframeSelector } from './TimeframeSelector';
 export { default as RecordModal } from './RecordModal';
+export { default as CustomerSalesTable } from './CustomerSalesTable';

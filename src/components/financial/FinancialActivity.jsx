@@ -5,6 +5,7 @@ import TimeframeSelector from './TimeframeSelector';
 import FinancialChart from './FinancialChart';
 import CustomerList from './CustomerList';
 import ProjectList from './ProjectList';
+import CustomerSalesTable from './CustomerSalesTable';
 import RecordModal from './RecordModal';
 
 /**
@@ -201,32 +202,34 @@ function FinancialActivity({ darkMode = false }) {
         </div>
       )}
       
-      {/* Chart area */}
-      <div className={`
-        p-4 rounded-lg border
-        ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
-      `}>
-        {loading ? (
-          <div className="h-64 flex items-center justify-center">
-            <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-              Loading chart data...
-            </p>
-          </div>
-        ) : records.length === 0 ? (
-          <div className="h-64 flex items-center justify-center">
-            <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-              No financial data available for the selected timeframe
-            </p>
-          </div>
-        ) : (
-          <FinancialChart 
-            data={preparedChartData}
-            timeframe={timeframe}
-            onMonthClick={handleChartMonthClick}
-            darkMode={darkMode}
-          />
-        )}
-      </div>
+      {/* Chart area - only show when no customer is selected */}
+      {showFullCustomerList && (
+        <div className={`
+          p-4 rounded-lg border
+          ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+        `}>
+          {loading ? (
+            <div className="h-64 flex items-center justify-center">
+              <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
+                Loading chart data...
+              </p>
+            </div>
+          ) : records.length === 0 ? (
+            <div className="h-64 flex items-center justify-center">
+              <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
+                No financial data available for the selected timeframe
+              </p>
+            </div>
+          ) : (
+            <FinancialChart
+              data={preparedChartData}
+              timeframe={timeframe}
+              onMonthClick={handleChartMonthClick}
+              darkMode={darkMode}
+            />
+          )}
+        </div>
+      )}
       
       {/* Customer list or Selected Customer Info */}
       <div className="mb-6">
@@ -292,18 +295,21 @@ function FinancialActivity({ darkMode = false }) {
                     </div>
                   </div>
                 </div>
+                
+                {/* Display individual sales lines for the selected customer */}
+                {selectedCustomer.records && selectedCustomer.records.length > 0 && (
+                  <CustomerSalesTable
+                    records={selectedCustomer.records}
+                    onEditRecord={handleEditRecord}
+                    darkMode={darkMode}
+                  />
+                )}
               </div>
             )}
           </div>
         )}
       </div>
-      
       {/* Project list - shown when a customer is selected and showProjects is true */}
-      {/* {console.log("ProjectList rendering condition check:", {
-        selectedProjectId,
-        selectedCustomerId,
-        showProjects
-      })} */}
       {selectedCustomerId && showProjects && !showFullCustomerList && (
         <div>
           <ProjectList
