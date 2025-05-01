@@ -72,6 +72,7 @@ export { useBillableHours } from './useBillableHours';
 export { useTeam } from './useTeam';
 export { useProducts } from './useProducts';
 export { useSales } from './useSales';
+export { useSalesActivity } from './useSalesActivity';
 
 /**
  * Hook for managing loading and error states

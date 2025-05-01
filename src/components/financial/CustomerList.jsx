@@ -4,7 +4,7 @@ import { initializeQuickBooks } from '../../api/fileMaker';
 import { useSnackBar } from '../../context/SnackBarContext';
 
 /**
- * Customer list component for displaying financial data by customer
+ * Customer list component for displaying sales data by customer
  * @param {Object} props - Component props
  * @param {Object} props.customers - Customers data grouped by customer ID
  * @param {Object} props.projects - Projects data grouped by project ID
@@ -14,7 +14,7 @@ import { useSnackBar } from '../../context/SnackBarContext';
  * @param {boolean} props.showProjects - Whether to show projects for the selected customer
  * @param {function} props.onToggleProjects - Function to toggle projects visibility
  * @param {boolean} props.darkMode - Whether dark mode is enabled
- * @param {function} props.updateBilledStatus - Function to update billed status of records
+ * @param {function} props.updateInvoiceStatus - Function to update invoice status of sales
  * @returns {JSX.Element} Customer list component
  */
 function CustomerList({
@@ -26,7 +26,7 @@ function CustomerList({
   showProjects = false,
   onToggleProjects,
   darkMode = false,
-  updateBilledStatus
+  updateInvoiceStatus
 }) {
   const { showError, showSuccess } = useSnackBar();
   const [processingQbCustomerId, setProcessingQbCustomerId] = useState(null);
@@ -73,9 +73,14 @@ function CustomerList({
     }).format(amount);
   };
 
-  // Format hours for display
-  const formatHours = (hours) => {
-    return `${hours.toFixed(2)} hrs`;
+  // Format quantity for display
+  const formatQuantity = (quantity) => {
+    // Ensure quantity is a number and limit to 2 decimal places
+    const formattedQuantity = typeof quantity === 'number'
+      ? parseFloat(quantity.toFixed(2))
+      : parseFloat(parseFloat(quantity || 0).toFixed(2));
+    
+    return `${formattedQuantity} units`;
   };
 
   // Handle QuickBooks initialization
@@ -101,16 +106,16 @@ function CustomerList({
     try {
       // Get the unbilled records for this customer
       const customerRecords = customers[customerId].records;
-      const unbilledRecords = customerRecords.filter(record => !record.billed);
+      const uninvoicedRecords = customerRecords.filter(record => record.inv_id === null);
       
-      console.log(`Unbilled records for ${customers[customerId].customerName}:`, {
+      console.log(`Uninvoiced sales for ${customers[customerId].customerName}:`, {
         totalRecords: customerRecords.length,
-        unbilledCount: unbilledRecords.length,
-        firstUnbilledRecord: unbilledRecords[0] || 'None'
+        uninvoicedCount: uninvoicedRecords.length,
+        firstUninvoicedRecord: uninvoicedRecords[0] || 'None'
       });
       
-      if (unbilledRecords.length === 0) {
-        showError('No unbilled records found for this customer');
+      if (uninvoicedRecords.length === 0) {
+        showError('No uninvoiced sales found for this customer');
         return;
       }
       
@@ -118,7 +123,7 @@ function CustomerList({
       const recordsByProject = {};
       const recordIds = [];
       
-      unbilledRecords.forEach(record => {
+      uninvoicedRecords.forEach(record => {
         // Add to the flat array of record IDs for optimistic update
         recordIds.push(record.id);
         
@@ -141,8 +146,8 @@ function CustomerList({
         recordsByProject: recordsByProject
       });
       
-      // Optimistically update the billed status in the UI
-      updateBilledStatus(customerId, recordIds);
+      // Optimistically update the invoice status in the UI
+      updateInvoiceStatus(customerId, recordIds);
       
       showSuccess('QuickBooks processing initiated successfully');
     } catch (error) {
@@ -151,7 +156,7 @@ function CustomerList({
     } finally {
       setProcessingQbCustomerId(null);
     }
-  }, [customers, showError, updateBilledStatus]);
+  }, [customers, showError, updateInvoiceStatus]);
 
   // Debug logs
   console.log("CustomerList rendering with props:", {
@@ -219,11 +224,11 @@ function CustomerList({
                     px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
                     ${darkMode ? 'text-gray-300' : 'text-gray-500'}
                   `}
-                  onClick={() => requestSort('totalHours')}
+                  onClick={() => requestSort('totalQuantity')}
                 >
                   <div className="flex items-center justify-end space-x-1">
-                    <span>Hours</span>
-                    <span>{getSortDirectionIndicator('totalHours')}</span>
+                    <span>Quantity</span>
+                    <span>{getSortDirectionIndicator('totalQuantity')}</span>
                   </div>
                 </th>
               </tr>
@@ -251,8 +256,8 @@ function CustomerList({
                       <td className="px-4 py-3 text-sm">
                         <div className="flex items-center justify-between">
                           <span>{customer.customerName}</span>
-                          {/* Only show QuickBooks button if there are unbilled records */}
-                          {customer.records && customer.records.some(record => !record.billed) && (
+                          {/* Only show QuickBooks button if there are uninvoiced sales */}
+                          {customer.records && customer.records.some(record => record.inv_id === null) && (
                             <button
                               onClick={(e) => handleQuickBooksInit(customerKey, e)}
                               disabled={processingQbCustomerId === customerKey}
@@ -262,7 +267,7 @@ function CustomerList({
                                   ? 'bg-gray-400 cursor-not-allowed'
                                   : 'bg-green-600 hover:bg-green-700 text-white'}
                               `}
-                              title="Send unbilled records to QuickBooks"
+                              title="Send uninvoiced sales to QuickBooks"
                             >
                               <span>qb</span>
                             </button>
@@ -273,7 +278,7 @@ function CustomerList({
                         {formatCurrency(customer.totalAmount)}
                       </td>
                       <td className="px-4 py-3 text-sm text-right">
-                        {formatHours(customer.totalHours)}
+                        {formatQuantity(customer.totalQuantity)}
                       </td>
                     </tr>
                     
@@ -327,7 +332,7 @@ function CustomerList({
                                           {formatCurrency(project.totalAmount)}
                                         </div>
                                         <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                          {formatHours(project.totalHours)}
+                                          {formatQuantity(project.totalQuantity)}
                                         </div>
                                       </div>
                                     </div>
@@ -358,7 +363,7 @@ CustomerList.propTypes = {
   showProjects: PropTypes.bool,
   onToggleProjects: PropTypes.func.isRequired,
   darkMode: PropTypes.bool,
-  updateBilledStatus: PropTypes.func.isRequired
+  updateInvoiceStatus: PropTypes.func.isRequired
 };
 
 export default React.memo(CustomerList);

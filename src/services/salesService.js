@@ -23,7 +23,9 @@ export async function fetchSalesByOrganization(organizationId) {
     
     // Use adminQuery to bypass RLS restrictions
     const result = await adminQuery('customer_sales', {
-      select: '*',
+      select: `id, date, customer_id, product_id, product_name, quantity,
+        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
+        customers(business_name)`,
       eq: {
         column: 'organization_id',
         value: organizationId
@@ -82,6 +84,173 @@ export async function fetchSalesByOrganization(organizationId) {
 }
 
 /**
+ * Fetches unbilled sales (null inv_id) for a specific organization
+ * @param {string} organizationId - The organization ID to fetch unbilled sales for
+ * @returns {Promise<Object>} - Object containing success status and sales data
+ */
+export async function fetchUnbilledSalesByOrganization(organizationId) {
+  if (!organizationId) {
+    console.error('Cannot fetch unbilled sales: Organization ID is missing');
+    return {
+      success: false,
+      error: 'Organization ID is required',
+      data: []
+    };
+  }
+
+  try {
+    console.log(`Fetching unbilled sales for organization: ${organizationId}`);
+    
+    // Use adminQuery to bypass RLS restrictions with multiple filters
+    // Include a join with the customers table to get the customer name
+    const result = await adminQuery('customer_sales', {
+      select: `id, date, customer_id, product_id, product_name, quantity,
+        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
+        customers(business_name)`,
+      filters: [
+        { type: 'eq', column: 'organization_id', value: organizationId },
+        { type: 'is', column: 'inv_id', value: null }
+      ],
+      order: {
+        column: 'date',
+        ascending: false
+      }
+    });
+
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : []
+    };
+
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to fetch unbilled sales');
+    }
+
+    // Handle null or undefined data gracefully
+    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
+      console.log(`No unbilled sales found for organization: ${organizationId}`);
+      return {
+        success: true,
+        data: []
+      };
+    }
+
+    // Ensure amount is always a number for each sale
+    const processedSales = processedResult.data.map(sale => {
+      if (!sale) return null;
+      
+      // Convert amount to number if it's a string
+      if (sale.amount !== undefined && sale.amount !== null) {
+        sale.amount = typeof sale.amount === 'string'
+          ? parseFloat(sale.amount)
+          : sale.amount;
+      }
+      
+      return sale;
+    }).filter(sale => sale !== null); // Filter out null sales
+
+    return {
+      success: true,
+      data: processedSales
+    };
+  } catch (error) {
+    console.error('Error fetching unbilled sales:', error);
+    return {
+      success: false,
+      error: error.message,
+      data: []
+    };
+  }
+}
+
+/**
+ * Fetches sales for the current month for a specific organization
+ * @param {string} organizationId - The organization ID to fetch current month sales for
+ * @returns {Promise<Object>} - Object containing success status and sales data
+ */
+export async function fetchCurrentMonthSalesByOrganization(organizationId) {
+  if (!organizationId) {
+    console.error('Cannot fetch current month sales: Organization ID is missing');
+    return {
+      success: false,
+      error: 'Organization ID is required',
+      data: []
+    };
+  }
+
+  try {
+    console.log(`Fetching current month sales for organization: ${organizationId}`);
+    
+    // Calculate first and last day of current month
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    
+    // Use adminQuery to bypass RLS restrictions with multiple filters
+    const result = await adminQuery('customer_sales', {
+      select: `id, date, customer_id, product_id, product_name, quantity,
+        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
+        customers(business_name)`,
+      filters: [
+        { type: 'eq', column: 'organization_id', value: organizationId },
+        { type: 'gte', column: 'date', value: firstDay },
+        { type: 'lte', column: 'date', value: lastDay }
+      ],
+      order: {
+        column: 'date',
+        ascending: false
+      }
+    });
+
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : []
+    };
+
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to fetch current month sales');
+    }
+
+    // Handle null or undefined data gracefully
+    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
+      console.log(`No current month sales found for organization: ${organizationId}`);
+      return {
+        success: true,
+        data: []
+      };
+    }
+
+    // Ensure amount is always a number for each sale
+    const processedSales = processedResult.data.map(sale => {
+      if (!sale) return null;
+      
+      // Convert amount to number if it's a string
+      if (sale.amount !== undefined && sale.amount !== null) {
+        sale.amount = typeof sale.amount === 'string'
+          ? parseFloat(sale.amount)
+          : sale.amount;
+      }
+      
+      return sale;
+    }).filter(sale => sale !== null); // Filter out null sales
+
+    return {
+      success: true,
+      data: processedSales
+    };
+  } catch (error) {
+    console.error('Error fetching current month sales:', error);
+    return {
+      success: false,
+      error: error.message,
+      data: []
+    };
+  }
+}
+
+/**
  * Fetches sales for a specific customer
  * @param {string} customerId - The customer ID to fetch sales for
  * @returns {Promise<Object>} - Object containing success status and sales data
@@ -101,7 +270,9 @@ export async function fetchSalesByCustomer(customerId) {
     
     // Use adminQuery to bypass RLS restrictions
     const result = await adminQuery('customer_sales', {
-      select: '*',
+      select: `id, date, customer_id, product_id, product_name, quantity,
+        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
+        customers(business_name)`,
       eq: {
         column: 'customer_id',
         value: customerId
@@ -151,6 +322,172 @@ export async function fetchSalesByCustomer(customerId) {
     };
   } catch (error) {
     console.error('Error fetching sales:', error);
+    return {
+      success: false,
+      error: error.message,
+      data: []
+    };
+  }
+}
+
+/**
+ * Fetches unbilled sales (null inv_id) for a specific customer
+ * @param {string} customerId - The customer ID to fetch unbilled sales for
+ * @returns {Promise<Object>} - Object containing success status and sales data
+ */
+export async function fetchUnbilledSalesByCustomer(customerId) {
+  if (!customerId) {
+    console.error('Cannot fetch unbilled sales: Customer ID is missing');
+    return {
+      success: false,
+      error: 'Customer ID is required',
+      data: []
+    };
+  }
+
+  try {
+    console.log(`Fetching unbilled sales for customer: ${customerId}`);
+    
+    // Use adminQuery to bypass RLS restrictions with multiple filters
+    const result = await adminQuery('customer_sales', {
+      select: `id, date, customer_id, product_id, product_name, quantity,
+        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
+        customers(business_name)`,
+      filters: [
+        { type: 'eq', column: 'customer_id', value: customerId },
+        { type: 'is', column: 'inv_id', value: null }
+      ],
+      order: {
+        column: 'date',
+        ascending: false
+      }
+    });
+
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : []
+    };
+
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to fetch unbilled sales');
+    }
+
+    // Handle null or undefined data gracefully
+    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
+      console.log(`No unbilled sales found for customer: ${customerId}`);
+      return {
+        success: true,
+        data: []
+      };
+    }
+
+    // Ensure amount is always a number for each sale
+    const processedSales = processedResult.data.map(sale => {
+      if (!sale) return null;
+      
+      // Convert amount to number if it's a string
+      if (sale.amount !== undefined && sale.amount !== null) {
+        sale.amount = typeof sale.amount === 'string'
+          ? parseFloat(sale.amount)
+          : sale.amount;
+      }
+      
+      return sale;
+    }).filter(sale => sale !== null); // Filter out null sales
+
+    return {
+      success: true,
+      data: processedSales
+    };
+  } catch (error) {
+    console.error('Error fetching unbilled sales:', error);
+    return {
+      success: false,
+      error: error.message,
+      data: []
+    };
+  }
+}
+
+/**
+ * Fetches sales for the current month for a specific customer
+ * @param {string} customerId - The customer ID to fetch current month sales for
+ * @returns {Promise<Object>} - Object containing success status and sales data
+ */
+export async function fetchCurrentMonthSalesByCustomer(customerId) {
+  if (!customerId) {
+    console.error('Cannot fetch current month sales: Customer ID is missing');
+    return {
+      success: false,
+      error: 'Customer ID is required',
+      data: []
+    };
+  }
+
+  try {
+    console.log(`Fetching current month sales for customer: ${customerId}`);
+    
+    // Calculate first and last day of current month
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    
+    // Use adminQuery to bypass RLS restrictions with multiple filters
+    const result = await adminQuery('customer_sales', {
+      select: `id, date, customer_id, product_id, product_name, quantity,
+        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
+        customers(business_name)`,
+      filters: [
+        { type: 'eq', column: 'customer_id', value: customerId },
+        { type: 'gte', column: 'date', value: firstDay },
+        { type: 'lte', column: 'date', value: lastDay }
+      ],
+      order: {
+        column: 'date',
+        ascending: false
+      }
+    });
+
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : []
+    };
+
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to fetch current month sales');
+    }
+
+    // Handle null or undefined data gracefully
+    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
+      console.log(`No current month sales found for customer: ${customerId}`);
+      return {
+        success: true,
+        data: []
+      };
+    }
+
+    // Ensure amount is always a number for each sale
+    const processedSales = processedResult.data.map(sale => {
+      if (!sale) return null;
+      
+      // Convert amount to number if it's a string
+      if (sale.amount !== undefined && sale.amount !== null) {
+        sale.amount = typeof sale.amount === 'string'
+          ? parseFloat(sale.amount)
+          : sale.amount;
+      }
+      
+      return sale;
+    }).filter(sale => sale !== null); // Filter out null sales
+
+    return {
+      success: true,
+      data: processedSales
+    };
+  } catch (error) {
+    console.error('Error fetching current month sales:', error);
     return {
       success: false,
       error: error.message,
@@ -379,8 +716,9 @@ export function validateSaleData(data) {
 
   //console.log('Validating sale data:', data);
 
-  // Product ID is not required for project-generated sales (fixed price or subscription)
-  if (!data.product_id && !data.project_id) {
+  // For editing existing sales in the UI, we don't require product_id or project_id
+  // Only require these fields for new sales being created
+  if (!data.id && !data.product_id && !data.project_id) {
     errors.push('Either Product ID or Project ID is required');
   }
 
@@ -388,18 +726,24 @@ export function validateSaleData(data) {
     errors.push('Customer ID is required');
   }
 
-  // Check for amount or total_price (support both field names)
-  const price = data.total_price !== undefined ? data.total_price : data.amount;
-  if (price === undefined || price === null || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
-    errors.push('Sale amount must be a positive number');
+  // Check for unit_price and quantity
+  if (data.unit_price === undefined || data.unit_price === null ||
+      isNaN(parseFloat(data.unit_price)) || parseFloat(data.unit_price) < 0) {
+    errors.push('Unit price must be a non-negative number');
+  }
+
+  if (data.quantity === undefined || data.quantity === null ||
+      isNaN(parseInt(data.quantity, 10)) || parseInt(data.quantity, 10) <= 0) {
+    errors.push('Quantity must be a positive number');
   }
 
   if (!data.date) {
     errors.push('Sale date is required');
   }
 
-  if (!data.organization_id) {
-    errors.push('Organization ID is required');
+  // Only require organization_id for new sales, not when editing existing ones
+  if (!data.id && !data.organization_id) {
+    errors.push('Organization ID is required for new sales');
   }
 
   return {
@@ -493,10 +837,8 @@ function processJsonData(data) {
     for (const key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = processJsonData(data[key]);
-        // Only add non-null values to the result
-        if (value != null) {
+        // Always preserve key even if null
           result[key] = value;
-        }
       }
     }
     return result;
@@ -928,6 +1270,155 @@ export async function updateFinancialRecord(financialId, financialRecord) {
     };
   } catch (error) {
     console.error('Error updating sale from financial record:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Creates a sales record from a single financial record
+ * @param {string} financialId - The ID of the financial record
+ * @param {Object} organizationId - The organization ID
+ * @returns {Promise<Object>} - Object containing success status and created sale data
+ */
+export async function createSaleFromFinancialRecord(financialId, organizationId) {
+  try {
+    if (!financialId) {
+      throw new Error('Financial record ID is required');
+    }
+
+    if (!organizationId) {
+      throw new Error('Organization ID is required');
+    }
+
+    // Import required functions
+    const { fetchFinancialRecords } = await import('../api/financialRecords');
+    const { processFinancialData } = await import('./billableHoursService');
+
+    // Fetch the specific financial record
+    const result = await fetchFinancialRecords('unpaid', null, null);
+    
+    if (!result || !result.response || !result.response.data) {
+      throw new Error('Failed to fetch financial record');
+    }
+    
+    // Process the financial data
+    const financialRecords = processFinancialData(result);
+    
+    // Find the specific record we're looking for
+    const record = financialRecords.find(r => r.id === financialId);
+    
+    if (!record) {
+      throw new Error(`Financial record with ID ${financialId} not found`);
+    }
+    
+    // Skip records that are already billed
+    if (record.billed) {
+      return {
+        success: true,
+        data: null,
+        message: 'Record is already billed, skipping'
+      };
+    }
+    
+    // Format the product/service field according to the specified rules
+    let productService = '';
+    
+    // Extract capital letters and numbers from customer name
+    const customerNameFormatted = (record.customerName || '')
+      .replace(/[^A-Z0-9]/g, '')  // Keep only capital letters and numbers
+      .trim();
+    
+    // Get the first word of the project name
+    const projectNameFirstWord = record.projectName ?
+      record.projectName.split(' ')[0] : '';
+    
+    // Concatenate with a colon
+    productService = `${customerNameFormatted}:${projectNameFirstWord}`;
+    
+    // Look up if a customer exists where business_name = record.customerName and organization_id = organizationId
+    let supabaseCustomerId = null;
+    
+    const customerResult = await adminQuery('customers', {
+      select: '*',
+      eq: {
+        column: 'business_name',
+        value: record.customerName
+      }
+    });
+    
+    if (customerResult.success && customerResult.data && customerResult.data.length > 0) {
+      // Customer exists, check if linked to organization
+      supabaseCustomerId = customerResult.data[0].id;
+      
+      // Check if customer is linked to organization
+      const linkResult = await adminQuery('customer_organization', {
+        select: '*',
+        filter: {
+          column: 'customer_id',
+          operator: 'eq',
+          value: supabaseCustomerId
+        }
+      });
+      
+      const isLinked = linkResult.success &&
+                      linkResult.data &&
+                      linkResult.data.some(link => link.organization_id === organizationId);
+      
+      if (!isLinked) {
+        // Link customer to organization
+        await adminInsert('customer_organization', {
+          customer_id: supabaseCustomerId,
+          organization_id: organizationId
+        });
+      }
+    } else {
+      // Customer doesn't exist, create it
+      const newCustomerResult = await adminInsert('customers', {
+        business_name: record.customerName
+      });
+      
+      if (!newCustomerResult.success) {
+        throw new Error(`Failed to create customer: ${newCustomerResult.error}`);
+      }
+      
+      supabaseCustomerId = newCustomerResult.data[0].id;
+      
+      // Link customer to organization
+      await adminInsert('customer_organization', {
+        customer_id: supabaseCustomerId,
+        organization_id: organizationId
+      });
+    }
+    
+    // Create the sale data with the Supabase customer ID
+    const saleData = {
+      financial_id: record.id,
+      customer_id: supabaseCustomerId,
+      organization_id: organizationId,
+      product_name: productService,
+      quantity: record.hours,
+      unit_price: record.rate,
+      total_price: record.amount,
+      date: record.date
+    };
+    
+    // Insert the sale record into Supabase
+    const insertResult = await adminInsert('customer_sales', saleData);
+    
+    if (!insertResult.success) {
+      throw new Error(insertResult.error || 'Failed to create sale record');
+    }
+    
+    return {
+      success: true,
+      data: insertResult.data[0],
+      message: 'Sales record created successfully'
+    };
+  } catch (error) {
+    console.error('Error creating sale from financial record:', error);
     return {
       success: false,
       error: error.message

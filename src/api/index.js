@@ -73,7 +73,25 @@ export {
 } from './financialRecords';
 
 // API version
-export const API_VERSION = '1.0.0';
+export const API_VERSION = '1.0.1';
+
+// QuickBooks Edge Function API
+export {
+    getQBOCompanyInfo,
+    listQBOCustomers,
+    getQBOCustomer,
+    createQBOCustomer,
+    updateQBOCustomer,
+    listQBOInvoices,
+    getQBOInvoice,
+    createQBOInvoice,
+    updateQBOInvoice,
+    listQBOAccounts,
+    getQBOAccount,
+    listQBOItems,
+    getQBOItem,
+    executeQBOQuery
+} from './quickbooksEdgeFunction';
 
 // Error codes
 export const ErrorCodes = {

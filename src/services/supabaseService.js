@@ -315,6 +315,24 @@ export const adminQuery = async (table, options = {}) => {
       const { column, operator, value } = options.filter;
       query = query.filter(column, operator, value);
     }
+    
+    // Apply multiple filters
+    if (options.filters && Array.isArray(options.filters)) {
+      for (const filter of options.filters) {
+        const { type, column, value } = filter;
+        switch (type) {
+          case 'eq': query = query.eq(column, value); break;
+          case 'neq': query = query.neq(column, value); break;
+          case 'gt': query = query.gt(column, value); break;
+          case 'gte': query = query.gte(column, value); break;
+          case 'lt': query = query.lt(column, value); break;
+          case 'lte': query = query.lte(column, value); break;
+          case 'is': query = query.is(column, value); break;
+          case 'in': query = query.in(column, value); break;
+          default: break;
+        }
+      }
+    }
     if (options.eq) {
       const { column, value } = options.eq;
       query = query.eq(column, value);

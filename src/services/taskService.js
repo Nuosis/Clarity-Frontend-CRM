@@ -9,6 +9,8 @@ import {
     startTaskTimer as startTaskTimerAPI,
     stopTaskTimer as stopTaskTimerAPI
 } from '../api/tasks';
+import { fetchFinancialRecordByRecordId } from '../api/financialRecords';
+import { createSaleFromFinancialRecord } from './salesService';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -62,16 +64,61 @@ export async function startTimer(task) {
  * @param {Object} params - Timer stop parameters
  * @returns {Promise<Object>} Updated timer record
  */
-export async function stopTimer(params) {
+export async function stopTimer(params, organizationId = null) {
     if (!params?.recordId) {
         throw new Error('Invalid timer record');
     }
-    return await stopTaskTimerAPI(
+    
+    // Stop the timer in FileMaker
+    const result = await stopTaskTimerAPI(
         params.recordId,
         params.description,
         params.saveImmediately,
         params.totalPauseTime + params.adjustment
     );
+            
+    // console.log('Timer stop result:', result, params);
+    
+    // If the timer was successfully stopped, create a sales record in Supabase
+    if (result && result.response) {
+        try {
+            // Get the organization ID from the parameter or from the global state
+            const orgId = organizationId || (window.state?.user?.supabaseOrgID);
+            
+            if (!orgId) {
+                console.warn('No organization ID found, skipping sales record creation');
+                return result;
+            }
+
+            // Declare financialId variable
+            let financialId;
+
+            try {
+                console.log(`Fetching financial record by recordId: ${params.recordId}`);
+                const financialRecord = await fetchFinancialRecordByRecordId(params.recordId);
+                
+                if (financialRecord && financialRecord.response && financialRecord.response.data && financialRecord.response.data.length > 0) {
+                    financialId = financialRecord.response.data[0].fieldData.__ID;
+                    console.log(`Found financial ID from record lookup: ${financialId}`);
+                }
+            } catch (fetchError) {
+                console.error('Error fetching financial record by recordId:', fetchError);
+            }
+            
+            if (financialId) {
+                // Create a sales record in Supabase
+                console.log(`Creating sales record for financial record ${financialId} with organization ID ${orgId}`);
+                await createSaleFromFinancialRecord(financialId, orgId);
+            } else {
+                console.warn('Could not find financial record ID in timer stop result or by recordId lookup');
+            }
+        } catch (error) {
+            console.error('Error creating sales record:', error);
+            // Don't throw the error, as we still want to return the timer stop result
+        }
+    }
+    
+    return result;
 }
 
 /**

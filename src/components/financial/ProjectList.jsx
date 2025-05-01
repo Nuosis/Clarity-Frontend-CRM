@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
 /**
- * Project list component for displaying financial data by project
+ * Project list component for displaying sales data by project
  * @param {Object} props - Component props
  * @param {Object} props.projects - Projects data grouped by project ID
  * @param {string|null} props.selectedProjectId - Currently selected project ID
@@ -60,9 +60,14 @@ function ProjectList({ projects, selectedProjectId = null, onProjectSelect, onEd
     }).format(amount);
   };
 
-  // Format hours for display
-  const formatHours = (hours) => {
-    return `${hours.toFixed(2)} hrs`;
+  // Format quantity for display
+  const formatQuantity = (quantity) => {
+    // Ensure quantity is a number and limit to 2 decimal places
+    const formattedQuantity = typeof quantity === 'number'
+      ? parseFloat(quantity.toFixed(2))
+      : parseFloat(parseFloat(quantity || 0).toFixed(2));
+    
+    return `${formattedQuantity} units`;
   };
 
   return (
@@ -120,11 +125,11 @@ function ProjectList({ projects, selectedProjectId = null, onProjectSelect, onEd
                     px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
                     ${darkMode ? 'text-gray-300' : 'text-gray-500'}
                   `}
-                  onClick={() => requestSort('totalHours')}
+                  onClick={() => requestSort('totalQuantity')}
                 >
                   <div className="flex items-center justify-end space-x-1">
-                    <span>Hours</span>
-                    <span>{getSortDirectionIndicator('totalHours')}</span>
+                    <span>Quantity</span>
+                    <span>{getSortDirectionIndicator('totalQuantity')}</span>
                   </div>
                 </th>
               </tr>
@@ -152,7 +157,7 @@ function ProjectList({ projects, selectedProjectId = null, onProjectSelect, onEd
                       {formatCurrency(project.totalAmount)}
                     </td>
                     <td className="px-4 py-3 text-sm text-right">
-                      {formatHours(project.totalHours)}
+                      {formatQuantity(project.totalQuantity)}
                     </td>
                   </tr>
                   
@@ -180,25 +185,25 @@ function ProjectList({ projects, selectedProjectId = null, onProjectSelect, onEd
                                   px-4 py-2 text-right text-xs font-medium uppercase tracking-wider
                                   ${darkMode ? 'text-gray-400' : 'text-gray-600'}
                                 `}>
-                                  Hours
+                                  Quantity
                                 </th>
                                 <th className={`
                                   px-4 py-2 text-right text-xs font-medium uppercase tracking-wider
                                   ${darkMode ? 'text-gray-400' : 'text-gray-600'}
                                 `}>
-                                  Amount
+                                  Unit Price
+                                </th>
+                                <th className={`
+                                  px-4 py-2 text-center text-xs font-medium uppercase tracking-wider
+                                  ${darkMode ? 'text-gray-400' : 'text-gray-600'}
+                                `}>
+                                  Total Price
                                 </th>
                                 <th className={`
                                   px-4 py-2 text-center text-xs font-medium uppercase tracking-wider
                                   ${darkMode ? 'text-gray-400' : 'text-gray-600'}
                                 `}>
                                   Status
-                                </th>
-                                <th className={`
-                                  px-4 py-2 text-center text-xs font-medium uppercase tracking-wider
-                                  ${darkMode ? 'text-gray-400' : 'text-gray-600'}
-                                `}>
-                                  Actions
                                 </th>
                               </tr>
                             </thead>
@@ -215,22 +220,25 @@ function ProjectList({ projects, selectedProjectId = null, onProjectSelect, onEd
                                     {new Date(record.date).toLocaleDateString()}
                                   </td>
                                   <td className="px-4 py-2 text-xs max-w-xs truncate">
-                                    {record.description}
+                                    {record.product_name || 'No Product'}
                                   </td>
                                   <td className="px-4 py-2 text-xs text-right">
-                                    {formatHours(record.hours)}
+                                    {record.quantity || 0}
                                   </td>
                                   <td className="px-4 py-2 text-xs text-right">
-                                    {formatCurrency(record.amount)}
+                                    {formatCurrency(record.unit_price || 0)}
+                                  </td>
+                                  <td className="px-4 py-2 text-xs text-right">
+                                    {formatCurrency(record.total_price || 0)}
                                   </td>
                                   <td className="px-4 py-2 text-xs text-center">
                                     <span className={`
                                       inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                      ${record.billed 
+                                      ${record.inv_id !== null
                                         ? (darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800')
                                         : (darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800')}
                                     `}>
-                                      {record.billed ? 'Billed' : 'Unbilled'}
+                                      {record.inv_id !== null ? 'Invoiced' : 'Uninvoiced'}
                                     </span>
                                   </td>
                                   <td className="px-4 py-2 text-xs text-center">
@@ -241,8 +249,8 @@ function ProjectList({ projects, selectedProjectId = null, onProjectSelect, onEd
                                       }}
                                       className={`
                                         inline-flex items-center px-2 py-1 border rounded-md text-xs font-medium
-                                        ${darkMode 
-                                          ? 'border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600' 
+                                        ${darkMode
+                                          ? 'border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600'
                                           : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}
                                       `}
                                     >

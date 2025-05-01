@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { useBillableHours } from '../../hooks/useBillableHours';
+import { useSalesActivity } from '../../hooks/useSalesActivity';
 import TimeframeSelector from './TimeframeSelector';
 import FinancialChart from './FinancialChart';
 import CustomerList from './CustomerList';
@@ -8,7 +8,7 @@ import ProjectList from './ProjectList';
 import RecordModal from './RecordModal';
 
 /**
- * Financial Activity component for displaying financial data
+ * Financial Activity component for displaying sales data
  * @param {Object} props - Component props
  * @param {boolean} props.darkMode - Whether dark mode is enabled
  * @returns {JSX.Element} Financial Activity component
@@ -21,7 +21,7 @@ function FinancialActivity({ darkMode = false }) {
   const [showProjects, setShowProjects] = useState(false);
   const [showFullCustomerList, setShowFullCustomerList] = useState(true);
 
-  // Use the financial records hook
+  // Use the sales activity hook
   const {
     records,
     loading,
@@ -33,7 +33,7 @@ function FinancialActivity({ darkMode = false }) {
     selectedCustomerId,
     selectedCustomer,
     selectedProjectId,
-    //selectedProject,
+    selectedProject,
     selectedMonth,
     selectedMonthRecords,
     monthlyTotals,
@@ -41,10 +41,10 @@ function FinancialActivity({ darkMode = false }) {
     selectCustomer,
     selectProject,
     selectMonth,
-    saveRecord,
+    saveSale,
     fetchData,
-    updateBilledStatus
-  } = useBillableHours(timeframe);
+    updateInvoiceStatus
+  } = useSalesActivity(timeframe);
 
   // Handle timeframe change
   const handleTimeframeChange = useCallback((newTimeframe) => {
@@ -97,10 +97,10 @@ function FinancialActivity({ darkMode = false }) {
 
   // Handle save record
   const handleSaveRecord = useCallback(async (updatedRecord) => {
-    await saveRecord(updatedRecord);
+    await saveSale(updatedRecord);
     setIsEditModalOpen(false);
     fetchData();
-  }, [saveRecord, fetchData]);
+  }, [saveSale, fetchData]);
 
   // Format currency for display
   const formatCurrency = (amount) => {
@@ -137,7 +137,7 @@ function FinancialActivity({ darkMode = false }) {
           </h2>
           {!loading && totals && (
             <div className={`mt-1 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              Total: {formatCurrency(totals.totalAmount)} ({formatHours(totals.totalHours)})
+              Total: {formatCurrency(totals.totalAmount)} (Qty: {totals.totalQuantity})
             </div>
           )}
         </div>
@@ -194,7 +194,7 @@ function FinancialActivity({ darkMode = false }) {
             <div>
               <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Total:</span>{' '}
               <span className={darkMode ? 'text-white' : 'text-gray-900'}>
-                {formatCurrency(selectedMonthRecords.reduce((sum, record) => sum + record.amount, 0))}
+                {formatCurrency(selectedMonthRecords.reduce((sum, record) => sum + (record.total_price || 0), 0))}
               </span>
             </div>
           </div>
@@ -240,7 +240,7 @@ function FinancialActivity({ darkMode = false }) {
             showProjects={showProjects}
             onToggleProjects={handleToggleProjects}
             darkMode={darkMode}
-            updateBilledStatus={updateBilledStatus}
+            updateInvoiceStatus={updateInvoiceStatus}
           />
         ) : (
           <div className={`
@@ -284,10 +284,10 @@ function FinancialActivity({ darkMode = false }) {
                     </div>
                     <div>
                       <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Total Hours:
+                        Total Quantity:
                       </span>
                       <div className={`text-base font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {formatHours(selectedCustomer.totalHours)}
+                        {selectedCustomer.totalQuantity}
                       </div>
                     </div>
                   </div>
@@ -299,11 +299,11 @@ function FinancialActivity({ darkMode = false }) {
       </div>
       
       {/* Project list - shown when a customer is selected and showProjects is true */}
-      {console.log("ProjectList rendering condition check:", {
+      {/* {console.log("ProjectList rendering condition check:", {
         selectedProjectId,
         selectedCustomerId,
         showProjects
-      })}
+      })} */}
       {selectedCustomerId && showProjects && !showFullCustomerList && (
         <div>
           <ProjectList

@@ -3,6 +3,10 @@ import { useAppState, useAppStateOperations } from '../context/AppStateContext';
 import {
   fetchSalesByOrganization,
   fetchSalesByCustomer,
+  fetchUnbilledSalesByOrganization,
+  fetchUnbilledSalesByCustomer,
+  fetchCurrentMonthSalesByOrganization,
+  fetchCurrentMonthSalesByCustomer,
   createSale,
   updateSale,
   deleteSale,
@@ -133,6 +137,194 @@ export function useSales() {
       };
     } catch (err) {
       console.error('Error loading sales for customer:', err);
+      setError(err.message);
+      return {
+        success: false,
+        error: err.message,
+        data: []
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [setSales]);
+
+  /**
+   * Loads unbilled sales (null inv_id) for a specific organization
+   */
+  const loadUnbilledSalesForOrganization = useCallback(async (organizationId) => {
+    if (!organizationId) {
+      console.warn('Cannot load unbilled sales: Organization ID is missing');
+      return {
+        success: false,
+        error: 'Organization ID is required',
+        data: []
+      };
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log(`Loading unbilled sales for organization: ${organizationId}`);
+      const result = await fetchUnbilledSalesByOrganization(organizationId);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load unbilled sales');
+      }
+      
+      // The data is already processed by fetchUnbilledSalesByOrganization
+      const salesData = result.data || [];
+      
+      // Update the app state with the sales
+      setSales(salesData);
+      
+      return {
+        success: true,
+        data: salesData
+      };
+    } catch (err) {
+      console.error('Error loading unbilled sales:', err);
+      setError(err.message);
+      return {
+        success: false,
+        error: err.message,
+        data: []
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [setSales]);
+
+  /**
+   * Loads current month sales for a specific organization
+   */
+  const loadCurrentMonthSalesForOrganization = useCallback(async (organizationId) => {
+    if (!organizationId) {
+      console.warn('Cannot load current month sales: Organization ID is missing');
+      return {
+        success: false,
+        error: 'Organization ID is required',
+        data: []
+      };
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log(`Loading current month sales for organization: ${organizationId}`);
+      const result = await fetchCurrentMonthSalesByOrganization(organizationId);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load current month sales');
+      }
+      
+      // The data is already processed by fetchCurrentMonthSalesByOrganization
+      const salesData = result.data || [];
+      
+      // Update the app state with the sales
+      setSales(salesData);
+      
+      return {
+        success: true,
+        data: salesData
+      };
+    } catch (err) {
+      console.error('Error loading current month sales:', err);
+      setError(err.message);
+      return {
+        success: false,
+        error: err.message,
+        data: []
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [setSales]);
+
+  /**
+   * Loads unbilled sales (null inv_id) for a specific customer
+   */
+  const loadUnbilledSalesForCustomer = useCallback(async (customerId) => {
+    if (!customerId) {
+      console.warn('Cannot load unbilled sales: Customer ID is missing');
+      return {
+        success: false,
+        error: 'Customer ID is required',
+        data: []
+      };
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log(`Loading unbilled sales for customer: ${customerId}`);
+      const result = await fetchUnbilledSalesByCustomer(customerId);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load unbilled sales');
+      }
+      
+      // The data is already processed by fetchUnbilledSalesByCustomer
+      const salesData = result.data || [];
+      
+      // Update the app state with the sales
+      setSales(salesData);
+      
+      return {
+        success: true,
+        data: salesData
+      };
+    } catch (err) {
+      console.error('Error loading unbilled sales for customer:', err);
+      setError(err.message);
+      return {
+        success: false,
+        error: err.message,
+        data: []
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [setSales]);
+
+  /**
+   * Loads current month sales for a specific customer
+   */
+  const loadCurrentMonthSalesForCustomer = useCallback(async (customerId) => {
+    if (!customerId) {
+      console.warn('Cannot load current month sales: Customer ID is missing');
+      return {
+        success: false,
+        error: 'Customer ID is required',
+        data: []
+      };
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log(`Loading current month sales for customer: ${customerId}`);
+      const result = await fetchCurrentMonthSalesByCustomer(customerId);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load current month sales');
+      }
+      
+      // The data is already processed by fetchCurrentMonthSalesByCustomer
+      const salesData = result.data || [];
+      
+      // Update the app state with the sales
+      setSales(salesData);
+      
+      return {
+        success: true,
+        data: salesData
+      };
+    } catch (err) {
+      console.error('Error loading current month sales for customer:', err);
       setError(err.message);
       return {
         success: false,
@@ -321,6 +513,10 @@ export function useSales() {
     // Actions
     loadSalesForOrganization,
     loadSalesForCustomer,
+    loadUnbilledSalesForOrganization,
+    loadUnbilledSalesForCustomer,
+    loadCurrentMonthSalesForOrganization,
+    loadCurrentMonthSalesForCustomer,
     handleSaleSelect,
     handleSaleCreate,
     handleSaleUpdate,

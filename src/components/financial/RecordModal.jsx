@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { validateFinancialRecordData } from '../../services/billableHoursService';
+import { validateSaleData } from '../../services/salesService';
 
 /**
- * Modal component for editing financial records
+ * Modal component for editing sales records
  * @param {Object} props - Component props
  * @param {Object} props.record - Record to edit
  * @param {function} props.onClose - Function to call when modal is closed
@@ -14,16 +14,17 @@ import { validateFinancialRecordData } from '../../services/billableHoursService
 function RecordModal({ record, onClose, onSave, darkMode = false }) {
   const [formData, setFormData] = useState({
     id: '',
-    recordId: '',
-    customerId: '',
-    customerName: '',
-    projectId: '',
-    projectName: '',
-    hours: 0,
-    rate: 0,
+    customer_id: '',
+    customer_name: '',
+    project_id: '',
+    project_name: '',
+    product_id: '',
+    product_name: '',
+    quantity: 1,
+    unit_price: 0,
+    total_price: 0,
     date: '',
-    billed: false,
-    description: ''
+    inv_id: null
   });
   
   const [errors, setErrors] = useState([]);
@@ -34,16 +35,17 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
     if (record) {
       setFormData({
         id: record.id || '',
-        recordId: record.recordId || '',
-        customerId: record.customerId || '',
-        customerName: record.customerName || '',
-        projectId: record.projectId || '',
-        projectName: record.projectName || '',
-        hours: record.hours || 0,
-        rate: record.rate || 0,
+        customer_id: record.customer_id || '',
+        customer_name: record.customers?.business_name || '',
+        project_id: record.project_id || '',
+        project_name: record.project_name || '',
+        product_id: record.product_id || '',
+        product_name: record.product_name || '',
+        quantity: record.quantity || 1,
+        unit_price: record.unit_price || 0,
+        total_price: record.total_price || 0,
         date: record.date ? new Date(record.date).toISOString().split('T')[0] : '',
-        billed: record.billed || false,
-        description: record.description || ''
+        inv_id: record.inv_id
       });
     }
   }, [record]);
@@ -62,7 +64,7 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
     e.preventDefault();
     
     // Validate form data
-    const validation = validateFinancialRecordData(formData);
+    const validation = validateSaleData(formData);
     if (!validation.isValid) {
       setErrors(validation.errors);
       return;
@@ -72,12 +74,12 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
     setErrors([]);
     
     try {
-      // Calculate amount based on hours and rate
+      // Calculate total_price based on quantity and unit_price
       const updatedRecord = {
         ...formData,
-        hours: parseFloat(formData.hours),
-        rate: parseFloat(formData.rate),
-        amount: parseFloat(formData.hours) * parseFloat(formData.rate)
+        quantity: parseInt(formData.quantity, 10),
+        unit_price: parseFloat(formData.unit_price),
+        total_price: parseInt(formData.quantity, 10) * parseFloat(formData.unit_price)
       };
       
       await onSave(updatedRecord);
@@ -110,7 +112,7 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
       >
         <div className="flex justify-between items-center mb-4">
           <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Edit Financial Record
+            Edit Sales Record
           </h3>
           <button
             type="button"
@@ -156,9 +158,9 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
                 </label>
                 <input
                   type="text"
-                  id="customerName"
-                  name="customerName"
-                  value={formData.customerName}
+                  id="customer_name"
+                  name="customer_name"
+                  value={formData.customer_name}
                   readOnly
                   className={`
                     mt-1 block w-full rounded-md px-3 py-2 text-sm border
@@ -177,9 +179,9 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
                 </label>
                 <input
                   type="text"
-                  id="projectName"
-                  name="projectName"
-                  value={formData.projectName}
+                  id="project_name"
+                  name="project_name"
+                  value={formData.project_name}
                   readOnly
                   className={`
                     mt-1 block w-full rounded-md px-3 py-2 text-sm border
@@ -191,52 +193,75 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
               </div>
             </div>
             
-            {/* Hours and Rate */}
+            {/* Product Name */}
+            <div>
+              <label
+                htmlFor="product_name"
+                className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+              >
+                Product
+              </label>
+              <input
+                type="text"
+                id="product_name"
+                name="product_name"
+                value={formData.product_name}
+                onChange={handleChange}
+                className={`
+                  mt-1 block w-full rounded-md px-3 py-2 text-sm border
+                  ${darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white'
+                    : 'bg-white border-gray-300 text-gray-900'}
+                `}
+              />
+            </div>
+            
+            {/* Quantity and Unit Price */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label 
-                  htmlFor="hours" 
+                <label
+                  htmlFor="quantity"
                   className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
                 >
-                  Hours
+                  Quantity
                 </label>
                 <input
                   type="number"
-                  id="hours"
-                  name="hours"
-                  value={formData.hours}
+                  id="quantity"
+                  name="quantity"
+                  value={formData.quantity}
                   onChange={handleChange}
-                  step="0.25"
-                  min="0"
+                  step="1"
+                  min="1"
                   required
                   className={`
                     mt-1 block w-full rounded-md px-3 py-2 text-sm border
-                    ${darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white' 
+                    ${darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white'
                       : 'bg-white border-gray-300 text-gray-900'}
                   `}
                 />
               </div>
               <div>
-                <label 
-                  htmlFor="rate" 
+                <label
+                  htmlFor="unit_price"
                   className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
                 >
-                  Hourly Rate
+                  Unit Price
                 </label>
                 <input
                   type="number"
-                  id="rate"
-                  name="rate"
-                  value={formData.rate}
+                  id="unit_price"
+                  name="unit_price"
+                  value={formData.unit_price}
                   onChange={handleChange}
                   step="0.01"
                   min="0"
                   required
                   className={`
                     mt-1 block w-full rounded-md px-3 py-2 text-sm border
-                    ${darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white' 
+                    ${darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white'
                       : 'bg-white border-gray-300 text-gray-900'}
                   `}
                 />
@@ -267,44 +292,49 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
               />
             </div>
             
-            {/* Description */}
+            {/* Total Price (calculated, read-only) */}
             <div>
-              <label 
-                htmlFor="description" 
+              <label
+                htmlFor="total_price"
                 className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
               >
-                Description
+                Total Price (calculated)
               </label>
-              <textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows="3"
+              <input
+                type="number"
+                id="total_price"
+                name="total_price"
+                value={(formData.quantity * formData.unit_price).toFixed(2)}
+                readOnly
                 className={`
                   mt-1 block w-full rounded-md px-3 py-2 text-sm border
-                  ${darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white' 
-                    : 'bg-white border-gray-300 text-gray-900'}
+                  ${darkMode
+                    ? 'bg-gray-700 border-gray-600 text-gray-300'
+                    : 'bg-gray-100 border-gray-300 text-gray-700'}
                 `}
               />
             </div>
             
-            {/* Billed Status */}
+            {/* Invoice Status */}
             <div className="flex items-center">
               <input
                 type="checkbox"
-                id="billed"
-                name="billed"
-                checked={formData.billed}
-                onChange={handleChange}
+                id="invoiced"
+                name="invoiced"
+                checked={formData.inv_id !== null}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    inv_id: e.target.checked ? 'pending' : null
+                  }));
+                }}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <label 
-                htmlFor="billed" 
+              <label
+                htmlFor="invoiced"
                 className={`ml-2 block text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
               >
-                Mark as Billed
+                Mark as Invoiced
               </label>
             </div>
           </div>

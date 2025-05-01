@@ -327,3 +327,22 @@ export async function fetchYearlyRecords(year, customerId = null) {
         return await fetchDataFromFileMaker(params);
     });
 }
+
+/**
+ * Fetches a financial record by its recordId
+ * @param {string} recordId - The recordId of the record to fetch
+ * @returns {Promise} Promise resolving to the financial record data
+ */
+export async function fetchFinancialRecordByRecordId(recordId) {
+    validateParams({ recordId }, ['recordId']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.RECORDS,
+            action: Actions.READ,
+            query: [{ "~recordId": recordId }]
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}

@@ -88,7 +88,7 @@ function AppContent() {
         clearSelectedTask
     } = useTask(appState.selectedProject?.id);
     const { loadProductsForOrganization } = useProducts();
-    const { loadSalesForOrganization } = useSales();
+    const { loadUnbilledSalesForOrganization } = useSales();
 
     // Initialization effect
     useEffect(() => {
@@ -123,18 +123,18 @@ function AppContent() {
                         await loadProductsForOrganization(supabaseIds.supabaseOrgId);
                         
                         // Create sales from unbilled financials before loading sales data
-                        loadingStateManager.setLoading('initialization', true, 'Processing unbilled financials...');
-                        try {
+                        // loadingStateManager.setLoading('initialization', true, 'Processing unbilled financials...');
+                        /*try {
                             const { createSalesFromUnbilledFinancials } = await import('./services/salesService');
                             await createSalesFromUnbilledFinancials(supabaseIds.supabaseOrgId);
                             console.log('Successfully created sales from unbilled financials');
                         } catch (unbilledError) {
                             console.error('Error creating sales from unbilled financials:', unbilledError);
                             // Continue with loading sales even if this fails
-                        }
+                        }*/
                         
                         loadingStateManager.setLoading('initialization', true, 'Loading sales...');
-                        await loadSalesForOrganization(supabaseIds.supabaseOrgId);
+                        await loadUnbilledSalesForOrganization(supabaseIds.supabaseOrgId);
                     }
                 }
                 
@@ -158,7 +158,7 @@ function AppContent() {
         if (fmReady) {
             initialize();
         }
-    }, [fmReady, loadCustomers, loadTeams, setError, setLoading, setUser, loadProductsForOrganization, loadSalesForOrganization]);
+    }, [fmReady, loadCustomers, loadTeams, setError, setLoading, setUser, loadProductsForOrganization, loadUnbilledSalesForOrganization]);
 
     // Memoized handlers using useCallback
     const onCustomerSelect = useCallback(async (customer) => {

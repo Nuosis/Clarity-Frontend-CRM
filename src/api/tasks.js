@@ -206,7 +206,9 @@ export async function stopTaskTimer(recordId, description = '', saveImmediately 
             }
         };
         
-        return await fetchDataFromFileMaker(params);
+        const data = await fetchDataFromFileMaker(params);
+        // console.log('Timer stop result:', data);
+        return data;
     });
 }
 

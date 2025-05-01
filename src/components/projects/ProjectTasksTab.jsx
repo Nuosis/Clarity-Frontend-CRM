@@ -4,11 +4,11 @@ import TaskList from '../tasks/TaskList';
 
 function ProjectTasksTab({
   projectId,
-  tasks,
-  onTaskSelect,
-  onTaskStatusChange,
-  onTaskCreate,
-  onTaskUpdate
+  tasks = [],
+  onTaskSelect = () => {},
+  onTaskStatusChange = () => {},
+  onTaskCreate = () => {},
+  onTaskUpdate = () => {}
 }) {
   return (
     <TaskList
@@ -29,14 +29,6 @@ ProjectTasksTab.propTypes = {
   onTaskStatusChange: PropTypes.func,
   onTaskCreate: PropTypes.func,
   onTaskUpdate: PropTypes.func
-};
-
-ProjectTasksTab.defaultProps = {
-  tasks: [],
-  onTaskSelect: () => {},
-  onTaskStatusChange: () => {},
-  onTaskCreate: () => {},
-  onTaskUpdate: () => {}
 };
 
 export default React.memo(ProjectTasksTab);
