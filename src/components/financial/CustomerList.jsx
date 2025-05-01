@@ -7,24 +7,16 @@ import { useSnackBar } from '../../context/SnackBarContext';
  * Customer list component for displaying sales data by customer
  * @param {Object} props - Component props
  * @param {Object} props.customers - Customers data grouped by customer ID
- * @param {Object} props.projects - Projects data grouped by project ID
  * @param {string|null} props.selectedCustomerId - Currently selected customer ID
  * @param {function} props.onCustomerSelect - Function to call when a customer is selected
- * @param {function} props.onProjectSelect - Function to call when a project is selected
- * @param {boolean} props.showProjects - Whether to show projects for the selected customer
- * @param {function} props.onToggleProjects - Function to toggle projects visibility
  * @param {boolean} props.darkMode - Whether dark mode is enabled
  * @param {function} props.updateInvoiceStatus - Function to update invoice status of sales
  * @returns {JSX.Element} Customer list component
  */
 function CustomerList({
   customers,
-  projects,
   selectedCustomerId = null,
   onCustomerSelect,
-  onProjectSelect,
-  showProjects = false,
-  onToggleProjects,
   darkMode = false,
   updateInvoiceStatus
 }) {
@@ -83,86 +75,10 @@ function CustomerList({
     return `${formattedQuantity} units`;
   };
 
-  // Handle QuickBooks initialization
-  const handleQuickBooksInit = useCallback(async (customerId, e) => {
-    e.stopPropagation(); // Prevent row selection when clicking the button
-    
-    console.log(`QB Init for customer: ${customerId}`, {
-      customerName: customers[customerId]?.customerName || 'Unknown',
-      customerExists: !!customers[customerId],
-      recordsExist: !!(customers[customerId]?.records),
-      recordsCount: customers[customerId]?.records?.length || 0
-    });
-    
-    // Handle empty customer IDs that use the name-based key
-    const isNameBasedKey = customerId.startsWith('name:');
-    
-    if ((!customerId && !isNameBasedKey) || !customers[customerId]) {
-      showError('Customer information is missing');
-      return;
-    }
-    
-    setProcessingQbCustomerId(customerId);
-    try {
-      // Get the unbilled records for this customer
-      const customerRecords = customers[customerId].records;
-      const uninvoicedRecords = customerRecords.filter(record => record.inv_id === null);
-      
-      console.log(`Uninvoiced sales for ${customers[customerId].customerName}:`, {
-        totalRecords: customerRecords.length,
-        uninvoicedCount: uninvoicedRecords.length,
-        firstUninvoicedRecord: uninvoicedRecords[0] || 'None'
-      });
-      
-      if (uninvoicedRecords.length === 0) {
-        showError('No uninvoiced sales found for this customer');
-        return;
-      }
-      
-      // Group records by project ID
-      const recordsByProject = {};
-      const recordIds = [];
-      
-      uninvoicedRecords.forEach(record => {
-        // Add to the flat array of record IDs for optimistic update
-        recordIds.push(record.id);
-        
-        // Add to the grouped records by project
-        if (!recordsByProject[record.projectId]) {
-          recordsByProject[record.projectId] = [];
-        }
-        recordsByProject[record.projectId].push(record.id);
-      });
-      
-      console.log("Records grouped by project:", {
-        projectCount: Object.keys(recordsByProject).length,
-        projectIds: Object.keys(recordsByProject),
-        recordIds: recordIds
-      });
-      
-      // Pass customer ID and records grouped by project ID to QuickBooks
-      await initializeQuickBooks({
-        custId: customerId,
-        recordsByProject: recordsByProject
-      });
-      
-      // Optimistically update the invoice status in the UI
-      updateInvoiceStatus(customerId, recordIds);
-      
-      showSuccess('QuickBooks processing initiated successfully');
-    } catch (error) {
-      console.error('QuickBooks initialization error:', error);
-      showError(`Error processing QuickBooks: ${error.message}`);
-    } finally {
-      setProcessingQbCustomerId(null);
-    }
-  }, [customers, showError, updateInvoiceStatus]);
-
   // Debug logs
   console.log("CustomerList rendering with props:", {
     customersCount: Object.keys(customers).length,
-    selectedCustomerId,
-    showProjects
+    selectedCustomerId
   });
 
   if (selectedCustomerId) {
@@ -256,22 +172,6 @@ function CustomerList({
                       <td className="px-4 py-3 text-sm">
                         <div className="flex items-center justify-between">
                           <span>{customer.customerName}</span>
-                          {/* Only show QuickBooks button if there are uninvoiced sales */}
-                          {customer.records && customer.records.some(record => record.inv_id === null) && (
-                            <button
-                              onClick={(e) => handleQuickBooksInit(customerKey, e)}
-                              disabled={processingQbCustomerId === customerKey}
-                              className={`
-                                px-2 py-1 rounded-md text-xs ml-2 flex items-center
-                                ${processingQbCustomerId === customerKey
-                                  ? 'bg-gray-400 cursor-not-allowed'
-                                  : 'bg-green-600 hover:bg-green-700 text-white'}
-                              `}
-                              title="Send uninvoiced sales to QuickBooks"
-                            >
-                              <span>qb</span>
-                            </button>
-                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-right">
@@ -281,68 +181,6 @@ function CustomerList({
                         {formatQuantity(customer.totalQuantity)}
                       </td>
                     </tr>
-                    
-                    {/* Projects for selected customer */}
-                    {selectedCustomerId === customerKey && showProjects && (
-                      <tr className={darkMode ? 'bg-gray-900' : 'bg-gray-50'}>
-                        <td colSpan="3" className="px-0 py-0">
-                          <div className="p-3">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                Projects
-                              </h4>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onToggleProjects(false);
-                                }}
-                                className={`
-                                  p-1 rounded-full
-                                  ${darkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}
-                                `}
-                                aria-label="Close projects"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                            
-                            <div className="space-y-2 max-h-60 overflow-y-auto">
-                              {Object.values(projects)
-                                .filter(project => project.customerId === customer.customerId)
-                                .map(project => (
-                                  <div
-                                    key={project.projectId}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onProjectSelect(project.projectId);
-                                    }}
-                                    className={`
-                                      p-2 rounded cursor-pointer
-                                      ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}
-                                    `}
-                                  >
-                                    <div className="flex justify-between">
-                                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                        {project.projectName}
-                                      </span>
-                                      <div className="text-right">
-                                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                          {formatCurrency(project.totalAmount)}
-                                        </div>
-                                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                          {formatQuantity(project.totalQuantity)}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </React.Fragment>
                 );
               })}
@@ -356,12 +194,8 @@ function CustomerList({
 
 CustomerList.propTypes = {
   customers: PropTypes.object.isRequired,
-  projects: PropTypes.object.isRequired,
   selectedCustomerId: PropTypes.string,
   onCustomerSelect: PropTypes.func.isRequired,
-  onProjectSelect: PropTypes.func.isRequired,
-  showProjects: PropTypes.bool,
-  onToggleProjects: PropTypes.func.isRequired,
   darkMode: PropTypes.bool,
   updateInvoiceStatus: PropTypes.func.isRequired
 };

@@ -4,7 +4,6 @@ import { useSalesActivity } from '../../hooks/useSalesActivity';
 import TimeframeSelector from './TimeframeSelector';
 import FinancialChart from './FinancialChart';
 import CustomerList from './CustomerList';
-import ProjectList from './ProjectList';
 import CustomerSalesTable from './CustomerSalesTable';
 import RecordModal from './RecordModal';
 
@@ -19,7 +18,6 @@ function FinancialActivity({ darkMode = false }) {
   const [timeframe, setTimeframe] = useState('today');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState(null);
-  const [showProjects, setShowProjects] = useState(false);
   const [showFullCustomerList, setShowFullCustomerList] = useState(true);
 
   // Use the sales activity hook
@@ -56,34 +54,20 @@ function FinancialActivity({ darkMode = false }) {
   // Handle customer selection
   const handleCustomerSelect = useCallback((customerId) => {
     console.log("Customer selected:", customerId);
-    console.log("Current state - showProjects:", showProjects);
     console.log("Selected customer before update:", selectedCustomer);
     
     // Just update the customer selection - no need to refetch data
     selectCustomer(customerId);
     
-    setShowProjects(true);
     setShowFullCustomerList(false); // Hide the full customer list when a customer is selected
     console.log("Selected customer after update:", selectedCustomer);
-  }, [selectCustomer, showProjects, selectedCustomer]);
-
-  // Handle toggle projects visibility
-  const handleToggleProjects = useCallback((show) => {
-    setShowProjects(show);
-  }, []);
+  }, [selectCustomer, selectedCustomer]);
   
   // Handle back to customer list
   const handleBackToCustomerList = useCallback(() => {
     setShowFullCustomerList(true);
-    setShowProjects(false);
     selectCustomer(null);
   }, [selectCustomer]);
-
-  // Handle project selection
-  const handleProjectSelect = useCallback((projectId) => {
-    // Just update the project selection - no need to refetch data
-    selectProject(projectId);
-  }, [selectProject]);
 
   // Handle chart month click
   const handleChartMonthClick = useCallback((monthData) => {
@@ -239,9 +223,6 @@ function FinancialActivity({ darkMode = false }) {
             projects={recordsByProject}
             selectedCustomerId={selectedCustomerId}
             onCustomerSelect={handleCustomerSelect}
-            onProjectSelect={handleProjectSelect}
-            showProjects={showProjects}
-            onToggleProjects={handleToggleProjects}
             darkMode={darkMode}
             updateInvoiceStatus={updateInvoiceStatus}
           />
@@ -309,18 +290,6 @@ function FinancialActivity({ darkMode = false }) {
           </div>
         )}
       </div>
-      {/* Project list - shown when a customer is selected and showProjects is true */}
-      {selectedCustomerId && showProjects && !showFullCustomerList && (
-        <div>
-          <ProjectList
-            projects={recordsByProject}
-            selectedProjectId={selectedProjectId}
-            onProjectSelect={handleProjectSelect}
-            onEditRecord={handleEditRecord}
-            darkMode={darkMode}
-          />
-        </div>
-      )}
       
       {/* Edit modal */}
       {isEditModalOpen && recordToEdit && (
