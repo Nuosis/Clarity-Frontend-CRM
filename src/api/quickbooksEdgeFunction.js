@@ -74,6 +74,17 @@ export const listQBOCustomers = async () => {
 };
 
 /**
+ * List customer by display name
+ * @param {string} customer - The customer display name
+ * @returns {Promise<Object>} - The list of customers
+ */
+export const listQBOCustomerByName = async (customer) => {
+  // Encode the customer name to handle special characters in URLs
+  const encodedCustomer = encodeURIComponent(customer);
+  return await makeRequest(`customers/${encodedCustomer}`);
+};
+
+/**
  * Get a specific customer by ID
  * @param {string} customerId - The customer ID
  * @returns {Promise<Object>} - The customer information
@@ -198,6 +209,7 @@ export default {
   getQBOCompanyInfo,
   listQBOCustomers,
   getQBOCustomer,
+  listQBOCustomerByName,
   createQBOCustomer,
   updateQBOCustomer,
   listQBOInvoices,

@@ -175,8 +175,35 @@ serve(async (req) => {
       case 'customers':
         if (req.method === 'GET') {
           if (pathParts.length > startIndex + 1) {
-            // Get specific customer
-            response = await makeQuickBooksRequest(`customer/${pathParts[startIndex + 1]}`, 'GET', authToken, undefined, undefined);
+            const pathParam = pathParts[startIndex + 1];
+            
+            // Try to parse the path parameter as a number
+            const numericId = parseInt(pathParam, 10);
+            
+            // Check if it's a valid numeric ID (not NaN)
+            if (!isNaN(numericId) && numericId.toString() === pathParam) {
+              // Get specific customer by ID
+              console.log(`Getting customer by ID: ${numericId}`);
+              response = await makeQuickBooksRequest(`customer/${numericId}`, 'GET', authToken, undefined, undefined);
+            } else {
+              // This is a name query - use the query endpoint directly
+              const customerName = decodeURIComponent(pathParam);
+              console.log(`Querying customer by name: ${customerName}`);
+              
+              // Escape single quotes in the customer name
+              const escapedName = customerName.replace(/'/g, "\\'");
+              
+              // Construct the query to find customer by DisplayName
+              const query = `SELECT * FROM Customer WHERE DisplayName = '${escapedName}'`;
+              console.log(`Executing query: ${query}`);
+              
+              // Use the query endpoint with POST method as shown in the example URL
+              response = await makeQuickBooksRequest('query', 'POST', authToken, {
+                "Query": query
+              });
+              
+              console.log('Customer name query response status:', response.status);
+            }
           } else {
             // List customers - only active ones using GET request
             response = await makeQuickBooksRequest('query', 'GET', authToken, undefined, {

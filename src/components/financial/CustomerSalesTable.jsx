@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { createQBOCustomer, createQBOInvoice, listQBOCustomers, executeQBOQuery } from '../../api/quickbooksEdgeFunction';
+import { createQBOCustomer, createQBOInvoice, listQBOCustomerByName, executeQBOQuery } from '../../api/quickbooksEdgeFunction';
 import { adminUpdate } from '../../services/supabaseService';
 
 /**
@@ -19,6 +19,7 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
     key: 'date',
     direction: 'desc'
   });
+  const customerName = records.length > 0 ? records[0].customers?.business_name : 'Unknown Customer';
 
   // Sort records based on current sort configuration
   // Group and summarize records by product_name and month/year
@@ -139,12 +140,11 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       // Find QBO customer by name
       let qboCustomerId = null;
       
-      // Query QBO for customers with similar names
-      const customerQuery = `SELECT * FROM Customer WHERE DisplayName LIKE '%${customerName}%'`;
-      const qboCustomersResult = await executeQBOQuery(customerQuery);
+      // Query QBO for customers by name
+      const qboCustomersResult = await await listQBOCustomerByName(customerName);
       
       if (!qboCustomersResult.success) {
-        throw new Error(`Failed to query QuickBooks customers: ${qboCustomersResult.error}`);
+        throw new Error(`Failed to query QuickBooks customers: ${qboCustomersResult.Fault.Error[0]}`);
       }
       
       const qboCustomers = qboCustomersResult.data.QueryResponse.Customer || [];

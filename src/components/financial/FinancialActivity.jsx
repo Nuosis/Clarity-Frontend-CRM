@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useSalesActivity } from '../../hooks/useSalesActivity';
 import { useAppState } from '../../context/AppStateContext';
-import { listQBOCustomers } from '../../api/quickbooksEdgeFunction';
+import { listQBOCustomerByName } from '../../api/quickbooksEdgeFunction';
 import { executeScript } from '../../api/fileMakerEdgeFunction';
 import TimeframeSelector from './TimeframeSelector';
 import FinancialChart from './FinancialChart';
@@ -78,13 +78,11 @@ function FinancialActivity({ darkMode = false }) {
   // Handle customer selection
   const handleCustomerSelect = useCallback((customerId) => {
     console.log("Customer selected:", customerId);
-    console.log("Selected customer before update:", selectedCustomer);
     
     // Just update the customer selection - no need to refetch data
     selectCustomer(customerId);
     
     setShowFullCustomerList(false); // Hide the full customer list when a customer is selected
-    console.log("Selected customer after update:", selectedCustomer);
   }, [selectCustomer, selectedCustomer]);
   
   // Handle back to customer list
@@ -151,10 +149,12 @@ function FinancialActivity({ darkMode = false }) {
     setIsQboQueryLoading(true);
     setQboQueryError(null);
     setQboQueryResults(null);
+
+    console.log(selectedCustomer)
     
     try {
       // Use the listQBOCustomers function to get all customers
-      const result = await listQBOCustomers();
+      const result = await listQBOCustomerByName('AL3');
       setQboQueryResults(result);
     } catch (error) {
       console.error("Error executing QBO query:", error);

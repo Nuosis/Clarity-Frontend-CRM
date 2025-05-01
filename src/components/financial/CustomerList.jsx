@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { initializeQuickBooks } from '../../api/fileMaker';
 import { useSnackBar } from '../../context/SnackBarContext';
 
 /**
@@ -18,10 +17,8 @@ function CustomerList({
   selectedCustomerId = null,
   onCustomerSelect,
   darkMode = false,
-  updateInvoiceStatus
 }) {
   const { showError, showSuccess } = useSnackBar();
-  const [processingQbCustomerId, setProcessingQbCustomerId] = useState(null);
   const [sortConfig, setSortConfig] = useState({
     key: 'totalAmount',
     direction: 'desc'
