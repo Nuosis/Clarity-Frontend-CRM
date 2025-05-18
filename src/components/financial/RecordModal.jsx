@@ -9,9 +9,10 @@ import { validateSaleData } from '../../services/salesService';
  * @param {function} props.onClose - Function to call when modal is closed
  * @param {function} props.onSave - Function to call when record is saved
  * @param {boolean} props.darkMode - Whether dark mode is enabled
+ * @param {boolean} props.limitedEdit - Whether to limit editing to only the description field
  * @returns {JSX.Element} Record modal component
  */
-function RecordModal({ record, onClose, onSave, darkMode = false }) {
+function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = false }) {
   const [formData, setFormData] = useState({
     id: '',
     customer_id: '',
@@ -112,7 +113,7 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
       >
         <div className="flex justify-between items-center mb-4">
           <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Edit Sales Record
+            {limitedEdit ? 'Edit Work Description' : 'Edit Sales Record'}
           </h3>
           <button
             type="button"
@@ -193,13 +194,13 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
               </div>
             </div>
             
-            {/* Product Name */}
+            {/* Product Name / Work Performed */}
             <div>
               <label
                 htmlFor="product_name"
                 className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
               >
-                Product
+                {limitedEdit ? 'Work Performed' : 'Product'}
               </label>
               <input
                 type="text"
@@ -234,11 +235,13 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
                   step="1"
                   min="1"
                   required
+                  disabled={limitedEdit}
                   className={`
                     mt-1 block w-full rounded-md px-3 py-2 text-sm border
                     ${darkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'}
+                      ? (limitedEdit ? 'bg-gray-600' : 'bg-gray-700') + ' border-gray-600 text-white'
+                      : (limitedEdit ? 'bg-gray-100' : 'bg-white') + ' border-gray-300 text-gray-900'}
+                    ${limitedEdit ? 'cursor-not-allowed opacity-75' : ''}
                   `}
                 />
               </div>
@@ -258,11 +261,13 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
                   step="0.01"
                   min="0"
                   required
+                  disabled={limitedEdit}
                   className={`
                     mt-1 block w-full rounded-md px-3 py-2 text-sm border
                     ${darkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'}
+                      ? (limitedEdit ? 'bg-gray-600' : 'bg-gray-700') + ' border-gray-600 text-white'
+                      : (limitedEdit ? 'bg-gray-100' : 'bg-white') + ' border-gray-300 text-gray-900'}
+                    ${limitedEdit ? 'cursor-not-allowed opacity-75' : ''}
                   `}
                 />
               </div>
@@ -270,8 +275,8 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
             
             {/* Date */}
             <div>
-              <label 
-                htmlFor="date" 
+              <label
+                htmlFor="date"
                 className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 Date
@@ -283,11 +288,13 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
                 value={formData.date}
                 onChange={handleChange}
                 required
+                disabled={limitedEdit}
                 className={`
                   mt-1 block w-full rounded-md px-3 py-2 text-sm border
-                  ${darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white' 
-                    : 'bg-white border-gray-300 text-gray-900'}
+                  ${darkMode
+                    ? (limitedEdit ? 'bg-gray-600' : 'bg-gray-700') + ' border-gray-600 text-white'
+                    : (limitedEdit ? 'bg-gray-100' : 'bg-white') + ' border-gray-300 text-gray-900'}
+                  ${limitedEdit ? 'cursor-not-allowed opacity-75' : ''}
                 `}
               />
             </div>
@@ -316,27 +323,29 @@ function RecordModal({ record, onClose, onSave, darkMode = false }) {
             </div>
             
             {/* Invoice Status */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="invoiced"
-                name="invoiced"
-                checked={formData.inv_id !== null}
-                onChange={(e) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    inv_id: e.target.checked ? 'pending' : null
-                  }));
-                }}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="invoiced"
-                className={`ml-2 block text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
-              >
-                Mark as Invoiced
-              </label>
-            </div>
+            {!limitedEdit && (
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="invoiced"
+                  name="invoiced"
+                  checked={formData.inv_id !== null}
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      inv_id: e.target.checked ? 'pending' : null
+                    }));
+                  }}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor="invoiced"
+                  className={`ml-2 block text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                >
+                  Mark as Invoiced
+                </label>
+              </div>
+            )}
           </div>
           
           {/* Action Buttons */}
@@ -378,7 +387,8 @@ RecordModal.propTypes = {
   record: PropTypes.object.isRequired,
   onClose: PropTypes.func.isRequired,
   onSave: PropTypes.func.isRequired,
-  darkMode: PropTypes.bool
+  darkMode: PropTypes.bool,
+  limitedEdit: PropTypes.bool
 };
 
 export default RecordModal;

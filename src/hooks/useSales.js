@@ -50,7 +50,7 @@ export function useSales() {
   }, [user?.supabaseOrgID, initialized]);
 
   /**
-   * Loads sales for a specific organization
+   * Loads unbilled sales for a specific organization
    * Used during initialization and can be called manually if needed
    */
   const loadSalesForOrganization = useCallback(async (organizationId) => {
@@ -68,14 +68,14 @@ export function useSales() {
       setError(null);
       setAppLoading(true);
       
-      console.log(`Loading sales for organization: ${organizationId}`);
-      const result = await fetchSalesByOrganization(organizationId);
+      console.log(`Loading unbilled sales for organization: ${organizationId}`);
+      const result = await fetchUnbilledSalesByOrganization(organizationId);
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to load sales');
       }
       
-      // The data is already processed by fetchSalesByOrganization
+      // The data is already processed by fetchUnbilledSalesByOrganization
       const salesData = result.data || [];
       
       // Update the app state with the sales
@@ -90,6 +90,57 @@ export function useSales() {
       console.error('Error loading sales:', err);
       setError(err.message);
       setAppError(`Failed to load sales: ${err.message}`);
+      return {
+        success: false,
+        error: err.message,
+        data: []
+      };
+    } finally {
+      setLoading(false);
+      setAppLoading(false);
+    }
+  }, [setSales, setAppLoading, setAppError]);
+
+  /**
+   * Loads all sales for a specific organization
+   * Can be called manually when all sales data is needed
+   */
+  const loadAllSalesForOrganization = useCallback(async (organizationId) => {
+    if (!organizationId) {
+      console.warn('Cannot load all sales: Organization ID is missing');
+      return {
+        success: false,
+        error: 'Organization ID is required',
+        data: []
+      };
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setAppLoading(true);
+      
+      console.log(`Loading all sales for organization: ${organizationId}`);
+      const result = await fetchSalesByOrganization(organizationId);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load all sales');
+      }
+      
+      // The data is already processed by fetchSalesByOrganization
+      const salesData = result.data || [];
+      
+      // Update the app state with the sales
+      setSales(salesData);
+      
+      return {
+        success: true,
+        data: salesData
+      };
+    } catch (err) {
+      console.error('Error loading all sales:', err);
+      setError(err.message);
+      setAppError(`Failed to load all sales: ${err.message}`);
       return {
         success: false,
         error: err.message,
@@ -512,6 +563,7 @@ export function useSales() {
     
     // Actions
     loadSalesForOrganization,
+    loadAllSalesForOrganization,
     loadSalesForCustomer,
     loadUnbilledSalesForOrganization,
     loadUnbilledSalesForCustomer,

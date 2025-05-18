@@ -1,7 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { listQBOCustomerByName, createQBOCustomer, getQBOInvoiceByQuery, createQBOInvoice } from '../../api/quickbooksEdgeFunction';
+import {
+  listQBOCustomerByName,
+  createQBOCustomer,
+  getQBOInvoiceByQuery,
+  createQBOInvoice,
+  sendQBOInvoiceEmail,
+  getQBOCustomer
+} from '../../api/quickbooksEdgeFunction';
 import { executeScript } from '../../api/fileMakerEdgeFunction';
+import { fetchDataFromFileMaker } from '../../api/fileMaker';
 import { useAppState } from '../../context/AppStateContext';
 import { adminUpdate } from '../../services/supabaseService';
 
@@ -101,11 +109,14 @@ function QboTestPanel({ darkMode = false }) {
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
   const [isUpdatingSupabase, setIsUpdatingSupabase] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
   
   // State for invoice query
   const [invoiceResults, setInvoiceResults] = useState(null);
   const [isInvoiceLoading, setIsInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState(null);
+  const [invNo, setInvNo] = useState(null);
   
   // State for customer selection
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -147,12 +158,17 @@ function QboTestPanel({ darkMode = false }) {
     }
     
     setIsCreatingCustomer(true);
+
+    const customerEmail = "test@me.com" //replace with actual result of customer email
     
     try {
       // Create customer in QBO
       const customerData = {
         DisplayName: selectedCustomerName,
         CompanyName: selectedCustomerName,
+        PrimaryEmailAddr: {
+          Address: customerEmail
+        },
         // Add currency reference if not CAD
         ...(selectedCurrency !== 'CAD' && {
           CurrencyRef: {
@@ -207,11 +223,25 @@ function QboTestPanel({ darkMode = false }) {
       return;
     }
     
-    const qboCustomerId = qboQueryResults?.QueryResponse?.Customer?.[0]?.Id;
+    const qboCustomer = qboQueryResults?.QueryResponse?.Customer?.[0];
+    const qboCustomerId = qboCustomer?.Id;
     if (!qboCustomerId) {
       alert('QuickBooks customer ID not found. Please query the customer first using the "Get Customer" button.');
       return;
     }
+
+    const now = new Date();
+    const year = String(now.getFullYear()).slice(-2); // get last 2 digits
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    
+    setInvNo(`${qboCustomerId}${year}${month}01`)
+
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1); // first day of next month
+    const dueDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0); // last day of next month
+
+    // Format as YYYY-MM-DD for QBO
+    const formattedDueDate = dueDate.toISOString().split('T')[0];
+    console.log('Due date:', formattedDueDate);
     
     if (recordsToInvoice.length === 0) {
       alert('All records are already invoiced');
@@ -221,48 +251,149 @@ function QboTestPanel({ darkMode = false }) {
     setIsCreatingInvoice(true);
     
     try {
-      const ItemRef = `Development Income:Development ${selectedCurrency}`;
+      // Get customer currency from QBO customer data
+      const customerCurrency = qboCustomer?.CurrencyRef?.value || selectedCurrency;
+      console.log('Using customer currency:', customerCurrency);
+      let ItemRefValue;
+
+      switch (customerCurrency) {
+        case 'CAD':
+          ItemRefValue = 3;
+          break;
+        case 'EUR':
+          ItemRefValue = 8;
+          break;
+        case 'USD':
+          ItemRefValue = 7;
+          break;
+        default:
+          throw new Error(`Unsupported currency: ${customerCurrency}`);
+      }
+
+      let taxCodeRef;
+
+      switch (customerCurrency) {
+        case 'CAD':
+          taxCodeRef = 4;
+          break;
+        case 'EUR':
+          taxCodeRef = 3;
+          break;
+        case 'USD':
+          taxCodeRef = 3;
+          break;
+        default:
+          throw new Error(`Unsupported: ${customerCurrency}`);
+      }
+      
+      const ItemRef = `Development Income:Development ${customerCurrency}`;
+      
+      // Group records by product_name and sum quantities and amounts
+      const groupedRecords = {};
+      
+      recordsToInvoice.forEach(record => {
+        const productName = record.product_name || 'Development';
+        
+        if (!groupedRecords[productName]) {
+          groupedRecords[productName] = {
+            productName,
+            quantity: 0,
+            totalAmount: 0,
+            records: []
+          };
+        }
+        
+        groupedRecords[productName].quantity += (record.quantity || 1);
+        groupedRecords[productName].totalAmount += (record.total_price || 0);
+        groupedRecords[productName].records.push(record);
+      });
+      
+      console.log('Grouped records:', groupedRecords);
+      
+      // Create invoice lines from grouped records
+      const invoiceLines = Object.values(groupedRecords).map((group, index) => {
+        // Extract product code from product name (e.g., "PG:MG" -> "MG")
+        const productNameParts = group.productName.split(':');
+        const productCode = productNameParts.length > 1 ? productNameParts[1].trim() : group.productName;
+        
+        // Ensure numeric values for quantity and unit price
+        const quantity = Number(group.quantity);
+        const unitPrice = Number(group.records[0].unit_price || 0);
+        
+        // Calculate amount as quantity * unitPrice
+        const amount = quantity * unitPrice;
+        
+        console.log('Creating line item:', {
+          productCode,
+          quantity,
+          unitPrice,
+          amount
+        });
+        
+        return {
+          Amount: amount.toString(), // Convert to string as in the example
+          Description: productCode, // Empty string as in the example
+          DocNumber: invNo,
+          DueDate: formattedDueDate,
+          DetailType: "SalesItemLineDetail",
+          LineNum: index + 1, // Line number starting from 1
+          SalesItemLineDetail: {
+            ItemRef: {
+              value: ItemRefValue,
+            },
+            Qty: quantity,  
+            TaxCodeRef: {
+              value: taxCodeRef,
+            },
+            UnitPrice: unitPrice
+          }
+        };
+      });
+      
+      // Get today's date and due date (30 days from now)
+      const today = new Date();
+      const dueDate = new Date(today);
+      dueDate.setDate(today.getDate() + 30);
+      
+      // Format dates as YYYY-MM-DD
+      const dueDateFormatted = dueDate.toISOString().split('T')[0];
       
       // Prepare invoice data for QBO
       const invoiceData = {
         CustomerRef: {
+          name: selectedCustomerName,
           value: qboCustomerId
         },
-        Line: recordsToInvoice.map(record => ({
-          DetailType: 'SalesItemLineDetail',
-          SalesItemLineDetail: {
-            ItemRef: {
-              name: ItemRef
-            },
-            Qty: record.quantity || 1,
-            UnitPrice: record.unit_price || 0
-          },
-          Amount: record.total_price || 0,
-          Description: record.product_name || 'Development'
-        }))
+        DeliveryInfo: {
+          DeliveryType: "Email"
+        },
+        DueDate: dueDateFormatted,
+        GlobalTaxCalculation: "TaxExcluded",
+        Line: invoiceLines
       };
+      
+      console.log('Invoice data:', invoiceData);
       
       // Create invoice in QBO
       const invoiceResult = await createQBOInvoice(invoiceData);
+      console.log('Create invoice response:', invoiceResult);
       
-      if (!invoiceResult.success) {
-        throw new Error(`Failed to create invoice in QuickBooks: ${invoiceResult.error}`);
+      if (invoiceResult.Fault) {
+        const errorMessage = invoiceResult.Fault.Error?.[0]?.Detail || 'Unknown error';
+        throw new Error(`Failed to create invoice in QuickBooks: ${errorMessage}`);
       }
       
-      const qboInvoiceId = invoiceResult.data.Id;
+      const qboInvoiceId = invoiceResult.Invoice.Id;
       console.log(`Invoice created in QBO with ID: ${qboInvoiceId}`);
       
-      // Refresh invoice results to show the newly created invoice
-      await executeLastMonthInvoicesQuery();
-      
-      alert(`Invoice created successfully in QuickBooks Online with ID: ${qboInvoiceId}`);
+      alert(`Invoice created successfully in QuickBooks Online with ID: ${qboInvoiceId}. Please click "Get Last Month Invoices" to refresh the invoice list.`);
     } catch (error) {
       console.error('Error creating invoice:', error);
       alert(`Failed to create invoice: ${error.message}`);
     } finally {
       setIsCreatingInvoice(false);
     }
-  }, [selectedCustomerId, qboQueryResults, recordsToInvoice, selectedCurrency, executeLastMonthInvoicesQuery]);
+  }, [selectedCustomerId, qboQueryResults, recordsToInvoice, selectedCurrency]);
   
   // Update Supabase records with invoice IDs from existing invoices
   const updateSupabaseRecords = useCallback(async () => {
@@ -282,79 +413,117 @@ function QboTestPanel({ darkMode = false }) {
     }
     
     setIsUpdatingSupabase(true);
+    console.log('Starting updateSupabaseRecords function');
+    console.log('Selected Customer ID:', selectedCustomerId);
+    console.log('Records to invoice:', recordsToInvoice.length);
+    console.log('Invoice results:', invoiceResults);
     
     try {
       const invoices = invoiceResults.QueryResponse.Invoice;
+      console.log('Invoices found:', invoices ? invoices.length : 0);
       
       // Process each uninvoiced record
       const updatePromises = recordsToInvoice.map(async (record) => {
+        console.log('Processing record:', record.id, 'Product name:', record.product_name);
         // Find matching line item in invoices
         let matchFound = false;
         
         for (const invoice of invoices) {
+          console.log('Checking invoice:', invoice.Id, 'Line items:', invoice.Line ? invoice.Line.length : 0);
           if (!invoice.Line) continue;
           
           for (const line of invoice.Line) {
+            console.log('Checking line item:', line.Id, 'Detail type:', line.DetailType, 'Description:', line.Description);
             // Skip if not a sales item line detail
-            if (line.DetailType !== 'SalesItemLineDetail') continue;
+            if (line.DetailType !== 'SalesItemLineDetail') {
+              console.log('Skipping non-sales item line detail');
+              continue;
+            }
             
             // Extract product name from the record
             const recordProductName = record.product_name || '';
             const productNameParts = recordProductName.split(':');
             const recordProductCode = productNameParts.length > 1 ? productNameParts[1].trim() : '';
+            console.log('Record product code:', recordProductCode);
             
-            // Extract product name from the line description
-            const lineDescription = line.Description || '';
-            const lineDescriptionParts = lineDescription.split(':');
-            const lineProductCode = lineDescriptionParts.length > 1 ? lineDescriptionParts[1].trim() : '';
+            // Get the line description (which is the product code in QuickBooks)
+            const lineProductCode = line.Description || '';
+            console.log('Line product code:', lineProductCode);
             
             // Check if the product codes match
             if (recordProductCode && lineProductCode && recordProductCode === lineProductCode) {
+              console.log('MATCH FOUND! Updating record in Supabase');
               // Found a match, update the record in Supabase
               const updateData = {
                 inv_id: `${invoice.Id}:${line.Id}`
               };
+              console.log('Update data:', updateData);
               
-              const updateResult = await adminUpdate('customer_sales', updateData, { id: record.id });
-              
-              if (!updateResult.success) {
-                console.error(`Failed to update inv_id for record ${record.id}: ${updateResult.error}`);
+              try {
+                console.log('Calling adminUpdate with:', 'customer_sales', updateData, { id: record.id });
+                const updateResult = await adminUpdate('customer_sales', updateData, { id: record.id });
+                console.log('Update result:', updateResult);
+                
+                if (!updateResult.success) {
+                  console.error(`Failed to update inv_id for record ${record.id}: ${updateResult.error}`);
+                  return false;
+                }
+                
+                // If the record has a financial_id, update the corresponding billable hours record in FileMaker
+                if (record.financial_id) {
+                  console.log('Updating billable hours record in FileMaker:', record.financial_id);
+                  
+                  try {
+                    const params = {
+                      layout: 'dapiRecord',
+                      action: 'update',
+                      UUID: record.financial_id,
+                      fieldData: { "f_billed": "1" }
+                    };
+                    
+                    console.log('FileMaker update params:', params);
+                    const fmResult = await fetchDataFromFileMaker(params, 0, true);
+                    console.log('FileMaker update result:', fmResult);
+                    
+                    if (fmResult.error) {
+                      console.error(`Failed to update FileMaker record ${record.financial_id}: ${fmResult.error}`);
+                      return false;
+                    }
+                  } catch (fmError) {
+                    console.error('Error updating FileMaker record:', fmError);
+                    return false;
+                  }
+                }
+              } catch (updateError) {
+                console.error('Error during update operation:', updateError);
                 return false;
               }
               
-              // If the record has a financial_id, update the corresponding billable hours record
-              if (record.financial_id) {
-                const billableUpdateData = {
-                  f_billed: 1
-                };
-                
-                const billableUpdateResult = await adminUpdate('billable_hours', billableUpdateData, { id: record.financial_id });
-                
-                if (!billableUpdateResult.success) {
-                  console.error(`Failed to update billable hours record ${record.financial_id}: ${billableUpdateResult.error}`);
-                  return false;
-                }
-              }
-              
               matchFound = true;
-              break;
+              // Continue checking other line items for potential matches
+            } else {
+              console.log('No match found for this line item');
             }
           }
           
-          if (matchFound) break;
+          // Continue checking other invoices for potential matches
         }
         
+        console.log('Record processing complete. Match found:', matchFound);
         return matchFound;
       });
       
+      console.log('All update promises created, waiting for resolution');
       const results = await Promise.all(updatePromises);
+      console.log('Update results:', results);
       const successCount = results.filter(Boolean).length;
+      console.log('Success count:', successCount);
       
       alert(`Updated ${successCount} of ${recordsToInvoice.length} records in Supabase.`);
       
       // Refresh customer records to show updated invoice status
       if (successCount > 0) {
-        handleCustomerSelect({ target: { value: selectedCustomerId } });
+        alert(`Updated ${successCount} records. Please select the customer again to refresh the records.`);
       }
     } catch (error) {
       console.error('Error updating Supabase records:', error);
@@ -362,7 +531,130 @@ function QboTestPanel({ darkMode = false }) {
     } finally {
       setIsUpdatingSupabase(false);
     }
-  }, [selectedCustomerId, invoiceResults, recordsToInvoice, handleCustomerSelect]);
+  }, [selectedCustomerId, invoiceResults, recordsToInvoice]);
+  
+  // Send email for an invoice
+  const sendInvoiceEmail = useCallback(async () => {
+    if (!selectedInvoiceId) {
+      alert('Please select an invoice first');
+      return;
+    }
+    
+    setIsSendingEmail(true);
+    
+    try {
+      // Find the selected invoice to get customer information
+      const selectedInvoice = invoiceResults?.QueryResponse?.Invoice?.find(
+        invoice => invoice.Id === selectedInvoiceId
+      );
+      
+      if (!selectedInvoice) {
+        throw new Error('Selected invoice not found in results');
+      }
+      
+      // Get the customer ID from the invoice
+      const customerId = selectedInvoice.CustomerRef?.value;
+      
+      if (!customerId) {
+        throw new Error('Customer ID not found in the invoice');
+      }
+      
+      // Get customer details to find email address
+      const customerResult = await getQBOCustomer(customerId);
+      console.log('Customer details:', customerResult);
+      
+      // Extract email address from customer
+      const emailAddress = customerResult?.Customer?.PrimaryEmailAddr?.Address;
+      
+      if (!emailAddress) {
+        throw new Error('Customer email address not found');
+      }
+      
+      console.log(`Using customer email address: ${emailAddress}`);
+      
+      // Check if this is an OBSI customer (steven@oakbaysoftrends.net)
+      if (emailAddress === 'steven@oakbaysoftrends.net') {
+        console.log('OBSI customer detected, using special handling');
+        
+        // Get the financial IDs from the records to invoice
+        const financialIds = recordsToInvoice
+          .filter(record => record.financial_id)
+          .map(record => record.financial_id);
+        
+        if (financialIds.length === 0) {
+          throw new Error('No financial IDs found for OBSI customer');
+        }
+        
+        console.log('Financial IDs:', financialIds);
+        
+        // Get the first financial ID to fetch the customer ID from FileMaker
+        const firstFinancialId = financialIds[0];
+        
+        // Fetch the FileMaker record to get the customer ID
+        const fmParams = {
+          layout: 'dapiRecords',
+          action: 'read',
+          query: [{"__ID":firstFinancialId}]
+        };
+        
+        const fmResult = await fetchDataFromFileMaker(fmParams, 0, true);
+        console.log('FileMaker record result:', fmResult);
+        if (!fmResult.response.data || fmResult.response.data.length === 0) {
+          throw new Error('FileMaker record not found');
+        }
+        
+        // Extract the customer ID from the FileMaker record
+        const fmCustomerId = fmResult.response.data[0].fieldData._custID;
+        
+        if (!fmCustomerId) {
+          throw new Error('FileMaker customer ID not found');
+        }
+        
+        console.log('FileMaker customer ID:', fmCustomerId);
+        
+        // Get the invoice number from the selected invoice
+        const invoiceNumber = selectedInvoice.DocNumber;
+        
+        // Create the parameter for the FileMaker script
+        const scriptParam = JSON.stringify({
+          ids: financialIds,
+          custID: fmCustomerId,
+          invNo: invoiceNumber
+        });
+        
+        console.log('Calling FileMaker script with param:', scriptParam);
+        
+        // Call the FileMaker script
+        if (typeof FileMaker !== 'undefined' && FileMaker.PerformScript) {
+          FileMaker.PerformScript('bill obsi customer', scriptParam);
+          // alert(`OBSI customer billing initiated for invoice #${invoiceNumber}`);
+        } else {
+          throw new Error('FileMaker object not available');
+        }
+      } else {
+        // Regular customer - send email via QuickBooks
+        const result = await sendQBOInvoiceEmail(selectedInvoiceId, emailAddress);
+        console.log('Send invoice email response:', result);
+        
+        if (result.Fault) {
+          const errorMessage = result.Fault.Error?.[0]?.Detail || 'Unknown error';
+          throw new Error(`Failed to send invoice email: ${errorMessage}`);
+        }
+        
+        alert(`Invoice email sent successfully to ${emailAddress} for invoice ID: ${selectedInvoiceId}`);
+      }
+    } catch (error) {
+      console.error('Error sending invoice email:', error);
+      alert(`Failed to send invoice email: ${error.message}`);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }, [selectedInvoiceId, invoiceResults, recordsToInvoice]);
+  
+  // Handle invoice selection
+  const handleInvoiceSelect = useCallback((e) => {
+    setSelectedInvoiceId(e.target.value);
+  }, []);
   
   // Execute query to get invoices from the last month
   const executeLastMonthInvoicesQuery = useCallback(async () => {
@@ -601,7 +893,7 @@ function QboTestPanel({ darkMode = false }) {
             )}
           </div>
           
-          <div className="flex space-x-4 mb-4">
+          <div className="flex flex-wrap gap-4 mb-4">
             {/* FileMaker Health Check Button */}
             <button
               onClick={executeFmHealthCheck}
@@ -649,6 +941,42 @@ function QboTestPanel({ darkMode = false }) {
             >
               {isInvoiceLoading ? 'Loading...' : 'Get Last Month Invoices'}
             </button>
+            
+            {/* Create Invoice Button - Only visible when there's a customer selected and records to invoice */}
+            {selectedCustomerId && recordsToInvoice.length > 0 && qboQueryResults?.QueryResponse?.Customer?.[0]?.Id && (
+              <button
+                onClick={createInvoice}
+                disabled={isCreatingInvoice}
+                className={`
+                  px-4 py-2 rounded font-medium
+                  ${isCreatingInvoice
+                    ? (darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')
+                    : (darkMode
+                      ? 'bg-yellow-800 text-yellow-100 hover:bg-yellow-700'
+                      : 'bg-yellow-600 text-white hover:bg-yellow-700')}
+                `}
+              >
+                {isCreatingInvoice ? 'Creating...' : 'Create Invoice'}
+              </button>
+            )}
+            
+            {/* Update Supabase Button - Only visible when there are invoice results and records to invoice */}
+            {invoiceResults?.QueryResponse?.Invoice && recordsToInvoice.length > 0 && (
+              <button
+                onClick={updateSupabaseRecords}
+                disabled={isUpdatingSupabase}
+                className={`
+                  px-4 py-2 rounded font-medium
+                  ${isUpdatingSupabase
+                    ? (darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')
+                    : (darkMode
+                      ? 'bg-indigo-800 text-indigo-100 hover:bg-indigo-700'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700')}
+                `}
+              >
+                {isUpdatingSupabase ? 'Updating...' : 'Update Records'}
+              </button>
+            )}
           </div>
           
           {/* QBO Query Error */}
@@ -827,6 +1155,72 @@ function QboTestPanel({ darkMode = false }) {
               darkMode={darkMode}
               defaultExpanded={false}
             >
+              <div className="mb-4">
+                {invoiceResults?.QueryResponse?.Invoice && invoiceResults.QueryResponse.Invoice.length > 0 && (
+                  <div className="mb-4">
+                    <label
+                      htmlFor="invoiceSelect"
+                      className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                    >
+                      Select Invoice to Email:
+                    </label>
+                    <div className="flex space-x-2">
+                      <div className="relative flex-grow">
+                        <select
+                          id="invoiceSelect"
+                          value={selectedInvoiceId}
+                          onChange={handleInvoiceSelect}
+                          className={`
+                            appearance-none w-full px-4 py-2 rounded-lg border shadow-sm
+                            focus:outline-none focus:ring-2 focus:border-transparent
+                            ${darkMode
+                              ? 'bg-gray-800 border-gray-600 text-white focus:ring-blue-600'
+                              : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}
+                            transition-all duration-200
+                          `}
+                        >
+                          <option value="">-- Select an Invoice --</option>
+                          {invoiceResults.QueryResponse.Invoice.map(invoice => (
+                            <option key={invoice.Id} value={invoice.Id}>
+                              Invoice #{invoice.DocNumber} - {invoice.CustomerRef.name} - {formatCurrency(invoice.TotalAmt)}
+                            </option>
+                          ))}
+                        </select>
+                        {/* Custom dropdown arrow */}
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
+                          <svg
+                            className={`h-5 w-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                      <button
+                        onClick={sendInvoiceEmail}
+                        disabled={!selectedInvoiceId || isSendingEmail}
+                        className={`
+                          px-4 py-2 rounded font-medium whitespace-nowrap
+                          ${!selectedInvoiceId || isSendingEmail
+                            ? (darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500')
+                            : (darkMode
+                              ? 'bg-teal-800 text-teal-100 hover:bg-teal-700'
+                              : 'bg-teal-600 text-white hover:bg-teal-700')}
+                        `}
+                      >
+                        {isSendingEmail ? 'Sending...' : 'Send Email'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className={`
                 p-3 rounded-lg border overflow-auto max-h-96
                 ${darkMode ? 'bg-gray-900 border-gray-800 text-gray-300' : 'bg-white border-gray-300 text-gray-800'}

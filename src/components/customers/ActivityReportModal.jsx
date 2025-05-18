@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useAppState } from '../../context/AppStateContext';
 import { useSnackBar } from '../../context/SnackBarContext';
 import { useCustomerActivity } from '../../hooks/useCustomerActivity';
-import { sendEmailWithAttachment, isMailjetConfigured, createHtmlEmailTemplate } from '../../services/mailjetService';
+import { sendEmailWithAttachment, isMailjetConfigured, createHtmlEmailTemplate, isValidEmail } from '../../services/mailjetService';
+import RecordModal from '../financial/RecordModal';
+import { updateActivityRecord } from '../../api/customerActivity';
 
 // Helper function to send PDF to FileMaker
 function sendToFileMaker(base64Data, fileName, customerId, exportButton, showError, showSuccess) {
@@ -38,11 +40,14 @@ function sendToFileMaker(base64Data, fileName, customerId, exportButton, showErr
   }
 }
 
-function ActivityReportModal({ 
-  customer, 
-  isOpen, 
-  onClose 
+function ActivityReportModal({
+  customer,
+  isOpen,
+  onClose
 }) {
+  // State for record editing
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { darkMode } = useTheme();
   const { showError, showSuccess } = useSnackBar();
   const { user } = useAppState();
@@ -60,14 +65,35 @@ function ActivityReportModal({
 
   // Fetch activity data when the modal is opened or timeframe changes
   // Only fetch when timeframe changes if it's not 'custom' (which has its own Apply button)
+  // Use a ref to track if this is the initial render
+  const initialRenderRef = useRef(true);
+  // Use a ref to track the previous timeframe
+  const prevTimeframeRef = useRef(activityTimeframe);
+  
+  // Single effect to handle all cases
   useEffect(() => {
-    if (isOpen && customer?.id) {
-      // For custom timeframe, we only fetch when the Apply button is clicked
-      if (activityTimeframe !== 'custom') {
+    // Skip the first render to prevent double fetching
+    if (initialRenderRef.current) {
+      initialRenderRef.current = false;
+      // Initial fetch when modal opens
+      if (isOpen && customer?.id && activityTimeframe !== 'custom') {
+        console.log("Initial fetch for timeframe:", activityTimeframe);
         fetchActivity(customer);
       }
+      return;
     }
-  }, []);
+    
+    // For subsequent renders, only fetch if timeframe changed and it's not custom
+    if (isOpen && customer?.id &&
+        activityTimeframe !== 'custom' &&
+        prevTimeframeRef.current !== activityTimeframe) {
+      console.log("Timeframe changed from", prevTimeframeRef.current, "to", activityTimeframe);
+      fetchActivity(customer);
+    }
+    
+    // Update the previous timeframe ref
+    prevTimeframeRef.current = activityTimeframe;
+  }, [isOpen, customer, activityTimeframe]);
 
   if (!isOpen) return null;
 
@@ -229,7 +255,42 @@ function ActivityReportModal({
                 </tr>
               ) : (
                 activityData.map(record => (
-                  <tr key={record.id} className={darkMode ? 'bg-gray-800 hover:bg-gray-750' : 'bg-white hover:bg-gray-50'}>
+                  <tr
+                    key={record.id}
+                    className={`
+                      ${darkMode ? 'bg-gray-800 hover:bg-gray-750' : 'bg-white hover:bg-gray-50'}
+                      cursor-pointer
+                    `}
+                    onClick={() => {
+                      console.log("Row clicked:", record);
+                      console.log("Record billed status:", record.billed);
+                      
+                      // Allow editing all records, but mark billed ones for limited editing
+                      console.log(record.billed ? "Record is billed, preparing for limited edit" : "Record is unbilled, preparing for full edit");
+                      
+                      // Convert the activity record to a format compatible with RecordModal
+                      const recordForEdit = {
+                        id: record.id,
+                        recordId: record.recordId,
+                        customer_id: record.customerId,
+                        customers: { business_name: record.customerName },
+                        project_id: record.projectId,
+                        project_name: record.projectName,
+                        product_name: record.description,
+                        quantity: record.rawHours,
+                        unit_price: record.rawHours > 0 ? record.rawAmount / record.rawHours : 0,
+                        total_price: record.rawAmount,
+                        date: record.rawDate,
+                        inv_id: record.billed ? 'invoiced' : null,
+                        // Add a flag to indicate if this is a billed record (for limited editing)
+                        isBilled: record.billed
+                      };
+                      
+                      console.log("Converted record for edit:", recordForEdit);
+                      setSelectedRecord(recordForEdit);
+                      setIsEditModalOpen(true);
+                    }}
+                  >
                     <td className="px-4 py-3">{record.date}</td>
                     <td className="px-4 py-3">{record.projectName}</td>
                     <td className="px-4 py-3">{record.description}</td>
@@ -315,9 +376,18 @@ function ActivityReportModal({
                           mainText: `Please find attached the activity report for ${customer.Name}.\n\nThis report contains a summary of all project activities for the selected time period.`,
                           footerText: "This report was generated automatically by the Clarity CRM system."
                         });
+
+                        console.log({customer})
+                        
+                        // Check if customer email is valid before sending
+                        if (!isValidEmail(customer.Email)) {
+                          showError(`Cannot send email: Invalid or missing email address "${customer.Email || ''}"`);
+                          exportButton.disabled = false;
+                          return;
+                        }
                         
                         const emailOptions = {
-                          to: customer.Email || '', // Use customer email if available
+                          to: customer.Email,
                           subject: `Activity Report: ${customer.Name}`,
                           text: `Please find attached the activity report for ${customer.Name}.\n\nThis report contains a summary of all project activities for the selected time period.`,
                           html: htmlContent,
@@ -332,6 +402,8 @@ function ActivityReportModal({
                         
                         // Send email with attachment
                         return sendEmailWithAttachment(emailOptions).then(result => {
+                          console.log("Email send result:", result);
+                          
                           if (result.success) {
                             showSuccess("PDF report sent via email");
                             
@@ -340,13 +412,14 @@ function ActivityReportModal({
                               exportButton.disabled = false;
                             }, 1000);
                           } else {
+                            // Show error and confirmation dialog for fallback
+                            showError(`Failed to send email: ${result.error}`);
                             
                             // Show confirmation dialog for fallback
-                            if (confirm(`Failed to send email: ${result.error}. Would you like to save the report using FileMaker instead?`)) {
+                            if (confirm(`Would you like to save the report using FileMaker instead?`)) {
                               // Fallback to FileMaker workflow
                               sendToFileMaker(base64Data, fileName, customer.id, exportButton, showError, showSuccess);
                             } else {
-                              showError(`Failed to send email: ${result.error}`);
                               exportButton.disabled = false;
                             }
                           }
@@ -384,6 +457,57 @@ function ActivityReportModal({
           </button>
         </div>
       </div>
+      
+      {/* Edit Record Modal */}
+      {isEditModalOpen && selectedRecord && (
+        <RecordModal
+          record={selectedRecord}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={async (updatedRecord) => {
+            try {
+              // Update the record in FileMaker
+              console.log("Saving updated record:", updatedRecord);
+              
+              // For billed records, only update the description field
+              if (selectedRecord.isBilled) {
+                console.log("Billed record - only updating description");
+                // Create a modified record with only the fields we want to update
+                const limitedUpdate = {
+                  id: updatedRecord.id,
+                  recordId: updatedRecord.recordId,
+                  product_name: updatedRecord.product_name, // Only update the description
+                  // Keep original values for other fields
+                  quantity: selectedRecord.quantity,
+                  unit_price: selectedRecord.unit_price,
+                  total_price: selectedRecord.total_price,
+                  date: selectedRecord.date,
+                  inv_id: selectedRecord.inv_id
+                };
+                
+                await updateActivityRecord(limitedUpdate);
+              } else {
+                // For unbilled records, update all fields
+                await updateActivityRecord(updatedRecord);
+              }
+              
+              // Close the modal
+              setIsEditModalOpen(false);
+              
+              // Refresh the activity data
+              fetchActivity(customer);
+              
+              // Show success message
+              showSuccess("Record updated successfully");
+            } catch (error) {
+              console.error("Error updating record:", error);
+              showError(`Error updating record: ${error.message}`);
+            }
+          }}
+          darkMode={darkMode}
+          // Pass a flag to indicate if this is a billed record (for limited editing)
+          limitedEdit={selectedRecord.isBilled}
+        />
+      )}
     </div>
   );
 }

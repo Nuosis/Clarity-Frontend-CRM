@@ -733,8 +733,8 @@ export function validateSaleData(data) {
   }
 
   if (data.quantity === undefined || data.quantity === null ||
-      isNaN(parseInt(data.quantity, 10)) || parseInt(data.quantity, 10) <= 0) {
-    errors.push('Quantity must be a positive number');
+      isNaN(parseFloat(data.quantity)) || parseFloat(data.quantity) < 0) {
+    errors.push('Quantity must be a non-negative number (0 or greater)');
   }
 
   if (!data.date) {

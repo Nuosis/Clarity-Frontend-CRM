@@ -27,11 +27,19 @@ function CustomerDetails({
   const { showError } = useSnackBar();
   const { user, customerDetails } = useAppState();
   const { fetchOrCreateCustomerInSupabase } = useSupabaseCustomer();
-  const { sales, loadSalesForCustomer } = useSales();
+  const { sales, loadSalesForCustomer, loadUnbilledSalesForCustomer } = useSales();
   
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
   const [showActivityReport, setShowActivityReport] = useState(false);
   const [groupingError, setGroupingError] = useState(null);
+
+  // Function to load all sales for this customer
+  const loadAllSalesForThisCustomer = useCallback(() => {
+    const customerId = customerDetails?.id || customer?.id;
+    if (customerId) {
+      loadSalesForCustomer(customerId);
+    }
+  }, [customerDetails?.id, customer?.id, loadSalesForCustomer]);
 
   // Calculate stats for display
   const stats = useMemo(() => {
@@ -119,9 +127,9 @@ function CustomerDetails({
   useEffect(() => {
     const customerId = customerDetails?.id || customer?.id;
     if (customerId) {
-      loadSalesForCustomer(customerId);
+      loadUnbilledSalesForCustomer(customerId);
     }
-  }, [customerDetails?.id, customer?.id, loadSalesForCustomer]);
+  }, [customerDetails?.id, customer?.id, loadUnbilledSalesForCustomer]);
 
   return (
     <div className="space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-2">

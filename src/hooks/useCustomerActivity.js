@@ -23,6 +23,7 @@ export function useCustomerActivity() {
    * @returns {Promise<void>}
    */
   const fetchActivity = useCallback(async (customer) => {
+    console.log("fetch called")
     if (!customer || !customer.id) {
       showError('Customer information is missing');
       return;
@@ -45,6 +46,7 @@ export function useCustomerActivity() {
         apiTimeframe = 'custom';
       }
       
+      console.log({customer})
       // Fetch activity data using the dedicated function
       const data = await fetchCustomerActivityData(
         apiTimeframe,

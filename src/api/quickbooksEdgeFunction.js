@@ -160,6 +160,20 @@ export const updateQBOInvoice = async (invoiceData) => {
 };
 
 /**
+ * Send an invoice email
+ * @param {string} invoiceId - The invoice ID
+ * @param {string} [sendToEmail] - Optional email address to send to (if different from the one in the invoice)
+ * @returns {Promise<Object>} - The response from the send operation
+ */
+export const sendQBOInvoiceEmail = async (invoiceId, sendToEmail = null) => {
+  let endpoint = `send-invoice/${invoiceId}`;
+  if (sendToEmail) {
+    endpoint += `?sendTo=${encodeURIComponent(sendToEmail)}`;
+  }
+  return await makeRequest(endpoint, 'POST');
+};
+
+/**
  * Account Operations
  */
 
@@ -226,6 +240,7 @@ export default {
   getQBOInvoiceByQuery,
   createQBOInvoice,
   updateQBOInvoice,
+  sendQBOInvoiceEmail,
   listQBOAccounts,
   getQBOAccount,
   listQBOItems,

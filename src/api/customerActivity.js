@@ -227,3 +227,47 @@ export async function fetchCustomerActivityData(timeframe, customerId, dateRange
         return await fetchDataFromFileMaker(params);
     });
 }
+
+/**
+ * Updates an activity record in FileMaker
+ * @param {Object} record - The updated record data
+ * @returns {Promise} Promise resolving to the update result
+ */
+export async function updateActivityRecord(record) {
+    validateParams({ record }, ['record']);
+    
+    console.log("[DEBUG] Updating activity record:", record);
+    console.log("[DEBUG] Work Performed value:", record.product_name);
+    
+    return handleFileMakerOperation(async () => {
+        // Prepare the data for FileMaker update
+        // We need to map the RecordModal format back to FileMaker field names
+        const fieldData = {
+            // Required fields for identification
+            __ID: record.id,
+            
+            // Fields that can be updated
+            "Work Performed": record.product_name || "",
+            Billable_Time_Rounded: record.quantity.toString(),
+            Hourly_Rate: record.unit_price.toString(),
+            
+            // Mark as billed if needed
+            f_billed: record.inv_id !== null ? "1" : "0"
+        };
+        
+        const params = {
+            layout: Layouts.RECORDS,
+            action: Actions.UPDATE,
+            UUID: record.id,
+            data: {
+                fieldData
+            },
+            recordId: record.recordId
+        };
+        
+        console.log("[DEBUG] Update params:", JSON.stringify(params));
+        console.log("[DEBUG] FileMaker fieldData:", fieldData);
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}

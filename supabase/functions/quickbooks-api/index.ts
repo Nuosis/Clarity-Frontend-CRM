@@ -171,6 +171,57 @@ serve(async (req) => {
         // Get company info
         response = await makeQuickBooksRequest('companyinfo/' + (pathParts[startIndex + 1] || 'companyinfo'), 'GET', authToken, undefined, undefined);
         break;
+      
+      case 'send-invoice':
+        if (req.method === 'POST' && pathParts.length > startIndex + 1) {
+          const invoiceId = pathParts[startIndex + 1];
+          // Check if sendTo parameter is provided
+          const sendToEmail = url.searchParams.get('sendTo');
+          
+          let endpoint = `invoice/${invoiceId}/send`;
+          if (sendToEmail) {
+            endpoint += `?sendTo=${encodeURIComponent(sendToEmail)}&minorversion=75`;
+          }
+          
+          // Set up headers with the required content type for send invoice
+          const headers: Record<string, string> = {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/octet-stream',
+            'Accept': 'application/json'
+          };
+          
+          // Make a direct request to QuickBooks API for sending invoice
+          try {
+            // Get QuickBooks credentials from FileMaker
+            const { realmId, accessToken } = await getQuickBooksCredentials(authToken);
+            
+            // Construct the QuickBooks API URL
+            const apiUrl = `https://quickbooks.api.intuit.com/v3/company/${realmId}/${endpoint}`;
+            console.log('Sending invoice email to:', apiUrl);
+            
+            // Make the request to QuickBooks API
+            const qbResponse = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/octet-stream',
+                'Accept': 'application/json'
+              }
+            });
+            
+            response = qbResponse;
+            console.log('Send invoice response status:', response.status);
+          } catch (error) {
+            console.error('Error sending invoice email:', error);
+            throw error;
+          }
+        } else {
+          return new Response(JSON.stringify({ error: 'Invalid request for send-invoice. Requires POST method and invoice ID.' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        break;
         
       case 'customers':
         if (req.method === 'GET') {

@@ -87,6 +87,14 @@ async function getMailJetConfig() {
  */
 export async function sendEmailWithAttachment(options) {
   try {
+    // Validate recipient email address
+    if (!isValidEmail(options.to)) {
+      return {
+        success: false,
+        error: `Invalid recipient email address: "${options.to || ''}"`
+      };
+    }
+    
     // Fetch configuration from FileMaker using FMGofer.Performscript
     const config = await getMailJetConfig();
 
@@ -184,7 +192,28 @@ export async function sendEmailWithAttachment(options) {
         };
       }
       
-      if (responseData && !responseData.error) {
+      // Check for Mailjet API errors in the response
+      if (responseData && responseData.Messages && responseData.Messages[0] && responseData.Messages[0].Errors) {
+        // Extract error details from Mailjet response format
+        const errors = responseData.Messages[0].Errors;
+        const errorMessage = errors[0]?.ErrorMessage || 'Unknown Mailjet error';
+        const errorCode = errors[0]?.ErrorCode || '';
+        const errorDetails = errors[0]?.ErrorRelatedTo ? errors[0].ErrorRelatedTo.join(', ') : '';
+        
+        console.error("[ERROR] Mailjet API error:", { errorCode, errorMessage, errorDetails });
+        
+        return {
+          success: false,
+          error: `${errorMessage} (${errorCode})${errorDetails ? ` - Related to: ${errorDetails}` : ''}`
+        };
+      } else if (responseData && responseData.Status === "error") {
+        // Handle general error status
+        console.error("[ERROR] Mailjet general error:", responseData);
+        return {
+          success: false,
+          error: responseData.message || 'Unknown error from Mailjet API'
+        };
+      } else if (responseData && !responseData.error) {
         console.log("[DEBUG] Email sent successfully");
         return {
           success: true,
@@ -210,8 +239,22 @@ export async function sendEmailWithAttachment(options) {
 }
 
 /**
+ * Validates an email address format
+ *
+ * @param {string} email - Email address to validate
+ * @returns {boolean} - True if email is valid, false otherwise
+ */
+export function isValidEmail(email) {
+  if (!email) return false;
+  
+  // Basic email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+/**
  * Check if Mailjet service is properly configured
- * 
+ *
  * @returns {Promise<boolean>} - True if Mailjet is configured, false otherwise
  */
 export async function isMailjetConfigured() {
