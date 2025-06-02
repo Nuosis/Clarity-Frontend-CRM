@@ -18,6 +18,7 @@ function ProjectDetails({
   onTaskStatusChange = () => {},
   onDelete = () => {},
   onTeamChange = () => Promise.resolve(), // Ensure it returns a Promise
+  onObjectiveCreate = () => {},
   project
 }) {
   const { darkMode } = useTheme();
@@ -311,6 +312,7 @@ function ProjectDetails({
           <ProjectObjectivesTab
             project={project}
             darkMode={darkMode}
+            onCreateObjective={onObjectiveCreate}
           />
         )}
 

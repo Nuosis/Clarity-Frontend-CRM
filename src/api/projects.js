@@ -192,3 +192,22 @@ export async function fetchProjectsForCustomers(customerIds) {
         return await fetchDataFromFileMaker(params);
     });
 }
+
+/**
+ * Creates a new project objective
+ * @param {Object} data - The objective data
+ * @returns {Promise<Object>} Created objective record
+ */
+export async function createObjective(data) {
+    validateParams({ data }, ['data']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.PROJECT_OBJECTIVES,
+            action: Actions.CREATE,
+            fieldData: data
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}

@@ -3,6 +3,20 @@
  */
 
 /**
+ * Converts a date from YYYY-MM-DD format to MM/DD/YYYY format for FileMaker
+ * @param {string} dateString - Date in YYYY-MM-DD format
+ * @returns {string} - Date in MM/DD/YYYY format
+ */
+function convertToFileMakerDate(dateString) {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+}
+
+/**
  * Processes raw project data from FileMaker
  * @param {Object} projectData - Raw project data
  * @param {Object} relatedData - Related project data (images, links, etc.)
@@ -102,8 +116,9 @@ export function processProjectObjectives(objectives, projectId, steps) {
             id: obj.fieldData.__ID,
             recordId: obj.recordId,
             objective: obj.fieldData.projectObjective,
+            status: obj.fieldData.status || 'Open',
             order: obj.fieldData.order || 0,
-            completed: obj.fieldData.f_completed === "1",
+            completed: obj.fieldData.f_completed === 1 || obj.fieldData.f_completed === "1",
             steps: processObjectiveSteps(steps, obj.fieldData.__ID)
         }))
         .sort((a, b) => a.order - b.order);
@@ -283,8 +298,8 @@ export function formatProjectForFileMaker(data) {
         f_fixedPrice: data.isFixedPrice ? "1" : "0",
         f_subscription: data.isSubscription ? "1" : "0",
         value: data.value || "0",
-        dateStart: data.dateStart || "",
-        dateEnd: data.dateEnd || "",
+        dateStart: convertToFileMakerDate(data.dateStart),
+        dateEnd: convertToFileMakerDate(data.dateEnd),
         __ID: data.id // Include the UUID in the data sent to FileMaker
     };
 }

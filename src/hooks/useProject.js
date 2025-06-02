@@ -8,7 +8,8 @@ import {
     updateProject,
     fetchProjectsForCustomers,
     fetchProjectNotes,
-    deleteProject
+    deleteProject,
+    createObjective
 } from '../api';
 import { useProjectRecords } from '../context/ProjectContext';
 import { useSnackBar } from '../context/SnackBarContext';
@@ -449,6 +450,43 @@ export function useProject(customerId = null) {
         }
     }, [selectedProject, projects]);
 
+    /**
+     * Creates a new objective for a project
+     */
+    const handleObjectiveCreate = useCallback(async (projectId, objectiveText) => {
+        try {
+            setLoading(true);
+            setError(null);
+            
+            // Prepare objective data for FileMaker (including the newly added fields)
+            const objectiveData = {
+                _projectID: projectId,
+                projectObjective: objectiveText,
+                status: "Open", // Default status
+                f_completed: 0 // Default to not completed (0 = false, 1 = true)
+            };
+            
+            // Create the objective in FileMaker
+            const result = await createObjective(objectiveData);
+            
+            // Add a small delay to avoid race condition with FileMaker
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Reload project details to get the updated objectives
+            if (selectedProject && selectedProject.id === projectId) {
+                await loadProjectDetails(projectId);
+            }
+            
+            return result;
+        } catch (err) {
+            setError(err.message);
+            console.error('Error creating objective:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedProject, loadProjectDetails]);
+
     return {
         // State
         loading,
@@ -469,6 +507,7 @@ export function useProject(customerId = null) {
         handleProjectStatusChange,
         handleProjectDelete,
         handleProjectTeamChange,
+        handleObjectiveCreate,
         
         // Utilities
         getProjectCompletion,

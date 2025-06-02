@@ -73,6 +73,7 @@ export { useTeam } from './useTeam';
 export { useProducts } from './useProducts';
 export { useSales } from './useSales';
 export { useSalesActivity } from './useSalesActivity';
+export { useFinancialSync } from './useFinancialSync';
 
 /**
  * Hook for managing loading and error states

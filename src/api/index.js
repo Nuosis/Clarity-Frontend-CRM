@@ -45,7 +45,8 @@ export {
     fetchAllProjectData,
     fetchProjectsForCustomers,
     fetchProjectNotes,
-    deleteProject
+    deleteProject,
+    createObjective
 } from './projects';
 
 // Task operations
