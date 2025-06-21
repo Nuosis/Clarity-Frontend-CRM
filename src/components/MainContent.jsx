@@ -10,6 +10,7 @@ import FinancialActivity from './financial/FinancialActivity';
 import FileMakerExample from './examples/FileMakerExample';
 import SupabaseExample from './examples/SupabaseExample';
 import QboTestPanel from './financial/QboTestPanel';
+import MarketingPanel from './marketing/MarketingPanel';
 import ErrorBoundary from './ErrorBoundary';
 import Loading from './loading/Loading';
 import { useProject } from '../hooks/useProject';
@@ -48,6 +49,7 @@ const MainContent = React.memo(function MainContent({
         showFileMakerExample,
         showSupabaseExample,
         showQboTestPanel,
+        showMarketing,
         sidebarMode,
         selectedProduct,
         products,
@@ -161,6 +163,18 @@ const MainContent = React.memo(function MainContent({
         return (
             <ErrorBoundary>
                 <QboTestPanel darkMode={darkMode} />
+            </ErrorBoundary>
+        );
+    }
+    
+    // Show Marketing panel if selected
+    if (showMarketing) {
+        return (
+            <ErrorBoundary>
+                <MarketingPanel
+                    customers={handlers.customers || []}
+                    darkMode={darkMode}
+                />
             </ErrorBoundary>
         );
     }
@@ -302,7 +316,11 @@ const MainContent = React.memo(function MainContent({
                 ? 'Select a customer to view details'
                 : sidebarMode === 'team'
                 ? 'Select a team to view details'
-                : 'Select a product to view details'
+                : sidebarMode === 'product'
+                ? 'Select a product to view details'
+                : sidebarMode === 'marketing'
+                ? 'Click "Send Information Session" to start a marketing campaign'
+                : 'Select an item to view details'
             }
         </div>
     );

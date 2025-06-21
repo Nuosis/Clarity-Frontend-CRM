@@ -94,6 +94,16 @@ export {
     executeQBOQuery
 } from './quickbooksEdgeFunction';
 
+// Marketing operations
+export {
+    sendInformationSessionEmails,
+    sendCustomListInformationSessionEmails,
+    sendTestInformationSessionEmail,
+    validateEmailTemplate,
+    sendCustomBulkEmail,
+    getCampaignStatus
+} from './marketing';
+
 // Error codes
 export const ErrorCodes = {
     TIMEOUT: 'TIMEOUT',

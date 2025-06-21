@@ -402,8 +402,8 @@ function Sidebar({
 }) {
     const { darkMode } = useTheme();
     const { projects, projectRecords } = useProject();
-    const { showFinancialActivity, showFileMakerExample, showSupabaseExample, showQboTestPanel, showCustomerForm, showTeamForm, sidebarMode, showProductForm } = useAppState();
-    const { setShowFinancialActivity, setShowFileMakerExample, setShowSupabaseExample, setShowQboTestPanel, setShowCustomerForm, setShowTeamForm, setSidebarMode, setSelectedProduct, setShowProductForm: contextSetShowProductForm } = useAppStateOperations();
+    const { showFinancialActivity, showFileMakerExample, showSupabaseExample, showQboTestPanel, showCustomerForm, showTeamForm, sidebarMode, showProductForm, showMarketing } = useAppState();
+    const { setShowFinancialActivity, setShowFileMakerExample, setShowSupabaseExample, setShowQboTestPanel, setShowCustomerForm, setShowTeamForm, setSidebarMode, setSelectedProduct, setShowProductForm: contextSetShowProductForm, setShowMarketing } = useAppStateOperations();
     
     // Handle product selection
     const handleProductSelect = (product) => {
@@ -452,7 +452,7 @@ function Sidebar({
                         text-lg font-semibold
                         ${darkMode ? 'text-white' : 'text-gray-900'}
                     `}>
-                        {sidebarMode === 'customer' ? 'Customers' : sidebarMode === 'team' ? 'Teams' : 'Products'}
+                        {sidebarMode === 'customer' ? 'Customers' : sidebarMode === 'team' ? 'Teams' : sidebarMode === 'product' ? 'Products' : 'Marketing'}
                     </h2>
                     {sidebarMode === 'customer' ? (
                         <button
@@ -514,21 +514,23 @@ function Sidebar({
                     </div>
                 )}
                 
-                {/* Financial Activity Button */}
-                <button
-                    onClick={() => setShowFinancialActivity(true)}
-                    className={`
-                        mt-4 w-full flex items-center justify-center px-4 py-2 rounded-md
-                        ${showFinancialActivity
-                            ? (darkMode ? 'bg-blue-700 text-white' : 'bg-blue-100 text-blue-800')
-                            : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
-                    `}
-                >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                    </svg>
-                    Financial Activity
-                </button>
+                {/* Financial Activity Button - Hide when marketing mode is active */}
+                {sidebarMode !== 'marketing' && (
+                    <button
+                        onClick={() => setShowFinancialActivity(true)}
+                        className={`
+                            mt-4 w-full flex items-center justify-center px-4 py-2 rounded-md
+                            ${showFinancialActivity
+                                ? (darkMode ? 'bg-blue-700 text-white' : 'bg-blue-100 text-blue-800')
+                                : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
+                        `}
+                    >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                        </svg>
+                        Financial Activity
+                    </button>
+                )}
                 
                 {/* FileMaker API Example Button - Only shown when VITE_SHOW_FM_API is true */}
                 {SHOW_FM_API && (
@@ -583,11 +585,50 @@ function Sidebar({
                         QBO Test Panel
                     </button>
                 )}
+                
+                {/* Marketing Button */}
+                {sidebarMode === 'marketing' && (
+                    <button
+                        onClick={() => setShowMarketing(true)}
+                        className={`
+                            mt-2 w-full flex items-center justify-center px-4 py-2 rounded-md
+                            ${showMarketing
+                                ? (darkMode ? 'bg-orange-700 text-white' : 'bg-orange-100 text-orange-800')
+                                : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
+                        `}
+                    >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Send Information Session
+                    </button>
+                )}
             </div>
 
             {/* List Content */}
             <div className="flex-1 overflow-y-auto">
-                {sidebarMode === 'customer' ? (
+                {sidebarMode === 'marketing' ? (
+                    /* Marketing Mode - Show marketing info */
+                    <div className={`
+                        p-4 text-center
+                        ${darkMode ? 'text-gray-300' : 'text-gray-600'}
+                    `}>
+                        <div className="mb-4">
+                            <svg className="w-12 h-12 mx-auto mb-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h3 className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            Marketing Center
+                        </h3>
+                        <p className="text-sm mb-4">
+                            Send information session emails to customers who have opted in for communications.
+                        </p>
+                        <p className="text-xs">
+                            Click "Send Information Session" to get started.
+                        </p>
+                    </div>
+                ) : sidebarMode === 'customer' ? (
                     /* Customer List */
                     <>
                         {activeCustomers.length > 0 && activeCustomers.map(customer => (

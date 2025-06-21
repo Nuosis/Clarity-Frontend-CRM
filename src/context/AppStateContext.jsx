@@ -26,7 +26,8 @@ export const APP_ACTIONS = {
     SET_SHOW_PRODUCT_FORM: 'SET_SHOW_PRODUCT_FORM',
     SET_SIDEBAR_MODE: 'SET_SIDEBAR_MODE',
     SET_PRODUCTS: 'SET_PRODUCTS',
-    SET_SALES: 'SET_SALES'
+    SET_SALES: 'SET_SALES',
+    SET_SHOW_MARKETING: 'SET_SHOW_MARKETING'
 };
 const initialState = {
     loading: true,
@@ -46,7 +47,7 @@ const initialState = {
     showCustomerForm: false,
     showTeamForm: false,
     showProductForm: false,
-    sidebarMode: 'customer', // 'customer', 'team', or 'product'
+    sidebarMode: 'customer', // 'customer', 'team', 'product', or 'marketing'
     // Initial data
     products: [],
     sales: [],
@@ -175,6 +176,20 @@ function appReducer(state, action) {
                 showFinancialActivity: false, // Hide financial activity
                 showFileMakerExample: false, // Hide FileMaker example
                 showSupabaseExample: false, // Hide Supabase example
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SHOW_MARKETING:
+            return {
+                ...state,
+                showMarketing: action.payload,
+                selectedCustomer: null, // Clear selections when showing marketing
+                selectedProject: null,
+                selectedTask: null,
+                selectedTeam: null,
+                showFinancialActivity: false, // Hide financial activity
+                showFileMakerExample: false, // Hide FileMaker example
+                showSupabaseExample: false, // Hide Supabase example
+                showQboTestPanel: false, // Hide QBO test panel
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SHOW_CUSTOMER_FORM:
@@ -356,6 +371,10 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_SIDEBAR_MODE, payload: mode });
     }, [dispatch]);
 
+    const setShowMarketing = useCallback((show) => {
+        dispatch({ type: APP_ACTIONS.SET_SHOW_MARKETING, payload: show });
+    }, [dispatch]);
+
     return {
         setLoading,
         setError,
@@ -378,6 +397,7 @@ export function useAppStateOperations() {
         setSidebarMode,
         setProducts,
         setSales,
+        setShowMarketing,
         resetState
     };
 }

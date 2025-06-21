@@ -302,7 +302,8 @@ function AppContent() {
         handleTimerStart,
         handleTimerStop,
         handleTimerPause,
-        handleTimerAdjust
+        handleTimerAdjust,
+        customers // Add customers for marketing functionality
     }), [
         onCustomerSelect,
         onProjectSelect,
@@ -320,7 +321,8 @@ function AppContent() {
         handleTimerStart,
         handleTimerStop,
         handleTimerPause,
-        handleTimerAdjust
+        handleTimerAdjust,
+        customers // Add customers dependency
     ]);
 
     // Handle initialization states
