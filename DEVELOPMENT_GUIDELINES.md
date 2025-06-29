@@ -1,14 +1,16 @@
 # Clarity Admin Frontend Development Guidelines
 
-This document outlines the development standards, patterns, and best practices for the Clarity Admin React frontend project. These guidelines ensure code quality, maintainability, and consistency across the codebase.
+This document outlines the development standards, patterns, and best practices for the Clarity CRM React frontend project. These guidelines ensure code quality, maintainability, and consistency across the codebase.
 
 ## Overview
-This document outlines development standards, practices, and workflows for the Clarity Business Solution's admin frontend. All developers should follow these guidelines to maintain consistency, quality, and alignment with the existing Clarity ecosystem.
+This document outlines development standards, practices, and workflows for the Clarity Business Solution's CRM frontend. All developers should follow these guidelines to maintain consistency, quality, and alignment with the existing Clarity ecosystem.
 
 ## Project Architecture
 
 ### Three-Layer Architecture
 1. **UI (Frontend-Admin [This project])** - React-based admin interface for management/developer low-level backend access
+2. **Integration Layer (App https://api.claritybusinesssolutions.ca/docs)** - Service adapters, routing, verification, external API management. Code base @ /Users/marcusswift/python/clarity-backend/app
+3. **Backend Services** - Core business logic, database, and workflow processing. Code base @ /Users/marcusswift/python/clarity-backend/
 
 ### Core Principles
 - **DRY (Don't Repeat Yourself)**: Eliminate code duplication through reusable components, hooks, and utilities
@@ -31,18 +33,32 @@ This document outlines development standards, practices, and workflows for the C
 ### Directory Structure
 ```
 src/
-├── components/           # Reusable UI components
-│   ├── common/          # Generic components (Button, Input, Modal)
-│   ├── forms/           # Form-specific components
-│   └── layout/          # Layout components (Header, Footer, Sidebar)
-├── pages/               # Page-level components
-├── hooks/               # Custom React hooks
-├── lib/                 # Utility functions and API clients
-├── store/               # Redux store and slices
-├── styles/              # Theme, global styles, and styled-components
-├── assets/              # Images, icons, and static files
-├── types/               # TypeScript type definitions (if using TS)
-└── utils/               # Helper functions and constants
+├── api/           # API modules for backend/service integration
+├── assets/        # Images, icons, and static files
+├── classes/       # Utility classes and managers
+├── components/    # All React UI components, organized by domain
+│   ├── common/        # Reusable UI components (if present)
+│   ├── forms/         # Form-specific components (if present)
+│   ├── layout/        # Layout components (Header, Sidebar, etc.)
+│   ├── loading/       # Loading indicators and spinners
+│   ├── customers/     # Customer-related UI
+│   ├── examples/      # Example/demo components
+│   ├── financial/     # Financial and QuickBooks UI
+│   ├── global/        # Global UI elements (SnackBar, TextInput, etc.)
+│   ├── marketing/     # Marketing-related UI
+│   ├── products/      # Product-related UI
+│   ├── projects/      # Project-related UI
+│   ├── tasks/         # Task-related UI
+│   ├── teams/         # Team-related UI
+├── config.js      # App configuration
+├── context/       # React context providers (AppState, Team, etc.)
+├── hooks/         # Custom React hooks (utility only)
+├── index.css      # Global CSS
+├── index.jsx      # App entry point
+├── main.jsx       # App bootstrap and provider setup
+├── services/      # Business logic, data services, and Redux slices
+├── style.css      # Additional global styles
+├── utils/         # Helper functions and constants
 ```
 
 ### File Naming Conventions
