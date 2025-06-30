@@ -6,6 +6,7 @@ import { AppStateProvider } from './context/AppStateContext';
 import { SnackBarProvider } from './context/SnackBarContext';
 import { TeamProvider } from './context/TeamContext';
 import { ProjectProvider } from './context/ProjectContext';
+import { MarketingProvider } from './context/MarketingContext';
 import { ThemeProvider } from './components/layout/AppLayout';
 import './index.css';
 import './style.css';
@@ -34,11 +35,13 @@ root.render(
         <SnackBarProvider>
             <TeamProvider>
                 <ProjectProvider>
-                    <ThemeProvider>
-                        <ErrorBoundary>
-                            <App />
-                        </ErrorBoundary>
-                    </ThemeProvider>
+                    <MarketingProvider>
+                        <ThemeProvider>
+                            <ErrorBoundary>
+                                <App />
+                            </ErrorBoundary>
+                        </ThemeProvider>
+                    </MarketingProvider>
                 </ProjectProvider>
             </TeamProvider>
         </SnackBarProvider>

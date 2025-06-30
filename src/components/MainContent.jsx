@@ -11,11 +11,13 @@ import FileMakerExample from './examples/FileMakerExample';
 import SupabaseExample from './examples/SupabaseExample';
 import QboTestPanel from './financial/QboTestPanel';
 import MarketingPanel from './marketing/MarketingPanel';
+import NewMarketingPanel from './marketing/NewMarketingPanel';
 import ErrorBoundary from './ErrorBoundary';
 import Loading from './loading/Loading';
 import { useProject } from '../hooks/useProject';
 import { useTeamContext } from '../context/TeamContext';
 import { useAppState, useAppStateOperations } from '../context/AppStateContext';
+import { useMarketingContext } from '../context/MarketingContext';
 import { useTheme } from './layout/AppLayout';
 const MainContent = React.memo(function MainContent({
     selectedTask = null,
@@ -60,6 +62,7 @@ const MainContent = React.memo(function MainContent({
         setProducts,
         setShowProductForm
     } = useAppStateOperations();
+    const { selectedMarketingDomain } = useMarketingContext();
     const { darkMode } = useTheme();
 
     // Memoized project selection handler
@@ -167,13 +170,13 @@ const MainContent = React.memo(function MainContent({
         );
     }
     
-    // Show Marketing panel if selected
-    if (showMarketing) {
+    // Show Marketing panel when in marketing mode
+    if (sidebarMode === 'marketing') {
         return (
             <ErrorBoundary>
-                <MarketingPanel
-                    customers={handlers.customers || []}
+                <NewMarketingPanel
                     darkMode={darkMode}
+                    selectedDomain={selectedMarketingDomain}
                 />
             </ErrorBoundary>
         );

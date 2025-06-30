@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from './AppLayout';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { useProject } from '../../hooks/useProject';
 import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
+import { useMarketingContext } from '../../context/MarketingContext';
 import CustomerForm from '../customers/CustomerForm';
 import TeamForm from '../teams/TeamForm';
 
@@ -398,12 +399,16 @@ function Sidebar({
     onCustomerDelete,
     onTeamSelect = () => {},
     onTeamDelete = () => {},
-    setShowProductForm
+    setShowProductForm,
+    selectedMarketingDomain,
+    onMarketingDomainSelect
 }) {
     const { darkMode } = useTheme();
     const { projects, projectRecords } = useProject();
     const { showFinancialActivity, showFileMakerExample, showSupabaseExample, showQboTestPanel, showCustomerForm, showTeamForm, sidebarMode, showProductForm, showMarketing } = useAppState();
     const { setShowFinancialActivity, setShowFileMakerExample, setShowSupabaseExample, setShowQboTestPanel, setShowCustomerForm, setShowTeamForm, setSidebarMode, setSelectedProduct, setShowProductForm: contextSetShowProductForm, setShowMarketing } = useAppStateOperations();
+    const marketingContext = useMarketingContext();
+    
     
     // Handle product selection
     const handleProductSelect = (product) => {
@@ -502,6 +507,24 @@ function Sidebar({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
                         </button>
+                    ) : sidebarMode === 'marketing' ? (
+                        <button
+                            onClick={() => {
+                                // TODO: Add functionality to create new marketing domain
+                                console.log('Add new marketing domain');
+                            }}
+                            className={`
+                                p-1 rounded-md flex items-center justify-center
+                                ${darkMode
+                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
+                            `}
+                            title="Add new marketing domain"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
                     ) : null}
                 </div>
                 {sidebarMode === 'customer' && stats && (
@@ -586,48 +609,78 @@ function Sidebar({
                     </button>
                 )}
                 
-                {/* Marketing Button */}
-                {sidebarMode === 'marketing' && (
-                    <button
-                        onClick={() => setShowMarketing(true)}
-                        className={`
-                            mt-2 w-full flex items-center justify-center px-4 py-2 rounded-md
-                            ${showMarketing
-                                ? (darkMode ? 'bg-orange-700 text-white' : 'bg-orange-100 text-orange-800')
-                                : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800')}
-                        `}
-                    >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        Send Information Session
-                    </button>
-                )}
             </div>
 
             {/* List Content */}
             <div className="flex-1 overflow-y-auto">
                 {sidebarMode === 'marketing' ? (
-                    /* Marketing Mode - Show marketing info */
-                    <div className={`
-                        p-4 text-center
-                        ${darkMode ? 'text-gray-300' : 'text-gray-600'}
-                    `}>
-                        <div className="mb-4">
-                            <svg className="w-12 h-12 mx-auto mb-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <h3 className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            Marketing Center
-                        </h3>
-                        <p className="text-sm mb-4">
-                            Send information session emails to customers who have opted in for communications.
-                        </p>
-                        <p className="text-xs">
-                            Click "Send Information Session" to get started.
-                        </p>
-                    </div>
+                    /* Marketing Domains List */
+                    <>
+                            {marketingContext.marketingDomains.map(domain => (
+                                <div
+                                    key={domain.id}
+                                    onClick={() => marketingContext.setSelectedMarketingDomain(domain)}
+                                    className={`
+                                        py-2 px-4 cursor-pointer border-b last:border-b-0 relative
+                                        ${darkMode ? 'border-gray-700' : 'border-gray-200'}
+                                        ${marketingContext.selectedMarketingDomain?.id === domain.id
+                                            ? (darkMode ? 'bg-gray-700' : 'bg-gray-100')
+                                            : (darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50')}
+                                        ${domain.isActive
+                                            ? ''
+                                            : (darkMode ? 'opacity-50' : 'opacity-60')}
+                                    `}
+                                >
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center space-x-3">
+                                            <span className="text-lg">{domain.icon}</span>
+                                            <div>
+                                                <h3 className={`
+                                                    font-medium text-sm
+                                                    ${darkMode ? 'text-gray-300' : 'text-gray-700'}
+                                                `}>
+                                                    {domain.name}
+                                                </h3>
+                                                {domain.focusCount > 0 && (
+                                                    <p className={`
+                                                        text-xs
+                                                        ${darkMode ? 'text-gray-500' : 'text-gray-500'}
+                                                    `}>
+                                                        {domain.focusCount} focus area{domain.focusCount !== 1 ? 's' : ''}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Action button for active/inactive status */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                marketingContext.toggleMarketingDomainStatus(domain.id, !domain.isActive);
+                                            }}
+                                            className={`
+                                                p-1 rounded-md flex items-center justify-center w-6 h-6
+                                                ${darkMode
+                                                    ? 'text-gray-500 hover:bg-blue-800 hover:text-white'
+                                                    : 'text-gray-400 hover:bg-blue-100 hover:text-blue-800'}
+                                                transition-colors duration-200 z-10
+                                            `}
+                                            title={domain.isActive ? "Deactivate" : "Activate"}
+                                        >
+                                            {domain.isActive ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </>
                 ) : sidebarMode === 'customer' ? (
                     /* Customer List */
                     <>
@@ -763,7 +816,15 @@ Sidebar.propTypes = {
     onCustomerDelete: PropTypes.func.isRequired,
     onTeamSelect: PropTypes.func,
     onTeamDelete: PropTypes.func,
-    setShowProductForm: PropTypes.func
+    setShowProductForm: PropTypes.func,
+    selectedMarketingDomain: PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        icon: PropTypes.string,
+        focusCount: PropTypes.number,
+        isActive: PropTypes.bool
+    }),
+    onMarketingDomainSelect: PropTypes.func
 };
 
 export default React.memo(Sidebar);

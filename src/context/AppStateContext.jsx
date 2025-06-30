@@ -28,6 +28,10 @@ export const APP_ACTIONS = {
     SET_PRODUCTS: 'SET_PRODUCTS',
     SET_SALES: 'SET_SALES',
     SET_SHOW_MARKETING: 'SET_SHOW_MARKETING',
+    SET_SELECTED_MARKETING_DOMAIN: 'SET_SELECTED_MARKETING_DOMAIN',
+    SET_SELECTED_MARKETING_FOCUS: 'SET_SELECTED_MARKETING_FOCUS',
+    SET_SELECTED_MARKETING_CONTENT: 'SET_SELECTED_MARKETING_CONTENT',
+    TOGGLE_MARKETING_DOMAIN_STATUS: 'TOGGLE_MARKETING_DOMAIN_STATUS',
     // New authentication and environment actions
     SET_AUTHENTICATION: 'SET_AUTHENTICATION',
     SET_ENVIRONMENT: 'SET_ENVIRONMENT',
@@ -52,6 +56,9 @@ const initialState = {
     showTeamForm: false,
     showProductForm: false,
     sidebarMode: 'customer', // 'customer', 'team', 'product', or 'marketing'
+    selectedMarketingDomain: null,
+    selectedMarketingFocus: null,
+    selectedMarketingContent: null,
     // Initial data
     products: [],
     sales: [],
@@ -205,6 +212,36 @@ function appReducer(state, action) {
                 showFileMakerExample: false, // Hide FileMaker example
                 showSupabaseExample: false, // Hide Supabase example
                 showQboTestPanel: false, // Hide QBO test panel
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SELECTED_MARKETING_DOMAIN:
+            return {
+                ...state,
+                selectedMarketingDomain: action.payload,
+                selectedMarketingFocus: null, // Clear focus when domain changes
+                selectedMarketingContent: null, // Clear content when domain changes
+                sidebarMode: 'marketing', // Switch to marketing mode
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SELECTED_MARKETING_FOCUS:
+            return {
+                ...state,
+                selectedMarketingFocus: action.payload,
+                selectedMarketingContent: action.payload ? 'overview' : null, // Auto-select overview when focus is selected
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SELECTED_MARKETING_CONTENT:
+            return {
+                ...state,
+                selectedMarketingContent: action.payload,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.TOGGLE_MARKETING_DOMAIN_STATUS:
+            // This would typically update the domain in a domains array
+            // For now, just log the action since domains are managed in MarketingContext
+            console.log('Toggle marketing domain status:', action.payload);
+            return {
+                ...state,
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_AUTHENTICATION:

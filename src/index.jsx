@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import Loading from './components/loading/Loading';
 import AppLayout, { ThemeProvider } from './components/layout/AppLayout';
 import Sidebar from './components/layout/Sidebar';
@@ -102,6 +102,14 @@ function AppContent() {
     } = useTask(appState.selectedProject?.id);
     const { loadProductsForOrganization } = useProducts();
     const { loadUnbilledSalesForOrganization } = useSales();
+
+    // Marketing domain state
+    const [selectedMarketingDomain, setSelectedMarketingDomain] = useState(null);
+
+    // Marketing domain handler
+    const handleMarketingDomainSelect = useCallback((domain) => {
+        setSelectedMarketingDomain(domain);
+    }, []);
 
     // Authentication handlers
     const handleFileMakerDetected = useCallback(() => {
@@ -409,7 +417,9 @@ function AppContent() {
         handleTimerStop,
         handleTimerPause,
         handleTimerAdjust,
-        customers // Add customers for marketing functionality
+        customers, // Add customers for marketing functionality
+        selectedMarketingDomain,
+        onMarketingDomainSelect: handleMarketingDomainSelect
     }), [
         onCustomerSelect,
         onProjectSelect,
@@ -428,7 +438,9 @@ function AppContent() {
         handleTimerStop,
         handleTimerPause,
         handleTimerAdjust,
-        customers // Add customers dependency
+        customers, // Add customers dependency
+        selectedMarketingDomain,
+        handleMarketingDomainSelect
     ]);
 
     // Show SignIn component if not authenticated
@@ -518,6 +530,8 @@ function AppContent() {
                         inactive: processedCustomers.filter(c => !c.isActive).length,
                         activePercentage: Math.round((processedCustomers.filter(c => c.isActive).length / customers.length) * 100)
                     } : null}
+                    selectedMarketingDomain={selectedMarketingDomain}
+                    onMarketingDomainSelect={handleMarketingDomainSelect}
                 />
                 <MainContent
                     darkMode={darkMode}
