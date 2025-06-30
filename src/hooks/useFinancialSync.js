@@ -1,9 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAppState } from '../context/AppStateContext';
-import { 
-  synchronizeFinancialRecords, 
-  getFinancialSyncStatus 
+import {
+  synchronizeFinancialRecords,
+  getFinancialSyncStatus
 } from '../services/financialSyncService';
+import {
+  getPendingSyncSummary
+} from '../services/syncTrackingService';
 
 /**
  * Hook for managing financial synchronization between devRecords and customer_sales
@@ -15,6 +18,17 @@ export function useFinancialSync() {
   const [syncStatus, setSyncStatus] = useState(null);
   const [lastSyncResult, setLastSyncResult] = useState(null);
 
+  // Debug logging for user information in hook
+  useEffect(() => {
+    console.log('[useFinancialSync] Debug - User data received:', {
+      user,
+      hasUser: !!user,
+      supabaseOrgID: user?.supabaseOrgID,
+      supabaseOrgId: user?.supabaseOrgId,
+      userKeys: user ? Object.keys(user) : 'No user'
+    });
+  }, [user]);
+
   /**
    * Gets the synchronization status for a date range
    * @param {string} startDate - Start date in YYYY-MM-DD format
@@ -22,11 +36,14 @@ export function useFinancialSync() {
    * @returns {Promise<Object>} - Status result
    */
   const checkSyncStatus = useCallback(async (startDate, endDate) => {
-    if (!user?.supabaseOrgID) {
+    if (!user?.supabaseOrgID && !user?.supabaseOrgId) {
       const error = 'Organization ID is required';
       setError(error);
       return { success: false, error };
     }
+
+    // Get the organization ID from either property name (for backward compatibility)
+    const orgId = user?.supabaseOrgID || user?.supabaseOrgId;
 
     if (!startDate || !endDate) {
       const error = 'Start date and end date are required';
@@ -38,9 +55,9 @@ export function useFinancialSync() {
       setLoading(true);
       setError(null);
 
-      console.log(`Checking sync status for ${user.supabaseOrgID} from ${startDate} to ${endDate}`);
+      console.log(`Checking sync status for ${orgId} from ${startDate} to ${endDate}`);
       
-      const result = await getFinancialSyncStatus(user.supabaseOrgID, startDate, endDate);
+      const result = await getFinancialSyncStatus(orgId, startDate, endDate);
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to get sync status');
@@ -72,11 +89,14 @@ export function useFinancialSync() {
    * @returns {Promise<Object>} - Dry run result
    */
   const previewSync = useCallback(async (startDate, endDate, options = {}) => {
-    if (!user?.supabaseOrgID) {
+    if (!user?.supabaseOrgID && !user?.supabaseOrgId) {
       const error = 'Organization ID is required';
       setError(error);
       return { success: false, error };
     }
+
+    // Get the organization ID from either property name (for backward compatibility)
+    const orgId = user?.supabaseOrgID || user?.supabaseOrgId;
 
     if (!startDate || !endDate) {
       const error = 'Start date and end date are required';
@@ -88,12 +108,12 @@ export function useFinancialSync() {
       setLoading(true);
       setError(null);
 
-      console.log(`Previewing sync for ${user.supabaseOrgID} from ${startDate} to ${endDate}`);
+      console.log(`Previewing sync for ${orgId} from ${startDate} to ${endDate}`);
       
       const result = await synchronizeFinancialRecords(
-        user.supabaseOrgID, 
-        startDate, 
-        endDate, 
+        orgId,
+        startDate,
+        endDate,
         { ...options, dryRun: true }
       );
       
@@ -128,11 +148,14 @@ export function useFinancialSync() {
    * @returns {Promise<Object>} - Synchronization result
    */
   const performSync = useCallback(async (startDate, endDate, options = {}) => {
-    if (!user?.supabaseOrgID) {
+    if (!user?.supabaseOrgID && !user?.supabaseOrgId) {
       const error = 'Organization ID is required';
       setError(error);
       return { success: false, error };
     }
+
+    // Get the organization ID from either property name (for backward compatibility)
+    const orgId = user?.supabaseOrgID || user?.supabaseOrgId;
 
     if (!startDate || !endDate) {
       const error = 'Start date and end date are required';
@@ -144,12 +167,12 @@ export function useFinancialSync() {
       setLoading(true);
       setError(null);
 
-      console.log(`Performing sync for ${user.supabaseOrgID} from ${startDate} to ${endDate}`);
+      console.log(`Performing sync for ${orgId} from ${startDate} to ${endDate}`);
       
       const result = await synchronizeFinancialRecords(
-        user.supabaseOrgID, 
-        startDate, 
-        endDate, 
+        orgId,
+        startDate,
+        endDate,
         { ...options, dryRun: false }
       );
       
@@ -263,6 +286,49 @@ export function useFinancialSync() {
     setLastSyncResult(null);
   }, []);
 
+  /**
+   * Performs a review to identify what needs syncing (stores in sessionStorage)
+   * @param {string} startDate - Start date in YYYY-MM-DD format
+   * @param {string} endDate - End date in YYYY-MM-DD format
+   * @param {Object} options - Synchronization options
+   * @returns {Promise<Object>} - Review result
+   */
+  const performReview = useCallback(async (startDate, endDate, options = {}) => {
+    return await performSync(startDate, endDate, { ...options, dryRun: true });
+  }, [performSync]);
+
+  /**
+   * Syncs only the pending records stored in sessionStorage
+   * @param {string} startDate - Start date in YYYY-MM-DD format
+   * @param {string} endDate - End date in YYYY-MM-DD format
+   * @param {Object} options - Synchronization options
+   * @returns {Promise<Object>} - Sync result
+   */
+  const syncPendingOnly = useCallback(async (startDate, endDate, options = {}) => {
+    return await performSync(startDate, endDate, { ...options, usePendingOnly: true });
+  }, [performSync]);
+
+  /**
+   * Gets pending sync summary from sessionStorage
+   * @param {string} startDate - Start date in YYYY-MM-DD format
+   * @param {string} endDate - End date in YYYY-MM-DD format
+   * @returns {Object} - Pending sync summary
+   */
+  const getPendingSummary = useCallback((startDate, endDate) => {
+    if (!user?.supabaseOrgID && !user?.supabaseOrgId) {
+      return {
+        hasPending: false,
+        toCreate: 0,
+        toUpdate: 0,
+        toDelete: 0,
+        lastReview: null
+      };
+    }
+
+    const orgId = user?.supabaseOrgID || user?.supabaseOrgId;
+    return getPendingSyncSummary(orgId, startDate, endDate);
+  }, [user?.supabaseOrgID]);
+
   return {
     // State
     loading,
@@ -274,11 +340,16 @@ export function useFinancialSync() {
     checkSyncStatus,
     previewSync,
     performSync,
+    performReview,
+    syncPendingOnly,
     syncCurrentMonth,
     syncPreviousMonth,
     syncMonth,
     checkCurrentMonthStatus,
     checkPreviousMonthStatus,
+    
+    // New tracking functions
+    getPendingSummary,
     
     // Utility functions
     clearError,

@@ -4,7 +4,7 @@
 
 import { fetchFinancialRecords } from '../api/financialRecords';
 import { processFinancialData } from './billableHoursService';
-import { adminQuery } from './supabaseService';
+import { query } from './supabaseService';
 
 /**
  * Debug function to trace processing of a specific record
@@ -72,7 +72,7 @@ export async function debugRecordProcessing(financialId, startDate, endDate, org
     
     // Step 3: Check existing customer_sales record
     console.log('🔍 Step 3: Checking existing customer_sales record...');
-    const customerSalesResult = await adminQuery('customer_sales', {
+    const customerSalesResult = await query('customer_sales', {
       select: '*',
       eq: {
         column: 'financial_id',

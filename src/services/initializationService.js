@@ -1,5 +1,5 @@
 import { fetchDataFromFileMaker } from '../api/fileMaker';
-import { query, adminQuery } from './supabaseService';
+import { query } from './supabaseService';
 import { loadOrganizationProducts } from './productService';
 // Note: We don't directly import useProducts here since hooks can only be used in React components
 
@@ -71,7 +71,7 @@ class InitializationService {
             
             // Use adminQuery to bypass RLS restrictions
             // Query the customer_email table to find the customer with matching email
-            const emailResult = await adminQuery('customer_email', {
+            const emailResult = await query('customer_email', {
                 select: 'customer_id',
                 eq: {
                     column: 'email',
@@ -99,9 +99,8 @@ class InitializationService {
             }
             console.log(`Found customer ID: ${customerId}`);
 
-            // Use adminQuery to bypass RLS restrictions
             // Query the customer_user table to get the user_id for this customer
-            const userResult = await adminQuery('customer_user', {
+            const userResult = await query('customer_user', {
                 select: 'user_id',
                 eq: {
                     column: 'customer_id',
@@ -128,7 +127,7 @@ class InitializationService {
             console.log(`Found Supabase user ID: ${supabaseUserId}`);
 
             // Query the customer_organization table to get the organization_id for this customer
-            const orgResult = await adminQuery('customer_organization', {
+            const orgResult = await query('customer_organization', {
                 select: 'organization_id',
                 eq: {
                     column: 'customer_id',
@@ -155,10 +154,26 @@ class InitializationService {
 
             // Update the user state with the Supabase user ID and organization ID
             if (setUser && supabaseUserId) {
-                setUser({
+                const updatedUser = {
                     ...user,
                     supabaseUserID: supabaseUserId,
                     supabaseOrgID: supabaseOrgId
+                };
+                
+                console.log('[InitializationService] Setting user with organization ID:', {
+                    originalUser: user,
+                    supabaseUserId,
+                    supabaseOrgId,
+                    updatedUser,
+                    hasOrgId: !!supabaseOrgId
+                });
+                
+                setUser(updatedUser);
+            } else {
+                console.log('[InitializationService] Not setting user - missing data:', {
+                    hasSetUser: !!setUser,
+                    hasSupabaseUserId: !!supabaseUserId,
+                    supabaseOrgId
                 });
             }
 

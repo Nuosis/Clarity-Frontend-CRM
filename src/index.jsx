@@ -4,6 +4,7 @@ import AppLayout, { ThemeProvider } from './components/layout/AppLayout';
 import Sidebar from './components/layout/Sidebar';
 import MainContent from './components/MainContent';
 import ErrorBoundary from './components/ErrorBoundary';
+import SignIn from './components/auth/SignIn';
 import { useTheme } from './components/layout/AppLayout';
 import { useCustomer, useProject, useTask, useFileMakerBridge, useProducts, useSales } from './hooks';
 import { TeamProvider, useTeamContext } from './context/TeamContext';
@@ -12,14 +13,23 @@ import { loadingStateManager, useGlobalLoadingState } from './services/loadingSt
 import { AppStateProvider, useAppState, useAppStateOperations } from './context/AppStateContext';
 import { ProjectProvider } from './context/ProjectContext';
 import { calculateProjectDetailStats } from './services/projectService';
+import { setEnvironmentContext, ENVIRONMENT_TYPES, AUTH_METHODS } from './services/dataService';
 
 // Memoized sidebar for performance
 const MemoizedSidebar = React.memo(Sidebar);
 
 function AppContent() {
     const { darkMode } = useTheme();
-    const { isReady: fmReady, error: fmError, status: fmStatus } = useFileMakerBridge();
     const appState = useAppState();
+    
+    // Only use FileMaker bridge hook if we're in FileMaker environment
+    // For web app environments, provide mock values to avoid FileMaker verification
+    const shouldUseFileMakerBridge = appState.environment.type === ENVIRONMENT_TYPES.FILEMAKER;
+    const fileMakerBridge = shouldUseFileMakerBridge
+        ? useFileMakerBridge()
+        : { isReady: true, error: null, status: 'Web app mode - FileMaker bridge disabled' };
+    
+    const { isReady: fmReady, error: fmError, status: fmStatus } = fileMakerBridge;
     const {
         setLoading,
         setError,
@@ -29,6 +39,9 @@ function AppContent() {
         setSelectedTask,
         setSelectedTeam,
         setShowProductForm,
+        setAuthentication,
+        setEnvironment,
+        setEnvironmentDetectionComplete,
         resetState
     } = useAppStateOperations();
     const globalLoadingState = useGlobalLoadingState();
@@ -90,51 +103,129 @@ function AppContent() {
     const { loadProductsForOrganization } = useProducts();
     const { loadUnbilledSalesForOrganization } = useSales();
 
-    // Initialization effect
+    // Authentication handlers
+    const handleFileMakerDetected = useCallback(() => {
+        console.log('[App] FileMaker environment detected');
+        
+        // Set environment context
+        setEnvironment(ENVIRONMENT_TYPES.FILEMAKER);
+        setEnvironmentContext({
+            type: ENVIRONMENT_TYPES.FILEMAKER,
+            authentication: {
+                isAuthenticated: true,
+                method: AUTH_METHODS.FILEMAKER,
+                user: null // Will be set after user context is loaded
+            }
+        });
+        
+        // Set authentication state
+        setAuthentication({
+            isAuthenticated: true,
+            method: AUTH_METHODS.FILEMAKER,
+            user: null
+        });
+        
+        console.log('[App] FileMaker authentication set, starting initialization');
+    }, [setEnvironment, setAuthentication]);
+
+    const handleSupabaseAuth = useCallback((authState) => {
+        console.log('[App] Supabase authentication successful', authState);
+        
+        // Set environment context
+        setEnvironment(ENVIRONMENT_TYPES.WEBAPP);
+        setEnvironmentContext({
+            type: ENVIRONMENT_TYPES.WEBAPP,
+            authentication: authState
+        });
+        
+        // Set authentication state
+        setAuthentication(authState);
+        
+        console.log('[App] Supabase authentication set, starting initialization');
+    }, [setEnvironment, setAuthentication]);
+
+    const handleDetectionComplete = useCallback(() => {
+        console.log('[App] Environment detection complete');
+        setEnvironmentDetectionComplete(true);
+    }, [setEnvironmentDetectionComplete]);
+
+    // Initialization effect - only runs after authentication
     useEffect(() => {
         let isInitialized = false;
         
         const initialize = async () => {
-            // Skip if already initialized
-            if (isInitialized) {
-                console.log('[App] Skipping initialization - already initialized');
+            // Skip if already initialized or not authenticated
+            if (isInitialized || !appState.authentication.isAuthenticated) {
                 return;
             }
             
             try {
-                console.log('[App] Starting initialization');
-                loadingStateManager.setLoading('initialization', true, 'Connecting to FileMaker...');
+                console.log('[App] Starting initialization for environment:', appState.environment.type);
+                loadingStateManager.setLoading('initialization', true, 'Initializing application...');
                 
-                // Wait for FileMaker connection
-                await initializationService.waitForFileMaker(() => fmReady);
-                
-                loadingStateManager.setLoading('initialization', true, 'Loading user context...');
-                const userContext = await initializationService.loadUserContext();
-                setUser(userContext);
-                
-                // Fetch Supabase user ID if user context is available
-                if (userContext && userContext.userEmail) {
-                    loadingStateManager.setLoading('initialization', true, 'Retrieving Supabase user ID...');
-                    const supabaseIds = await initializationService.fetchSupabaseUserId(userContext, setUser);
+                if (appState.environment.type === ENVIRONMENT_TYPES.FILEMAKER) {
+                    // FileMaker initialization
+                    loadingStateManager.setLoading('initialization', true, 'Connecting to FileMaker...');
+                    await initializationService.waitForFileMaker(() => fmReady);
+                    
+                    loadingStateManager.setLoading('initialization', true, 'Loading user context...');
+                    const userContext = await initializationService.loadUserContext();
+                    setUser(userContext);
+                    
+                    // Update authentication with user context
+                    setAuthentication({
+                        ...appState.authentication,
+                        user: userContext
+                    });
+                    
+                    // Fetch Supabase user ID if user context is available
+                    if (userContext && userContext.userEmail) {
+                        loadingStateManager.setLoading('initialization', true, 'Retrieving Supabase user ID...');
+                        const supabaseIds = await initializationService.fetchSupabaseUserId(userContext, setUser);
 
-                    // Load products and sales if organization ID is available
-                    if (supabaseIds && supabaseIds.supabaseOrgId) {
-                        loadingStateManager.setLoading('initialization', true, 'Loading products...');
-                        await loadProductsForOrganization(supabaseIds.supabaseOrgId);
+                        // Load products and sales if organization ID is available
+                        if (supabaseIds && supabaseIds.supabaseOrgId) {
+                            loadingStateManager.setLoading('initialization', true, 'Loading products...');
+                            await loadProductsForOrganization(supabaseIds.supabaseOrgId);
+                            
+                            loadingStateManager.setLoading('initialization', true, 'Loading sales...');
+                            await loadUnbilledSalesForOrganization(supabaseIds.supabaseOrgId);
+                        }
+                    }
+                } else if (appState.environment.type === ENVIRONMENT_TYPES.WEBAPP) {
+                    // Web app initialization
+                    loadingStateManager.setLoading('initialization', true, 'Setting up web application...');
+                    
+                    // Set user from Supabase auth
+                    if (appState.authentication.user) {
+                        const webAppUser = {
+                            userEmail: appState.authentication.user.email,
+                            userName: appState.authentication.user.user_metadata?.full_name || appState.authentication.user.email,
+                            userID: appState.authentication.user.id
+                        };
+                        setUser(webAppUser);
                         
-                        // Create sales from unbilled financials before loading sales data
-                        // loadingStateManager.setLoading('initialization', true, 'Processing unbilled financials...');
-                        /*try {
-                            const { createSalesFromUnbilledFinancials } = await import('./services/salesService');
-                            await createSalesFromUnbilledFinancials(supabaseIds.supabaseOrgId);
-                            console.log('Successfully created sales from unbilled financials');
-                        } catch (unbilledError) {
-                            console.error('Error creating sales from unbilled financials:', unbilledError);
-                            // Continue with loading sales even if this fails
-                        }*/
+                        // Fetch Supabase organization ID for web app users
+                        loadingStateManager.setLoading('initialization', true, 'Retrieving organization information...');
+                        console.log('[App] Web app user before fetchSupabaseUserId:', webAppUser);
                         
-                        loadingStateManager.setLoading('initialization', true, 'Loading sales...');
-                        await loadUnbilledSalesForOrganization(supabaseIds.supabaseOrgId);
+                        const supabaseIds = await initializationService.fetchSupabaseUserId(webAppUser, setUser);
+                        console.log('[App] fetchSupabaseUserId result:', supabaseIds);
+                        
+                        // Load products and sales if organization ID is available
+                        if (supabaseIds && supabaseIds.supabaseOrgId) {
+                            console.log('[App] Loading products and sales for org ID:', supabaseIds.supabaseOrgId);
+                            loadingStateManager.setLoading('initialization', true, 'Loading products...');
+                            await loadProductsForOrganization(supabaseIds.supabaseOrgId);
+                            
+                            loadingStateManager.setLoading('initialization', true, 'Loading sales...');
+                            await loadUnbilledSalesForOrganization(supabaseIds.supabaseOrgId);
+                        } else {
+                            console.log('[App] No organization ID found - skipping products/sales loading:', {
+                                hasSupabaseIds: !!supabaseIds,
+                                supabaseOrgId: supabaseIds?.supabaseOrgId
+                            });
+                        }
                     }
                 }
                 
@@ -155,10 +246,25 @@ function AppContent() {
             }
         };
 
-        if (fmReady) {
+        // Only initialize if authenticated and (FileMaker ready or web app)
+        if (appState.authentication.isAuthenticated &&
+            (appState.environment.type === ENVIRONMENT_TYPES.WEBAPP ||
+             (appState.environment.type === ENVIRONMENT_TYPES.FILEMAKER && fmReady))) {
             initialize();
         }
-    }, [fmReady, loadCustomers, loadTeams, setError, setLoading, setUser, loadProductsForOrganization, loadUnbilledSalesForOrganization]);
+    }, [
+        appState.authentication.isAuthenticated,
+        appState.environment.type,
+        fmReady,
+        loadCustomers,
+        loadTeams,
+        setError,
+        setLoading,
+        setUser,
+        setAuthentication,
+        loadProductsForOrganization,
+        loadUnbilledSalesForOrganization
+    ]);
 
     // Memoized handlers using useCallback
     const onCustomerSelect = useCallback(async (customer) => {
@@ -325,8 +431,19 @@ function AppContent() {
         customers // Add customers dependency
     ]);
 
-    // Handle initialization states
-    if (!fmReady) {
+    // Show SignIn component if not authenticated
+    if (!appState.authentication.isAuthenticated) {
+        return (
+            <SignIn
+                onFileMakerDetected={handleFileMakerDetected}
+                onSupabaseAuth={handleSupabaseAuth}
+                onDetectionComplete={handleDetectionComplete}
+            />
+        );
+    }
+
+    // Handle initialization states after authentication
+    if (appState.environment.type === ENVIRONMENT_TYPES.FILEMAKER && !fmReady) {
         return (
             <div className="text-center p-4">
                 <div className="text-bg-[#004967] mb-2">{fmStatus}</div>

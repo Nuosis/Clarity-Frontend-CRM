@@ -1,4 +1,6 @@
 import FMGofer from 'fm-gofer';
+import axios from 'axios';
+import { backendConfig } from '../config';
 
 // Initialize web viewer communication
 let bridgeInitialized = false;
@@ -22,6 +24,172 @@ if (typeof window !== "undefined") {
 }
 
 /**
+ * Detect if we're running in FileMaker or web app environment
+ * @returns {boolean} True if FileMaker environment, false if web app
+ */
+function isFileMakerEnvironment() {
+    // Check for FileMaker bridge availability
+    const hasFMGofer = typeof FMGofer !== 'undefined' && FMGofer.PerformScript;
+    const hasFileMaker = typeof window !== 'undefined' && window.FileMaker && window.FileMaker.PerformScript;
+    
+    return hasFMGofer || hasFileMaker;
+}
+
+/**
+ * Generate HMAC-SHA256 authentication header for backend API
+ * @param {string} payload - Request payload
+ * @returns {Promise<string>} Authorization header
+ */
+async function generateBackendAuthHeader(payload = '') {
+    const secretKey = import.meta.env.VITE_SECRET_KEY;
+    
+    if (!secretKey) {
+        console.warn('[FileMaker] SECRET_KEY not available. Using development mode.');
+        const timestamp = Math.floor(Date.now() / 1000);
+        return `Bearer dev-token.${timestamp}`;
+    }
+    
+    // Check if Web Crypto API is available
+    if (typeof crypto === 'undefined' || !crypto.subtle) {
+        console.warn('[FileMaker] Web Crypto API not available. Using fallback auth.');
+        const timestamp = Math.floor(Date.now() / 1000);
+        return `Bearer fallback-token.${timestamp}`;
+    }
+    
+    const timestamp = Math.floor(Date.now() / 1000);
+    const message = `${timestamp}.${payload}`;
+    
+    try {
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(secretKey);
+        const messageData = encoder.encode(message);
+        
+        const cryptoKey = await crypto.subtle.importKey(
+            'raw',
+            keyData,
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign']
+        );
+        
+        const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+        const signatureHex = Array.from(new Uint8Array(signature))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+        
+        return `Bearer ${signatureHex}.${timestamp}`;
+    } catch (error) {
+        console.warn('[FileMaker] Crypto operation failed, using fallback:', error);
+        const timestamp = Math.floor(Date.now() / 1000);
+        return `Bearer fallback-token.${timestamp}`;
+    }
+}
+
+/**
+ * Convert FileMaker-style parameters to backend API call
+ * @param {Object} params - FileMaker-style parameters
+ * @returns {Promise<Object>} Backend API response
+ */
+async function callBackendAPI(params) {
+    const { layout, action, query, recordId, data } = params;
+    
+    console.log('[FileMaker] Calling backend API:', { layout, action, recordId });
+    
+    try {
+        let url, method, requestData, queryParams;
+        
+        // Map FileMaker actions to HTTP requests
+        switch (action) {
+            case 'read':
+                if (recordId) {
+                    // Get specific record
+                    url = `/filemaker/${layout}/records/${recordId}`;
+                    method = 'GET';
+                } else if (query && query.length > 0) {
+                    // Find records with query
+                    url = `/filemaker/${layout}/_find`;
+                    method = 'POST';
+                    requestData = { query };
+                } else {
+                    // Get all records
+                    url = `/filemaker/${layout}/records`;
+                    method = 'GET';
+                    queryParams = { limit: 100 };
+                }
+                break;
+                
+            case 'create':
+                url = `/filemaker/${layout}/records`;
+                method = 'POST';
+                requestData = data;
+                break;
+                
+            case 'update':
+                url = `/filemaker/${layout}/records/${recordId}`;
+                method = 'PATCH';
+                requestData = data;
+                break;
+                
+            case 'delete':
+                url = `/filemaker/${layout}/records/${recordId}`;
+                method = 'DELETE';
+                break;
+                
+            default:
+                throw new Error(`Unsupported FileMaker action: ${action}`);
+        }
+        
+        // Prepare request config
+        const config = {
+            method,
+            url: `${backendConfig.baseUrl}${url}`,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+        
+        // Add authentication header
+        const payload = requestData ? JSON.stringify(requestData) : '';
+        config.headers.Authorization = await generateBackendAuthHeader(payload);
+        
+        // Add request data or query params
+        if (requestData) {
+            config.data = requestData;
+        }
+        if (queryParams) {
+            config.params = queryParams;
+        }
+        
+        console.log('[FileMaker] Backend API request:', {
+            method,
+            url: config.url,
+            hasData: !!requestData,
+            hasParams: !!queryParams
+        });
+        
+        // Make the request
+        const response = await axios(config);
+        
+        console.log('[FileMaker] Backend API response:', response.status);
+        
+        // Return response in FileMaker-compatible format
+        return {
+            response: {
+                data: response.data.data || response.data,
+                dataInfo: response.data.dataInfo || {},
+                messages: response.data.messages || []
+            }
+        };
+        
+    } catch (error) {
+        console.error('[FileMaker] Backend API error:', error);
+        
+        // Return error in FileMaker-compatible format
+        throw new Error(`Backend API call failed: ${error.response?.data?.detail || error.message}`);
+    }
+}
+
+/**
  * Formats parameters for FileMaker API calls
  * Ensures consistent parameter structure and version
  */
@@ -40,25 +208,49 @@ export function formatParams(params) {
 
 /**
  * Main function to interact with FileMaker
- * Handles retries, error handling, and response formatting
+ * Handles both FileMaker and web app environments automatically
+ * Routes to appropriate backend based on environment detection
  */
 export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true) {
     const timestamp = new Date().toISOString();
-    //console.log(`[FileMaker API ${timestamp}] Fetching data:`, {
-    //     params
-    // });
+    console.log(`[FileMaker API ${timestamp}] Fetching data:`, { params });
     
+    // Check if we have app environment context available
+    const appElement = document.querySelector('[data-app-environment]');
+    const appEnvironment = appElement?.getAttribute('data-app-environment');
+    
+    // Use app environment context if available, otherwise fall back to detection
+    const useFileMakerBridge = appEnvironment === 'filemaker' ||
+        (appEnvironment === null && isFileMakerEnvironment());
+    
+    if (useFileMakerBridge) {
+        console.log('[FileMaker] Using FileMaker native bridge');
+        return await handleFileMakerNativeCall(params, attempt, isAsync);
+    } else {
+        console.log('[FileMaker] Using backend API for web app environment');
+        return await callBackendAPI(params);
+    }
+}
+
+/**
+ * Handle FileMaker native calls (original implementation)
+ * @param {Object} params - FileMaker parameters
+ * @param {number} attempt - Retry attempt number
+ * @param {boolean} isAsync - Whether to use async operations
+ * @returns {Promise<Object>} FileMaker response
+ */
+async function handleFileMakerNativeCall(params, attempt = 0, isAsync = true) {
     return new Promise((resolve, reject) => {
-       if (attempt >= 30) { // 30 retries = 3 seconds
-           const error = new Error("FileMaker object is unavailable after 3 seconds");
-           error.code = "TIMEOUT";
-           reject(error);
-           return;
-       }
+        if (attempt >= 30) { // 30 retries = 3 seconds
+            const error = new Error("FileMaker object is unavailable after 3 seconds");
+            error.code = "TIMEOUT";
+            reject(error);
+            return;
+        }
 
         if (typeof FileMaker === "undefined" || !FileMaker.PerformScript) {
             setTimeout(() => {
-                fetchDataFromFileMaker(params, attempt + 1, isAsync)
+                handleFileMakerNativeCall(params, attempt + 1, isAsync)
                     .then(resolve)
                     .catch(reject);
             }, 100);
@@ -67,8 +259,6 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
 
         try {
             const formattedParams = formatParams(params);
-            // console.log("Formatted params:", formattedParams);
-            
             const param = JSON.stringify(formattedParams);
             const layout = formattedParams.layout;
             
@@ -85,7 +275,6 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
                     .then(result => handleScriptResult(layout, result, resolve, reject))
                     .catch(error => {
                         console.error("FileMaker script error:", error);
-                        // Create a new error object instead of modifying the existing one
                         const scriptError = new Error(error.message || String(error));
                         scriptError.code = "SCRIPT_ERROR";
                         scriptError.originalError = error;
@@ -98,7 +287,6 @@ export async function fetchDataFromFileMaker(params, attempt = 0, isAsync = true
                     handleScriptResult(layout, result, resolve, reject);
                 } catch (error) {
                     console.error("FileMaker script error:", error);
-                    // Create a new error object instead of modifying the existing one
                     const scriptError = new Error(error.message || String(error));
                     scriptError.code = "SCRIPT_ERROR";
                     scriptError.originalError = error;

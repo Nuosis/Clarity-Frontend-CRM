@@ -39,30 +39,31 @@ export function ProjectProvider({ children }) {
             });
         }
 
-        if (!contextFetched.current) {
-            contextFetched.current = true;
-            
-            console.log('[ProjectContext] Fetching project context');
-            const contextParams = {
-                layout: Layouts.CONTEXT,
-                action: Actions.READ,
-                callBackName: "returnContext"
-            };
+        // TODO: Uncomment when CONTEXT layout is properly defined
+        // if (!contextFetched.current) {
+        //     contextFetched.current = true;
+        //
+        //     console.log('[ProjectContext] Fetching project context');
+        //     const contextParams = {
+        //         layout: Layouts.CONTEXT,
+        //         action: Actions.READ,
+        //         callBackName: "returnContext"
+        //     };
 
-            // Since returnContext is working directly, we don't need to use the queue
-            window.returnContext = (d) => {
-                const data = JSON.parse(d);
-                if (data?.response?.data) {
-                    console.log('[ProjectContext] Project context received:', {
-                        sample: data.response.data[0]
-                    });
-                    setProjectContext(data.response.data);
-                }
-            };
+        //     // Since returnContext is working directly, we don't need to use the queue
+        //     window.returnContext = (d) => {
+        //         const data = JSON.parse(d);
+        //         if (data?.response?.data) {
+        //             console.log('[ProjectContext] Project context received:', {
+        //                 sample: data.response.data[0]
+        //             });
+        //             setProjectContext(data.response.data);
+        //         }
+        //     };
 
-            // Trigger the context fetch
-            fetchDataFromFileMaker(contextParams, 0, false);
-        }
+        //     // Trigger the context fetch
+        //     fetchDataFromFileMaker(contextParams, 0, false);
+        // }
     }, []);
 
     const value = {
@@ -84,11 +85,11 @@ export function useProjectRecords() {
     }
     return context.projectRecords;
 }
-
-export function useProjectContext() {
-    const context = useContext(ProjectContext);
-    if (context === undefined) {
-        throw new Error('useProjectContext must be used within a ProjectProvider');
-    }
-    return context.projectContext;
-}
+// TODO: Uncomment when CONTEXT layout is properly defined
+// export function useProjectContext() {
+//     const context = useContext(ProjectContext);
+//     if (context === undefined) {
+//         throw new Error('useProjectContext must be used within a ProjectProvider');
+//     }
+//     return context.projectContext;
+// }

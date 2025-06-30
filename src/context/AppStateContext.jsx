@@ -27,7 +27,11 @@ export const APP_ACTIONS = {
     SET_SIDEBAR_MODE: 'SET_SIDEBAR_MODE',
     SET_PRODUCTS: 'SET_PRODUCTS',
     SET_SALES: 'SET_SALES',
-    SET_SHOW_MARKETING: 'SET_SHOW_MARKETING'
+    SET_SHOW_MARKETING: 'SET_SHOW_MARKETING',
+    // New authentication and environment actions
+    SET_AUTHENTICATION: 'SET_AUTHENTICATION',
+    SET_ENVIRONMENT: 'SET_ENVIRONMENT',
+    SET_ENVIRONMENT_DETECTION_COMPLETE: 'SET_ENVIRONMENT_DETECTION_COMPLETE'
 };
 const initialState = {
     loading: true,
@@ -51,6 +55,17 @@ const initialState = {
     // Initial data
     products: [],
     sales: [],
+    // Authentication state
+    authentication: {
+        isAuthenticated: false,
+        user: null,
+        method: null // 'filemaker' | 'supabase' | null
+    },
+    // Environment state
+    environment: {
+        type: null, // 'filemaker' | 'webapp' | null
+        detectionComplete: false
+    },
     version: 1, // For state versioning
 };
 
@@ -190,6 +205,30 @@ function appReducer(state, action) {
                 showFileMakerExample: false, // Hide FileMaker example
                 showSupabaseExample: false, // Hide Supabase example
                 showQboTestPanel: false, // Hide QBO test panel
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_AUTHENTICATION:
+            return {
+                ...state,
+                authentication: action.payload,
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_ENVIRONMENT:
+            return {
+                ...state,
+                environment: {
+                    ...state.environment,
+                    type: action.payload
+                },
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_ENVIRONMENT_DETECTION_COMPLETE:
+            return {
+                ...state,
+                environment: {
+                    ...state.environment,
+                    detectionComplete: action.payload
+                },
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_SHOW_CUSTOMER_FORM:
@@ -375,6 +414,18 @@ export function useAppStateOperations() {
         dispatch({ type: APP_ACTIONS.SET_SHOW_MARKETING, payload: show });
     }, [dispatch]);
 
+    const setAuthentication = useCallback((authState) => {
+        dispatch({ type: APP_ACTIONS.SET_AUTHENTICATION, payload: authState });
+    }, [dispatch]);
+
+    const setEnvironment = useCallback((envType) => {
+        dispatch({ type: APP_ACTIONS.SET_ENVIRONMENT, payload: envType });
+    }, [dispatch]);
+
+    const setEnvironmentDetectionComplete = useCallback((complete) => {
+        dispatch({ type: APP_ACTIONS.SET_ENVIRONMENT_DETECTION_COMPLETE, payload: complete });
+    }, [dispatch]);
+
     return {
         setLoading,
         setError,
@@ -398,6 +449,9 @@ export function useAppStateOperations() {
         setProducts,
         setSales,
         setShowMarketing,
+        setAuthentication,
+        setEnvironment,
+        setEnvironmentDetectionComplete,
         resetState
     };
 }

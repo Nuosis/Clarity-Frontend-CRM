@@ -3,18 +3,28 @@
  */
 
 // Supabase configuration
-export const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'https://koxofrstjtsywvgflhyu.supabase.co';
-export const supabaseKey = import.meta.env?.VITE_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtveG9mcnN0anRzeXd2Z2ZsaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3Mjk2OTUsImV4cCI6MjA2MDMwNTY5NX0.lu8ZWDwDZNlS2EnTHfMdrWcPVhtnUIj7E6UxYUq5ZeY';
+export const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'https://supabase.claritybusinesssolutions.ca';
+export const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzUxMDg5MTE4LCJleHAiOjIwNjUzMjc0NDZ9.CG_oQSoIRHeXtQDaR4u2mQxZKpIlVZ_7TZZ6JVWEV6w';
+export const supabaseServiceRoleKey = import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q';
 
-// FileMaker Data API configuration
+// For backward compatibility
+export const supabaseKey = supabaseAnonKey;
+
+// Backend API configuration
+export const backendConfig = {
+  baseUrl: 'https://api.claritybusinesssolutions.ca',
+  fileMakerApiUrl: 'https://api.claritybusinesssolutions.ca/filemaker',
+  quickBooksApiUrl: 'https://api.claritybusinesssolutions.ca/quickbooks'
+};
+
+// FileMaker Data API configuration (updated to use backend)
 export const fileMakerConfig = {
-  // These values are set in the edge function environment
-  // and don't need to be exposed in the frontend
-  apiUrl: `${supabaseUrl}/functions/v1/filemaker-api`
+  apiUrl: backendConfig.fileMakerApiUrl
 };
 
 export default {
   supabaseUrl,
   supabaseKey,
+  backendConfig,
   fileMakerConfig
 };

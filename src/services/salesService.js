@@ -1,7 +1,7 @@
 /**
  * Sales data processing and business logic
  */
-import { adminQuery, adminInsert, adminUpdate, adminRemove } from './supabaseService';
+import { query, insert, update, remove } from './supabaseService';
 
 /**
  * Fetches all sales for a specific organization by customer
@@ -22,7 +22,7 @@ export async function fetchSalesByOrganization(organizationId) {
     console.log(`Fetching sales for organization: ${organizationId}`);
     
     // Use adminQuery to bypass RLS restrictions
-    const result = await adminQuery('customer_sales', {
+    const result = await query('customer_sales', {
       select: `id, date, customer_id, product_id, product_name, quantity,
         unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
         customers(business_name)`,
@@ -103,7 +103,7 @@ export async function fetchUnbilledSalesByOrganization(organizationId) {
     
     // Use adminQuery to bypass RLS restrictions with multiple filters
     // Include a join with the customers table to get the customer name
-    const result = await adminQuery('customer_sales', {
+    const result = await query('customer_sales', {
       select: `id, date, customer_id, product_id, product_name, quantity,
         unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
         customers(business_name)`,
@@ -188,7 +188,7 @@ export async function fetchCurrentMonthSalesByOrganization(organizationId) {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
     
     // Use adminQuery to bypass RLS restrictions with multiple filters
-    const result = await adminQuery('customer_sales', {
+    const result = await query('customer_sales', {
       select: `id, date, customer_id, product_id, product_name, quantity,
         unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
         customers(business_name)`,
@@ -269,7 +269,7 @@ export async function fetchSalesByCustomer(customerId) {
     console.log(`Fetching sales for customer: ${customerId}`);
     
     // Use adminQuery to bypass RLS restrictions
-    const result = await adminQuery('customer_sales', {
+    const result = await query('customer_sales', {
       select: `id, date, customer_id, product_id, product_name, quantity,
         unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
         customers(business_name)`,
@@ -349,7 +349,7 @@ export async function fetchUnbilledSalesByCustomer(customerId) {
     console.log(`Fetching unbilled sales for customer: ${customerId}`);
     
     // Use adminQuery to bypass RLS restrictions with multiple filters
-    const result = await adminQuery('customer_sales', {
+    const result = await query('customer_sales', {
       select: `id, date, customer_id, product_id, product_name, quantity,
         unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
         customers(business_name)`,
@@ -434,7 +434,7 @@ export async function fetchCurrentMonthSalesByCustomer(customerId) {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
     
     // Use adminQuery to bypass RLS restrictions with multiple filters
-    const result = await adminQuery('customer_sales', {
+    const result = await query('customer_sales', {
       select: `id, date, customer_id, product_id, product_name, quantity,
         unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
         customers(business_name)`,
@@ -519,7 +519,10 @@ export async function createSale(saleData) {
       };
     }
 
-    const result = await adminInsert('customer_sales', saleData);
+    const result = await insert('customer_sales', {
+      id: uuidv4(),
+      ...saleData
+    });
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
@@ -584,7 +587,10 @@ export async function createSalesBatch(salesDataArray) {
       }
 
       try {
-        const result = await adminInsert('customer_sales', saleData);
+        const result = await insert('customer_sales', {
+          id: uuidv4(),
+          ...saleData
+        });
         
         // Process JSON data immediately after receiving the response
         const processedResult = {
@@ -641,7 +647,7 @@ export async function updateSale(saleId, saleData) {
       };
     }
 
-    const result = await adminUpdate('customer_sales', saleData, { id: saleId });
+    const result = await update('customer_sales', saleData, { id: saleId });
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
@@ -680,7 +686,7 @@ export async function deleteSale(saleId) {
       throw new Error('Sale ID is required');
     }
 
-    const result = await adminRemove('customer_sales', { id: saleId });
+    const result = await remove('customer_sales', { id: saleId });
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
@@ -1066,7 +1072,7 @@ export async function createSalesFromUnbilledFinancials(organizationId) {
         }
         
         // First, check if a record already exists for this financial_id
-        const existingRecordResult = await adminQuery('customer_sales', {
+        const existingRecordResult = await query('customer_sales', {
           select: '*',
           eq: {
             column: 'financial_id',
@@ -1097,7 +1103,7 @@ export async function createSalesFromUnbilledFinancials(organizationId) {
         // Look up if a customer exists where business_name = record.customerName and organization_id = organizationId
         let supabaseCustomerId = null;
         
-        const customerResult = await adminQuery('customers', {
+        const customerResult = await query('customers', {
           select: '*',
           eq: {
             column: 'business_name',
@@ -1110,7 +1116,7 @@ export async function createSalesFromUnbilledFinancials(organizationId) {
           supabaseCustomerId = customerResult.data[0].id;
           
           // Check if customer is linked to organization
-          const linkResult = await adminQuery('customer_organization', {
+          const linkResult = await query('customer_organization', {
             select: '*',
             filter: {
               column: 'customer_id',
@@ -1125,14 +1131,16 @@ export async function createSalesFromUnbilledFinancials(organizationId) {
           
           if (!isLinked) {
             // Link customer to organization
-            await adminInsert('customer_organization', {
+            await insert('customer_organization', {
+              id: uuidv4(),
               customer_id: supabaseCustomerId,
               organization_id: organizationId
             });
           }
         } else {
           // Customer doesn't exist, create it
-          const newCustomerResult = await adminInsert('customers', {
+          const newCustomerResult = await insert('customers', {
+            id: uuidv4(),
             business_name: record.customerName
           });
           
@@ -1143,7 +1151,8 @@ export async function createSalesFromUnbilledFinancials(organizationId) {
           supabaseCustomerId = newCustomerResult.data[0].id;
           
           // Link customer to organization
-          await adminInsert('customer_organization', {
+          await insert('customer_organization', {
+            id: uuidv4(),
             customer_id: supabaseCustomerId,
             organization_id: organizationId
           });
@@ -1162,7 +1171,7 @@ export async function createSalesFromUnbilledFinancials(organizationId) {
         };
         
         // Insert the sale record into Supabase
-        const insertResult = await adminInsert('customer_sales', saleData);
+        const insertResult = await insert('customer_sales', saleData);
         
         if (!insertResult.success) {
           throw new Error(insertResult.error || 'Failed to create sale record');
@@ -1211,7 +1220,7 @@ export async function updateFinancialRecord(financialId, financialRecord) {
     }
 
     // First, find the customer_sales record with this financial_id
-    const findResult = await adminQuery('customer_sales', {
+    const findResult = await query('customer_sales', {
       select: '*',
       eq: {
         column: 'financial_id',
@@ -1249,7 +1258,7 @@ export async function updateFinancialRecord(financialId, financialRecord) {
     };
 
     // Update the customer_sales record
-    const result = await adminUpdate('customer_sales', updateData, { id: saleRecord.id });
+    const result = await update('customer_sales', updateData, { id: saleRecord.id });
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
@@ -1341,7 +1350,7 @@ export async function createSaleFromFinancialRecord(financialId, organizationId)
     // Look up if a customer exists where business_name = record.customerName and organization_id = organizationId
     let supabaseCustomerId = null;
     
-    const customerResult = await adminQuery('customers', {
+    const customerResult = await query('customers', {
       select: '*',
       eq: {
         column: 'business_name',
@@ -1354,7 +1363,7 @@ export async function createSaleFromFinancialRecord(financialId, organizationId)
       supabaseCustomerId = customerResult.data[0].id;
       
       // Check if customer is linked to organization
-      const linkResult = await adminQuery('customer_organization', {
+      const linkResult = await query('customer_organization', {
         select: '*',
         filter: {
           column: 'customer_id',
@@ -1369,14 +1378,14 @@ export async function createSaleFromFinancialRecord(financialId, organizationId)
       
       if (!isLinked) {
         // Link customer to organization
-        await adminInsert('customer_organization', {
+        await insert('customer_organization', {
           customer_id: supabaseCustomerId,
           organization_id: organizationId
         });
       }
     } else {
       // Customer doesn't exist, create it
-      const newCustomerResult = await adminInsert('customers', {
+      const newCustomerResult = await insert('customers', {
         business_name: record.customerName
       });
       
@@ -1387,7 +1396,7 @@ export async function createSaleFromFinancialRecord(financialId, organizationId)
       supabaseCustomerId = newCustomerResult.data[0].id;
       
       // Link customer to organization
-      await adminInsert('customer_organization', {
+      await insert('customer_organization', {
         customer_id: supabaseCustomerId,
         organization_id: organizationId
       });
@@ -1406,7 +1415,7 @@ export async function createSaleFromFinancialRecord(financialId, organizationId)
     };
     
     // Insert the sale record into Supabase
-    const insertResult = await adminInsert('customer_sales', saleData);
+    const insertResult = await insert('customer_sales', saleData);
     
     if (!insertResult.success) {
       throw new Error(insertResult.error || 'Failed to create sale record');

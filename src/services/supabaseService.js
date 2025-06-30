@@ -1,20 +1,223 @@
 /**
  * Supabase Service
- * 
- * This service provides functionality to interact with Supabase.
- * It uses environment variables to select the correct project and get the URL and access token.
+ *
+ * This service provides functionality to interact with Supabase through the backend API.
+ * It routes calls through api.claritybusinesssolutions.ca instead of direct Supabase connections.
  */
 import { createClient } from '@supabase/supabase-js';
-import { supabaseUrl, supabaseKey } from '../config';
+import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
+import { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, backendConfig } from '../config';
 
-// Get the service role key from environment variables
-const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
+}
 
-// Initialize the Supabase client with environment variables
-const supabase = createClient(supabaseUrl, supabaseKey);
+if (!supabaseServiceRoleKey) {
+  console.warn('Missing Supabase service role key - admin functions will not work');
+}
 
-// Initialize a separate client with service role key for admin operations
-const supabaseAdmin = serviceRoleKey ? createClient(supabaseUrl, serviceRoleKey) : null;
+// Regular client for user operations (authentication)
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Admin client for admin operations (bypassing RLS)
+const supabaseAdmin = supabaseServiceRoleKey
+  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : null;
+
+/**
+ * Generate HMAC-SHA256 authentication header for backend API
+ * @param {string} payload - Request payload
+ * @returns {Promise<string>} Authorization header
+ */
+async function generateBackendAuthHeader(payload = '') {
+    const secretKey = import.meta.env.VITE_SECRET_KEY;
+    
+    if (!secretKey) {
+        console.warn('[Supabase] SECRET_KEY not available. Using development mode.');
+        const timestamp = Math.floor(Date.now() / 1000);
+        return `Bearer dev-token.${timestamp}`;
+    }
+    
+    // Check if Web Crypto API is available
+    if (typeof crypto === 'undefined' || !crypto.subtle) {
+        console.warn('[Supabase] Web Crypto API not available. Using fallback auth.');
+        const timestamp = Math.floor(Date.now() / 1000);
+        return `Bearer fallback-token.${timestamp}`;
+    }
+    
+    const timestamp = Math.floor(Date.now() / 1000);
+    const message = `${timestamp}.${payload}`;
+    
+    try {
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(secretKey);
+        const messageData = encoder.encode(message);
+        
+        const cryptoKey = await crypto.subtle.importKey(
+            'raw',
+            keyData,
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign']
+        );
+        
+        const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+        const signatureHex = Array.from(new Uint8Array(signature))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+        
+        return `Bearer ${signatureHex}.${timestamp}`;
+    } catch (error) {
+        console.warn('[Supabase] Crypto operation failed, using fallback:', error);
+        const timestamp = Math.floor(Date.now() / 1000);
+        return `Bearer fallback-token.${timestamp}`;
+    }
+}
+
+/**
+ * Call backend API for Supabase operations
+ * @param {string} table - Table name
+ * @param {string} operation - Operation type (select, insert, update, delete)
+ * @param {Object} options - Operation options
+ * @returns {Promise<Object>} Backend API response
+ */
+async function callBackendSupabaseAPI(table, operation, options = {}) {
+    console.log('[Supabase] Calling backend API:', { table, operation });
+    
+    try {
+        let url, method, requestData, queryParams;
+        
+        // Map operations to HTTP requests
+        switch (operation) {
+            case 'select':
+                url = `/supabase/${table}/select`;
+                method = 'GET';
+                queryParams = {};
+                
+                if (options.columns) {
+                    queryParams.columns = options.columns;
+                }
+                
+                if (options.filters || options.eq || options.filter) {
+                    // Convert filters to JSON string
+                    const filters = {};
+                    
+                    if (options.eq) {
+                        filters[options.eq.column] = options.eq.value;
+                    }
+                    
+                    if (options.filter) {
+                        filters[options.filter.column] = options.filter.value;
+                    }
+                    
+                    if (options.filters && Array.isArray(options.filters)) {
+                        for (const filter of options.filters) {
+                            if (filter.type === 'eq') {
+                                filters[filter.column] = filter.value;
+                            }
+                            // Add more filter types as needed
+                        }
+                    }
+                    
+                    if (Object.keys(filters).length > 0) {
+                        queryParams.filters = JSON.stringify(filters);
+                    }
+                }
+                break;
+                
+            case 'insert':
+                url = `/supabase/${table}/insert`;
+                method = 'POST';
+                requestData = {
+                    table,
+                    data: options.data
+                };
+                break;
+                
+            case 'update':
+                url = `/supabase/${table}/update`;
+                method = 'PATCH';
+                requestData = {
+                    table,
+                    data: options.data,
+                    filters: options.match || options.filters || {}
+                };
+                break;
+                
+            case 'delete':
+                url = `/supabase/${table}/delete`;
+                method = 'DELETE';
+                requestData = options.match || options.filters || {};
+                break;
+                
+            default:
+                throw new Error(`Unsupported Supabase operation: ${operation}`);
+        }
+        
+        // Prepare request config
+        const config = {
+            method,
+            url: `${backendConfig.baseUrl}${url}`,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+        
+        // Add query parameters for GET requests
+        if (queryParams && Object.keys(queryParams).length > 0) {
+            config.params = queryParams;
+        }
+        
+        // Add request data for non-GET requests
+        if (requestData) {
+            config.data = requestData;
+            
+            // Generate auth header with payload
+            const payload = JSON.stringify(requestData);
+            config.headers.Authorization = await generateBackendAuthHeader(payload);
+        } else {
+            // Generate auth header without payload for GET requests
+            config.headers.Authorization = await generateBackendAuthHeader();
+        }
+        
+        console.log('[Supabase] Making request:', {
+            method: config.method,
+            url: config.url,
+            hasAuth: !!config.headers.Authorization
+        });
+        
+        const response = await axios(config);
+        
+        console.log('[Supabase] Backend API response:', {
+            status: response.status,
+            dataLength: Array.isArray(response.data) ? response.data.length : 'not-array'
+        });
+        
+        return {
+            success: true,
+            data: response.data
+        };
+        
+    } catch (error) {
+        console.error('[Supabase] Backend API error:', error);
+        
+        const errorMessage = error.response?.data?.detail ||
+                           error.response?.data?.message ||
+                           error.message ||
+                           'Unknown backend API error';
+        
+        return {
+            success: false,
+            error: errorMessage
+        };
+    }
+}
 
 /**
  * Get the current Supabase client instance
@@ -170,32 +373,14 @@ export const getSession = async () => {
  */
 export const query = async (table, options = {}) => {
   try {
-    let query = supabase.from(table);
-    
-    // Apply options
-    if (options.select) query = query.select(options.select);
-    if (options.filter) {
-      const { column, operator, value } = options.filter;
-      query = query.filter(column, operator, value);
-    }
-    if (options.eq) {
-      const { column, value } = options.eq;
-      query = query.eq(column, value);
-    }
-    if (options.order) {
-      const { column, ascending } = options.order;
-      query = query.order(column, { ascending });
-    }
-    if (options.limit) query = query.limit(options.limit);
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return {
-      success: true,
-      data
-    };
+    return await callBackendSupabaseAPI(table, 'select', {
+      columns: options.select || '*',
+      eq: options.eq,
+      filter: options.filter,
+      filters: options.filters,
+      order: options.order,
+      limit: options.limit
+    });
   } catch (error) {
     console.error(`Error querying table ${table}:`, error);
     return {
@@ -213,17 +398,27 @@ export const query = async (table, options = {}) => {
  */
 export const insert = async (table, data) => {
   try {
-    const { data: result, error } = await supabase
-      .from(table)
-      .insert(data)
-      .select();
+    // Ensure data has an id field - add UUID if missing
+    let processedData = data;
     
-    if (error) throw error;
+    if (Array.isArray(data)) {
+      // Handle array of records
+      processedData = data.map(record => {
+        if (!record.id) {
+          return { id: uuidv4(), ...record };
+        }
+        return record;
+      });
+    } else if (typeof data === 'object' && data !== null) {
+      // Handle single record
+      if (!data.id) {
+        processedData = { id: uuidv4(), ...data };
+      }
+    }
     
-    return {
-      success: true,
-      data: result
-    };
+    return await callBackendSupabaseAPI(table, 'insert', {
+      data: processedData
+    });
   } catch (error) {
     console.error(`Error inserting into table ${table}:`, error);
     return {
@@ -242,18 +437,10 @@ export const insert = async (table, data) => {
  */
 export const update = async (table, data, match) => {
   try {
-    const { data: result, error } = await supabase
-      .from(table)
-      .update(data)
-      .match(match)
-      .select();
-    
-    if (error) throw error;
-    
-    return {
-      success: true,
-      data: result
-    };
+    return await callBackendSupabaseAPI(table, 'update', {
+      data: data,
+      match: match
+    });
   } catch (error) {
     console.error(`Error updating table ${table}:`, error);
     return {
@@ -271,17 +458,9 @@ export const update = async (table, data, match) => {
  */
 export const remove = async (table, match) => {
   try {
-    const { data, error } = await supabase
-      .from(table)
-      .delete()
-      .match(match);
-    
-    if (error) throw error;
-    
-    return {
-      success: true,
-      data
-    };
+    return await callBackendSupabaseAPI(table, 'delete', {
+      match: match
+    });
   } catch (error) {
     console.error(`Error deleting from table ${table}:`, error);
     return {

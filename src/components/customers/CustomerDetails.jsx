@@ -107,21 +107,28 @@ function CustomerDetails({
     setShowNewProjectInput(false);
   }, [onProjectCreate]);
 
-  // Fetch or create customer details in Supabase when component mounts
-  useEffect(() => {
+  // Memoize the fetch function to prevent infinite loops
+  const handleFetchCustomerDetails = useCallback(async () => {
     if (customer && customer.Name && user && user.supabaseOrgID) {
-      fetchOrCreateCustomerInSupabase(customer, user)
-        .then(customerData => {
+      // Only fetch if we don't already have customer details for this customer
+      if (!customerDetails || customerDetails.business_name !== customer.Name) {
+        try {
+          const customerData = await fetchOrCreateCustomerInSupabase(customer, user);
           if (customerData) {
             setCustomerDetails(customerData);
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error("[ERROR] Failed to fetch/create customer details in Supabase:", error);
           showError(`Error with customer details in Supabase: ${error.message}`);
-        });
+        }
+      }
     }
-  }, [customer, user, fetchOrCreateCustomerInSupabase, setCustomerDetails, showError]);
+  }, [customer, user, customerDetails, fetchOrCreateCustomerInSupabase, setCustomerDetails, showError]);
+
+  // Fetch or create customer details in Supabase when component mounts
+  useEffect(() => {
+    handleFetchCustomerDetails();
+  }, [handleFetchCustomerDetails]);
   
   // Load sales data for this customer when customerDetails changes
   useEffect(() => {

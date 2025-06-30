@@ -1,7 +1,7 @@
 /**
  * Product data processing and business logic
  */
-import { adminQuery, adminInsert, adminUpdate, adminRemove } from './supabaseService';
+import { query, insert, update, remove } from './supabaseService';
 
 /**
  * Fetches all products for a specific organization
@@ -21,8 +21,8 @@ export async function fetchProductsByOrganization(organizationId) {
   try {
     console.log(`Fetching products for organization: ${organizationId}`);
     
-    // Use adminQuery to bypass RLS restrictions
-    const result = await adminQuery('products', {
+    // Use query for regular database operations
+    const result = await query('products', {
       select: '*',
       eq: {
         column: 'organization_id',
@@ -100,7 +100,7 @@ export async function createProduct(productData) {
       };
     }
 
-    const result = await adminInsert('products', productData);
+    const result = await insert('products', productData);
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
@@ -148,7 +148,7 @@ export async function updateProduct(productId, productData) {
       };
     }
 
-    const result = await adminUpdate('products', productData, { id: productId });
+    const result = await update('products', productData, { id: productId });
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
@@ -187,7 +187,7 @@ export async function deleteProduct(productId) {
       throw new Error('Product ID is required');
     }
 
-    const result = await adminRemove('products', { id: productId });
+    const result = await remove('products', { id: productId });
     
     // Process JSON data immediately after receiving the response
     const processedResult = {

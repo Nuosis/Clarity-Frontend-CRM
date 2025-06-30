@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../layout/AppLayout';
 import { useSales } from '../../hooks/useSales';
 import { useAppState } from '../../context/AppStateContext';
+import { parseDate, formatDate, formatYearMonth, formatMonthYear } from '../../utils/dateUtils';
 import SalesModal from './SalesModal';
 
 function CustomerTabs() {
@@ -27,68 +28,26 @@ function CustomerTabs() {
   const groupedSales = useMemo(() => {
     const groups = {};
     
-    // Month names for display
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    
     customerSales.forEach(sale => {
       const formattedSale = formatSale(sale);
       
-      // Extract YYYY-MM from the date with error handling
-      let monthIndex = 0;
-      let year = new Date().getFullYear();
+      // Parse the date using the utility function
       let yearMonth = '';
       let displayMonth = '';
       
-      try {
-        // Check if date is in expected format
-        if (formattedSale.date && typeof formattedSale.date === 'string') {
-          const dateParts = formattedSale.date.split('/');
-          if (dateParts.length === 3) {
-            monthIndex = parseInt(dateParts[0], 10) - 1; // 0-based month index
-            year = parseInt(dateParts[2], 10);
-            
-            // Validate month index is within range
-            if (monthIndex >= 0 && monthIndex < 12) {
-              yearMonth = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}`;
-              displayMonth = `${monthNames[monthIndex]} ${year}`;
-            } else {
-              // Fallback for invalid month
-              const currentDate = new Date();
-              monthIndex = currentDate.getMonth();
-              year = currentDate.getFullYear();
-              yearMonth = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}`;
-              displayMonth = `${monthNames[monthIndex]} ${year}`;
-              console.warn(`Invalid month index ${monthIndex + 1} for sale ${sale.id}, using current date`);
-            }
-          } else {
-            // Fallback for unexpected date format
-            const currentDate = new Date();
-            monthIndex = currentDate.getMonth();
-            year = currentDate.getFullYear();
-            yearMonth = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}`;
-            displayMonth = `${monthNames[monthIndex]} ${year}`;
-            console.warn(`Unexpected date format for sale ${sale.id}: ${formattedSale.date}, using current date`);
-          }
-        } else {
-          // Fallback if date is missing
-          const currentDate = new Date();
-          monthIndex = currentDate.getMonth();
-          year = currentDate.getFullYear();
-          yearMonth = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}`;
-          displayMonth = `${monthNames[monthIndex]} ${year}`;
-          console.warn(`Missing date for sale ${sale.id}, using current date`);
-        }
-      } catch (error) {
-        // Fallback for any other errors
+      // Try to parse the date from the original sale data first, then formatted sale
+      const dateToUse = sale.date || formattedSale.date;
+      const parsedDate = parseDate(dateToUse);
+      
+      if (parsedDate) {
+        yearMonth = formatYearMonth(parsedDate);
+        displayMonth = formatMonthYear(parsedDate);
+      } else {
+        // Fallback to current date if parsing fails
         const currentDate = new Date();
-        monthIndex = currentDate.getMonth();
-        year = currentDate.getFullYear();
-        yearMonth = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}`;
-        displayMonth = `${monthNames[monthIndex]} ${year}`;
-        console.error(`Error parsing date for sale ${sale.id}:`, error);
+        yearMonth = formatYearMonth(currentDate);
+        displayMonth = formatMonthYear(currentDate);
+        console.warn(`Could not parse date for sale ${sale.id}: ${dateToUse}, using current date`);
       }
       
       // Create a group key combining product name and year-month
@@ -260,7 +219,7 @@ function CustomerTabs() {
                                   className={darkMode ? 'bg-gray-600' : 'bg-gray-50'}
                                 >
                                   <td className="px-6 py-3 pl-12 whitespace-nowrap">{sale.product_name || 'Product'}</td>
-                                  <td className="px-6 py-3 whitespace-nowrap">{formattedSale.date}</td>
+                                  <td className="px-6 py-3 whitespace-nowrap">{formatDate(sale.date || formattedSale.date)}</td>
                                   <td className="px-6 py-3 whitespace-nowrap">{sale.quantity || 1}</td>
                                   <td className="px-6 py-3 whitespace-nowrap">${sale.unit_price ? parseFloat(sale.unit_price).toFixed(2) : formattedSale.amount}</td>
                                   <td className="px-6 py-3 whitespace-nowrap">${formattedSale.amount}</td>

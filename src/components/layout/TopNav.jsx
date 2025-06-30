@@ -6,7 +6,7 @@ import { useAppState, useAppStateOperations } from '../../context/AppStateContex
 function TopNav() {
   const { darkMode } = useTheme();
   const { sidebarMode, user } = useAppState();
-  const { setSidebarMode } = useAppStateOperations();
+  const { setSidebarMode, resetState } = useAppStateOperations();
   const [isUserHovered, setIsUserHovered] = useState(false);
   
   // Memoize handlers to prevent unnecessary re-renders
@@ -33,6 +33,13 @@ function TopNav() {
   const handleMouseLeave = useCallback(() => {
     setIsUserHovered(false);
   }, []);
+
+  const handleLogout = useCallback(() => {
+    // Clear all application state and return to authentication
+    resetState();
+    // Optionally reload the page to ensure clean state
+    window.location.reload();
+  }, [resetState]);
 
   // CSS reset for buttons to prevent any browser default styles
   const buttonResetStyle = {
@@ -143,7 +150,7 @@ function TopNav() {
           </button>
         </div>
         
-        {/* User Icon/Name with hover effect */}
+        {/* User Icon/Name with hover effect and logout */}
         {user && (
           <div
             className={`
@@ -156,13 +163,13 @@ function TopNav() {
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" 
-                 className={`h-5 w-5 ${darkMode ? 'text-blue-400' : 'text-blue-500'} flex-shrink-0`} 
-                 viewBox="0 0 20 20" 
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 className={`h-5 w-5 ${darkMode ? 'text-blue-400' : 'text-blue-500'} flex-shrink-0`}
+                 viewBox="0 0 20 20"
                  fill="currentColor">
               <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
             </svg>
-            <span 
+            <span
               className={`
                 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out
                 ${isUserHovered ? 'max-w-24 ml-2 opacity-100' : 'max-w-0 ml-0 opacity-0'}
@@ -170,6 +177,26 @@ function TopNav() {
             >
               {user.userName}
             </span>
+            {/* Logout button - only visible on hover */}
+            <button
+              onClick={handleLogout}
+              className={`
+                ml-2 p-1 rounded-full transition-all duration-300 ease-in-out
+                ${darkMode
+                  ? 'hover:bg-gray-600 text-gray-400 hover:text-red-400'
+                  : 'hover:bg-gray-100 text-gray-500 hover:text-red-500'}
+                ${isUserHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}
+              `}
+              title="Logout"
+              style={buttonResetStyle}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg"
+                   className="h-4 w-4"
+                   viewBox="0 0 20 20"
+                   fill="currentColor">
+                <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+              </svg>
+            </button>
           </div>
         )}
       </div>

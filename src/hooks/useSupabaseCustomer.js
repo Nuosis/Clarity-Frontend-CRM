@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useSnackBar } from '../context/SnackBarContext';
-import { adminQuery, adminInsert } from '../services/supabaseService';
+import { query, insert } from '../services/supabaseService';
 
 /**
  * Custom hook for managing customer data in Supabase
@@ -44,7 +44,7 @@ export function useSupabaseCustomer() {
   const createCustomerInSupabase = useCallback(async (customer, user) => {
     try {
       // 1. Create customer record
-      const customerResult = await adminInsert('customers', {
+      const customerResult = await insert('customers', {
         business_name: customer.Name // Store the full customer name in the business_name field
       });
       
@@ -70,7 +70,7 @@ export function useSupabaseCustomer() {
       
       // 3. Add customer email if available
       if (customer.Email) {
-        const emailResult = await adminInsert('customer_email', {
+        const emailResult = await insert('customer_email', {
           customer_id: supabaseCustomerId,
           email: customer.Email,
           is_primary: true
@@ -83,7 +83,7 @@ export function useSupabaseCustomer() {
       
       // 4. Add customer phone if available
       if (customer.Phone) {
-        const phoneResult = await adminInsert('customer_phone', {
+        const phoneResult = await insert('customer_phone', {
           customer_id: supabaseCustomerId,
           phone: customer.Phone,
           is_primary: true
@@ -96,7 +96,7 @@ export function useSupabaseCustomer() {
       
       // 5. Add customer address if available
       if (customer.City && customer.State) {
-        const addressResult = await adminInsert('customer_address', {
+        const addressResult = await insert('customer_address', {
           customer_id: supabaseCustomerId,
           address_line1: customer.Address || '',
           city: customer.City || '',
@@ -131,7 +131,7 @@ export function useSupabaseCustomer() {
    */
   const linkCustomerToOrganization = useCallback(async (customerId, organizationId) => {
     try {
-      const linkResult = await adminInsert('customer_organization', {
+      const linkResult = await insert('customer_organization', {
         customer_id: customerId,
         organization_id: organizationId
       });
@@ -167,9 +167,17 @@ export function useSupabaseCustomer() {
       return null;
     }
 
+    // Create a unique key for this customer/user combination to prevent duplicate calls
+    const customerKey = `${customer.Name}-${user.supabaseOrgID}`;
+    
+    // If we already have customer data for this key, return it
+    if (customerData && customerData.business_name === customer.Name) {
+      return customerData;
+    }
+
     try {
       // Query the customers table to find the customer with matching business_name
-      const result = await adminQuery('customers', {
+      const result = await query('customers', {
         select: '*',
         filter: {
           column: 'business_name',
@@ -184,7 +192,7 @@ export function useSupabaseCustomer() {
         parsedResultData = parseSupabaseData(result.data);
       }
 
-      let customerData;
+      let customerDataResult;
 
       // If customer doesn't exist in Supabase, create it
       if (!result.success || !parsedResultData || parsedResultData.length === 0) {
@@ -196,18 +204,18 @@ export function useSupabaseCustomer() {
           const newCustomer = await createCustomerInSupabase(customer, user);
           
           if (newCustomer.success) {
-            customerData = newCustomer.data;
+            customerDataResult = newCustomer.data;
           } else {
             console.error("[ERROR] Failed to create customer in Supabase:", newCustomer.error);
             showError(`Error creating customer in Supabase: ${newCustomer.error}`);
             return null;
           }
         } else {
-          return null;
+          return customerData; // Return existing data if creation was already attempted
         }
       } else {
         // Check if the customer is already linked to the organization
-        const orgResult = await adminQuery('customer_organization', {
+        const orgResult = await query('customer_organization', {
           select: '*',
           filter: {
             column: 'customer_id',
@@ -242,18 +250,21 @@ export function useSupabaseCustomer() {
           await linkCustomerToOrganization(parsedResultData[0].id, user.supabaseOrgID);
         }
 
-        customerData = parsedResultData[0];
+        customerDataResult = parsedResultData[0];
       }
       
-      // Save the customer data
-      setCustomerData(customerData);
-      return customerData;
+      // Only update state if the data has actually changed
+      if (!customerData || customerData.id !== customerDataResult.id) {
+        setCustomerData(customerDataResult);
+      }
+      
+      return customerDataResult;
     } catch (error) {
       console.error("[ERROR] Failed to fetch/create customer details in Supabase:", error);
       showError(`Error with customer details in Supabase: ${error.message}`);
       return null;
     }
-  }, [createCustomerInSupabase, linkCustomerToOrganization, parseSupabaseData, showError]);
+  }, [customerData, createCustomerInSupabase, linkCustomerToOrganization, parseSupabaseData, showError]);
 
   return {
     customerData,

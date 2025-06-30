@@ -2,21 +2,54 @@
  * QuickBooks Edge Function API Client
  * 
  * This module provides a client for interacting with the QuickBooks Online API
- * through the Supabase Edge Function.
+ * through the Backend Function.
  */
 
-import { supabaseUrl } from '../config';
-
-// Base URL for the edge function
-const EDGE_FUNCTION_URL = `${supabaseUrl}/functions/v1/quickbooks-api`;
+// Base URL for the backend API
+const BACKEND_API_URL = 'https://api.claritybusinesssolutions.ca/quickbooks-api';
 
 /**
- * Get the Supabase JWT token from your authentication system
- * This is needed to authenticate requests to the edge function
+ * Generate HMAC-SHA256 authentication header for Clarity backend
+ * @param {string} payload - The request payload (JSON string or empty string)
+ * @returns {string} - The authorization header value
  */
-const getAuthToken = () => {
-  // Use the service role key for edge function authentication
-  return import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const generateAuthHeader = async (payload = '') => {
+  const secretKey = import.meta.env.VITE_SECRET_KEY;
+  
+  if (!secretKey) {
+    throw new Error('SECRET_KEY not available. Check environment variables.');
+  }
+  
+  const timestamp = Math.floor(Date.now() / 1000);
+  const message = `${timestamp}.${payload}`;
+  
+  // Use Web Crypto API for HMAC-SHA256
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secretKey);
+  const messageData = encoder.encode(message);
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+  const signatureHex = Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  
+  return `Bearer ${signatureHex}.${timestamp}`;
+};
+
+/**
+ * Get the authentication token for backend API requests
+ * This will be replaced with environment-aware authentication
+ */
+const getAuthToken = (payload = '') => {
+  return generateAuthHeader(payload);
 };
 
 /**
@@ -27,25 +60,22 @@ const getAuthToken = () => {
  * @returns {Promise<Object>} - The API response
  */
 const makeRequest = async (endpoint, method = 'GET', data = null) => {
-  const token = getAuthToken();
-  
-  if (!token) {
-    throw new Error('Service role key not available. Check environment variables.');
-  }
+  const payload = data && (method === 'POST' || method === 'PUT') ? JSON.stringify(data) : '';
+  const authHeader = await getAuthToken(payload);
   
   const options = {
     method,
     headers: {
-      'Authorization': `Bearer ${token}`
+      'Authorization': authHeader
     }
   };
 
   if (data && (method === 'POST' || method === 'PUT')) {
     options.headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(data);
+    options.body = payload;
   }
 
-  const response = await fetch(`${EDGE_FUNCTION_URL}/${endpoint}`, options);
+  const response = await fetch(`${BACKEND_API_URL}/${endpoint}`, options);
   return await response.json();
 };
 

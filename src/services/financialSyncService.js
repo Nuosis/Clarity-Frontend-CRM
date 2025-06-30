@@ -2,9 +2,15 @@
  * Financial Synchronization Service
  * Ensures devRecords match customer_sales for given date ranges
  */
-import { adminQuery, adminUpdate, adminInsert, adminRemove } from './supabaseService';
+import { query, update, insert, remove } from './supabaseService';
 import { fetchFinancialRecords } from '../api/financialRecords';
 import { processFinancialData } from './billableHoursService';
+import {
+  storeSyncTracking,
+  getSyncTracking,
+  clearSyncTracking,
+  hasPendingSync
+} from './syncTrackingService';
 
 /**
  * Synchronizes devRecords with customer_sales for a given date range
@@ -17,42 +23,90 @@ import { processFinancialData } from './billableHoursService';
  * @returns {Promise<Object>} - Synchronization result
  */
 export async function synchronizeFinancialRecords(organizationId, startDate, endDate, options = {}) {
-  const { dryRun = false, deleteOrphaned = false } = options;
+  const { dryRun = false, deleteOrphaned = false, usePendingOnly = false } = options;
+  const syncStartTime = Date.now();
   
   try {
     console.log(`Starting financial synchronization for organization ${organizationId} from ${startDate} to ${endDate}`);
     
-    // Step 1: Fetch devRecords for the date range
-    const devRecordsResult = await fetchDevRecordsForDateRange(startDate, endDate);
-    if (!devRecordsResult.success) {
-      throw new Error(`Failed to fetch devRecords: ${devRecordsResult.error}`);
+    let comparison;
+    
+    if (usePendingOnly) {
+      // Use only the records stored in localStorage that need syncing
+      const pendingSync = getSyncTracking(organizationId, startDate, endDate);
+      
+      if (!pendingSync) {
+        console.log('No pending sync operations found');
+        return {
+          success: true,
+          summary: {
+            devRecordsCount: 0,
+            customerSalesCount: 0,
+            toCreate: 0,
+            toUpdate: 0,
+            toDelete: 0,
+            unchanged: 0,
+            syncType: 'pending_only'
+          },
+          changes: {
+            created: [],
+            updated: [],
+            deleted: [],
+            errors: []
+          },
+          duration: Date.now() - syncStartTime,
+          dryRun
+        };
+      }
+      
+      comparison = {
+        toCreate: pendingSync.toCreate || [],
+        toUpdate: pendingSync.toUpdate || [],
+        toDelete: pendingSync.toDelete || [],
+        unchanged: []
+      };
+      
+      console.log(`Using pending sync: ${comparison.toCreate.length} creates, ${comparison.toUpdate.length} updates, ${comparison.toDelete.length} deletes`);
+    } else {
+      // Perform full review and store what needs to be synced
+      console.log('Performing full review to identify sync needs');
+      
+      // Step 1: Fetch devRecords for the date range
+      const devRecordsResult = await fetchDevRecordsForDateRange(startDate, endDate);
+      if (!devRecordsResult.success) {
+        throw new Error(`Failed to fetch devRecords: ${devRecordsResult.error}`);
+      }
+      
+      const devRecords = devRecordsResult.data;
+      console.log(`Found ${devRecords.length} devRecords for date range`);
+      
+      // Step 2: Fetch customer_sales for the date range and organization
+      const customerSalesResult = await fetchCustomerSalesForDateRange(organizationId, startDate, endDate);
+      if (!customerSalesResult.success) {
+        throw new Error(`Failed to fetch customer_sales: ${customerSalesResult.error}`);
+      }
+      
+      const customerSales = customerSalesResult.data;
+      console.log(`Found ${customerSales.length} customer_sales records for date range`);
+      
+      // Step 3: Compare and identify differences
+      comparison = await compareRecords(devRecords, customerSales, organizationId);
+      
+      // Step 4: Store what needs to be synced in localStorage
+      storeSyncTracking(organizationId, startDate, endDate, comparison);
     }
     
-    const devRecords = devRecordsResult.data;
-    console.log(`Found ${devRecords.length} devRecords for date range`);
-    
-    // Step 2: Fetch customer_sales for the date range and organization
-    const customerSalesResult = await fetchCustomerSalesForDateRange(organizationId, startDate, endDate);
-    if (!customerSalesResult.success) {
-      throw new Error(`Failed to fetch customer_sales: ${customerSalesResult.error}`);
-    }
-    
-    const customerSales = customerSalesResult.data;
-    console.log(`Found ${customerSales.length} customer_sales records for date range`);
-    
-    // Step 3: Compare and identify differences
-    const comparison = await compareRecords(devRecords, customerSales, organizationId);
-    
-    // Step 4: Apply synchronization changes
+    // Step 5: Apply synchronization changes
     const syncResult = {
       success: true,
       summary: {
-        devRecordsCount: devRecords.length,
-        customerSalesCount: customerSales.length,
+        devRecordsCount: comparison.toCreate.length + comparison.toUpdate.length + comparison.unchanged.length,
+        customerSalesCount: comparison.toUpdate.length + comparison.toDelete.length + comparison.unchanged.length,
         toCreate: comparison.toCreate.length,
         toUpdate: comparison.toUpdate.length,
         toDelete: deleteOrphaned ? comparison.toDelete.length : 0,
-        unchanged: comparison.unchanged.length
+        unchanged: comparison.unchanged.length,
+        syncType: usePendingOnly ? 'pending_only' : 'full_review'
       },
       changes: {
         created: [],
@@ -60,6 +114,7 @@ export async function synchronizeFinancialRecords(organizationId, startDate, end
         deleted: [],
         errors: []
       },
+      duration: 0,
       dryRun
     };
     
@@ -118,7 +173,7 @@ export async function synchronizeFinancialRecords(organizationId, startDate, end
       if (deleteOrphaned) {
         for (const customerSale of comparison.toDelete) {
           try {
-            const deleteResult = await adminRemove('customer_sales', { id: customerSale.id });
+            const deleteResult = await remove('customer_sales', { id: customerSale.id });
             if (deleteResult.success) {
               syncResult.changes.deleted.push(customerSale);
             } else {
@@ -136,6 +191,17 @@ export async function synchronizeFinancialRecords(organizationId, startDate, end
             });
           }
         }
+      }
+      
+      // Track unchanged records as processed
+      for (const unchangedItem of comparison.unchanged) {
+        syncResult.processedRecordIds.push(unchangedItem.devRecord.id);
+        
+        // Track as skipped (already in sync)
+        await trackRecordProcessing(organizationId, unchangedItem.devRecord.id, 'skip', {
+          reason: 'already_in_sync',
+          customerSaleId: unchangedItem.customerSale.id
+        });
       }
     } else {
       // Dry run - just populate what would be changed
@@ -159,9 +225,24 @@ export async function synchronizeFinancialRecords(organizationId, startDate, end
           financialId: record.financial_id
         }));
       }
+      
+      // For dry run, include all record IDs as processed
+      syncResult.processedRecordIds = [
+        ...comparison.toCreate.map(r => r.id),
+        ...comparison.toUpdate.map(r => r.devRecord.id),
+        ...comparison.unchanged.map(r => r.devRecord.id)
+      ];
     }
     
-    console.log(`Synchronization completed. Created: ${syncResult.changes.created.length}, Updated: ${syncResult.changes.updated.length}, Deleted: ${syncResult.changes.deleted.length}, Errors: ${syncResult.changes.errors.length}`);
+    // Calculate sync duration
+    syncResult.duration = Date.now() - syncStartTime;
+    
+    // Track sync result if not a dry run
+    if (!dryRun) {
+      await trackSyncResult(organizationId, startDate, endDate, syncResult);
+    }
+    
+    console.log(`Synchronization completed. Created: ${syncResult.changes.created.length}, Updated: ${syncResult.changes.updated.length}, Deleted: ${syncResult.changes.deleted.length}, Errors: ${syncResult.changes.errors.length}, Duration: ${syncResult.duration}ms`);
     
     return syncResult;
     
@@ -226,7 +307,7 @@ async function fetchDevRecordsForDateRange(startDate, endDate) {
  */
 async function fetchCustomerSalesForDateRange(organizationId, startDate, endDate) {
   try {
-    const result = await adminQuery('customer_sales', {
+    const result = await query('customer_sales', {
       select: `id, date, customer_id, product_id, product_name, quantity,
         unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
         customers(business_name)`,
@@ -402,7 +483,7 @@ async function createCustomerSaleFromDevRecord(devRecord, organizationId) {
     };
     
     // Insert the record
-    const result = await adminInsert('customer_sales', saleData);
+    const result = await insert('customer_sales', saleData);
     
     if (!result.success) {
       throw new Error(result.error || 'Failed to create customer_sales record');
@@ -447,7 +528,7 @@ async function updateCustomerSaleFromDevRecord(customerSaleId, devRecord, organi
     };
     
     // Update the record
-    const result = await adminUpdate('customer_sales', updateData, { id: customerSaleId });
+    const result = await update('customer_sales', updateData, { id: customerSaleId });
     
     if (!result.success) {
       throw new Error(result.error || 'Failed to update customer_sales record');
@@ -475,7 +556,7 @@ async function updateCustomerSaleFromDevRecord(customerSaleId, devRecord, organi
 async function getOrCreateCustomerId(customerName, organizationId) {
   try {
     // Look up existing customer
-    const customerResult = await adminQuery('customers', {
+    const customerResult = await query('customers', {
       select: '*',
       eq: {
         column: 'business_name',
@@ -490,7 +571,7 @@ async function getOrCreateCustomerId(customerName, organizationId) {
       customerId = customerResult.data[0].id;
     } else {
       // Customer doesn't exist, create it
-      const newCustomerResult = await adminInsert('customers', {
+      const newCustomerResult = await insert('customers', {
         business_name: customerName
       });
       
@@ -520,7 +601,7 @@ async function getOrCreateCustomerId(customerName, organizationId) {
 async function ensureCustomerOrganizationLink(customerId, organizationId) {
   try {
     // Check if link already exists
-    const linkResult = await adminQuery('customer_organization', {
+    const linkResult = await query('customer_organization', {
       select: '*',
       filters: [
         { type: 'eq', column: 'customer_id', value: customerId },
@@ -530,7 +611,7 @@ async function ensureCustomerOrganizationLink(customerId, organizationId) {
     
     if (!linkResult.success || !linkResult.data || linkResult.data.length === 0) {
       // Link doesn't exist, create it
-      await adminInsert('customer_organization', {
+      await insert('customer_organization', {
         customer_id: customerId,
         organization_id: organizationId
       });

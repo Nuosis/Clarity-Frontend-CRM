@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useFinancialSync } from '../../hooks/useFinancialSync';
 import { debugRecordProcessing } from '../../services/debugFinancialSync';
+import { useAppState } from '../../context/AppStateContext';
 
 /**
  * Component for managing financial synchronization between devRecords and customer_sales
@@ -11,6 +12,7 @@ import { debugRecordProcessing } from '../../services/debugFinancialSync';
  * @returns {JSX.Element} Financial sync panel component
  */
 function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
+  const appState = useAppState();
   const {
     loading,
     error,
@@ -19,14 +21,40 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
     checkSyncStatus,
     previewSync,
     performSync,
+    performReview,
+    syncPendingOnly,
     syncCurrentMonth,
     syncPreviousMonth,
     checkCurrentMonthStatus,
     checkPreviousMonthStatus,
+    getPendingSummary,
     clearError,
     clearSyncStatus,
     clearLastSyncResult
   } = useFinancialSync();
+
+  // Debug logging for user information
+  useEffect(() => {
+    console.log('[FinancialSyncPanel] Debug - App State:', {
+      user: appState.user,
+      authentication: appState.authentication,
+      environment: appState.environment
+    });
+    
+    if (appState.user) {
+      console.log('[FinancialSyncPanel] Debug - User properties:', {
+        userEmail: appState.user.userEmail,
+        userName: appState.user.userName,
+        userID: appState.user.userID,
+        supabaseUserID: appState.user.supabaseUserID,
+        supabaseOrgID: appState.user.supabaseOrgID,
+        supabaseOrgId: appState.user.supabaseOrgId,
+        allUserKeys: Object.keys(appState.user)
+      });
+    } else {
+      console.log('[FinancialSyncPanel] Debug - No user found in app state');
+    }
+  }, [appState.user, appState.authentication, appState.environment]);
 
   const [dateRange, setDateRange] = useState({
     startDate: '',
@@ -42,6 +70,7 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
   const [showRecordDetail, setShowRecordDetail] = useState(false);
   const [debugResult, setDebugResult] = useState(null);
   const [showDebugReport, setShowDebugReport] = useState(false);
+  const [pendingSummary, setPendingSummary] = useState(null);
 
   // Initialize with current month dates
   useEffect(() => {
@@ -52,12 +81,16 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
     setDateRange({ startDate, endDate });
   }, []);
 
-  // Auto-check status when date range changes
+  // Auto-check status and get pending summary when date range changes
   useEffect(() => {
     if (dateRange.startDate && dateRange.endDate) {
       checkSyncStatus(dateRange.startDate, dateRange.endDate);
+      
+      // Get pending sync summary
+      const summary = getPendingSummary(dateRange.startDate, dateRange.endDate);
+      setPendingSummary(summary);
     }
-  }, [dateRange.startDate, dateRange.endDate, checkSyncStatus]);
+  }, [dateRange.startDate, dateRange.endDate, checkSyncStatus, getPendingSummary]);
 
   const handleDateRangeChange = (field, value) => {
     setDateRange(prev => ({
@@ -80,14 +113,42 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
     }
   };
 
-  const handlePerformSync = async () => {
+  const handlePerformReview = async () => {
     if (!dateRange.startDate || !dateRange.endDate) {
       return;
     }
 
-    const result = await performSync(dateRange.startDate, dateRange.endDate, syncOptions);
-    if (result.success && onSyncComplete) {
-      onSyncComplete(result.data);
+    const result = await performReview(dateRange.startDate, dateRange.endDate, syncOptions);
+    if (result.success) {
+      // Update pending summary after review
+      const summary = getPendingSummary(dateRange.startDate, dateRange.endDate);
+      setPendingSummary(summary);
+      
+      if (onSyncComplete) {
+        onSyncComplete(result.data);
+      }
+    }
+  };
+
+  const handleSyncPending = async () => {
+    if (!dateRange.startDate || !dateRange.endDate) {
+      return;
+    }
+
+    const result = await syncPendingOnly(dateRange.startDate, dateRange.endDate, syncOptions);
+    if (result.success) {
+      // Clear pending summary after successful sync
+      setPendingSummary({
+        hasPending: false,
+        toCreate: 0,
+        toUpdate: 0,
+        toDelete: 0,
+        lastReview: null
+      });
+      
+      if (onSyncComplete) {
+        onSyncComplete(result.data);
+      }
     }
     setShowPreview(false);
     setPreviewData(null);
@@ -344,6 +405,43 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
                     </div>
                   </div>
                 )}
+    
+                {/* Pending Sync Summary */}
+                {pendingSummary && pendingSummary.hasPending && (
+                  <div className={`
+                    p-3 rounded-lg border mt-4
+                    ${darkMode ? 'bg-yellow-900 border-yellow-600' : 'bg-yellow-50 border-yellow-200'}
+                  `}>
+                    <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                      Pending Sync Operations
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Create:</span>
+                        <span className={`ml-1 ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                          {pendingSummary.toCreate}
+                        </span>
+                      </div>
+                      <div>
+                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Update:</span>
+                        <span className={`ml-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                          {pendingSummary.toUpdate}
+                        </span>
+                      </div>
+                      <div>
+                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Delete:</span>
+                        <span className={`ml-1 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                          {pendingSummary.toDelete}
+                        </span>
+                      </div>
+                    </div>
+                    {pendingSummary.lastReview && (
+                      <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Last review: {new Date(pendingSummary.lastReview).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -360,10 +458,58 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
         {/* Sync Tab */}
         {activeTab === 'sync' && (
           <div className="space-y-4">
+            {/* Sync Type Selection */}
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Sync Type
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="syncType"
+                    value="auto"
+                    checked={syncType === 'auto'}
+                    onChange={(e) => setSyncType(e.target.value)}
+                    className="mr-2"
+                  />
+                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Auto (Recommended) - System decides based on last sync
+                  </span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="syncType"
+                    value="incremental"
+                    checked={syncType === 'incremental'}
+                    onChange={(e) => setSyncType(e.target.value)}
+                    className="mr-2"
+                  />
+                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Incremental - Only sync new/changed records
+                  </span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="syncType"
+                    value="full"
+                    checked={syncType === 'full'}
+                    onChange={(e) => setSyncType(e.target.value)}
+                    className="mr-2"
+                  />
+                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Full - Process all records (slower but thorough)
+                  </span>
+                </label>
+              </div>
+            </div>
+
             {/* Sync Options */}
             <div>
               <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Sync Options
+                Additional Options
               </label>
               <div className="space-y-2">
                 <label className="flex items-center">
@@ -410,9 +556,22 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
                     disabled:opacity-50 disabled:cursor-not-allowed
                   `}
                 >
-                  {loading ? 'Syncing...' : 'Sync Now'}
+                  {loading ? 'Syncing...' : `Sync Now (${syncType})`}
                 </button>
               </div>
+
+              {/* Sync Type Info */}
+              {syncType !== 'auto' && (
+                <div className={`
+                  p-3 rounded-lg text-sm
+                  ${darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-50 text-yellow-800'}
+                `}>
+                  <strong>Note:</strong> {syncType === 'incremental'
+                    ? 'Incremental sync will only process records that haven\'t been synced before. This is faster but may miss some changes if the tracking data is incomplete.'
+                    : 'Full sync will process all records regardless of previous sync state. This is slower but ensures complete accuracy.'
+                  }
+                </div>
+              )}
 
               <div className="border-t pt-3">
                 <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
