@@ -93,13 +93,13 @@ async function generateBackendAuthHeader(payload = '') {
 async function callBackendAPI(params) {
     const { layout, action, query, recordId, data, fieldData } = params;
     // Use fieldData if data is not provided (for consistency with FileMaker API)
-    const requestData = data || fieldData;
+    let requestData = data || fieldData;
     
     console.log('[FileMaker] Calling backend API:', { layout, action, recordId });
     
     try {
-        let url, method, requestData, queryParams;
-        
+        let url, method, queryParams;
+        console.log("try is called")
         // Map FileMaker actions to HTTP requests
         switch (action) {
             case 'read':
@@ -121,9 +121,15 @@ async function callBackendAPI(params) {
                 break;
                 
             case 'create':
+                console.log("create ...")
                 url = `/filemaker/${layout}/records`;
                 method = 'POST';
-                // requestData is already set above
+                console.log('[FileMaker] Create case - requestData:', requestData);
+                // Ensure requestData is set for create operations
+                if (!requestData && fieldData) {
+                    requestData = fieldData;
+                    console.log('[FileMaker] Fixed requestData from fieldData:', requestData);
+                }
                 break;
                 
             case 'update':
@@ -150,14 +156,19 @@ async function callBackendAPI(params) {
             }
         };
         
-        // Add authentication header
-        const payload = requestData ? JSON.stringify(requestData) : '';
-        config.headers.Authorization = await generateBackendAuthHeader(payload);
-        
         // Add request data or query params
         if (requestData) {
-            config.data = requestData;
+            // For backend API, wrap data in 'fields' object for CREATE and UPDATE operations
+            if (action === 'create' || action === 'update') {
+                config.data = { fields: requestData };
+            } else {
+                config.data = requestData;
+            }
         }
+        
+        // Add authentication header (calculate signature using the actual payload being sent)
+        const payload = config.data ? JSON.stringify(config.data) : '';
+        config.headers.Authorization = await generateBackendAuthHeader(payload);
         if (queryParams) {
             config.params = queryParams;
         }
@@ -173,13 +184,26 @@ async function callBackendAPI(params) {
         const response = await axios(config);
         
         console.log('[FileMaker] Backend API response:', response.status);
+        console.log('[FileMaker] Backend API response data:', response.data);
         
-        // Return response in FileMaker-compatible format
+        // For CREATE operations, ensure we have the proper FileMaker response format
+        if (action === 'create') {
+            return {
+                response: {
+                    recordId: response.data.record_id || response.data.recordId || response.data.id,
+                    data: response.data.data || response.data,
+                    dataInfo: response.data.dataInfo || {}
+                },
+                messages: response.data.messages || [{ code: '0', message: 'OK' }]
+            };
+        }
+        
+        // Return response in FileMaker-compatible format for other operations
         return {
             response: {
                 data: response.data.data || response.data,
                 dataInfo: response.data.dataInfo || {},
-                messages: response.data.messages || []
+                messages: response.data.messages || [{ code: '0', message: 'OK' }]
             }
         };
         
