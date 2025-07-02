@@ -91,7 +91,9 @@ async function generateBackendAuthHeader(payload = '') {
  * @returns {Promise<Object>} Backend API response
  */
 async function callBackendAPI(params) {
-    const { layout, action, query, recordId, data } = params;
+    const { layout, action, query, recordId, data, fieldData } = params;
+    // Use fieldData if data is not provided (for consistency with FileMaker API)
+    const requestData = data || fieldData;
     
     console.log('[FileMaker] Calling backend API:', { layout, action, recordId });
     
@@ -121,13 +123,13 @@ async function callBackendAPI(params) {
             case 'create':
                 url = `/filemaker/${layout}/records`;
                 method = 'POST';
-                requestData = data;
+                // requestData is already set above
                 break;
                 
             case 'update':
                 url = `/filemaker/${layout}/records/${recordId}`;
                 method = 'PATCH';
-                requestData = data;
+                // requestData is already set above
                 break;
                 
             case 'delete':

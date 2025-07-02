@@ -3,7 +3,7 @@
  * Ensures devRecords match customer_sales for given date ranges
  */
 import { query, update, insert, remove } from './supabaseService';
-import { fetchFinancialRecords } from '../api/financialRecords';
+import { fetchRecordsForDateRange } from '../api/financialRecords';
 import { processFinancialData } from './billableHoursService';
 import {
   storeSyncTracking,
@@ -114,6 +114,7 @@ export async function synchronizeFinancialRecords(organizationId, startDate, end
         deleted: [],
         errors: []
       },
+      processedRecordIds: [],
       duration: 0,
       dryRun
     };
@@ -256,38 +257,30 @@ export async function synchronizeFinancialRecords(organizationId, startDate, end
 }
 
 /**
- * Fetches devRecords for a specific date range
+ * Fetches devRecords for a specific date range (simplified for sync)
  * @param {string} startDate - Start date in YYYY-MM-DD format
  * @param {string} endDate - End date in YYYY-MM-DD format
  * @returns {Promise<Object>} - Result with devRecords data
  */
 async function fetchDevRecordsForDateRange(startDate, endDate) {
   try {
-    // Convert dates to FileMaker format (MM/DD/YYYY)
-    const startDateFM = convertToFileMakerDate(startDate);
-    const endDateFM = convertToFileMakerDate(endDate);
+    console.log(`Fetching devRecords for date range: ${startDate} to ${endDate}`);
     
-    // Fetch all unpaid records first (this is the most reliable method)
-    const result = await fetchFinancialRecords('unpaid');
+    // Use the simplified date range fetch - no filtering by payment status
+    const result = await fetchRecordsForDateRange(startDate, endDate);
     
     if (!result || !result.response || !result.response.data) {
-      throw new Error('Failed to fetch financial records');
+      throw new Error('Failed to fetch financial records for date range');
     }
     
     // Process the financial data
-    const allRecords = processFinancialData(result);
+    const records = processFinancialData(result);
     
-    // Filter records by date range
-    const filteredRecords = allRecords.filter(record => {
-      const recordDate = new Date(record.date);
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      return recordDate >= start && recordDate <= end;
-    });
+    console.log(`Found ${records.length} records for date range ${startDate} to ${endDate}`);
     
     return {
       success: true,
-      data: filteredRecords
+      data: records
     };
   } catch (error) {
     console.error('Error fetching devRecords for date range:', error);

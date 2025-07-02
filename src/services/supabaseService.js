@@ -88,7 +88,7 @@ async function generateBackendAuthHeader(payload = '') {
  * @returns {Promise<Object>} Backend API response
  */
 async function callBackendSupabaseAPI(table, operation, options = {}) {
-    console.log('[Supabase] Calling backend API:', { table, operation });
+    //console.log('[Supabase] Calling backend API:', { table, operation });
     
     try {
         let url, method, requestData, queryParams;
@@ -186,18 +186,18 @@ async function callBackendSupabaseAPI(table, operation, options = {}) {
             config.headers.Authorization = await generateBackendAuthHeader();
         }
         
-        console.log('[Supabase] Making request:', {
-            method: config.method,
-            url: config.url,
-            hasAuth: !!config.headers.Authorization
-        });
+        // console.log('[Supabase] Making request:', {
+        //     method: config.method,
+        //     url: config.url,
+        //     hasAuth: !!config.headers.Authorization
+        // });
         
         const response = await axios(config);
         
-        console.log('[Supabase] Backend API response:', {
-            status: response.status,
-            dataLength: Array.isArray(response.data) ? response.data.length : 'not-array'
-        });
+        // console.log('[Supabase] Backend API response:', {
+        //     status: response.status,
+        //     dataLength: Array.isArray(response.data) ? response.data.length : 'not-array'
+        // });
         
         return {
             success: true,

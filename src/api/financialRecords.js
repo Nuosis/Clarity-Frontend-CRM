@@ -346,3 +346,44 @@ export async function fetchFinancialRecordByRecordId(recordId) {
         return await fetchDataFromFileMaker(params);
     });
 }
+
+/**
+ * Fetches financial records for a specific date range (simplified for sync)
+ * @param {string} startDate - Start date in YYYY-MM-DD format
+ * @param {string} endDate - End date in YYYY-MM-DD format
+ * @returns {Promise} Promise resolving to the financial records data
+ */
+export async function fetchRecordsForDateRange(startDate, endDate) {
+    validateParams({ startDate, endDate }, ['startDate', 'endDate']);
+    
+    return handleFileMakerOperation(async () => {
+        // Convert dates to FileMaker format (MM/DD/YYYY)
+        const startDateFM = convertToFileMakerDate(startDate);
+        const endDateFM = convertToFileMakerDate(endDate);
+        
+        console.log(`Fetching records for date range: ${startDateFM} to ${endDateFM}`);
+        
+        // Simple query for date range - no filtering by payment status
+        const query = [{
+            "DateStart": `${startDateFM}...${endDateFM}`
+        }];
+        
+        const params = {
+            layout: Layouts.RECORDS,
+            action: Actions.READ,
+            query
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}
+
+/**
+ * Helper function to convert YYYY-MM-DD to MM/DD/YYYY format for FileMaker
+ * @param {string} dateString - Date in YYYY-MM-DD format
+ * @returns {string} Date in MM/DD/YYYY format
+ */
+function convertToFileMakerDate(dateString) {
+    const [year, month, day] = dateString.split('-');
+    return `${month}/${day}/${year}`;
+}

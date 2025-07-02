@@ -63,6 +63,7 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
   const [syncOptions, setSyncOptions] = useState({
     deleteOrphaned: true
   });
+  const [syncType, setSyncType] = useState('auto');
   const [activeTab, setActiveTab] = useState('status');
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
@@ -136,6 +137,30 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
     }
 
     const result = await syncPendingOnly(dateRange.startDate, dateRange.endDate, syncOptions);
+    if (result.success) {
+      // Clear pending summary after successful sync
+      setPendingSummary({
+        hasPending: false,
+        toCreate: 0,
+        toUpdate: 0,
+        toDelete: 0,
+        lastReview: null
+      });
+      
+      if (onSyncComplete) {
+        onSyncComplete(result.data);
+      }
+    }
+    setShowPreview(false);
+    setPreviewData(null);
+  };
+
+  const handlePerformSync = async () => {
+    if (!dateRange.startDate || !dateRange.endDate) {
+      return;
+    }
+
+    const result = await performSync(dateRange.startDate, dateRange.endDate, syncOptions);
     if (result.success) {
       // Clear pending summary after successful sync
       setPendingSummary({
@@ -406,42 +431,6 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
                   </div>
                 )}
     
-                {/* Pending Sync Summary */}
-                {pendingSummary && pendingSummary.hasPending && (
-                  <div className={`
-                    p-3 rounded-lg border mt-4
-                    ${darkMode ? 'bg-yellow-900 border-yellow-600' : 'bg-yellow-50 border-yellow-200'}
-                  `}>
-                    <div className={`text-sm font-medium mb-2 ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
-                      Pending Sync Operations
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Create:</span>
-                        <span className={`ml-1 ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
-                          {pendingSummary.toCreate}
-                        </span>
-                      </div>
-                      <div>
-                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Update:</span>
-                        <span className={`ml-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                          {pendingSummary.toUpdate}
-                        </span>
-                      </div>
-                      <div>
-                        <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Delete:</span>
-                        <span className={`ml-1 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
-                          {pendingSummary.toDelete}
-                        </span>
-                      </div>
-                    </div>
-                    {pendingSummary.lastReview && (
-                      <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Last review: {new Date(pendingSummary.lastReview).toLocaleString()}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
 
