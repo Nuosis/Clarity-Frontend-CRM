@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { Provider } from 'react-redux';
 import App from './index';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AppStateProvider } from './context/AppStateContext';
@@ -8,6 +9,7 @@ import { TeamProvider } from './context/TeamContext';
 import { ProjectProvider } from './context/ProjectContext';
 import { MarketingProvider } from './context/MarketingContext';
 import { ThemeProvider } from './components/layout/AppLayout';
+import store from './store';
 import './index.css';
 import './style.css';
 import 'tailwindcss/tailwind.css';
@@ -31,19 +33,21 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 
 // Wrap the app with strict mode and providers
 root.render(
-    <AppStateProvider>
-        <SnackBarProvider>
-            <TeamProvider>
-                <ProjectProvider>
-                    <MarketingProvider>
-                        <ThemeProvider>
-                            <ErrorBoundary>
-                                <App />
-                            </ErrorBoundary>
-                        </ThemeProvider>
-                    </MarketingProvider>
-                </ProjectProvider>
-            </TeamProvider>
-        </SnackBarProvider>
-    </AppStateProvider>
+    <Provider store={store}>
+        <AppStateProvider>
+            <SnackBarProvider>
+                <TeamProvider>
+                    <ProjectProvider>
+                        <MarketingProvider>
+                            <ThemeProvider>
+                                <ErrorBoundary>
+                                    <App />
+                                </ErrorBoundary>
+                            </ThemeProvider>
+                        </MarketingProvider>
+                    </ProjectProvider>
+                </TeamProvider>
+            </SnackBarProvider>
+        </AppStateProvider>
+    </Provider>
 );

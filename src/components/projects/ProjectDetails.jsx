@@ -7,6 +7,7 @@ import ProjectObjectivesTab from './ProjectObjectivesTab';
 import ProjectNotesTab from './ProjectNotesTab';
 import ProjectLinksTab from './ProjectLinksTab';
 import ProjectTeamTab from './ProjectTeamTab';
+import ProjectProposalsTab from '../proposals/ProjectProposalsTab';
 
 function ProjectDetails({
   projectId,
@@ -22,7 +23,7 @@ function ProjectDetails({
   project
 }) {
   const { darkMode } = useTheme();
-  const [activeTab, setActiveTab] = useState('tasks'); // Default active tab
+  const [activeTab, setActiveTab] = useState('proposal'); // Default to proposal tab
   const [localProject, setLocalProject] = useState(project);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -223,58 +224,22 @@ function ProjectDetails({
 
       {/* Tabs Navigation */}
       <div className="flex mb-4 border-b">
+        {/* Proposal Tab - NEW FIRST TAB */}
         <button
-          onClick={() => setActiveTab('tasks')}
+          onClick={() => setActiveTab('proposal')}
           className={`px-4 py-2 font-medium focus:outline-none relative ${
-            activeTab === 'tasks'
+            activeTab === 'proposal'
             ? `${darkMode ? 'text-white' : 'text-gray-800'}`
             : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`
           }`}
         >
-          Tasks
-          {activeTab === 'tasks' && (
+          Proposal
+          {activeTab === 'proposal' && (
             <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
           )}
         </button>
-        <button
-          onClick={() => setActiveTab('objectives')}
-          className={`px-4 py-2 font-medium focus:outline-none relative ${
-            activeTab === 'objectives'
-            ? `${darkMode ? 'text-white' : 'text-gray-800'}`
-            : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`
-          }`}
-        >
-          Objectives
-          {activeTab === 'objectives' && (
-            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('notes')}
-          className={`px-4 py-2 font-medium focus:outline-none relative ${
-            activeTab === 'notes'
-            ? `${darkMode ? 'text-white' : 'text-gray-800'}`
-            : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`
-          }`}
-        >
-          Notes
-          {activeTab === 'notes' && (
-            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('links')}
-          className={`px-4 py-2 font-medium focus:outline-none relative ${
-            activeTab === 'links'
-            ? `${darkMode ? 'text-white' : 'text-gray-800'}`
-            : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`
-          }`}
-        >
-          Links
-          {activeTab === 'links' && (
-            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
-          )}
-        </button>
+        
+        {/* Team Tab - MOVED TO SECOND */}
         <button
           onClick={() => setActiveTab('team')}
           className={`px-4 py-2 font-medium focus:outline-none relative ${
@@ -288,6 +253,66 @@ function ProjectDetails({
             <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
           )}
         </button>
+        
+        {/* Objectives Tab - MOVED TO THIRD */}
+        <button
+          onClick={() => setActiveTab('objectives')}
+          className={`px-4 py-2 font-medium focus:outline-none relative ${
+            activeTab === 'objectives'
+            ? `${darkMode ? 'text-white' : 'text-gray-800'}`
+            : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`
+          }`}
+        >
+          Objectives
+          {activeTab === 'objectives' && (
+            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
+          )}
+        </button>
+        
+        {/* Tasks Tab - MOVED TO FOURTH */}
+        <button
+          onClick={() => setActiveTab('tasks')}
+          className={`px-4 py-2 font-medium focus:outline-none relative ${
+            activeTab === 'tasks'
+            ? `${darkMode ? 'text-white' : 'text-gray-800'}`
+            : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`
+          }`}
+        >
+          Tasks
+          {activeTab === 'tasks' && (
+            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
+          )}
+        </button>
+        
+        {/* Notes Tab - MOVED TO FIFTH */}
+        <button
+          onClick={() => setActiveTab('notes')}
+          className={`px-4 py-2 font-medium focus:outline-none relative ${
+            activeTab === 'notes'
+            ? `${darkMode ? 'text-white' : 'text-gray-800'}`
+            : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`
+          }`}
+        >
+          Notes
+          {activeTab === 'notes' && (
+            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
+          )}
+        </button>
+        
+        {/* Links Tab - MOVED TO SIXTH */}
+        <button
+          onClick={() => setActiveTab('links')}
+          className={`px-4 py-2 font-medium focus:outline-none relative ${
+            activeTab === 'links'
+            ? `${darkMode ? 'text-white' : 'text-gray-800'}`
+            : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`
+          }`}
+        >
+          Links
+          {activeTab === 'links' && (
+            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
+          )}
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -295,6 +320,16 @@ function ProjectDetails({
         p-4 rounded-lg border
         ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
       `}>
+        {/* Proposal Tab - NEW */}
+        {activeTab === 'proposal' && project && (
+          <ProjectProposalsTab
+            project={project}
+            darkMode={darkMode}
+            localProject={localProject}
+            setLocalProject={setLocalProject}
+          />
+        )}
+        
         {/* Tasks Tab */}
         {activeTab === 'tasks' && project?.id && (
           <ProjectTasksTab

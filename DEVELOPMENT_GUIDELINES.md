@@ -9,7 +9,7 @@ This document outlines development standards, practices, and workflows for the C
 
 ### Three-Layer Architecture
 1. **UI (Frontend-Admin [This project])** - React-based admin interface for management/developer low-level backend access
-2. **Integration Layer (App https://api.claritybusinesssolutions.ca/docs)** - Service adapters, routing, verification, external API management. Code base @ /Users/marcusswift/python/clarity-backend/app
+2. **Integration Layer (App https://api.claritybusinesssolutions.ca/docs, https://api.claritybusinesssolutions.ca/openapi.json)** - Service adapters, routing, verification, external API management. Code base @ /Users/marcusswift/python/clarity-backend/app
 3. **Backend Services** - Core business logic, database, and workflow processing. Code base @ /Users/marcusswift/python/clarity-backend/
 
 ### Core Principles
