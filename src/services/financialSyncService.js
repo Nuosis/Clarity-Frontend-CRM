@@ -568,7 +568,8 @@ async function getOrCreateCustomerId(customerName, organizationId) {
     } else {
       // Customer doesn't exist, create it
       const newCustomerResult = await insert('customers', {
-        business_name: customerName
+        business_name: customerName,
+        type: 'CUSTOMER'
       });
       
       if (!newCustomerResult.success) {

@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { useSnackBar } from '../context/SnackBarContext';
 import { query, insert } from '../services/supabaseService';
 
@@ -43,8 +44,10 @@ export function useSupabaseCustomer() {
    */
   const createCustomerInSupabase = useCallback(async (customer, user) => {
     try {
-      // 1. Create customer record
+      // 1. Create customer record with required ID
+      const customerId = uuidv4();
       const customerResult = await insert('customers', {
+        id: customerId, // Backend requires an ID field
         business_name: customer.Name, // Store the full customer name in the business_name field
         type: 'CUSTOMER' // Set the required type field to CUSTOMER for business customers
       });
@@ -54,12 +57,25 @@ export function useSupabaseCustomer() {
       }
       
       // Validate that we have data returned from the insert operation
-      if (!customerResult.data || !Array.isArray(customerResult.data) || customerResult.data.length === 0) {
+      if (!customerResult.data) {
         throw new Error('No customer data returned from insert operation');
       }
       
+      // Handle both array and single object responses from backend
+      let customerDataArray;
+      if (Array.isArray(customerResult.data)) {
+        customerDataArray = customerResult.data;
+      } else {
+        // Backend might return a single object instead of array
+        customerDataArray = [customerResult.data];
+      }
+      
+      if (customerDataArray.length === 0) {
+        throw new Error('Empty customer data array returned from insert operation');
+      }
+      
       // Parse the customer result data if needed
-      let parsedCustomerData = customerResult.data[0];
+      let parsedCustomerData = customerDataArray[0];
       
       // Validate that the customer data has an ID
       if (!parsedCustomerData || !parsedCustomerData.id) {
@@ -152,8 +168,17 @@ export function useSupabaseCustomer() {
         throw new Error(`Failed to link customer to organization: ${linkResult.error}`);
       }
       
+      // Handle both array and single object responses from backend
+      let linkDataArray;
+      if (Array.isArray(linkResult.data)) {
+        linkDataArray = linkResult.data;
+      } else {
+        // Backend might return a single object instead of array
+        linkDataArray = [linkResult.data];
+      }
+      
       // Parse the link result data if needed
-      let parsedLinkData = linkResult.data[0];
+      let parsedLinkData = linkDataArray[0];
       
       return {
         success: true,
