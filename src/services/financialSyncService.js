@@ -487,7 +487,7 @@ async function createCustomerSaleFromDevRecord(devRecord, organizationId) {
     
     return {
       success: true,
-      data: result.data[0]
+      data: Array.isArray(result.data) ? result.data[0] : result.data
     };
   } catch (error) {
     console.error('Error creating customer_sales from devRecord:', error);
@@ -532,7 +532,7 @@ async function updateCustomerSaleFromDevRecord(customerSaleId, devRecord, organi
     
     return {
       success: true,
-      data: result.data[0]
+      data: Array.isArray(result.data) ? result.data[0] : result.data
     };
   } catch (error) {
     console.error('Error updating customer_sales from devRecord:', error);

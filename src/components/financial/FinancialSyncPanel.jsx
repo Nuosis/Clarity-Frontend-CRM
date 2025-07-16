@@ -61,7 +61,7 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
     endDate: ''
   });
   const [syncOptions, setSyncOptions] = useState({
-    deleteOrphaned: true
+    deleteOrphaned: false
   });
   const [syncType, setSyncType] = useState('auto');
   const [activeTab, setActiveTab] = useState('status');
