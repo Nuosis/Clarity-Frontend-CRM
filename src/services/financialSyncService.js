@@ -198,11 +198,8 @@ export async function synchronizeFinancialRecords(organizationId, startDate, end
       for (const unchangedItem of comparison.unchanged) {
         syncResult.processedRecordIds.push(unchangedItem.devRecord.id);
         
-        // Track as skipped (already in sync)
-        await trackRecordProcessing(organizationId, unchangedItem.devRecord.id, 'skip', {
-          reason: 'already_in_sync',
-          customerSaleId: unchangedItem.customerSale.id
-        });
+        // Note: Record processing tracking removed - function not implemented
+        console.log(`Skipped record ${unchangedItem.devRecord.id} - already in sync with customer_sales ${unchangedItem.customerSale.id}`);
       }
     } else {
       // Dry run - just populate what would be changed
@@ -238,9 +235,15 @@ export async function synchronizeFinancialRecords(organizationId, startDate, end
     // Calculate sync duration
     syncResult.duration = Date.now() - syncStartTime;
     
-    // Track sync result if not a dry run
+    // Note: Sync result tracking removed - function not implemented
     if (!dryRun) {
-      await trackSyncResult(organizationId, startDate, endDate, syncResult);
+      console.log(`Sync completed for organization ${organizationId} from ${startDate} to ${endDate}:`, {
+        created: syncResult.changes.created.length,
+        updated: syncResult.changes.updated.length,
+        deleted: syncResult.changes.deleted.length,
+        errors: syncResult.changes.errors.length,
+        duration: syncResult.duration
+      });
     }
     
     console.log(`Synchronization completed. Created: ${syncResult.changes.created.length}, Updated: ${syncResult.changes.updated.length}, Deleted: ${syncResult.changes.deleted.length}, Errors: ${syncResult.changes.errors.length}, Duration: ${syncResult.duration}ms`);

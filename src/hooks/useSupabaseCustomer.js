@@ -45,15 +45,27 @@ export function useSupabaseCustomer() {
     try {
       // 1. Create customer record
       const customerResult = await insert('customers', {
-        business_name: customer.Name // Store the full customer name in the business_name field
+        business_name: customer.Name, // Store the full customer name in the business_name field
+        type: 'CUSTOMER' // Set the required type field to CUSTOMER for business customers
       });
       
       if (!customerResult.success) {
         throw new Error(`Failed to create customer: ${customerResult.error}`);
       }
       
+      // Validate that we have data returned from the insert operation
+      if (!customerResult.data || !Array.isArray(customerResult.data) || customerResult.data.length === 0) {
+        throw new Error('No customer data returned from insert operation');
+      }
+      
       // Parse the customer result data if needed
       let parsedCustomerData = customerResult.data[0];
+      
+      // Validate that the customer data has an ID
+      if (!parsedCustomerData || !parsedCustomerData.id) {
+        throw new Error('Customer data missing required ID field');
+      }
+      
       let supabaseCustomerId = parsedCustomerData.id;
       
       // Check if the ID is a stringified JSON and parse it

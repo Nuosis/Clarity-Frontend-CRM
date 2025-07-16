@@ -210,8 +210,31 @@ async function callBackendAPI(params) {
     } catch (error) {
         console.error('[FileMaker] Backend API error:', error);
         
-        // Return error in FileMaker-compatible format
-        throw new Error(`Backend API call failed: ${error.response?.data?.detail || error.message}`);
+        // Enhanced error handling to prevent [object Object] display
+        let errorMessage = 'Backend API call failed';
+        
+        if (error.response?.data) {
+            // Handle different error response formats
+            if (typeof error.response.data === 'string') {
+                errorMessage += `: ${error.response.data}`;
+            } else if (error.response.data.detail) {
+                errorMessage += `: ${error.response.data.detail}`;
+            } else if (error.response.data.message) {
+                errorMessage += `: ${error.response.data.message}`;
+            } else if (error.response.data.error) {
+                errorMessage += `: ${error.response.data.error}`;
+            } else {
+                // If it's an object but no known error fields, stringify it
+                errorMessage += `: ${JSON.stringify(error.response.data)}`;
+            }
+        } else if (error.message) {
+            errorMessage += `: ${error.message}`;
+        } else {
+            // Fallback for any other error format
+            errorMessage += `: ${String(error)}`;
+        }
+        
+        throw new Error(errorMessage);
     }
 }
 
