@@ -44,10 +44,10 @@ export function useSupabaseCustomer() {
    */
   const createCustomerInSupabase = useCallback(async (customer, user) => {
     try {
-      // 1. Create customer record with required ID
-      const customerId = uuidv4();
+      // 1. Create customer record with FileMaker UUID as the ID
+      const customerId = customer.fileMakerUUID || uuidv4(); // Use FileMaker UUID if provided, otherwise generate new one
       const customerResult = await insert('customers', {
-        id: customerId, // Backend requires an ID field
+        id: customerId, // Use FileMaker UUID as Supabase ID to maintain consistency
         business_name: customer.Name, // Store the full customer name in the business_name field
         type: 'CUSTOMER' // Set the required type field to CUSTOMER for business customers
       });

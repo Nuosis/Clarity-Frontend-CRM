@@ -6,7 +6,7 @@
  */
 
 // Base URL for the backend API
-const BACKEND_API_URL = 'https://api.claritybusinesssolutions.ca/quickbooks-api';
+const BACKEND_API_URL = 'https://api.claritybusinesssolutions.ca/quickbooks';
 
 /**
  * Generate HMAC-SHA256 authentication header for Clarity backend
@@ -62,11 +62,17 @@ const getAuthToken = (payload = '') => {
 const makeRequest = async (endpoint, method = 'GET', data = null) => {
   const payload = data && (method === 'POST' || method === 'PUT') ? JSON.stringify(data) : '';
   const authHeader = await getAuthToken(payload);
+  const orgId = import.meta.env.VITE_CLARITY_INTEGRATION_ORG_ID;
+  
+  if (!orgId) {
+    throw new Error('VITE_CLARITY_INTEGRATION_ORG_ID not available. Check environment variables.');
+  }
   
   const options = {
     method,
     headers: {
-      'Authorization': authHeader
+      'Authorization': authHeader,
+      'X-Organization-ID': orgId
     }
   };
 
@@ -104,14 +110,14 @@ export const listQBOCustomers = async () => {
 };
 
 /**
- * List customer by display name
+ * Search for customers by display name using query endpoint
  * @param {string} customer - The customer display name
- * @returns {Promise<Object>} - The list of customers
+ * @returns {Promise<Object>} - The query results
  */
 export const listQBOCustomerByName = async (customer) => {
-  // Encode the customer name to handle special characters in URLs
-  const encodedCustomer = encodeURIComponent(customer);
-  return await makeRequest(`customers/${encodedCustomer}`);
+  // Use the query endpoint to search for customers by name
+  const query = `SELECT * FROM Customer WHERE DisplayName LIKE '%${customer}%'`;
+  return await makeRequest('query', 'POST', { Query: query });
 };
 
 /**

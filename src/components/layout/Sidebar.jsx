@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from './AppLayout';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
+import { getMonthlyBillableHoursFromState } from '../../services/monthlyBillableService';
 import { useProject } from '../../hooks/useProject';
 import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
 import { useMarketingContext } from '../../context/MarketingContext';
@@ -415,11 +416,26 @@ function Sidebar({
         setSelectedProduct(product);
     };
 
+    // State for monthly billable hours
+    const [monthlyBillableHours, setMonthlyBillableHours] = useState(0);
+
+    // Fetch monthly billable hours on component mount and when customers change
+    useEffect(() => {
+        const fetchMonthlyBillable = async () => {
+            try {
+                const hours = await getMonthlyBillableHoursFromState();
+                setMonthlyBillableHours(hours);
+            } catch (error) {
+                console.error('[Sidebar] Error fetching monthly billable hours:', error);
+                setMonthlyBillableHours(0);
+            }
+        };
+
+        fetchMonthlyBillable();
+    }, [customers]); // Refetch when customers change
+
     // Memoize customer grouping and stats
     const { activeCustomers, inactiveCustomers, stats } = useMemo(() => {
-        // Calculate stats
-        const unbilledHours = calculateRecordsUnbilledHours(projectRecords, true); // true for current month only
-
         // Group customers
         const groups = customers.reduce((acc, customer) => {
             if (customer.isActive) {
@@ -437,10 +453,10 @@ function Sidebar({
             ...groups,
             stats: {
                 active: activeCustomers.length,
-                unbilledHours
+                monthlyBillableHours: monthlyBillableHours.toFixed(1)
             }
         };
-    }, [customers, projects, projectRecords]);
+    }, [customers, monthlyBillableHours]);
 
     return (
         <div className={`
@@ -532,8 +548,7 @@ function Sidebar({
                         mt-2 text-sm
                         ${darkMode ? 'text-gray-400' : 'text-gray-500'}
                     `}>
-                        <span className="font-medium">{stats.active}</span> active,{' '}
-                        <span className="font-medium">{stats.unbilledHours}</span> unbilled hours
+                        <span className="font-medium">{stats.monthlyBillableHours}</span> billables
                     </div>
                 )}
                 

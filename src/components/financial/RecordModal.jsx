@@ -46,7 +46,10 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
         unit_price: record.unit_price || 0,
         total_price: record.total_price || 0,
         date: record.date ? new Date(record.date).toISOString().split('T')[0] : '',
-        inv_id: record.inv_id
+        inv_id: record.inv_id,
+        // Include immutable metadata fields
+        organization_id: record.organization_id || '',
+        financial_id: record.financial_id || ''
       });
     }
   }, [record]);
@@ -60,7 +63,7 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
     }));
   };
 
-  // Handle form submission
+  // Handle form submission with targeted PATCH update
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -75,15 +78,36 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
     setErrors([]);
     
     try {
-      // Calculate total_price based on quantity and unit_price
-      const updatedRecord = {
-        ...formData,
-        quantity: parseInt(formData.quantity, 10),
+      // Create targeted update payload with only mutable fields
+      const targetedUpdate = {
+        // Always include the record ID for identification
+        id: formData.id,
+        
+        // Only include mutable business fields that can be edited
+        product_name: formData.product_name,
+        quantity: parseFloat(formData.quantity),
         unit_price: parseFloat(formData.unit_price),
-        total_price: parseInt(formData.quantity, 10) * parseFloat(formData.unit_price)
+        total_price: parseFloat(formData.quantity) * parseFloat(formData.unit_price),
+        date: formData.date,
+        inv_id: formData.inv_id,
+        
+        // Preserve immutable metadata fields (these won't be sent in PATCH but kept for local state)
+        ...record // Spread original record to preserve all immutable fields locally
       };
       
-      await onSave(updatedRecord);
+      // Create the actual PATCH payload (only mutable fields)
+      const patchPayload = {
+        id: formData.id,
+        product_name: formData.product_name,
+        quantity: parseFloat(formData.quantity),
+        unit_price: parseFloat(formData.unit_price),
+        total_price: parseFloat(formData.quantity) * parseFloat(formData.unit_price),
+        date: formData.date,
+        inv_id: formData.inv_id
+      };
+      
+      // Pass both the full record (for UI state) and patch payload (for API)
+      await onSave(targetedUpdate, patchPayload);
       onClose();
     } catch (error) {
       setErrors([error.message || 'Failed to save record']);
@@ -232,8 +256,8 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
                   name="quantity"
                   value={formData.quantity}
                   onChange={handleChange}
-                  step="1"
-                  min="1"
+                  step="0.01"
+                  min="0.01"
                   required
                   disabled={limitedEdit}
                   className={`

@@ -3,7 +3,9 @@ import PropTypes from 'prop-types';
 import { v4 as uuidv4 } from 'uuid';
 import { createCustomer } from '../../api/customers';
 import { useSnackBar } from '../../context/SnackBarContext';
-import { useAppStateOperations } from '../../context/AppStateContext';
+import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
+import { useSupabaseCustomer } from '../../hooks/useSupabaseCustomer';
+import { useCustomer } from '../../hooks/useCustomer';
 
 /**
  * Customer form component for creating a new customer
@@ -14,7 +16,10 @@ import { useAppStateOperations } from '../../context/AppStateContext';
  */
 function CustomerForm({ onClose, darkMode = false }) {
   const { showError } = useSnackBar();
-  const { setLoading } = useAppStateOperations();
+  const { setLoading, setSelectedCustomer } = useAppStateOperations();
+  const { user } = useAppState();
+  const { createCustomerInSupabase } = useSupabaseCustomer();
+  const { loadCustomers, handleCustomerSelect } = useCustomer();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -131,8 +136,51 @@ function CustomerForm({ onClose, darkMode = false }) {
       // Remove the underscore version
       delete customerData.OBSI_ClientNo;
       
-      // Create customer
-      await createCustomer(customerData);
+      // 1. Create customer in FileMaker first
+      const fileMakerResult = await createCustomer(customerData);
+      console.log('FileMaker customer created:', fileMakerResult);
+      
+      // 2. Create customer in Supabase after successful FileMaker creation
+      if (user && user.supabaseOrgID) {
+        try {
+          const supabaseCustomerData = {
+            Name: customerData.Name,
+            Email: customerData.Email || null,
+            Phone: customerData.phone || null, // Use capital P to match Supabase hook expectation
+            fileMakerUUID: customerData.__ID, // Pass FileMaker UUID to be used as Supabase ID
+            // Include any other relevant fields for Supabase
+          };
+          
+          const supabaseResult = await createCustomerInSupabase(supabaseCustomerData, user);
+          if (supabaseResult && supabaseResult.success) {
+            console.log('Supabase customer created:', supabaseResult.data);
+          } else {
+            console.warn('Failed to create customer in Supabase:', supabaseResult?.error);
+            // Don't fail the entire operation if Supabase creation fails
+          }
+        } catch (supabaseError) {
+          console.error('Error creating customer in Supabase:', supabaseError);
+          // Don't fail the entire operation if Supabase creation fails
+        }
+      }
+      
+      // 3. Refresh customer list and select the new customer
+      await loadCustomers();
+      
+      // 4. Find and select the newly created customer
+      // After refreshing the customer list, find the customer by the FileMaker UUID we generated
+      if (fileMakerResult && fileMakerResult.response && fileMakerResult.response.data) {
+        // Wait a moment for the customer list to be fully refreshed
+        setTimeout(async () => {
+          try {
+            // The customer should now be in the refreshed list, select it by the UUID we generated
+            await handleCustomerSelect(customerData.__ID);
+          } catch (error) {
+            console.warn('Could not auto-select newly created customer:', error);
+            // Don't fail the entire operation if selection fails
+          }
+        }, 100);
+      }
       
       showError('Customer created successfully');
       onClose();

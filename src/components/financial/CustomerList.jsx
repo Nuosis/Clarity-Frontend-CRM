@@ -84,11 +84,12 @@ function CustomerList({
 
   return (
     <div className={`
-      rounded-lg border overflow-hidden
+      rounded-lg border overflow-hidden flex flex-col h-full
       ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
     `}>
+      {/* Fixed Header */}
       <div className={`
-        px-4 py-3 border-b
+        flex-shrink-0 px-4 py-3 border-b
         ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}
       `}>
         <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -96,95 +97,99 @@ function CustomerList({
         </h3>
       </div>
       
-      {customersArray.length === 0 ? (
-        <div className={`p-4 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          No customer data available
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
-              <tr>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                  onClick={() => requestSort('customerName')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Customer</span>
-                    <span>{getSortDirectionIndicator('customerName')}</span>
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                  onClick={() => requestSort('totalAmount')}
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Amount</span>
-                    <span>{getSortDirectionIndicator('totalAmount')}</span>
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                  onClick={() => requestSort('totalQuantity')}
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Quantity</span>
-                    <span>{getSortDirectionIndicator('totalQuantity')}</span>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody className={`
-              divide-y
-              ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}
-            `}>
-              {sortedCustomers.map(customer => {
-                // Generate a unique key for each customer - use name if ID is empty
-                const customerKey = customer.customerId || `name:${customer.customerName}`;
-                
-                return (
-                  <React.Fragment key={customerKey}>
-                    <tr
-                      onClick={() => onCustomerSelect(customerKey)}
-                      className={`
-                        cursor-pointer transition-colors
-                        ${selectedCustomerId === customerKey
-                          ? (darkMode ? 'bg-blue-900 bg-opacity-30' : 'bg-blue-50')
-                          : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')}
-                        ${darkMode ? 'text-gray-200' : 'text-gray-900'}
-                      `}
-                    >
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span>{customer.customerName}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right">
-                        {formatCurrency(customer.totalAmount)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right">
-                        {formatQuantity(customer.totalQuantity)}
-                      </td>
-                    </tr>
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-hidden">
+        {customersArray.length === 0 ? (
+          <div className={`p-4 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            No customer data available
+          </div>
+        ) : (
+          <div className="h-full overflow-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              {/* Sticky Table Header */}
+              <thead className={`sticky top-0 z-10 ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                <tr>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                    onClick={() => requestSort('customerName')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Customer</span>
+                      <span>{getSortDirectionIndicator('customerName')}</span>
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                    onClick={() => requestSort('totalAmount')}
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Amount</span>
+                      <span>{getSortDirectionIndicator('totalAmount')}</span>
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                    onClick={() => requestSort('totalQuantity')}
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Quantity</span>
+                      <span>{getSortDirectionIndicator('totalQuantity')}</span>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className={`
+                divide-y
+                ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}
+              `}>
+                {sortedCustomers.map(customer => {
+                  // Generate a unique key for each customer - use name if ID is empty
+                  const customerKey = customer.customerId || `name:${customer.customerName}`;
+                  
+                  return (
+                    <React.Fragment key={customerKey}>
+                      <tr
+                        onClick={() => onCustomerSelect(customerKey)}
+                        className={`
+                          cursor-pointer transition-colors
+                          ${selectedCustomerId === customerKey
+                            ? (darkMode ? 'bg-blue-900 bg-opacity-30' : 'bg-blue-50')
+                            : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')}
+                          ${darkMode ? 'text-gray-200' : 'text-gray-900'}
+                        `}
+                      >
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span>{customer.customerName}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {formatCurrency(customer.totalAmount)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {formatQuantity(customer.totalQuantity)}
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

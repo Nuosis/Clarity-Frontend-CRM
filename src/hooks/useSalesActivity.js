@@ -161,6 +161,19 @@ export function useSalesActivity(initialTimeframe = 'today') {
           return recordDateStr.startsWith(thisMonthStr);
         }
         
+        case 'lastMonth': {
+          // Calculate previous month and year
+          let prevMonth = now.getMonth(); // 0-based, so this is the previous month
+          let prevYear = now.getFullYear();
+          if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear -= 1;
+          }
+          // Format as YYYY-MM for month comparison
+          const lastMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+          return recordDateStr.startsWith(lastMonthStr);
+        }
+        
         case 'thisQuarter': {
           const quarter = Math.floor(now.getMonth() / 3);
           const startMonth = quarter * 3;
@@ -571,30 +584,46 @@ export function useSalesActivity(initialTimeframe = 'today') {
    */
   const saveSale = useCallback(async (saleData) => {
     try {
-      // This would typically call a service function to save the sale
       console.log('Saving sale:', saleData);
       
-      // For now, just update the local state
+      // Import the updateSale function from salesService
+      const { updateSale, createSale } = await import('../services/salesService');
+      
+      let result;
+      
       if (saleData.id) {
         // Update existing sale
-        setRecords(prevRecords => 
-          prevRecords.map(record => 
+        result = await updateSale(saleData.id, saleData);
+      } else {
+        // Create new sale
+        result = await createSale(saleData);
+      }
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save sale');
+      }
+      
+      // Update local state with the saved data
+      if (saleData.id) {
+        // Update existing sale in local state
+        setRecords(prevRecords =>
+          prevRecords.map(record =>
             record.id === saleData.id
               ? { ...record, ...saleData }
               : record
           )
         );
       } else {
-        // Create new sale
-        const newSale = {
+        // Add new sale to local state
+        const newSale = result.data || {
           ...saleData,
-          id: `temp-${Date.now()}`, // Temporary ID
+          id: `temp-${Date.now()}`,
           date: new Date().toISOString().split('T')[0]
         };
         setRecords(prevRecords => [...prevRecords, newSale]);
       }
       
-      return { success: true };
+      return { success: true, data: result.data };
     } catch (err) {
       console.error('Error saving sale:', err);
       return { success: false, error: err.message };

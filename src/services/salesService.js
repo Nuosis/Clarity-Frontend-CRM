@@ -2,6 +2,7 @@
  * Sales data processing and business logic
  */
 import { query, insert, update, remove } from './supabaseService';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Fetches all sales for a specific organization by customer
@@ -628,18 +629,37 @@ export async function createSalesBatch(salesDataArray) {
 }
 
 /**
- * Updates an existing sale
+ * Updates an existing sale with targeted PATCH approach
  * @param {string} saleId - The ID of the sale to update
- * @param {Object} saleData - The updated sale data
+ * @param {Object} saleData - The updated sale data (full record for UI state)
+ * @param {Object} patchPayload - Optional targeted patch payload (only changed fields)
  * @returns {Promise<Object>} - Object containing success status and updated sale data
  */
-export async function updateSale(saleId, saleData) {
+export async function updateSale(saleId, saleData, patchPayload = null) {
   try {
     if (!saleId) {
       throw new Error('Sale ID is required');
     }
 
-    const validation = validateSaleData(saleData);
+    // Use targeted patch payload if provided, otherwise fall back to full filtering
+    const dataToUpdate = patchPayload || saleData;
+
+    // Filter out computed fields that don't exist in the database table
+    const allowedFields = [
+      'customer_id', 'product_id', 'product_name', 'quantity',
+      'unit_price', 'total_price', 'date', 'inv_id', 'financial_id', 'organization_id'
+    ];
+    
+    const filteredSaleData = {};
+    for (const [key, value] of Object.entries(dataToUpdate)) {
+      if (allowedFields.includes(key)) {
+        filteredSaleData[key] = value;
+      }
+    }
+
+    console.log('Targeted PATCH update data:', filteredSaleData);
+
+    const validation = validateSaleData(saleData); // Validate full record for business rules
     if (!validation.isValid) {
       return {
         success: false,
@@ -647,7 +667,7 @@ export async function updateSale(saleId, saleData) {
       };
     }
 
-    const result = await update('customer_sales', saleData, { id: saleId });
+    const result = await update('customer_sales', filteredSaleData, { id: saleId });
     
     // Process JSON data immediately after receiving the response
     const processedResult = {
@@ -668,6 +688,71 @@ export async function updateSale(saleId, saleData) {
     };
   } catch (error) {
     console.error('Error updating sale:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Updates an existing sale with targeted PATCH approach (dedicated function)
+ * @param {string} saleId - The ID of the sale to update
+ * @param {Object} patchData - Only the fields that should be updated
+ * @returns {Promise<Object>} - Object containing success status and updated sale data
+ */
+export async function updateSaleTargeted(saleId, patchData) {
+  try {
+    if (!saleId) {
+      throw new Error('Sale ID is required');
+    }
+
+    if (!patchData || Object.keys(patchData).length === 0) {
+      throw new Error('Patch data is required');
+    }
+
+    // Define mutable fields that can be updated via PATCH
+    const mutableFields = [
+      'product_name', 'quantity', 'unit_price', 'total_price', 'date', 'inv_id'
+    ];
+    
+    // Filter to only include mutable fields
+    const targetedPatchData = {};
+    for (const [key, value] of Object.entries(patchData)) {
+      if (mutableFields.includes(key)) {
+        targetedPatchData[key] = value;
+      }
+    }
+
+    if (Object.keys(targetedPatchData).length === 0) {
+      throw new Error('No valid fields to update');
+    }
+
+    console.log('Targeted PATCH data (mutable fields only):', targetedPatchData);
+
+    // Perform the targeted update
+    const result = await update('customer_sales', targetedPatchData, { id: saleId });
+    
+    // Process JSON data immediately after receiving the response
+    const processedResult = {
+      ...result,
+      data: result.success && result.data ? processJsonData(result.data) : null
+    };
+    
+    if (!processedResult.success) {
+      throw new Error(processedResult.error || 'Failed to update sale');
+    }
+
+    // Return the processed data
+    return {
+      success: true,
+      data: Array.isArray(processedResult.data) && processedResult.data.length > 0
+        ? processedResult.data[0]
+        : null,
+      updatedFields: Object.keys(targetedPatchData)
+    };
+  } catch (error) {
+    console.error('Error updating sale with targeted PATCH:', error);
     return {
       success: false,
       error: error.message
@@ -720,11 +805,12 @@ export async function deleteSale(saleId) {
 export function validateSaleData(data) {
   const errors = [];
 
-  //console.log('Validating sale data:', data);
+  console.log('Validating sale data:', data);
 
   // For editing existing sales in the UI, we don't require product_id or project_id
-  // Only require these fields for new sales being created
-  if (!data.id && !data.product_id && !data.project_id) {
+  // Only require these fields for new sales being created from scratch (not from financial records)
+  // If the record has a financial_id, it's from the financial system and doesn't need product_id/project_id
+  if (!data.id && !data.financial_id && !data.product_id && !data.project_id) {
     errors.push('Either Product ID or Project ID is required');
   }
 
@@ -748,8 +834,9 @@ export function validateSaleData(data) {
   }
 
   // Only require organization_id for new sales, not when editing existing ones
-  if (!data.id && !data.organization_id) {
-    errors.push('Organization ID is required for new sales');
+  // But if we're updating an existing record, we still need organization_id
+  if (!data.organization_id) {
+    errors.push('Organization ID is required');
   }
 
   return {

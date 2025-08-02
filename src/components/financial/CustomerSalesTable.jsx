@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { createQBOCustomer, createQBOInvoice, listQBOCustomerByName, executeQBOQuery } from '../../api/quickbooksEdgeFunction';
+import { createQBOCustomer, createQBOInvoice, listQBOCustomerByName, listQBOCustomers } from '../../api/quickbooksEdgeFunction';
 import { adminUpdate } from '../../services/supabaseService';
 import CreateQBOCustomerModal from './CreateQBOCustomerModal';
+import RecordDetailsModal from './RecordDetailsModal';
 
 /**
  * Component to display individual sales lines for a customer
@@ -21,7 +22,24 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
     direction: 'desc'
   });
   const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
+  const [showRecordDetailsModal, setShowRecordDetailsModal] = useState(false);
+  const [selectedGroupRecords, setSelectedGroupRecords] = useState([]);
+  const [selectedGroupTitle, setSelectedGroupTitle] = useState('');
   const customerName = records.length > 0 ? records[0].customers?.business_name : 'Unknown Customer';
+
+  // Handle clicking on a summary row to show detailed records
+  const handleRowClick = useCallback((group) => {
+    setSelectedGroupRecords(group.records);
+    setSelectedGroupTitle(`${group.product_name} - ${group.monthYear}`);
+    setShowRecordDetailsModal(true);
+  }, []);
+
+  // Handle closing the record details modal
+  const handleCloseRecordDetails = useCallback(() => {
+    setShowRecordDetailsModal(false);
+    setSelectedGroupRecords([]);
+    setSelectedGroupTitle('');
+  }, []);
 
   // Sort records based on current sort configuration
   // Group and summarize records by product_name and month/year
@@ -99,10 +117,16 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
 
   // Format currency for display
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
-      currency: 'USD' 
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
     }).format(amount);
+  };
+
+  // Format quantity to limit to 2 decimal places maximum
+  const formatQuantity = (quantity) => {
+    const num = Number(quantity) || 0;
+    return num % 1 === 0 ? num.toString() : num.toFixed(2);
   };
 
   /**
@@ -141,15 +165,138 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
 
       // Find QBO customer by name
       let qboCustomerId = null;
+      let qboCustomerCurrencyRef = 'CAD'; // Default currency
       
-      // Query QBO for customers by name
-      const qboCustomersResult = await await listQBOCustomerByName(customerName);
+      // Query QBO for customers by name - wrap in try-catch to handle 500 errors gracefully
+      console.log(`Searching for QuickBooks customer: "${customerName}"`);
+      let qboCustomers = [];
+      let shouldTryFallback = false;
       
-      if (!qboCustomersResult.success) {
-        throw new Error(`Failed to query QuickBooks customers: ${qboCustomersResult.Fault.Error[0]}`);
+      try {
+        const qboCustomersResult = await listQBOCustomerByName(customerName);
+        console.log('QBO Customer Search Result:', qboCustomersResult);
+        
+        // Check if the result indicates other types of failure first
+        // Allow 404s and 500s to fall through to the fallback logic
+        if (qboCustomersResult.success === false &&
+            !(qboCustomersResult.detail === "Not Found" ||
+              qboCustomersResult.detail === "Failed to execute query" ||
+              qboCustomersResult.status === 404 ||
+              qboCustomersResult.status === 500 ||
+              (qboCustomersResult.error && qboCustomersResult.error.includes('404')) ||
+              (qboCustomersResult.error && qboCustomersResult.error.includes('500')))) {
+          // Handle different error response structures (but not 404s or 500s)
+          const errorMessage = qboCustomersResult.error ||
+                              qboCustomersResult.message ||
+                              (qboCustomersResult.Fault && qboCustomersResult.Fault.Error && qboCustomersResult.Fault.Error[0]) ||
+                              'Unknown error occurred';
+          throw new Error(`Failed to query QuickBooks customers: ${errorMessage}`);
+        }
+        
+        // Handle successful response or 404/500 - extract customers
+        qboCustomers = qboCustomersResult.QueryResponse?.Customer || [];
+        
+        // If we got a 404 or 500 or empty result, trigger fallback
+        if (qboCustomers.length === 0) {
+          shouldTryFallback = true;
+        }
+      } catch (error) {
+        console.warn('listQBOCustomerByName failed, will try fallback:', error);
+        shouldTryFallback = true;
       }
       
-      const qboCustomers = qboCustomersResult.QueryResponse.Customer || [];
+      // If we need to try fallback (404, 500, or empty result), try a broader search
+      if (shouldTryFallback) {
+        console.log(`No exact match found for "${customerName}". Trying to list all customers for manual matching...`);
+        
+        // Try to get all customers and do a fuzzy match
+        try {
+          const allCustomersResult = await listQBOCustomers();
+          console.log('All customers query result:', allCustomersResult);
+          
+          if (allCustomersResult && allCustomersResult.customers) {
+            const allCustomers = allCustomersResult.customers;
+            
+            // Debug: Show what we're searching for and first few customers
+            console.log(`🔍 CUSTOMER SEARCH DEBUG:`);
+            console.log(`- Searching for: "${customerName}"`);
+            console.log(`- Total customers: ${allCustomers.length}`);
+            console.log(`- First 3 customers:`, allCustomers.slice(0, 3).map(c => ({
+              Id: c.Id,
+              DisplayName: c.DisplayName,
+              CompanyName: c.CompanyName,
+              FullyQualifiedName: c.FullyQualifiedName
+            })));
+            
+            // Simple exact match first
+            const normalizedSearchName = customerName.toLowerCase().trim();
+            let matchedCustomers = allCustomers.filter(customer => {
+              const displayName = customer.DisplayName?.toLowerCase().trim() || '';
+              const companyName = customer.CompanyName?.toLowerCase().trim() || '';
+              const fullyQualifiedName = customer.FullyQualifiedName?.toLowerCase().trim() || '';
+              
+              const isMatch = displayName === normalizedSearchName ||
+                             companyName === normalizedSearchName ||
+                             fullyQualifiedName === normalizedSearchName;
+              
+              if (isMatch) {
+                console.log(`✅ EXACT MATCH FOUND:`, {
+                  Id: customer.Id,
+                  DisplayName: customer.DisplayName,
+                  CompanyName: customer.CompanyName,
+                  searchTerm: customerName
+                });
+              }
+              
+              return isMatch;
+            });
+            
+            console.log(`- Exact matches: ${matchedCustomers.length}`);
+            
+            // If no exact match, try partial
+            if (matchedCustomers.length === 0) {
+              console.log(`- Trying partial matches...`);
+              matchedCustomers = allCustomers.filter(customer => {
+                const displayName = customer.DisplayName?.toLowerCase() || '';
+                const companyName = customer.CompanyName?.toLowerCase() || '';
+                const fullyQualifiedName = customer.FullyQualifiedName?.toLowerCase() || '';
+                
+                const isMatch = displayName.includes(normalizedSearchName) ||
+                               companyName.includes(normalizedSearchName) ||
+                               fullyQualifiedName.includes(normalizedSearchName);
+                
+                if (isMatch) {
+                  console.log(`✅ PARTIAL MATCH FOUND:`, {
+                    Id: customer.Id,
+                    DisplayName: customer.DisplayName,
+                    CompanyName: customer.CompanyName,
+                    searchTerm: customerName
+                  });
+                }
+                
+                return isMatch;
+              });
+              console.log(`- Partial matches: ${matchedCustomers.length}`);
+            }
+            
+            console.log(`Found ${matchedCustomers.length} potential matches:`, matchedCustomers.map(c => c.DisplayName));
+            
+            if (matchedCustomers.length > 0) {
+              // Use the matched customers
+              qboCustomers = matchedCustomers;
+            }
+          }
+        } catch (broadSearchError) {
+          console.warn('Broad customer search failed:', broadSearchError);
+        }
+      }
+      
+      // If still no customers found after all attempts, show create modal
+      if (qboCustomers.length === 0) {
+        console.log(`Customer "${customerName}" not found in QuickBooks after all search attempts`);
+        setShowCreateCustomerModal(true);
+        return; // Exit the function here, it will be resumed after customer creation
+      }
       
       if (qboCustomers.length === 0) {
         // No matching customer found, show modal to create one
@@ -158,7 +305,7 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       } else if (qboCustomers.length === 1) {
         // Exactly one matching customer found
         qboCustomerId = qboCustomers[0].Id;
-        qboCustomerCurrencyRef = qboCustomers[0].CurrencyRef.value;
+        qboCustomerCurrencyRef = qboCustomers[0].CurrencyRef?.value || 'CAD';
 
         console.log(`Found matching QBO customer: ${qboCustomers[0].DisplayName} (ID: ${qboCustomerId}) (CURRENCY: ${qboCustomerCurrencyRef})`);
 
@@ -179,9 +326,10 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
           return;
         }
         
-        qboCustomerId = qboCustomers[parseInt(selectedIndex) - 1].Id;
-        qboCustomerCurrencyRef = qboCustomers[parseInt(selectedIndex) - 1].CurrencyRef.value;
-        console.log(`Found matching QBO customer: ${qboCustomers[0].DisplayName} (ID: ${qboCustomerId}) (CURRENCY: ${qboCustomerCurrencyRef})`);
+        const selectedCustomer = qboCustomers[parseInt(selectedIndex) - 1];
+        qboCustomerId = selectedCustomer.Id;
+        qboCustomerCurrencyRef = selectedCustomer.CurrencyRef?.value || 'CAD';
+        console.log(`Selected QBO customer: ${selectedCustomer.DisplayName} (ID: ${qboCustomerId}) (CURRENCY: ${qboCustomerCurrencyRef})`);
       }
 
       // Filter out records that are already invoiced
@@ -214,13 +362,31 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       };
 
       // Create invoice in QBO
+      console.log('Creating QBO invoice with data:', invoiceData);
       const invoiceResult = await createQBOInvoice(invoiceData);
+      console.log('QBO Invoice creation result:', invoiceResult);
       
-      if (!invoiceResult.success) {
-        throw new Error(`Failed to create invoice in QuickBooks: ${invoiceResult.error}`);
+      // Handle different response structures
+      let qboInvoiceId = null;
+      
+      if (invoiceResult.success && invoiceResult.data && invoiceResult.data.Id) {
+        // Standard success response
+        qboInvoiceId = invoiceResult.data.Id;
+      } else if (invoiceResult.Invoice && invoiceResult.Invoice.Id) {
+        // Direct invoice response
+        qboInvoiceId = invoiceResult.Invoice.Id;
+      } else if (invoiceResult.QueryResponse && invoiceResult.QueryResponse.Invoice && invoiceResult.QueryResponse.Invoice[0]) {
+        // Query response format
+        qboInvoiceId = invoiceResult.QueryResponse.Invoice[0].Id;
+      } else {
+        // Handle error cases
+        const errorMessage = invoiceResult.error ||
+                            invoiceResult.message ||
+                            invoiceResult.detail ||
+                            (invoiceResult.Fault && invoiceResult.Fault.Error && invoiceResult.Fault.Error[0] && invoiceResult.Fault.Error[0].Detail) ||
+                            'Unknown error occurred during invoice creation';
+        throw new Error(`Failed to create invoice in QuickBooks: ${errorMessage}`);
       }
-
-      const qboInvoiceId = invoiceResult.data.Id;
       console.log(`Invoice created in QBO with ID: ${qboInvoiceId}`);
 
       // Update the inv_id field in Supabase for each sales item
@@ -321,11 +487,12 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
 
   return (
     <div className={`
-      rounded-lg border overflow-hidden mt-4 flex flex-col
+      rounded-lg border overflow-hidden mt-4 flex flex-col h-full
       ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
-    `} style={{ maxHeight: 'calc(100% - 2rem)' }}>
+    `}>
+      {/* Fixed Header */}
       <div className={`
-        px-4 py-3 border-b flex justify-between items-center
+        flex-shrink-0 px-4 py-3 border-b flex justify-between items-center
         ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}
       `}>
         <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -342,155 +509,166 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         </button>
       </div>
       
-      {records.length === 0 ? (
-        <div className={`p-4 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          No sales data available for this customer
-        </div>
-      ) : (
-        <div className="overflow-x-auto overflow-y-auto pb-4" style={{ maxHeight: 'calc(100vh - 25rem)' }}>
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
-              <tr>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                  onClick={() => requestSort('date')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Date</span>
-                    <span>{getSortDirectionIndicator('date')}</span>
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                  onClick={() => requestSort('product_name')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Description</span>
-                    <span>{getSortDirectionIndicator('product_name')}</span>
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                  onClick={() => requestSort('quantity')}
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Quantity</span>
-                    <span>{getSortDirectionIndicator('quantity')}</span>
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                  onClick={() => requestSort('unit_price')}
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Unit Price</span>
-                    <span>{getSortDirectionIndicator('unit_price')}</span>
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                  onClick={() => requestSort('total_price')}
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Total</span>
-                    <span>{getSortDirectionIndicator('total_price')}</span>
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-center text-xs font-medium uppercase tracking-wider
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                >
-                  Status
-                </th>
-                <th 
-                  scope="col" 
-                  className={`
-                    px-4 py-3 text-center text-xs font-medium uppercase tracking-wider
-                    ${darkMode ? 'text-gray-300' : 'text-gray-500'}
-                  `}
-                >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className={`
-              divide-y
-              ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}
-            `}>
-              {summarizedRecords.map(group => (
-                <tr
-                  key={group.groupKey}
-                  className={darkMode ? 'text-gray-300' : 'text-gray-800'}
-                >
-                  <td className="px-4 py-3 text-sm">
-                    {group.monthYear}
-                  </td>
-                  <td className="px-4 py-3 text-sm max-w-xs truncate">
-                    {group.product_name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right">
-                    {group.quantity}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right">
-                    {formatCurrency(group.unit_price)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right">
-                    {formatCurrency(group.total_price)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    {/* Status: If all records invoiced, show Invoiced, else Uninvoiced */}
-                    <span className={`
-                      inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                      ${group.records.every(r => r.inv_id !== null)
-                        ? (darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800')
-                        : (darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800')}
-                    `}>
-                      {group.records.every(r => r.inv_id !== null) ? 'Invoiced' : 'Uninvoiced'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    {/* Edit action disabled for summary rows */}
-                    <button
-                      disabled
-                      className={`
-                        inline-flex items-center px-2 py-1 border rounded-md text-xs font-medium opacity-50 cursor-not-allowed
-                        ${darkMode
-                          ? 'border-gray-600 bg-gray-700 text-gray-200'
-                          : 'border-gray-300 bg-white text-gray-700'}
-                      `}
-                    >
-                      Edit
-                    </button>
-                  </td>
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-hidden">
+        {records.length === 0 ? (
+          <div className={`p-4 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            No sales data available for this customer
+          </div>
+        ) : (
+          <div className="h-full overflow-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              {/* Sticky Table Header */}
+              <thead className={`sticky top-0 z-10 ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                <tr>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                    onClick={() => requestSort('date')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Date</span>
+                      <span>{getSortDirectionIndicator('date')}</span>
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                    onClick={() => requestSort('product_name')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Description</span>
+                      <span>{getSortDirectionIndicator('product_name')}</span>
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                    onClick={() => requestSort('quantity')}
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Quantity</span>
+                      <span>{getSortDirectionIndicator('quantity')}</span>
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                    onClick={() => requestSort('unit_price')}
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Unit Price</span>
+                      <span>{getSortDirectionIndicator('unit_price')}</span>
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-right text-xs font-medium uppercase tracking-wider cursor-pointer
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                    onClick={() => requestSort('total_price')}
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Total</span>
+                      <span>{getSortDirectionIndicator('total_price')}</span>
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-center text-xs font-medium uppercase tracking-wider
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                  >
+                    Status
+                  </th>
+                  <th
+                    scope="col"
+                    className={`
+                      px-4 py-3 text-center text-xs font-medium uppercase tracking-wider
+                      ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                    `}
+                  >
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className={`
+                divide-y
+                ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}
+              `}>
+                {summarizedRecords.map(group => (
+                  <tr
+                    key={group.groupKey}
+                    onClick={() => handleRowClick(group)}
+                    className={`
+                      cursor-pointer transition-colors
+                      ${darkMode
+                        ? 'text-gray-300 hover:bg-gray-700'
+                        : 'text-gray-800 hover:bg-gray-50'}
+                    `}
+                    title="Click to view detailed records"
+                  >
+                    <td className="px-4 py-3 text-sm">
+                      {group.monthYear}
+                    </td>
+                    <td className="px-4 py-3 text-sm max-w-xs truncate">
+                      {group.product_name}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {formatQuantity(group.quantity)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {formatCurrency(group.unit_price)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {formatCurrency(group.total_price)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-center">
+                      {/* Status: If all records invoiced, show Invoiced, else Uninvoiced */}
+                      <span className={`
+                        inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                        ${group.records.every(r => r.inv_id !== null)
+                          ? (darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800')
+                          : (darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800')}
+                      `}>
+                        {group.records.every(r => r.inv_id !== null) ? 'Invoiced' : 'Uninvoiced'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-center">
+                      {/* Edit action disabled for summary rows */}
+                      <button
+                        disabled
+                        className={`
+                          inline-flex items-center px-2 py-1 border rounded-md text-xs font-medium opacity-50 cursor-not-allowed
+                          ${darkMode
+                            ? 'border-gray-600 bg-gray-700 text-gray-200'
+                            : 'border-gray-300 bg-white text-gray-700'}
+                        `}
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
       
       {/* Create Customer Modal */}
       {showCreateCustomerModal && (
@@ -498,6 +676,17 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
           customerName={customerName}
           onClose={() => setShowCreateCustomerModal(false)}
           onSave={handleCreateCustomer}
+          darkMode={darkMode}
+        />
+      )}
+      
+      {/* Record Details Modal */}
+      {showRecordDetailsModal && (
+        <RecordDetailsModal
+          records={selectedGroupRecords}
+          groupTitle={selectedGroupTitle}
+          onClose={handleCloseRecordDetails}
+          onEditRecord={onEditRecord}
           darkMode={darkMode}
         />
       )}

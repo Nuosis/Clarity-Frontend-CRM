@@ -137,9 +137,9 @@ function FinancialActivity({ darkMode = false }) {
 
 
   return (
-    <div className="flex flex-col space-y-6" >
-      {/* Header with tabs */}
-      <div className="flex flex-col space-y-4">
+    <div className="flex flex-col h-full" >
+      {/* Fixed Header with tabs */}
+      <div className="flex-shrink-0 flex flex-col space-y-4 mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -187,116 +187,36 @@ function FinancialActivity({ darkMode = false }) {
       </div>
       
       
-      {/* Tab Content */}
-      {activeTab === 'activity' && (
-        <>
-          {/* Error message */}
-          {error && (
-            <div className={`
-              p-4 rounded-lg border
-              ${darkMode ? 'bg-red-900 bg-opacity-30 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-800'}
-            `}>
-              <p className="text-sm font-medium">Error loading financial data</p>
-              <p className="text-xs mt-1">{error}</p>
-            </div>
-          )}
-          
-          {/* Selected month details (when a month is clicked in quarterly/yearly view) */}
-          {selectedMonth && (
-            <div className={`
-              p-4 rounded-lg border
-              ${darkMode ? 'bg-blue-900 bg-opacity-20 border-blue-800' : 'bg-blue-50 border-blue-200'}
-            `}>
-              <div className="flex justify-between items-center">
-                <h3 className={`font-medium ${darkMode ? 'text-blue-200' : 'text-blue-800'}`}>
-                  {new Date(selectedMonth.year, selectedMonth.month - 1).toLocaleDateString('en-US', {
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </h3>
-                <button
-                  onClick={() => selectMonth(null)}
-                  className={`
-                    text-xs px-2 py-1 rounded
-                    ${darkMode
-                      ? 'bg-blue-800 text-blue-100 hover:bg-blue-700'
-                      : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}
-                  `}
-                >
-                  Clear Selection
-                </button>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Records:</span>{' '}
-                  <span className={darkMode ? 'text-white' : 'text-gray-900'}>
-                    {selectedMonthRecords.length}
-                  </span>
-                </div>
-                <div>
-                  <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Total:</span>{' '}
-                  <span className={darkMode ? 'text-white' : 'text-gray-900'}>
-                    {formatCurrency(selectedMonthRecords.reduce((sum, record) => sum + (record.total_price || 0), 0))}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Chart area - only show when no customer is selected */}
-          {showFullCustomerList && (
-            <div className={`
-              p-4 rounded-lg border
-              ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
-            `}>
-              {loading ? (
-                <div className="h-64 flex items-center justify-center">
-                  <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-                    Loading chart data...
-                  </p>
-                </div>
-              ) : records.length === 0 ? (
-                <div className="h-64 flex items-center justify-center">
-                  <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-                    No financial data available for the selected timeframe
-                  </p>
-                </div>
-              ) : (
-                <FinancialChart
-                  data={preparedChartData}
-                  timeframe={timeframe}
-                  onMonthClick={handleChartMonthClick}
-                  darkMode={darkMode}
-                />
-              )}
-            </div>
-          )}
-          
-          {/* Customer list or Selected Customer Info */}
-          <div className={`${!showFullCustomerList ? 'flex-grow overflow-hidden' : 'mb-6'}`} style={{ maxHeight: !showFullCustomerList ? 'calc(100vh - 15rem)' : 'auto' }}>
-            {showFullCustomerList ? (
-              <CustomerList
-                customers={recordsByCustomer}
-                projects={recordsByProject}
-                selectedCustomerId={selectedCustomerId}
-                onCustomerSelect={handleCustomerSelect}
-                darkMode={darkMode}
-                updateInvoiceStatus={updateInvoiceStatus}
-              />
-            ) : (
+      {/* Scrollable Tab Content */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'activity' && (
+          <div className="h-full flex flex-col space-y-6 overflow-hidden">
+            {/* Error message */}
+            {error && (
               <div className={`
-                rounded-lg border overflow-hidden flex flex-col h-full
-                ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+                flex-shrink-0 p-4 rounded-lg border
+                ${darkMode ? 'bg-red-900 bg-opacity-30 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-800'}
               `}>
-                <div className={`
-                  px-4 py-3 border-b flex justify-between items-center
-                  ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}
-                `}>
-                  <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Selected Customer
+                <p className="text-sm font-medium">Error loading financial data</p>
+                <p className="text-xs mt-1">{error}</p>
+              </div>
+            )}
+            
+            {/* Selected month details (when a month is clicked in quarterly/yearly view) */}
+            {selectedMonth && (
+              <div className={`
+                flex-shrink-0 p-4 rounded-lg border
+                ${darkMode ? 'bg-blue-900 bg-opacity-20 border-blue-800' : 'bg-blue-50 border-blue-200'}
+              `}>
+                <div className="flex justify-between items-center">
+                  <h3 className={`font-medium ${darkMode ? 'text-blue-200' : 'text-blue-800'}`}>
+                    {new Date(selectedMonth.year, selectedMonth.month - 1).toLocaleDateString('en-US', {
+                      month: 'long',
+                      year: 'numeric'
+                    })}
                   </h3>
                   <button
-                    onClick={handleBackToCustomerList}
+                    onClick={() => selectMonth(null)}
                     className={`
                       text-xs px-2 py-1 rounded
                       ${darkMode
@@ -304,64 +224,146 @@ function FinancialActivity({ darkMode = false }) {
                         : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}
                     `}
                   >
-                    Back to Customer List
+                    Clear Selection
                   </button>
                 </div>
-                
-                {selectedCustomer && (
-                  <div className="p-4 grow overflow-auto">
-                    <div className="flex flex-col space-y-2">
-                      <div className="text-lg font-medium mb-2">
-                        {selectedCustomer.customerName}
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Total Amount:
-                          </span>
-                          <div className={`text-base font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {formatCurrency(selectedCustomer.totalAmount)}
-                          </div>
-                        </div>
-                        <div>
-                          <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Total Units:
-                          </span>
-                          <div className={`text-base font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {selectedCustomer.totalQuantity}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Display individual sales lines for the selected customer */}
-                    {selectedCustomer.records && selectedCustomer.records.length > 0 && (
-                      <CustomerSalesTable
-                        records={selectedCustomer.records}
-                        onEditRecord={handleEditRecord}
-                        darkMode={darkMode}
-                        onRefresh={fetchData}
-                      />
-                    )}
+                <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Records:</span>{' '}
+                    <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                      {selectedMonthRecords.length}
+                    </span>
                   </div>
+                  <div>
+                    <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Total:</span>{' '}
+                    <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                      {formatCurrency(selectedMonthRecords.reduce((sum, record) => sum + (record.total_price || 0), 0))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Chart area - only show when no customer is selected */}
+            {showFullCustomerList && (
+              <div className={`
+                flex-shrink-0 p-4 rounded-lg border
+                ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+              `}>
+                {loading ? (
+                  <div className="h-64 flex items-center justify-center">
+                    <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
+                      Loading chart data...
+                    </p>
+                  </div>
+                ) : records.length === 0 ? (
+                  <div className="h-64 flex items-center justify-center">
+                    <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
+                      No financial data available for the selected timeframe
+                    </p>
+                  </div>
+                ) : (
+                  <FinancialChart
+                    data={preparedChartData}
+                    timeframe={timeframe}
+                    onMonthClick={handleChartMonthClick}
+                    darkMode={darkMode}
+                  />
                 )}
               </div>
             )}
+            
+            {/* Customer list or Selected Customer Info - This is the scrollable area */}
+            <div className="flex-1 overflow-hidden">
+              {showFullCustomerList ? (
+                <CustomerList
+                  customers={recordsByCustomer}
+                  projects={recordsByProject}
+                  selectedCustomerId={selectedCustomerId}
+                  onCustomerSelect={handleCustomerSelect}
+                  darkMode={darkMode}
+                  updateInvoiceStatus={updateInvoiceStatus}
+                />
+              ) : (
+                <div className={`
+                  rounded-lg border overflow-hidden flex flex-col h-full
+                  ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+                `}>
+                  <div className={`
+                    flex-shrink-0 px-4 py-3 border-b flex justify-between items-center
+                    ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}
+                  `}>
+                    <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Selected Customer
+                    </h3>
+                    <button
+                      onClick={handleBackToCustomerList}
+                      className={`
+                        text-xs px-2 py-1 rounded
+                        ${darkMode
+                          ? 'bg-blue-800 text-blue-100 hover:bg-blue-700'
+                          : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}
+                      `}
+                    >
+                      Back to Customer List
+                    </button>
+                  </div>
+                  
+                  {selectedCustomer && (
+                    <div className="flex-1 overflow-auto p-4">
+                      <div className="flex flex-col space-y-2">
+                        <div className="text-lg font-medium mb-2">
+                          {selectedCustomer.customerName}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Total Amount:
+                            </span>
+                            <div className={`text-base font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {formatCurrency(selectedCustomer.totalAmount)}
+                            </div>
+                          </div>
+                          <div>
+                            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Total Units:
+                            </span>
+                            <div className={`text-base font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {selectedCustomer.totalQuantity}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Display individual sales lines for the selected customer */}
+                      {selectedCustomer.records && selectedCustomer.records.length > 0 && (
+                        <CustomerSalesTable
+                          records={selectedCustomer.records}
+                          onEditRecord={handleEditRecord}
+                          darkMode={darkMode}
+                          onRefresh={fetchData}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </>
-      )}
+        )}
 
-      {/* Sync Tab Content */}
-      {activeTab === 'sync' && (
-        <FinancialSyncPanel
-          darkMode={darkMode}
-          onSyncComplete={handleSyncComplete}
-        />
-      )}
+        {/* Sync Tab Content */}
+        {activeTab === 'sync' && (
+          <FinancialSyncPanel
+            darkMode={darkMode}
+            onSyncComplete={handleSyncComplete}
+          />
+        )}
+      </div>
       
       {/* Edit modal */}
       {isEditModalOpen && recordToEdit && (
-        <RecordModal 
+        <RecordModal
           record={recordToEdit}
           onClose={() => setIsEditModalOpen(false)}
           onSave={handleSaveRecord}
