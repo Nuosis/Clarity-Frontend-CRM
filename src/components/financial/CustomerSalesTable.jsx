@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { createQBOCustomer, createQBOInvoice, listQBOCustomerByName, listQBOCustomers } from '../../api/quickbooksEdgeFunction';
-import { adminUpdate } from '../../services/supabaseService';
+import { createQBOCustomer, createQBOInvoice, listQBOCustomers, sendQBOInvoiceEmail, searchQBOCustomers } from '../../api/quickbooksApi';
+import { update } from '../../services/supabaseService';
+import { fetchFinancialRecordByUUID, updateFinancialRecordBilledStatus } from '../../api/financialRecords';
+import { generateInvoicePayload, validateInvoiceData, formatInvoiceForLogging } from '../../services/invoiceGenerationService';
 import CreateQBOCustomerModal from './CreateQBOCustomerModal';
 import RecordDetailsModal from './RecordDetailsModal';
 
@@ -17,6 +19,7 @@ import RecordDetailsModal from './RecordDetailsModal';
 function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh }) {
   // State for tracking loading state during QBO operations
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingMilestone, setProcessingMilestone] = useState('');
   const [sortConfig, setSortConfig] = useState({
     key: 'date',
     direction: 'desc'
@@ -26,6 +29,46 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
   const [selectedGroupRecords, setSelectedGroupRecords] = useState([]);
   const [selectedGroupTitle, setSelectedGroupTitle] = useState('');
   const customerName = records.length > 0 ? records[0].customers?.business_name : 'Unknown Customer';
+
+  /**
+   * Search for QuickBooks customers using the dedicated search endpoint
+   * Uses the tested /quickbooks/customers/search endpoint with SDK filtering
+   * @param {string} searchName - Customer name to search for
+   * @returns {Promise<Array>} Array of matching customers
+   */
+  const searchQBOCustomerAdvanced = useCallback(async (searchName) => {
+    console.log(`🔍 [INVESTIGATION] Searching for QuickBooks customer: "${searchName}"`);
+    console.log(`🔍 [INVESTIGATION] About to call searchQBOCustomers function from quickbooksApi.js`);
+    
+    try {
+      // Use the dedicated search endpoint with name parameter
+      const searchParams = {
+        name: searchName,
+        active_only: true,
+        max_results: 20
+      };
+      console.log(`🔍 [INVESTIGATION] Search parameters:`, searchParams);
+      
+      const result = await searchQBOCustomers(searchParams);
+      console.log(`🔍 [INVESTIGATION] searchQBOCustomers returned:`, result);
+      
+      if (result?.customers && result.customers.length > 0) {
+        console.log(`✅ [INVESTIGATION] Found ${result.customers.length} customer(s) matching "${searchName}"`);
+        return result.customers;
+      } else {
+        console.log(`❌ [INVESTIGATION] No customers found for "${searchName}"`);
+        return [];
+      }
+    } catch (error) {
+      console.error('🚨 [INVESTIGATION] Customer search error:', error);
+      console.error('🚨 [INVESTIGATION] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      return [];
+    }
+  }, []);
 
   // Handle clicking on a summary row to show detailed records
   const handleRowClick = useCallback((group) => {
@@ -41,12 +84,33 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
     setSelectedGroupTitle('');
   }, []);
 
+  // Handle record update for optimistic updates
+  const handleRecordUpdate = useCallback((updatedRecord) => {
+    // Update the selected group records optimistically
+    setSelectedGroupRecords(prevRecords =>
+      prevRecords.map(record =>
+        record.id === updatedRecord.id ? { ...record, ...updatedRecord } : record
+      )
+    );
+    
+    // Call the parent refresh callback to update the main data
+    if (typeof onRefresh === 'function') {
+      onRefresh();
+    }
+  }, [onRefresh]);
+
+  // Helper function to parse record dates consistently (avoiding UTC issues)
+  const parseRecordDate = (dateStr) => {
+    const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+    return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+  };
+
   // Sort records based on current sort configuration
   // Group and summarize records by product_name and month/year
   const summarizedRecords = React.useMemo(() => {
     const groupMap = new Map();
     records.forEach(record => {
-      const dateObj = new Date(record.date);
+      const dateObj = parseRecordDate(record.date);
       const monthYear = dateObj.toLocaleString('en-US', { month: 'short', year: 'numeric' });
       const key = `${record.product_name || 'No Product'}|${monthYear}`;
       if (!groupMap.has(key)) {
@@ -75,8 +139,8 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
     const arr = Array.from(groupMap.values());
     return arr.sort((a, b) => {
       // Sort by date (desc/asc), then by product_name
-      const aDate = new Date(a.records[0].date);
-      const bDate = new Date(b.records[0].date);
+      const aDate = parseRecordDate(a.records[0].date);
+      const bDate = parseRecordDate(b.records[0].date);
       if (sortConfig.key === 'date') {
         if (aDate < bDate) return sortConfig.direction === 'asc' ? -1 : 1;
         if (aDate > bDate) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -138,6 +202,9 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
    * 4. Triggers QBO to send the invoice
    */
   const handleQboInvoiceClick = useCallback(async () => {
+    console.log('🚀 [INVESTIGATION] QuickBooks invoice button clicked - starting systematic investigation');
+    console.log('🔍 [INVESTIGATION] Component imports from:', '../../api/quickbooksApi');
+    
     if (records.length === 0) {
       alert('No sales records to invoice');
       return;
@@ -152,163 +219,38 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
 
     try {
       setIsProcessing(true);
+      setProcessingMilestone('Starting...');
 
       // Get the customer ID and name from the first record
       const firstRecord = records[0];
       const customerId = firstRecord.customer_id;
       const customerName = firstRecord.customers?.business_name || 'Unknown Customer';
+      
+      console.log('🔍 [INVESTIGATION] Customer details:', { customerId, customerName });
 
       if (!customerId) {
         alert('Customer ID is missing from the sales records');
         return;
       }
 
-      // Find QBO customer by name
-      let qboCustomerId = null;
-      let qboCustomerCurrencyRef = 'CAD'; // Default currency
+      // Find QBO customer using advanced search
+      setProcessingMilestone('Finding customer...');
+      console.log('🔍 [INVESTIGATION] About to call searchQBOCustomerAdvanced with:', customerName);
+      const qboCustomers = await searchQBOCustomerAdvanced(customerName);
       
-      // Query QBO for customers by name - wrap in try-catch to handle 500 errors gracefully
-      console.log(`Searching for QuickBooks customer: "${customerName}"`);
-      let qboCustomers = [];
-      let shouldTryFallback = false;
-      
-      try {
-        const qboCustomersResult = await listQBOCustomerByName(customerName);
-        console.log('QBO Customer Search Result:', qboCustomersResult);
-        
-        // Check if the result indicates other types of failure first
-        // Allow 404s and 500s to fall through to the fallback logic
-        if (qboCustomersResult.success === false &&
-            !(qboCustomersResult.detail === "Not Found" ||
-              qboCustomersResult.detail === "Failed to execute query" ||
-              qboCustomersResult.status === 404 ||
-              qboCustomersResult.status === 500 ||
-              (qboCustomersResult.error && qboCustomersResult.error.includes('404')) ||
-              (qboCustomersResult.error && qboCustomersResult.error.includes('500')))) {
-          // Handle different error response structures (but not 404s or 500s)
-          const errorMessage = qboCustomersResult.error ||
-                              qboCustomersResult.message ||
-                              (qboCustomersResult.Fault && qboCustomersResult.Fault.Error && qboCustomersResult.Fault.Error[0]) ||
-                              'Unknown error occurred';
-          throw new Error(`Failed to query QuickBooks customers: ${errorMessage}`);
-        }
-        
-        // Handle successful response or 404/500 - extract customers
-        qboCustomers = qboCustomersResult.QueryResponse?.Customer || [];
-        
-        // If we got a 404 or 500 or empty result, trigger fallback
-        if (qboCustomers.length === 0) {
-          shouldTryFallback = true;
-        }
-      } catch (error) {
-        console.warn('listQBOCustomerByName failed, will try fallback:', error);
-        shouldTryFallback = true;
-      }
-      
-      // If we need to try fallback (404, 500, or empty result), try a broader search
-      if (shouldTryFallback) {
-        console.log(`No exact match found for "${customerName}". Trying to list all customers for manual matching...`);
-        
-        // Try to get all customers and do a fuzzy match
-        try {
-          const allCustomersResult = await listQBOCustomers();
-          console.log('All customers query result:', allCustomersResult);
-          
-          if (allCustomersResult && allCustomersResult.customers) {
-            const allCustomers = allCustomersResult.customers;
-            
-            // Debug: Show what we're searching for and first few customers
-            console.log(`🔍 CUSTOMER SEARCH DEBUG:`);
-            console.log(`- Searching for: "${customerName}"`);
-            console.log(`- Total customers: ${allCustomers.length}`);
-            console.log(`- First 3 customers:`, allCustomers.slice(0, 3).map(c => ({
-              Id: c.Id,
-              DisplayName: c.DisplayName,
-              CompanyName: c.CompanyName,
-              FullyQualifiedName: c.FullyQualifiedName
-            })));
-            
-            // Simple exact match first
-            const normalizedSearchName = customerName.toLowerCase().trim();
-            let matchedCustomers = allCustomers.filter(customer => {
-              const displayName = customer.DisplayName?.toLowerCase().trim() || '';
-              const companyName = customer.CompanyName?.toLowerCase().trim() || '';
-              const fullyQualifiedName = customer.FullyQualifiedName?.toLowerCase().trim() || '';
-              
-              const isMatch = displayName === normalizedSearchName ||
-                             companyName === normalizedSearchName ||
-                             fullyQualifiedName === normalizedSearchName;
-              
-              if (isMatch) {
-                console.log(`✅ EXACT MATCH FOUND:`, {
-                  Id: customer.Id,
-                  DisplayName: customer.DisplayName,
-                  CompanyName: customer.CompanyName,
-                  searchTerm: customerName
-                });
-              }
-              
-              return isMatch;
-            });
-            
-            console.log(`- Exact matches: ${matchedCustomers.length}`);
-            
-            // If no exact match, try partial
-            if (matchedCustomers.length === 0) {
-              console.log(`- Trying partial matches...`);
-              matchedCustomers = allCustomers.filter(customer => {
-                const displayName = customer.DisplayName?.toLowerCase() || '';
-                const companyName = customer.CompanyName?.toLowerCase() || '';
-                const fullyQualifiedName = customer.FullyQualifiedName?.toLowerCase() || '';
-                
-                const isMatch = displayName.includes(normalizedSearchName) ||
-                               companyName.includes(normalizedSearchName) ||
-                               fullyQualifiedName.includes(normalizedSearchName);
-                
-                if (isMatch) {
-                  console.log(`✅ PARTIAL MATCH FOUND:`, {
-                    Id: customer.Id,
-                    DisplayName: customer.DisplayName,
-                    CompanyName: customer.CompanyName,
-                    searchTerm: customerName
-                  });
-                }
-                
-                return isMatch;
-              });
-              console.log(`- Partial matches: ${matchedCustomers.length}`);
-            }
-            
-            console.log(`Found ${matchedCustomers.length} potential matches:`, matchedCustomers.map(c => c.DisplayName));
-            
-            if (matchedCustomers.length > 0) {
-              // Use the matched customers
-              qboCustomers = matchedCustomers;
-            }
-          }
-        } catch (broadSearchError) {
-          console.warn('Broad customer search failed:', broadSearchError);
-        }
-      }
-      
-      // If still no customers found after all attempts, show create modal
+      // If no customers found, show create modal
       if (qboCustomers.length === 0) {
-        console.log(`Customer "${customerName}" not found in QuickBooks after all search attempts`);
+        console.log(`Customer "${customerName}" not found in QuickBooks`);
         setShowCreateCustomerModal(true);
-        return; // Exit the function here, it will be resumed after customer creation
+        return;
       }
       
-      if (qboCustomers.length === 0) {
-        // No matching customer found, show modal to create one
-        setShowCreateCustomerModal(true);
-        return; // Exit the function here, it will be resumed after customer creation
-      } else if (qboCustomers.length === 1) {
+      let selectedQboCustomer = null;
+      
+      if (qboCustomers.length === 1) {
         // Exactly one matching customer found
-        qboCustomerId = qboCustomers[0].Id;
-        qboCustomerCurrencyRef = qboCustomers[0].CurrencyRef?.value || 'CAD';
-
-        console.log(`Found matching QBO customer: ${qboCustomers[0].DisplayName} (ID: ${qboCustomerId}) (CURRENCY: ${qboCustomerCurrencyRef})`);
-
+        selectedQboCustomer = qboCustomers[0];
+        console.log(`Found matching QBO customer: ${selectedQboCustomer.DisplayName} (ID: ${selectedQboCustomer.Id})`);
       } else {
         // Multiple matching customers found, ask user to select one
         let customerOptions = '';
@@ -326,10 +268,8 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
           return;
         }
         
-        const selectedCustomer = qboCustomers[parseInt(selectedIndex) - 1];
-        qboCustomerId = selectedCustomer.Id;
-        qboCustomerCurrencyRef = selectedCustomer.CurrencyRef?.value || 'CAD';
-        console.log(`Selected QBO customer: ${selectedCustomer.DisplayName} (ID: ${qboCustomerId}) (CURRENCY: ${qboCustomerCurrencyRef})`);
+        selectedQboCustomer = qboCustomers[parseInt(selectedIndex) - 1];
+        console.log(`Selected QBO customer: ${selectedQboCustomer.DisplayName} (ID: ${selectedQboCustomer.Id})`);
       }
 
       // Filter out records that are already invoiced
@@ -340,83 +280,230 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         return;
       }
 
-      const ItemRef = `Development Income:Development ${qboCustomerCurrencyRef}`
+      // Validate invoice data before generating payload
+      const validation = validateInvoiceData(recordsToInvoice, selectedQboCustomer);
+      if (!validation.isValid) {
+        console.error('Invoice data validation failed:', validation.errors);
+        alert(`Cannot create invoice: ${validation.errors.join(', ')}`);
+        return;
+      }
 
-      // Prepare invoice data for QBO
-      const invoiceData = {
-        CustomerRef: {
-          value: qboCustomerId
-        },
-        Line: recordsToInvoice.map(record => ({
-          DetailType: 'SalesItemLineDetail',
-          SalesItemLineDetail: {
-            ItemRef: {
-              name: ItemRef
-            },
-            Qty: record.quantity || 1,
-            UnitPrice: record.unit_price || 0
-          },
-          Amount: record.total_price || 0,
-          Description: record.product_name || 'Development'
-        }))
-      };
-
-      // Create invoice in QBO
-      console.log('Creating QBO invoice with data:', invoiceData);
-      const invoiceResult = await createQBOInvoice(invoiceData);
-      console.log('QBO Invoice creation result:', invoiceResult);
+      setProcessingMilestone('Generating invoice...');
       
+      // Generate advanced invoice payload using the new service
+      const invoicePayload = await generateInvoicePayload(recordsToInvoice, selectedQboCustomer);
+      
+      console.log('Generated advanced invoice payload:');
+      console.log(formatInvoiceForLogging(invoicePayload));
+
+      setProcessingMilestone('Creating invoice...');
+      // Create invoice in QBO
+      console.log('Creating QBO invoice with advanced payload:', invoicePayload);
+      const invoiceResult = await createQBOInvoice(invoicePayload);
+      
+      // Comprehensive logging for debugging postprocessing issues
+      //   "invoice": {
+      //     "AllowIPNPayment": true,
+      //     "AllowOnlineACHPayment": false,
+      //     "AllowOnlineCreditCardPayment": false,
+      //     "ApplyTaxAfterDiscount": false,
+      //     "Balance": 0,
+      //     "BillAddr": null,
+      //     "BillEmail": null,
+      //     "BillEmailBcc": null,
+      //     "BillEmailCc": null,
+      //     "CurrencyRef": null,
+      //     "CustomField": [],
+      //     "CustomerMemo": null,
+      //     "CustomerRef": {
+      //       "name": "AL3",
+      //       "value": "394"
+      //     },
+      //     "DeliveryInfo": null,
+      //     "DepartmentRef": null,
+      //     "Deposit": 0,
+      //     "DocNumber": "3942507001",
+      //     "DueDate": "2025-07-31",
+      //     "EInvoiceStatus": null,
+      //     "EmailStatus": "NotSet",
+      //     "ExchangeRate": 1,
+      //     "FreeFormAddress": false,
+      //     "GlobalTaxCalculation": "TaxExcluded",
+      //     "HomeBalance": 0,
+      //     "HomeTotalAmt": 0,
+      //     "Id": "6495",
+      //     "InvoiceLink": "",
+      //     "Line": [
+      //       {
+      //         "Amount": 697,
+      //         "Description": "AL3:NAEMT",
+      //         "DetailType": "SalesItemLineDetail",
+      //         "LineNum": 1,
+      //         "SalesItemLineDetail": {
+      //           "ItemRef": {
+      //             "name": "Development USD",
+      //             "value": "7"
+      //           },
+      //           "Qty": 6.97,
+      //           "TaxCodeRef": {
+      //             "value": 3
+      //           },
+      //           "UnitPrice": 100
+      //         }
+      //       },
+      //       {
+      //         "Amount": 76.5,
+      //         "Description": "AL3:Miro",
+      //         "DetailType": "SalesItemLineDetail",
+      //         "LineNum": 2,
+      //         "SalesItemLineDetail": {
+      //           "ItemRef": {
+      //             "name": "Development USD",
+      //             "value": "7"
+      //           },
+      //           "Qty": 0.765,
+      //           "TaxCodeRef": {
+      //             "value": 3
+      //           },
+      //           "UnitPrice": 100
+      //         }
+      //       },
+      //       {
+      //         "Amount": 34,
+      //         "Description": "AL3:In",
+      //         "DetailType": "SalesItemLineDetail",
+      //         "LineNum": 3,
+      //         "SalesItemLineDetail": {
+      //           "ItemRef": {
+      //             "name": "Development USD",
+      //             "value": "7"
+      //           },
+      //           "Qty": 0.34,
+      //           "TaxCodeRef": {
+      //             "value": 3
+      //           },
+      //           "UnitPrice": 100
+      //         }
+      //       },
+      //       {
+      //         "Amount": 42.5,
+      //         "Description": "AL3:TSL",
+      //         "DetailType": "SalesItemLineDetail",
+      //         "LineNum": 4,
+      //         "SalesItemLineDetail": {
+      //           "ItemRef": {
+      //             "name": "Development USD",
+      //             "value": "7"
+      //           },
+      //           "Qty": 0.425,
+      //           "TaxCodeRef": {
+      //             "value": 3
+      //           },
+      //           "UnitPrice": 100
+      //         }
+      //       }
+      //     ],
+      //     "LinkedTxn": [],
+      //     "MetaData": null,
+      //     "PrintStatus": "NotSet",
+      //     "PrivateNote": "",
+      //     "RecurDataRef": null,
+      //     "SalesTermRef": null,
+      //     "ShipAddr": null,
+      //     "ShipDate": "",
+      //     "ShipMethodRef": null,
+      //     "SyncToken": 0,
+      //     "TaxExemptionRef": null,
+      //     "TotalAmt": "",
+      //     "TrackingNum": "",
+      //     "TxnDate": "",
+      //     "TxnTaxDetail": null,
+      //     "domain": "QBO",
+      //     "sparse": false
+      //   }
+      // }
+
       // Handle different response structures
       let qboInvoiceId = null;
       
-      if (invoiceResult.success && invoiceResult.data && invoiceResult.data.Id) {
-        // Standard success response
-        qboInvoiceId = invoiceResult.data.Id;
+      if (invoiceResult.invoice && invoiceResult.invoice.Id) {
+        // Direct invoice response (lowercase) - CURRENT FORMAT
+        qboInvoiceId = invoiceResult.invoice.Id;
+        console.log('✅ Success: Direct invoice format (lowercase), ID:', qboInvoiceId);
       } else if (invoiceResult.Invoice && invoiceResult.Invoice.Id) {
-        // Direct invoice response
+        // Direct Invoice response (uppercase) - Legacy format
         qboInvoiceId = invoiceResult.Invoice.Id;
-      } else if (invoiceResult.QueryResponse && invoiceResult.QueryResponse.Invoice && invoiceResult.QueryResponse.Invoice[0]) {
-        // Query response format
-        qboInvoiceId = invoiceResult.QueryResponse.Invoice[0].Id;
+        console.log('✅ Success: Direct Invoice format (uppercase), ID:', qboInvoiceId);
       } else {
-        // Handle error cases
-        const errorMessage = invoiceResult.error ||
-                            invoiceResult.message ||
-                            invoiceResult.detail ||
-                            (invoiceResult.Fault && invoiceResult.Fault.Error && invoiceResult.Fault.Error[0] && invoiceResult.Fault.Error[0].Detail) ||
-                            'Unknown error occurred during invoice creation';
+        // Handle error cases - check for various error response formats
+        let errorMessage = 'Unknown error occurred during invoice creation';
+        
+        if (invoiceResult.detail) {
+          // Backend API error format (most common)
+          errorMessage = invoiceResult.detail;
+        } else if (invoiceResult.error) {
+          // Generic error field
+          errorMessage = invoiceResult.error;
+        } else if (invoiceResult.message) {
+          // Message field
+          errorMessage = invoiceResult.message;
+        } else if (invoiceResult.Fault && invoiceResult.Fault.Error && invoiceResult.Fault.Error[0] && invoiceResult.Fault.Error[0].Detail) {
+          // QuickBooks SDK fault format
+          errorMessage = invoiceResult.Fault.Error[0].Detail;
+        } else if (invoiceResult.Fault ) {
+          // QuickBooks SDK fault format
+          errorMessage = invoiceResult.Fault;
+        }
+        
         throw new Error(`Failed to create invoice in QuickBooks: ${errorMessage}`);
       }
       console.log(`Invoice created in QBO with ID: ${qboInvoiceId}`);
 
+      setProcessingMilestone('Updating records...');
       // Update the inv_id field in Supabase for each sales item
       const updatePromises = recordsToInvoice.map(async (record) => {
         const updateData = {
           inv_id: qboInvoiceId
         };
 
-        const updateResult = await adminUpdate('customer_sales', updateData, { id: record.id });
+        const updateResult = await update('customer_sales', updateData, { id: record.id });
         
         if (!updateResult.success) {
           console.error(`Failed to update inv_id for record ${record.id}: ${updateResult.error}`);
           return false;
         }
-
-        // If the record has a financial_id, update the corresponding billable hours record
+        
+        // If the record has a financial_id, update the corresponding billable hours record in FileMaker
         if (record.financial_id) {
-          // Update the billable hours record in Supabase
-          const billableUpdateData = {
-            f_billed: 1
-          };
-          
-          const billableUpdateResult = await adminUpdate('billable_hours', billableUpdateData, { id: record.financial_id });
-          
-          if (!billableUpdateResult.success) {
-            console.error(`Failed to update billable hours record ${record.financial_id}: ${billableUpdateResult.error}`);
+          try {
+            // First, fetch the FileMaker record using the UUID to get the actual recordId
+            console.log(`Looking up FileMaker record by UUID: ${record.financial_id}`);
+            const fileMakerRecord = await fetchFinancialRecordByUUID(record.financial_id);
+            console.log("FileMaker record: ", fileMakerRecord)
+            if (!fileMakerRecord.response || !fileMakerRecord.response.data || fileMakerRecord.response.data.length === 0) {
+              console.error(`Failed to find FileMaker record with UUID ${record.financial_id}`);
+              return false;
+            }
+            
+            // Get the actual FileMaker recordId from the response
+            const recordId = fileMakerRecord.response.data[0].recordId;
+            console.log(`Found FileMaker record with recordId: ${recordId}`);
+            
+            // Update the billable hours record in FileMaker to mark as billed
+            const billableUpdateResult = await updateFinancialRecordBilledStatus(recordId, 1);
+            console.log("Update: ", billableUpdateResult);
+            
+            // Check if the update was successful
+            if (!billableUpdateResult || !billableUpdateResult.response || !billableUpdateResult.response.data) {
+              console.error(`Error updating billable hours record for UUID ${record.financial_id}:`, billableUpdateResult);
+              return false;
+            }
+            
+            console.log(`Successfully marked billable hours record ${recordId} (UUID: ${record.financial_id}) as billed in FileMaker`);
+          } catch (error) {
+            console.error(`Error updating billable hours record for UUID ${record.financial_id}:`, error);
             return false;
           }
-          
-          console.log(`Marked billable hours record ${record.financial_id} as billed`);
         }
 
         return true;
@@ -432,12 +519,32 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         throw new Error('Some records failed to update');
       }
 
-      // Trigger QBO to send the invoice
-      // This would typically be done through a dedicated API or service
-      // For now, we'll just log it
-      console.log(`Sending invoice ${qboInvoiceId} to customer`);
-
-      alert(`Invoice created successfully in QuickBooks Online with ID: ${qboInvoiceId}`);
+      // Send the invoice email using QBO native functionality
+      setProcessingMilestone('Sending invoice email...');
+      try {
+        console.log(`Sending invoice ${qboInvoiceId} to customer via email`);
+        const emailResult = await sendQBOInvoiceEmail(qboInvoiceId);
+        console.log('Invoice email sent successfully:', emailResult);
+        
+        alert(`Invoice created successfully in QuickBooks Online and email sent to customer.`);
+      } catch (emailError) {
+        console.warn('Failed to send invoice email:', emailError);
+        
+        // Extract the actual error message from the error object
+        let errorMessage = 'Unknown email error';
+        if (typeof emailError === 'string') {
+          errorMessage = emailError;
+        } else if (emailError.error) {
+          errorMessage = emailError.error;
+        } else if (emailError.message) {
+          errorMessage = emailError.message;
+        } else if (emailError.detail) {
+          errorMessage = emailError.detail;
+        }
+        
+        // Don't fail the entire process if email sending fails
+        alert(`Invoice created successfully in QuickBooks Online. However, there was an issue sending the email: ${errorMessage}`);
+      }
       
       // Refresh the data to show updated invoice status
       if (typeof onRefresh === 'function') {
@@ -452,6 +559,7 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       alert(`Error creating invoice: ${error.message}`);
     } finally {
       setIsProcessing(false);
+      setProcessingMilestone('');
     }
   }, [records]);
   
@@ -462,12 +570,15 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       
       console.log('Creating customer with data:', customerData);
       const result = await createQBOCustomer(customerData);
+
+      console.log("customer create result: ",result)
+      const qboCustomerId = result.customer.Id;
       
-      if (!result.success) {
+      if (!qboCustomerId) {
         throw new Error(`Failed to create customer in QuickBooks: ${result.error}`);
       }
       
-      const qboCustomerId = result.Customer.Id;
+
       console.log(`Customer created in QBO with ID: ${qboCustomerId}`);
       
       // Close the modal
@@ -500,12 +611,17 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         </h3>
         <button
           onClick={handleQboInvoiceClick}
-          className="px-2 py-1 text-xs font-medium text-white rounded"
-          style={{ backgroundColor: '#2CA01C' }}
+          className={`px-2 py-1 text-xs font-medium text-white rounded transition-all duration-200 ${
+            isProcessing ? 'min-w-[120px]' : 'min-w-[32px]'
+          }`}
+          style={{
+            backgroundColor: '#2CA01C',
+            whiteSpace: 'nowrap'
+          }}
           title="Create QuickBooks Online Invoice"
           disabled={isProcessing}
         >
-          {isProcessing ? '...' : 'qb'}
+          {isProcessing ? (processingMilestone || 'Processing...') : 'qb'}
         </button>
       </div>
       
@@ -687,6 +803,7 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
           groupTitle={selectedGroupTitle}
           onClose={handleCloseRecordDetails}
           onEditRecord={onEditRecord}
+          onRecordUpdated={handleRecordUpdate}
           darkMode={darkMode}
         />
       )}

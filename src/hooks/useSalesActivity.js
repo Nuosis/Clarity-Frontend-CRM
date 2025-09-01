@@ -105,7 +105,7 @@ export function useSalesActivity(initialTimeframe = 'today') {
     if (selectedMonth && records.length > 0) {
       const { year, month } = selectedMonth;
       const monthRecords = records.filter(record => {
-        const recordDate = new Date(record.date);
+        const recordDate = parseRecordDate(record.date);
         return recordDate.getFullYear() === year && recordDate.getMonth() + 1 === month;
       });
       setSelectedMonthRecords(monthRecords);
@@ -114,6 +114,12 @@ export function useSalesActivity(initialTimeframe = 'today') {
     }
   }, [selectedMonth, records]);
 
+  // Helper function to parse record dates consistently
+  const parseRecordDate = (dateStr) => {
+    const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+    return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+  };
+
   /**
    * Filter records based on timeframe
    * @param {Array} records - Records to filter
@@ -121,20 +127,33 @@ export function useSalesActivity(initialTimeframe = 'today') {
    * @returns {Array} Filtered records
    */
   const filterRecordsByTimeframe = (records, timeframe) => {
+    // Get current date in local timezone
     const now = new Date();
-    // Format today's date as YYYY-MM-DD for string comparison
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    // Create timezone-aware date helpers
+    const getLocalDateString = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    const parseRecordDate = (dateStr) => {
+      // Parse date string as local date (not UTC)
+      const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+      return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+    };
+    
+    const todayStr = getLocalDateString(now);
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
     console.log('Filtering records by timeframe:', timeframe);
-    console.log('Today string format:', todayStr);
+    console.log('Today string format (local):', todayStr);
     console.log('Total records before filtering:', records.length);
     
     const filteredRecords = records.filter(record => {
-      // For direct string comparison with date format YYYY-MM-DD
       const recordDateStr = record.date;
-      // Also create a Date object for range comparisons
-      const recordDate = new Date(record.date + 'T00:00:00'); // Add time to ensure consistent parsing
+      const recordDate = parseRecordDate(recordDateStr);
       
       switch (timeframe) {
         case 'today':
@@ -148,28 +167,24 @@ export function useSalesActivity(initialTimeframe = 'today') {
           const endOfWeek = new Date(startOfWeek);
           endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
           
-          // Format as YYYY-MM-DD for comparison
-          const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`;
-          const endOfWeekStr = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`;
+          const startOfWeekStr = getLocalDateString(startOfWeek);
+          const endOfWeekStr = getLocalDateString(endOfWeek);
           
           return recordDateStr >= startOfWeekStr && recordDateStr <= endOfWeekStr;
         }
         
         case 'thisMonth': {
-          // Format as YYYY-MM for month comparison
           const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
           return recordDateStr.startsWith(thisMonthStr);
         }
         
         case 'lastMonth': {
-          // Calculate previous month and year
-          let prevMonth = now.getMonth(); // 0-based, so this is the previous month
+          let prevMonth = now.getMonth();
           let prevYear = now.getFullYear();
           if (prevMonth === 0) {
             prevMonth = 12;
             prevYear -= 1;
           }
-          // Format as YYYY-MM for month comparison
           const lastMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
           return recordDateStr.startsWith(lastMonthStr);
         }
@@ -178,11 +193,8 @@ export function useSalesActivity(initialTimeframe = 'today') {
           const quarter = Math.floor(now.getMonth() / 3);
           const startMonth = quarter * 3;
           const endMonth = startMonth + 2;
-          
-          // Format year for comparison
           const yearStr = `${now.getFullYear()}`;
           
-          // Check if the record's month is within the current quarter
           const recordMonth = parseInt(recordDateStr.split('-')[1], 10) - 1; // 0-based month
           return recordDateStr.startsWith(yearStr) &&
                  recordMonth >= startMonth &&
@@ -190,7 +202,6 @@ export function useSalesActivity(initialTimeframe = 'today') {
         }
         
         case 'thisYear': {
-          // Format as YYYY for year comparison
           const thisYearStr = `${now.getFullYear()}`;
           return recordDateStr.startsWith(thisYearStr);
         }
@@ -584,20 +595,27 @@ export function useSalesActivity(initialTimeframe = 'today') {
    */
   const saveSale = useCallback(async (saleData) => {
     try {
-      console.log('Saving sale:', saleData);
+      console.log('[FORM_DATA_INVESTIGATION] Original saleData received in saveSale:', JSON.stringify(saleData, null, 2));
+      console.log('[FORM_DATA_INVESTIGATION] inv_id value in original saleData:', saleData.inv_id);
+      console.log('[FORM_DATA_INVESTIGATION] typeof inv_id:', typeof saleData.inv_id);
       
       // Import the updateSale function from salesService
       const { updateSale, createSale } = await import('../services/salesService');
       
+      // Log the data being passed to the service layer
+      console.log('[FORM_DATA_INVESTIGATION] Data being passed to service layer:', JSON.stringify(saleData, null, 2));
+      
       let result;
       
       if (saleData.id) {
-        // Update existing sale
+        // Update existing sale - pass the complete saleData to preserve all fields including inv_id
         result = await updateSale(saleData.id, saleData);
       } else {
         // Create new sale
+        console.log('[FORM_DATA_INVESTIGATION] Calling createSale');
         result = await createSale(saleData);
       }
+      
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to save sale');
@@ -605,11 +623,15 @@ export function useSalesActivity(initialTimeframe = 'today') {
       
       // Update local state with the saved data
       if (saleData.id) {
-        // Update existing sale in local state
+        // Update existing sale in local state - use the returned data from the API if available
+        const updatedSaleData = result.data || saleData;
+        console.log('[FORM_DATA_INVESTIGATION] Final updatedSaleData:', JSON.stringify(updatedSaleData, null, 2));
+        console.log('[FORM_DATA_INVESTIGATION] inv_id in final updatedSaleData:', updatedSaleData?.inv_id);
+        
         setRecords(prevRecords =>
           prevRecords.map(record =>
             record.id === saleData.id
-              ? { ...record, ...saleData }
+              ? { ...record, ...updatedSaleData }
               : record
           )
         );

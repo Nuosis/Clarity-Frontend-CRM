@@ -15,20 +15,25 @@ export async function getMonthlyBillableHours(organizationId) {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
+    // Format dates as YYYY-MM-DD for date field comparison
+    const startDateStr = startOfMonth.toISOString().split('T')[0];
+    const endDateStr = endOfMonth.toISOString().split('T')[0];
+
     console.log('[MonthlyBillable] Fetching billable hours for:', {
       organizationId,
-      startOfMonth: startOfMonth.toISOString(),
-      endOfMonth: endOfMonth.toISOString()
+      startOfMonth: startDateStr,
+      endOfMonth: endDateStr
     });
 
     // Query customer_sales for current month using backend API
     // Use the same column selection as other services to ensure compatibility
+    // Filter by 'date' field instead of 'created_at' to get sales for the actual month
     const response = await query('customer_sales', {
       select: 'id, date, customer_id, product_id, product_name, quantity, unit_price, total_price, organization_id, created_at',
       filters: [
         { type: 'eq', column: 'organization_id', value: organizationId },
-        { type: 'gte', column: 'created_at', value: startOfMonth.toISOString() },
-        { type: 'lte', column: 'created_at', value: endOfMonth.toISOString() }
+        { type: 'gte', column: 'date', value: startDateStr },
+        { type: 'lte', column: 'date', value: endDateStr }
       ]
     });
 

@@ -105,7 +105,7 @@ export async function updateTaskStatus(taskId, completed) {
             action: Actions.UPDATE,
             recordId: taskId,
             fieldData: {
-                f_completed: completed
+                f_completed: completed ? 1 : 0
             }
         };
         

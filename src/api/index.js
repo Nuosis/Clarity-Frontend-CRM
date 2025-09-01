@@ -76,23 +76,59 @@ export {
 // API version
 export const API_VERSION = '1.1.1';
 
-// QuickBooks Edge Function API
+// QuickBooks API (New Backend Integration)
 export {
+    // Authorization
+    getQBOAuthorizationUrl,
+    handleQBOOAuthCallback,
+    refreshQBOToken,
+    validateQBOCredentials,
+    
+    // Company
     getQBOCompanyInfo,
+    
+    // Customers
     listQBOCustomers,
     getQBOCustomer,
     createQBOCustomer,
     updateQBOCustomer,
+    deleteQBOCustomer,
+    
+    // Invoices
     listQBOInvoices,
     getQBOInvoice,
     createQBOInvoice,
     updateQBOInvoice,
+    deleteQBOInvoice,
+    
+    // Bills
+    listQBOBills,
+    getQBOBill,
+    createQBOBill,
+    updateQBOBill,
+    deleteQBOBill,
+    
+    // Items & Vendors
+    listQBOItems,
+    listQBOVendors,
+    
+    // Query
+    executeQBOQuery,
+    
+    // Webhooks
+    getQBOWebhookStats,
+    listQBOWebhookEvents,
+    testQBOWebhook,
+    clearQBOWebhookEvents,
+    
+    // Legacy compatibility (deprecated)
+    listQBOCustomerByName,
+    getQBOInvoiceByQuery,
+    getQBOItem,
     listQBOAccounts,
     getQBOAccount,
-    listQBOItems,
-    getQBOItem,
-    executeQBOQuery
-} from './quickbooksEdgeFunction';
+    sendQBOInvoiceEmail
+} from './quickbooksApi';
 
 // Marketing operations
 export {

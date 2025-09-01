@@ -52,6 +52,27 @@ export function processFinancialData(data) {
       });
     }
     
+    // INVESTIGATION LOGGING: Capture field mapping for Task Name and Work Performed
+    const taskNameRaw = fieldData["Tasks::task"];
+    const taskNameFallback = fieldData["dapiTasks::task"];
+    const workPerformedRaw = fieldData["Work Performed"];
+    const workPerformedFallback = fieldData["dapiRecords::Work Performed"];
+    
+    console.log(`🔍 FIELD MAPPING DEBUG - Record ID: ${fieldData.__ID}`, {
+      timestamp: new Date().toISOString(),
+      taskNameRaw: taskNameRaw,
+      taskNameFallback: taskNameFallback,
+      taskNameFinal: taskNameRaw || taskNameFallback || null,
+      workPerformedRaw: workPerformedRaw,
+      workPerformedFallback: workPerformedFallback,
+      workPerformedFinal: workPerformedRaw || workPerformedFallback || "",
+      allAvailableFields: Object.keys(fieldData).filter(key =>
+        key.toLowerCase().includes('task') ||
+        key.toLowerCase().includes('work') ||
+        key.toLowerCase().includes('performed')
+      )
+    });
+
     return {
       id: fieldData.__ID,
       recordId: record.recordId, // used for delete and patch
@@ -67,6 +88,9 @@ export function processFinancialData(data) {
       year: parseInt(fieldData.year || 0),
       billed: fieldData.f_billed === "1" || fieldData.f_billed === 1,
       description: fieldData["Work Performed"] || "",
+      taskName: taskNameRaw || taskNameFallback || null,
+      workPerformed: workPerformedRaw || workPerformedFallback || "",
+      fixedPrice: parseFloat(fieldData["customers_Projects::f_fixedPrice"] || 0),
       createdAt: fieldData['~creationTimestamp'],
       modifiedAt: fieldData['~ModificationTimestamp'] || fieldData['~modificationTimestamp']
     };

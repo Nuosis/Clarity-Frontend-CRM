@@ -348,6 +348,48 @@ export async function fetchFinancialRecordByRecordId(recordId) {
 }
 
 /**
+ * Fetches a financial record by its UUID (__ID field)
+ * @param {string} financialId - The UUID (__ID) of the record to fetch
+ * @returns {Promise} Promise resolving to the financial record data
+ */
+export async function fetchFinancialRecordByUUID(financialId) {
+    validateParams({ financialId }, ['financialId']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.RECORDS,
+            action: Actions.READ,
+            query: [{ "__ID": financialId }]
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}
+
+/**
+ * Updates the f_billed field for a financial record by its recordId
+ * @param {string} recordId - The recordId of the record to update
+ * @param {number} billedStatus - The billed status (0 = not billed, 1 = billed)
+ * @returns {Promise} Promise resolving to the update result
+ */
+export async function updateFinancialRecordBilledStatus(recordId, billedStatus = 1) {
+    validateParams({ recordId, billedStatus }, ['recordId', 'billedStatus']);
+    
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.RECORDS,
+            action: Actions.UPDATE,
+            recordId: recordId,
+            fieldData: {
+                f_billed: billedStatus
+            }
+        };
+        
+        return await fetchDataFromFileMaker(params);
+    });
+}
+
+/**
  * Fetches financial records for a specific date range (simplified for sync)
  * @param {string} startDate - Start date in YYYY-MM-DD format
  * @param {string} endDate - End date in YYYY-MM-DD format

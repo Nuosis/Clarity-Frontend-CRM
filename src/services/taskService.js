@@ -100,6 +100,15 @@ export async function stopTimer(params, organizationId = null) {
                 if (financialRecord && financialRecord.response && financialRecord.response.data && financialRecord.response.data.length > 0) {
                     financialId = financialRecord.response.data[0].fieldData.__ID;
                     console.log(`Found financial ID from record lookup: ${financialId}`);
+                    
+                    // Check if this is a fixed-price project
+                    const fixedPrice = parseFloat(financialRecord.response.data[0].fieldData["customers_Projects::f_fixedPrice"] || 0);
+                    console.log(`Project fixed price value: ${fixedPrice}`);
+                    
+                    if (fixedPrice > 0) {
+                        console.log('Skipping sales record creation for fixed-price project');
+                        financialId = null; // Prevent sales record creation
+                    }
                 }
             } catch (fetchError) {
                 console.error('Error fetching financial record by recordId:', fetchError);
@@ -110,7 +119,7 @@ export async function stopTimer(params, organizationId = null) {
                 console.log(`Creating sales record for financial record ${financialId} with organization ID ${orgId}`);
                 await createSaleFromFinancialRecord(financialId, orgId);
             } else {
-                console.warn('Could not find financial record ID in timer stop result or by recordId lookup');
+                console.warn('Could not find financial record ID in timer stop result or by recordId lookup, or project is fixed-price');
             }
         } catch (error) {
             console.error('Error creating sales record:', error);

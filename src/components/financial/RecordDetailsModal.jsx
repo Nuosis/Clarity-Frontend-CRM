@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { fetchFinancialRecordByUUID } from '../../api/financialRecords';
+import { processFinancialData } from '../../services/billableHoursService';
+import RecordModal from './RecordModal';
 
 /**
  * Modal component for displaying detailed records that make up a summary row
@@ -12,6 +15,96 @@ import PropTypes from 'prop-types';
  * @returns {JSX.Element} Record details modal component
  */
 function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMode = false }) {
+  const [enrichedRecords, setEnrichedRecords] = useState(records);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+
+
+  // Fetch complete record data with Task and Work Performed information
+  useEffect(() => {
+    const fetchCompleteRecords = async () => {
+      if (!records || records.length === 0) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const completeRecords = await Promise.all(
+          records.map(async (record) => {
+            try {
+              // Use the financial_id or id to fetch complete record
+              const recordId = record.financial_id || record.id;
+              if (!recordId) {
+                console.warn('No financial_id or id found for record:', record);
+                return record;
+              }
+
+              const completeRecord = await fetchFinancialRecordByUUID(recordId);
+              
+              // LOG: Raw response from fetchFinancialRecordByUUID
+              console.log(`🔍 ENRICHMENT DEBUG - Raw API response for record ${recordId}:`,
+                JSON.stringify(completeRecord, null, 2));
+              
+              // CRITICAL FIX: Parse JSON string if needed
+              let parsedRecord = completeRecord;
+              if (typeof completeRecord === 'string') {
+                try {
+                  parsedRecord = JSON.parse(completeRecord);
+                  console.log(`🔍 ENRICHMENT DEBUG - Parsed JSON response for ${recordId}:`,
+                    JSON.stringify(parsedRecord, null, 2));
+                } catch (error) {
+                  console.error(`🔍 ENRICHMENT DEBUG - Failed to parse JSON for ${recordId}:`, error);
+                  return record; // Return original record if parsing fails
+                }
+              }
+              
+              console.log(`🔍 ENRICHMENT DEBUG - Data structure for processing ${recordId}:`,
+                JSON.stringify(parsedRecord, null, 2));
+              
+              // Process the complete record to ensure proper field mapping
+              const processedRecords = processFinancialData(parsedRecord);
+              const processedRecord = processedRecords[0];
+              
+              // LOG: Processed record after processFinancialData
+              console.log(`🔍 ENRICHMENT DEBUG - Processed record for ${recordId}:`,
+                JSON.stringify(processedRecord, null, 2));
+
+              // Merge the complete data with the original record
+              const mergedRecord = {
+                ...record,
+                ...processedRecord,
+                // Ensure we preserve the original record structure
+                taskName: processedRecord.taskName || record.taskName,
+                workPerformed: processedRecord.workPerformed || record.workPerformed
+              };
+              
+              // LOG: Final merged record
+              console.log(`🔍 ENRICHMENT DEBUG - Final merged record for ${recordId}:`,
+                JSON.stringify(mergedRecord, null, 2));
+              
+              return mergedRecord;
+            } catch (recordError) {
+              console.error(`Failed to fetch complete data for record ${record.financial_id || record.id}:`, recordError);
+              return record; // Return original record if fetch fails
+            }
+          })
+        );
+
+        setEnrichedRecords(completeRecords);
+      } catch (fetchError) {
+        console.error('Error fetching complete records:', fetchError);
+        setError('Failed to load complete record details');
+        setEnrichedRecords(records); // Fallback to original records
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompleteRecords();
+  }, [records]);
+
   // Format currency for display
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -34,6 +127,25 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
       day: 'numeric'
     });
   };
+
+  // Handle opening the edit modal
+  const handleEditRecord = useCallback((record) => {
+    setSelectedRecord(record);
+    setShowEditModal(true);
+  }, []);
+
+  // Handle closing the edit modal
+  const handleCloseEditModal = useCallback(() => {
+    setShowEditModal(false);
+    setSelectedRecord(null);
+  }, []);
+
+  // Handle saving a record - delegate to existing onEditRecord function
+  const handleSaveRecord = useCallback(async (updatedRecord, patchPayload) => {
+    // Simply delegate to the existing onEditRecord function
+    // This maintains the original workflow without optimistic updates
+    await onEditRecord(updatedRecord, patchPayload);
+  }, [onEditRecord]);
 
   // Handle modal backdrop click
   const handleBackdropClick = (e) => {
@@ -86,7 +198,19 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
         
         {/* Content */}
         <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 120px)' }}>
-          {records.length === 0 ? (
+          {loading ? (
+            <div className={`p-8 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
+                Loading complete record details...
+              </div>
+            </div>
+          ) : error ? (
+            <div className={`p-8 text-center ${darkMode ? 'text-red-400' : 'text-red-500'}`}>
+              <p className="mb-2">⚠️ {error}</p>
+              <p className="text-sm">Showing basic record information</p>
+            </div>
+          ) : enrichedRecords.length === 0 ? (
             <div className={`p-8 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               No detailed records available
             </div>
@@ -104,14 +228,23 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
                     >
                       Date
                     </th>
-                    <th 
-                      scope="col" 
+                    <th
+                      scope="col"
                       className={`
                         px-6 py-3 text-left text-xs font-medium uppercase tracking-wider
                         ${darkMode ? 'text-gray-300' : 'text-gray-500'}
                       `}
                     >
-                      Description
+                      Task
+                    </th>
+                    <th
+                      scope="col"
+                      className={`
+                        px-6 py-3 text-left text-xs font-medium uppercase tracking-wider
+                        ${darkMode ? 'text-gray-300' : 'text-gray-500'}
+                      `}
+                    >
+                      Work Performed
                     </th>
                     <th 
                       scope="col" 
@@ -164,7 +297,7 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
                   divide-y
                   ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}
                 `}>
-                  {records.map((record, index) => (
+                  {enrichedRecords.map((record, index) => (
                     <tr
                       key={record.id || index}
                       className={`
@@ -175,18 +308,23 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
                         {formatDate(record.date)}
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        <div className="max-w-xs truncate" title={record.product_name}>
-                          {record.product_name || 'No Description'}
+                        <div className="max-w-xs truncate" title={record.taskName || record.task_name || 'N/A'}>
+                          {record.taskName || record.task_name || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <div className="max-w-xs truncate" title={record.workPerformed || record.work_performed || record.description || 'N/A'}>
+                          {record.workPerformed || record.work_performed || record.description || 'N/A'}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
-                        {formatQuantity(record.quantity)}
+                        {formatQuantity(record.quantity || record.hours || 0)}
                       </td>
                       <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
-                        {formatCurrency(record.unit_price || 0)}
+                        {formatCurrency(record.unit_price || record.rate || 0)}
                       </td>
                       <td className="px-6 py-4 text-sm text-right whitespace-nowrap font-medium">
-                        {formatCurrency(record.total_price || 0)}
+                        {formatCurrency(record.total_price || record.amount || 0)}
                       </td>
                       <td className="px-6 py-4 text-sm text-center whitespace-nowrap">
                         <span className={`
@@ -200,7 +338,7 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
                       </td>
                       <td className="px-6 py-4 text-sm text-center whitespace-nowrap">
                         <button
-                          onClick={() => onEditRecord(record)}
+                          onClick={() => handleEditRecord(record)}
                           className={`
                             inline-flex items-center px-3 py-1 border rounded-md text-xs font-medium
                             ${darkMode
@@ -229,10 +367,20 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
               Total Records: {records.length}
             </span>
             <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Total Amount: {formatCurrency(records.reduce((sum, record) => sum + (record.total_price || 0), 0))}
+              Total Amount: {formatCurrency(records.reduce((sum, record) => sum + (record.total_price || record.amount || 0), 0))}
             </span>
           </div>
         </div>
+        
+        {/* Edit Record Modal */}
+        {showEditModal && selectedRecord && (
+          <RecordModal
+            record={selectedRecord}
+            onClose={handleCloseEditModal}
+            onSave={handleSaveRecord}
+            darkMode={darkMode}
+          />
+        )}
       </div>
     </div>
   );

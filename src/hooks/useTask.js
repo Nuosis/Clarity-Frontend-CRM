@@ -172,22 +172,22 @@ export function useTask(projectId = null) {
         }
     }, [selectedTask, showError]);
 
-    const handleTaskStatusChange = useCallback(async (taskId, completed) => {
+    const handleTaskStatusChange = useCallback(async (recordId, completed) => {
         try {
             setLoading(true);
             setError(null);
             
-            const result = await updateTaskCompletionStatus(taskId, completed);
+            const result = await updateTaskCompletionStatus(recordId, completed);
             if (result) {
                 setTasks(prevTasks =>
                     prevTasks.map(task =>
-                        task.id === taskId
+                        task.recordId === recordId
                             ? { ...task, isCompleted: completed }
                             : task
                     )
                 );
                 
-                if (selectedTask?.id === taskId) {
+                if (selectedTask?.recordId === recordId) {
                     setSelectedTask(prev => ({ ...prev, isCompleted: completed }));
                 }
             }

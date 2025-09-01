@@ -120,6 +120,48 @@ async function callBackendSupabaseAPI(table, operation, options = {}) {
                         for (const filter of options.filters) {
                             if (filter.type === 'eq') {
                                 filters[filter.column] = filter.value;
+                            } else if (filter.type === 'gte') {
+                                // Use nested object format for complex filters
+                                if (!filters[filter.column]) {
+                                    filters[filter.column] = {};
+                                }
+                                filters[filter.column].gte = filter.value;
+                            } else if (filter.type === 'lte') {
+                                // Use nested object format for complex filters
+                                if (!filters[filter.column]) {
+                                    filters[filter.column] = {};
+                                }
+                                filters[filter.column].lte = filter.value;
+                            } else if (filter.type === 'gt') {
+                                // Use nested object format for complex filters
+                                if (!filters[filter.column]) {
+                                    filters[filter.column] = {};
+                                }
+                                filters[filter.column].gt = filter.value;
+                            } else if (filter.type === 'lt') {
+                                // Use nested object format for complex filters
+                                if (!filters[filter.column]) {
+                                    filters[filter.column] = {};
+                                }
+                                filters[filter.column].lt = filter.value;
+                            } else if (filter.type === 'neq') {
+                                // Use nested object format for complex filters
+                                if (!filters[filter.column]) {
+                                    filters[filter.column] = {};
+                                }
+                                filters[filter.column].neq = filter.value;
+                            } else if (filter.type === 'is') {
+                                // Use nested object format for complex filters
+                                if (!filters[filter.column]) {
+                                    filters[filter.column] = {};
+                                }
+                                filters[filter.column].is = filter.value;
+                            } else if (filter.type === 'in') {
+                                // Use nested object format for complex filters
+                                if (!filters[filter.column]) {
+                                    filters[filter.column] = {};
+                                }
+                                filters[filter.column].in = filter.value;
                             }
                             // Add more filter types as needed
                         }

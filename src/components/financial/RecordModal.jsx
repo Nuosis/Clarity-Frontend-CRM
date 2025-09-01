@@ -34,7 +34,11 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
   // Initialize form data when record changes
   useEffect(() => {
     if (record) {
-      setFormData({
+      console.log('[REACT_STATE_INVESTIGATION] Original record received in RecordModal:', JSON.stringify(record, null, 2));
+      console.log('[REACT_STATE_INVESTIGATION] Original record.inv_id:', record.inv_id);
+      console.log('[REACT_STATE_INVESTIGATION] typeof record.inv_id:', typeof record.inv_id);
+      
+      const newFormData = {
         id: record.id || '',
         customer_id: record.customer_id || '',
         customer_name: record.customers?.business_name || '',
@@ -50,7 +54,13 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
         // Include immutable metadata fields
         organization_id: record.organization_id || '',
         financial_id: record.financial_id || ''
-      });
+      };
+      
+      console.log('[REACT_STATE_INVESTIGATION] New formData being set:', JSON.stringify(newFormData, null, 2));
+      console.log('[REACT_STATE_INVESTIGATION] New formData.inv_id:', newFormData.inv_id);
+      console.log('[REACT_STATE_INVESTIGATION] typeof newFormData.inv_id:', typeof newFormData.inv_id);
+      
+      setFormData(newFormData);
     }
   }, [record]);
 
@@ -78,24 +88,7 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
     setErrors([]);
     
     try {
-      // Create targeted update payload with only mutable fields
-      const targetedUpdate = {
-        // Always include the record ID for identification
-        id: formData.id,
-        
-        // Only include mutable business fields that can be edited
-        product_name: formData.product_name,
-        quantity: parseFloat(formData.quantity),
-        unit_price: parseFloat(formData.unit_price),
-        total_price: parseFloat(formData.quantity) * parseFloat(formData.unit_price),
-        date: formData.date,
-        inv_id: formData.inv_id,
-        
-        // Preserve immutable metadata fields (these won't be sent in PATCH but kept for local state)
-        ...record // Spread original record to preserve all immutable fields locally
-      };
-      
-      // Create the actual PATCH payload (only mutable fields)
+      // Create the actual PATCH payload (only mutable fields) using current form data
       const patchPayload = {
         id: formData.id,
         product_name: formData.product_name,
@@ -104,6 +97,18 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
         total_price: parseFloat(formData.quantity) * parseFloat(formData.unit_price),
         date: formData.date,
         inv_id: formData.inv_id
+      };
+      
+      // Create targeted update payload with current form data + preserved immutable fields
+      const targetedUpdate = {
+        ...patchPayload, // Use current form data (including updated inv_id)
+        // Preserve immutable metadata fields from original record
+        customer_id: record.customer_id,
+        organization_id: record.organization_id,
+        financial_id: record.financial_id,
+        created_at: record.created_at,
+        updated_at: record.updated_at,
+        customers: record.customers
       };
       
       // Pass both the full record (for UI state) and patch payload (for API)
@@ -355,9 +360,14 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
                   name="invoiced"
                   checked={formData.inv_id !== null}
                   onChange={(e) => {
+                    const now = new Date();
+                    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+                    const userStr = 'admin'; // TODO: Replace with actual user context when available
+                    const invIdValue = e.target.checked ? `${dateStr}_${userStr}` : null;
+                    
                     setFormData(prev => ({
                       ...prev,
-                      inv_id: e.target.checked ? 'pending' : null
+                      inv_id: invIdValue
                     }));
                   }}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"

@@ -187,7 +187,7 @@ const TaskItem = React.memo(function TaskItem({
                                     New Link
                                 </button>
                                 <button
-                                    onClick={() => onStatusChange(task.id, !task.isCompleted)}
+                                    onClick={() => onStatusChange(task.recordId, !task.isCompleted)}
                                     className={`
                                         p-2 rounded-md text-sm flex-1
                                         ${darkMode

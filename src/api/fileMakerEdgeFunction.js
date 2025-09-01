@@ -1,6 +1,6 @@
 /**
  * FileMaker Edge Function API Client
- * 
+ * ** DO NOT USE DEPRICATED ** use filemaker.js
  * This module provides a client for interacting with the FileMaker Data API
  * through the Backend Function.
  */

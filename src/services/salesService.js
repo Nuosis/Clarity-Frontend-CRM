@@ -653,6 +653,7 @@ export async function updateSale(saleId, saleData, patchPayload = null) {
     const filteredSaleData = {};
     for (const [key, value] of Object.entries(dataToUpdate)) {
       if (allowedFields.includes(key)) {
+        // Preserve null values for inv_id field - they are meaningful
         filteredSaleData[key] = value;
       }
     }
@@ -930,8 +931,8 @@ function processJsonData(data) {
     for (const key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = processJsonData(data[key]);
-        // Always preserve key even if null
-          result[key] = value;
+        // Always preserve key-value pairs, including null values for meaningful fields like inv_id
+        result[key] = value;
       }
     }
     return result;

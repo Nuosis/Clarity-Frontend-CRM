@@ -11,6 +11,15 @@ import PropTypes from 'prop-types';
  * @returns {JSX.Element} Create QBO Customer modal component
  */
 function CreateQBOCustomerModal({ customerName, onClose, onSave, darkMode = false }) {
+  // Currency mapping to match QuickBooks API requirements
+  const currencyMap = {
+    'CAD': { name: 'Canadian Dollar', value: 'CAD' },
+    'USD': { name: 'United States Dollar', value: 'USD' },
+    'EUR': { name: 'Euro', value: 'EUR' },
+    'GBP': { name: 'British Pound Sterling', value: 'GBP' },
+    'AUD': { name: 'Australian Dollar', value: 'AUD' }
+  };
+
   const [formData, setFormData] = useState({
     DisplayName: customerName || '',
     CompanyName: customerName || '',
@@ -18,7 +27,7 @@ function CreateQBOCustomerModal({ customerName, onClose, onSave, darkMode = fals
     FamilyName: '',
     PrimaryEmailAddr: { Address: '' },
     PrimaryPhone: { FreeFormNumber: '' },
-    CurrencyRef: { value: 'CAD' }
+    CurrencyRef: currencyMap['CAD']
   });
   
   const [errors, setErrors] = useState([]);
@@ -41,7 +50,7 @@ function CreateQBOCustomerModal({ customerName, onClose, onSave, darkMode = fals
     } else if (name === 'currency') {
       setFormData(prev => ({
         ...prev,
-        CurrencyRef: { value }
+        CurrencyRef: currencyMap[value]
       }));
     } else {
       setFormData(prev => ({

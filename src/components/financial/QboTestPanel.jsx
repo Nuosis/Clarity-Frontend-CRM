@@ -7,7 +7,7 @@ import {
   createQBOInvoice,
   sendQBOInvoiceEmail,
   getQBOCustomer
-} from '../../api/quickbooksEdgeFunction';
+} from '../../api/quickbooksApi';
 import { executeScript } from '../../api/fileMakerEdgeFunction';
 import { fetchDataFromFileMaker } from '../../api/fileMaker';
 import { useAppState } from '../../context/AppStateContext';
