@@ -1,0 +1,478 @@
+# Roo Code Mode Configuration
+# Coding standards and rules for the Clarity Admin Frontend project
+
+rules:
+  - name: Guidance
+    description: Comply with the Development Guidelines in DEVELOPMENT_GUIDELINES.md
+
+  # React Component Standards
+  - name: "React Component Organization"
+    description: "Components are organized by feature and reusability"
+    examples:
+      - "Define components in src/components/{domain}/ (e.g., src/components/auth/Login.jsx)"
+      - "Import components: import { ComponentName } from '../components/ComponentName'"
+      - "Keep related components together in domain-specific directories"
+      - "Use PascalCase for component files and names"
+      - "Export default for single component files, named exports for multiple utilities"
+
+  # ESLint Compliance
+  - name: "Follow ESLint Policies"
+    description: "Adhere to ESLint rules for code quality and consistency"
+    requirements:
+      - "Use functional components with hooks instead of class components"
+      - "Use PropTypes for prop validation"
+      - "Use destructuring for props and state"
+      - "Prefer const and let over var"
+      - "Use arrow functions for event handlers and callbacks"
+
+  # Modern React Standards
+  - name: "Modern React Patterns"
+    description: "Use modern React patterns and hooks"
+    examples:
+      - "✅ const Component = ({ prop1, prop2 }) => { ... }"
+      - "❌ class Component extends React.Component { ... }"
+      - "✅ const [state, setState] = useState(initialValue)"
+      - "❌ this.setState({ state: value })"
+      - "✅ useEffect(() => { ... }, [dependencies])"
+      - "❌ componentDidMount() { ... }"
+
+  # Component Structure
+  - name: "Component Definition Pattern"
+    description: "Use consistent component structure and patterns"
+    examples:
+      - "✅ Functional components with hooks"
+      - "✅ PropTypes for type checking"
+      - "✅ Default props when appropriate"
+      - "✅ JSDoc comments for component documentation"
+      - "✅ Styled-components for styling"
+
+  # State Management
+  - name: "State Management Best Practices"
+    description: "Prioritize Redux Toolkit for state management over custom hooks"
+    requirements:
+      - "✅ Redux Toolkit for ALL shared/global state management"
+      - "✅ createAsyncThunk for ALL API calls and async operations"
+      - "✅ useSelector and useDispatch for accessing Redux state"
+      - "✅ useState ONLY for local component UI state (form inputs, toggles, etc.)"
+      - "✅ useReducer ONLY for complex local component state logic"
+      - "❌ Custom hooks for data fetching - use Redux slices instead"
+      - "❌ Custom hooks for shared state - use Redux slices instead"
+      - "❌ Prop drilling for any shared state"
+      - "❌ Context API for business logic state - use Redux instead"
+
+  # Performance Optimization
+  - name: "React Performance Patterns"
+    description: "Optimize React components for performance"
+    requirements:
+      - "Use React.memo for expensive components"
+      - "Use useCallback for event handlers passed to child components"
+      - "Use useMemo for expensive calculations"
+      - "Implement code splitting with React.lazy and Suspense"
+      - "Avoid creating objects/functions in render"
+
+  # Component File Structure
+  - name: "Component File Organization"
+    description: "Organize component files for maintainability"
+    structure:
+      - "src/components/common/ - Reusable UI components"
+      - "src/components/forms/ - Form-specific components"
+      - "src/components/layout/ - Layout components"
+      - "src/pages/ - Page-level components"
+      - "src/hooks/ - ONLY utility hooks (error handling, DOM manipulation, etc.)"
+      - "src/store/ - Redux slices for ALL state management"
+
+  # Code Quality
+  - name: "Code Quality Standards"
+    description: "Maintain high code quality standards"
+    requirements:
+      - "Use PropTypes for all component props"
+      - "Write JSDoc comments for all components and hooks"
+      - "Handle loading and error states appropriately"
+      - "Use semantic HTML elements"
+      - "Implement proper accessibility attributes"
+
+  # Styling Standards
+  - name: "Styling Best Practices"
+    description: "Use consistent styling patterns"
+    requirements:
+      - "Use styled-components for component styling"
+      - "Use theme provider for design tokens"
+      - "Implement responsive design with theme breakpoints"
+      - "Avoid inline styles except for dynamic values"
+      - "Use semantic color and spacing names from theme"
+
+patterns:
+  # React Component Pattern
+  - name: "React Component Definition"
+    template: |
+      import { useState, useEffect, useCallback } from 'react'
+      import PropTypes from 'prop-types'
+      import styled from 'styled-components'
+      
+      const StyledComponent = styled.div`
+        /* Component styles using theme */
+      `
+      
+      /**
+       * Component description
+       * @param {Object} props - Component props
+       * @param {string} props.title - Component title
+       * @param {Function} props.onAction - Action handler
+       */
+      const {ComponentName} = ({ title, onAction }) => {
+        const [state, setState] = useState(initialState)
+        
+        const handleAction = useCallback(() => {
+          onAction?.()
+        }, [onAction])
+        
+        useEffect(() => {
+          // Side effects
+        }, [])
+        
+        return (
+          <StyledComponent>
+            {/* Component JSX */}
+          </StyledComponent>
+        )
+      }
+      
+      {ComponentName}.propTypes = {
+        title: PropTypes.string.isRequired,
+        onAction: PropTypes.func
+      }
+      
+      export default {ComponentName}
+
+  # Custom Hook Pattern (RESTRICTED USE)
+  - name: "Custom Hook Definition - UTILITY ONLY"
+    description: "Custom hooks should ONLY be used for utility functions, NOT state management"
+    allowed_use_cases:
+      - "DOM manipulation utilities"
+      - "Event listeners setup/cleanup"
+      - "Browser API abstractions (localStorage, sessionStorage)"
+      - "Error handling utilities"
+      - "Form validation helpers"
+    forbidden_use_cases:
+      - "❌ Data fetching - use Redux createAsyncThunk instead"
+      - "❌ API calls - use Redux slices instead"
+      - "❌ Shared state - use Redux instead"
+      - "❌ Business logic state - use Redux instead"
+    template: |
+      import { useCallback, useEffect } from 'react'
+      
+      /**
+       * Utility hook description (NOT for state management)
+       * @param {string} param - Hook parameter
+       * @returns {Object} Utility functions only
+       */
+      const use{UtilityName} = (param) => {
+        // ONLY utility functions, NO state management
+        const utilityFunction = useCallback(() => {
+          // Utility logic only
+        }, [param])
+        
+        useEffect(() => {
+          // Setup/cleanup only
+        }, [])
+        
+        return { utilityFunction }
+      }
+      
+      export default use{UtilityName}
+
+  # Redux Slice Pattern
+  - name: "Redux Toolkit Slice"
+    template: |
+      import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+      
+      export const {actionName} = createAsyncThunk(
+        '{slice}/{actionName}',
+        async (params, { rejectWithValue }) => {
+          try {
+            const response = await apiCall(params)
+            return response.data
+          } catch (error) {
+            return rejectWithValue(error.message)
+          }
+        }
+      )
+      
+      const {sliceName}Slice = createSlice({
+        name: '{sliceName}',
+        initialState: {
+          data: null,
+          loading: false,
+          error: null
+        },
+        reducers: {
+          clearError: (state) => {
+            state.error = null
+          }
+        },
+        extraReducers: (builder) => {
+          builder
+            .addCase({actionName}.pending, (state) => {
+              state.loading = true
+              state.error = null
+            })
+            .addCase({actionName}.fulfilled, (state, action) => {
+              state.loading = false
+              state.data = action.payload
+            })
+            .addCase({actionName}.rejected, (state, action) => {
+              state.loading = false
+              state.error = action.payload
+            })
+        }
+      })
+      
+      export const { clearError } = {sliceName}Slice.actions
+      export default {sliceName}Slice.reducer
+
+anti_patterns:
+  # Avoid these React patterns
+  - name: "Class Components"
+    avoid: |
+      class MyComponent extends React.Component {
+        constructor(props) {
+          super(props)
+          this.state = { count: 0 }
+        }
+        
+        componentDidMount() {
+          // Side effects
+        }
+        
+        render() {
+          return <div>{this.state.count}</div>
+        }
+      }
+    use_instead: |
+      const MyComponent = () => {
+        const [count, setCount] = useState(0)
+        
+        useEffect(() => {
+          // Side effects
+        }, [])
+        
+        return <div>{count}</div>
+      }
+
+  - name: "Inline Object Creation in Render"
+    avoid: |
+      const Component = () => {
+        return (
+          <ChildComponent 
+            style={{ color: 'red' }}
+            data={{ name: 'John' }}
+            onClick={() => handleClick()}
+          />
+        )
+      }
+    use_instead: |
+      const Component = () => {
+        const handleClick = useCallback(() => {
+          // Handle click
+        }, [])
+        
+        const style = useMemo(() => ({ color: 'red' }), [])
+        const data = useMemo(() => ({ name: 'John' }), [])
+        
+        return (
+          <ChildComponent 
+            style={style}
+            data={data}
+            onClick={handleClick}
+          />
+        )
+      }
+
+  - name: "Direct State Mutation"
+    avoid: |
+      const [items, setItems] = useState([])
+      
+      const addItem = (item) => {
+        items.push(item) // Mutating state directly
+        setItems(items)
+      }
+    use_instead: |
+      const [items, setItems] = useState([])
+      
+      const addItem = (item) => {
+        setItems(prevItems => [...prevItems, item])
+      }
+
+  - name: "Missing Dependency Arrays"
+    avoid: |
+      useEffect(() => {
+        fetchData(userId)
+      }) // Missing dependency array
+      
+      const memoizedValue = useMemo(() => {
+        return expensiveCalculation(data)
+      }) // Missing dependency array
+    use_instead: |
+      useEffect(() => {
+        fetchData(userId)
+      }, [userId]) // Include dependencies
+      
+      const memoizedValue = useMemo(() => {
+        return expensiveCalculation(data)
+      }, [data]) // Include dependencies
+
+  - name: "Prop Drilling"
+    avoid: |
+      const App = () => {
+        const [user, setUser] = useState(null)
+        return <Parent user={user} setUser={setUser} />
+      }
+      
+      const Parent = ({ user, setUser }) => {
+        return <Child user={user} setUser={setUser} />
+      }
+      
+      const Child = ({ user, setUser }) => {
+        return <GrandChild user={user} setUser={setUser} />
+      }
+    use_instead: |
+      // Use Context or Redux for shared state
+      const UserContext = createContext()
+      
+      const App = () => {
+        const [user, setUser] = useState(null)
+        return (
+          <UserContext.Provider value={{ user, setUser }}>
+            <Parent />
+          </UserContext.Provider>
+        )
+      }
+      
+      const GrandChild = () => {
+        const { user, setUser } = useContext(UserContext)
+        return <div>{user?.name}</div>
+      }
+
+  - name: "Inline Styles Instead of Styled Components"
+    avoid: |
+      const Component = () => {
+        return (
+          <div style={{
+            color: 'red',
+            fontSize: '16px',
+            padding: '10px'
+          }}>
+            Content
+          </div>
+        )
+      }
+    use_instead: |
+      const StyledDiv = styled.div`
+        color: ${props => props.theme.colors.error};
+        font-size: ${props => props.theme.typography.fontSize.md};
+        padding: ${props => props.theme.spacing.md};
+      `
+      
+      const Component = () => {
+        return <StyledDiv>Content</StyledDiv>
+
+  - name: "Custom Hooks for Data Fetching"
+    avoid: |
+      // ❌ Custom hook for API calls
+      const useUserData = (userId) => {
+        const [user, setUser] = useState(null)
+        const [loading, setLoading] = useState(false)
+        const [error, setError] = useState(null)
+        
+        useEffect(() => {
+          const fetchUser = async () => {
+            try {
+              setLoading(true)
+              const response = await apiClient.get(`/users/${userId}`)
+              setUser(response.data)
+            } catch (err) {
+              setError(err.message)
+            } finally {
+              setLoading(false)
+            }
+          }
+          fetchUser()
+        }, [userId])
+        
+        return { user, loading, error }
+      }
+    use_instead: |
+      // ✅ Redux slice for data fetching
+      export const fetchUser = createAsyncThunk(
+        'users/fetchUser',
+        async (userId, { rejectWithValue }) => {
+          try {
+            const response = await apiClient.get(`/users/${userId}`)
+            return response.data
+          } catch (error) {
+            return rejectWithValue(error.message)
+          }
+        }
+      )
+      
+      // ✅ Component uses Redux
+      const UserProfile = ({ userId }) => {
+        const dispatch = useDispatch()
+        const { user, loading, error } = useSelector(state => state.users)
+        
+        useEffect(() => {
+          dispatch(fetchUser(userId))
+        }, [dispatch, userId])
+        
+        return <div>{user?.name}</div>
+      }
+
+  - name: "Custom Hooks for Shared State"
+    avoid: |
+      // ❌ Custom hook managing shared state
+      const useSharedCounter = () => {
+        const [count, setCount] = useState(0)
+        
+        const increment = useCallback(() => {
+          setCount(prev => prev + 1)
+        }, [])
+        
+        const decrement = useCallback(() => {
+          setCount(prev => prev - 1)
+        }, [])
+        
+        return { count, increment, decrement }
+      }
+      
+      // This creates separate state instances in each component
+      const ComponentA = () => {
+        const { count, increment } = useSharedCounter()
+        return <button onClick={increment}>{count}</button>
+      }
+    use_instead: |
+      // ✅ Redux slice for shared state
+      const counterSlice = createSlice({
+        name: 'counter',
+        initialState: { value: 0 },
+        reducers: {
+          increment: (state) => {
+            state.value += 1
+          },
+          decrement: (state) => {
+            state.value -= 1
+          }
+        }
+      })
+      
+      // ✅ Components share the same state
+      const ComponentA = () => {
+        const dispatch = useDispatch()
+        const count = useSelector(state => state.counter.value)
+        
+        return (
+          <button onClick={() => dispatch(increment())}>
+            {count}
+          </button>
+        )
+      }
+      }
