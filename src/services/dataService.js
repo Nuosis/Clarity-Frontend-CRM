@@ -8,6 +8,7 @@
 import axios from 'axios';
 import FMGofer from 'fm-gofer';
 import { backendConfig } from '../config';
+import { getViteEnv } from '../utils/env';
 
 // Environment types
 export const ENVIRONMENT_TYPES = {
@@ -59,7 +60,7 @@ export const getEnvironmentContext = () => {
  * @returns {Promise<string>} Authorization header
  */
 const generateBackendAuthHeader = async (payload = '') => {
-  const secretKey = import.meta.env.VITE_SECRET_KEY;
+  const secretKey = getViteEnv('VITE_SECRET_KEY');
   
   if (!secretKey) {
     console.warn('[DataService] SECRET_KEY not available. Using development mode.');

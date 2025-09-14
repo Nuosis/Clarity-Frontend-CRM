@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, backendConfig } from '../config';
+import { getViteEnv } from '../utils/env';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
@@ -36,7 +37,7 @@ const supabaseAdmin = supabaseServiceRoleKey
  * @returns {Promise<string>} Authorization header
  */
 async function generateBackendAuthHeader(payload = '') {
-    const secretKey = import.meta.env.VITE_SECRET_KEY;
+    const secretKey = getViteEnv('VITE_SECRET_KEY');
     
     if (!secretKey) {
         console.warn('[Supabase] SECRET_KEY not available. Using development mode.');

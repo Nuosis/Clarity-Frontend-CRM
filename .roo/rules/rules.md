@@ -33,6 +33,7 @@ ensure consistency with the docments in `/ai_docs/context/core_docs/`
 - **DO not roll your own**: Leverage established libraries (lodash, axios, moment/date-fns, etc.) instead of custom implementations
 - **DO not duplicate libraries**: Do not use a new library when an existing library has already been implemented within the project
 - **Error Boundaries**: Implement error boundaries in React applications to catch and handle component errors
+- **DO NOT OVER ENGINEER** Start simple - increase complexity as needed via journey + user testing
 
 ### Performance and Scalability
 - **Optimization**: Write efficient algorithms and use appropriate data structures (Map, Set, WeakMap, etc.)

@@ -6,6 +6,7 @@
  */
 
 import { PDFDocument, StandardFonts, rgb, PageSizes } from 'pdf-lib';
+import { isTestEnv } from './env';
 
 /**
  * Creates a new PDF document with default settings
@@ -225,7 +226,7 @@ export function downloadPdf(pdfData) {
       link.setAttribute('rel', 'noopener noreferrer');
       
       // In test environments, just simulate the click without DOM manipulation
-      if (import.meta.env?.MODE === 'test') {
+      if (isTestEnv()) {
         // For test environments, just simulate the click
         link.click();
         URL.revokeObjectURL(url);
