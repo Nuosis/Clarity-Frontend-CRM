@@ -15,14 +15,12 @@
  */
 
 // Base URL for the Clarity backend API
-import { getViteEnv } from '../utils/env';
-
 // const BACKEND_API_URL = 'https://api.claritybusinesssolutions.ca';
-const BACKEND_API_URL = getViteEnv('VITE_API_URL', 'https://api.claritybusinesssolutions.ca');
+const BACKEND_API_URL = import.meta.env.VITE_API_URL || 'https://api.claritybusinesssolutions.ca';
 
 // Determine dev mode (Vite or generic)
 const isDev =
-  (getViteEnv('MODE') && getViteEnv('MODE') !== 'production') ||
+  (import.meta.env.MODE && import.meta.env.MODE !== 'production') ||
   (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production')
 
 /**
@@ -31,7 +29,7 @@ const isDev =
  * @returns {Promise<string>} - The authorization header value
  */
 const generateAuthHeader = async (payload = '') => {
-  const secretKey = getViteEnv('VITE_SECRET_KEY');
+  const secretKey = import.meta.env.VITE_SECRET_KEY;
   
   if (!secretKey) {
     throw new Error('VITE_SECRET_KEY not available. Check environment variables.');
@@ -89,7 +87,7 @@ const makeRequest = async (endpoint, method = 'GET', data = null, options = {}) 
   const authHeader = await generateAuthHeader(payload);
   
   // Get organization ID from environment
-  const orgId = getViteEnv('VITE_CLARITY_INTEGRATION_ORG_ID');
+  const orgId = import.meta.env.VITE_CLARITY_INTEGRATION_ORG_ID;
   
   if (!orgId) {
     throw new Error('VITE_CLARITY_INTEGRATION_ORG_ID not available. Check environment variables.');

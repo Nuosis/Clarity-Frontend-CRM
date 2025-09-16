@@ -1,7 +1,6 @@
 import FMGofer from 'fm-gofer';
 import axios from 'axios';
 import { backendConfig } from '../config';
-import { getViteEnv } from '../utils/env';
 
 // Initialize web viewer communication
 let bridgeInitialized = false;
@@ -42,7 +41,7 @@ function isFileMakerEnvironment() {
  * @returns {Promise<string>} Authorization header
  */
 async function generateBackendAuthHeader(payload = '') {
-    const secretKey = getViteEnv('VITE_SECRET_KEY');
+    const secretKey = import.meta.env.VITE_SECRET_KEY;
     
     if (!secretKey) {
         console.warn('[FileMaker] SECRET_KEY not available. Using development mode.');

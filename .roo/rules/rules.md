@@ -2,6 +2,9 @@
 conform to the directions in `rules_general.md`
 ensure consistency with the docments in `/ai_docs/context/core_docs/`
 
+- backend api url https://api.claritybusinesssolutions.ca/ 
+- see https://api.claritybusinesssolutions.ca/openapi.json for openapi endpoints
+
 ## Core Principles
 
 ### Code Quality Standards
@@ -186,6 +189,7 @@ ensure consistency with the docments in `/ai_docs/context/core_docs/`
 - **Environment Parity**: Maintain consistency across development, testing, and production environments
 - **Dependency Management**: Carefully manage external dependencies and versions
 - **Isolation**: Use appropriate isolation techniques (containers, virtual environments, etc.)
+- when testing to see if **server is running** use curl -s -o /dev/null -w "%{http_code}" http://localhost:1234 || echo "Server not running" not npm run dev
 
 ### Context Awareness
 - **roo.md** if a file is in a directory and that directory also has a roo.md file in it, the roo.md file contains important context specific to that directory and should be read prior to interacting with files in the directory
@@ -196,6 +200,3 @@ ensure consistency with the docments in `/ai_docs/context/core_docs/`
 - **Rollback Plans**: Maintain ability to rollback configuration changes
 - **Testing**: Test configuration changes in non-production environments first
 - **Approval Processes**: Implement appropriate approval processes for critical changes
-
-### Context Awareness
-- **roo.md** if a file is in a directory and that directory also has a roo.md file in it, the roo.md file contains important context specific to that directory and should be read prior to interacting with files in the directory

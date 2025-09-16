@@ -8,7 +8,6 @@ import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, backendConfig } from '../config';
-import { getViteEnv } from '../utils/env';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
@@ -18,18 +17,44 @@ if (!supabaseServiceRoleKey) {
   console.warn('Missing Supabase service role key - admin functions will not work');
 }
 
-// Regular client for user operations (authentication)
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Single unified client for all operations
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    storageKey: 'clarity-crm-auth'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'clarity-crm-unified'
+    }
+  }
+});
 
-// Admin client for admin operations (bypassing RLS)
-const supabaseAdmin = supabaseServiceRoleKey
-  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : null;
+/**
+ * Helper function to perform admin operations using the unified client
+ * @param {Function} operation - The operation to perform with admin privileges
+ * @returns {Promise} Result of the admin operation
+ */
+const performAdminOperation = async (operation) => {
+  if (!supabaseServiceRoleKey) {
+    console.warn('Service role key not available, using regular client');
+    return await operation(supabase);
+  }
+  
+  try {
+    const result = await operation(supabase, supabaseServiceRoleKey);
+    return result;
+  } catch (error) {
+    console.error('Admin operation failed:', error);
+    throw error;
+  }
+};
+
+// For backward compatibility, create a minimal admin reference
+const supabaseAdmin = supabaseServiceRoleKey ? supabase : null;
 
 /**
  * Generate HMAC-SHA256 authentication header for backend API
@@ -37,7 +62,7 @@ const supabaseAdmin = supabaseServiceRoleKey
  * @returns {Promise<string>} Authorization header
  */
 async function generateBackendAuthHeader(payload = '') {
-    const secretKey = getViteEnv('VITE_SECRET_KEY');
+    const secretKey = import.meta.env.VITE_SECRET_KEY;
     
     if (!secretKey) {
         console.warn('[Supabase] SECRET_KEY not available. Using development mode.');
@@ -89,8 +114,6 @@ async function generateBackendAuthHeader(payload = '') {
  * @returns {Promise<Object>} Backend API response
  */
 async function callBackendSupabaseAPI(table, operation, options = {}) {
-    //console.log('[Supabase] Calling backend API:', { table, operation });
-    
     try {
         let url, method, requestData, queryParams;
         
@@ -229,18 +252,7 @@ async function callBackendSupabaseAPI(table, operation, options = {}) {
             config.headers.Authorization = await generateBackendAuthHeader();
         }
         
-        // console.log('[Supabase] Making request:', {
-        //     method: config.method,
-        //     url: config.url,
-        //     hasAuth: !!config.headers.Authorization
-        // });
-        
         const response = await axios(config);
-        
-        // console.log('[Supabase] Backend API response:', {
-        //     status: response.status,
-        //     dataLength: Array.isArray(response.data) ? response.data.length : 'not-array'
-        // });
         
         return {
             success: true,
@@ -283,7 +295,7 @@ export const getSupabaseUrl = () => {
  * @returns {string} - The Supabase key
  */
 export const getSupabaseKey = () => {
-  return supabaseKey;
+  return supabaseAnonKey;
 };
 
 /**
@@ -355,7 +367,8 @@ export const signInWithEmail = async (email, password) => {
       data
     };
   } catch (error) {
-    console.error('Error signing in with email:', error);
+    console.error('Authentication error:', error.message);
+    
     return {
       success: false,
       error: error.message
@@ -400,7 +413,8 @@ export const getSession = async () => {
       data
     };
   } catch (error) {
-    console.error('Error getting session:', error);
+    console.error('Session retrieval error:', error.message);
+    
     return {
       success: false,
       error: error.message

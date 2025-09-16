@@ -7,8 +7,25 @@
 import { dataService } from '../services/dataService';
 
 /**
- * Check if a GitHub repository exists
- * GET /api/github/repositories/check?owner=...&repo=...
+ * Validate a GitHub repository URL
+ * GET /github/repositories/validate?url=...
+ *
+ * @param {Object} params
+ * @param {string} params.url - GitHub repository URL to validate
+ * @returns {Promise<{ exists: boolean, owner?: string, repo?: string, private?: boolean }>}
+ *
+ * @example
+ * const result = await validateRepositoryUrl({ url: 'https://github.com/claritybiz/app' });
+ * // result: { exists: true, owner: 'claritybiz', repo: 'app', private: true }
+ */
+export async function validateRepositoryUrl({ url }) {
+  const query = { url };
+  return dataService.get('/github/repositories/validate', query);
+}
+
+/**
+ * Check if a GitHub repository exists (legacy compatibility)
+ * Uses validateRepositoryUrl internally with constructed URL
  *
  * @param {Object} params
  * @param {string} params.owner - GitHub owner/org
@@ -20,13 +37,17 @@ import { dataService } from '../services/dataService';
  * // result: { exists: true, private: true }
  */
 export async function checkRepositoryExists({ owner, repo }) {
-  const query = { owner, repo };
-  return dataService.get('/api/github/repositories/check', query);
+  const url = `https://github.com/${owner}/${repo}`;
+  const result = await validateRepositoryUrl({ url });
+  return {
+    exists: result.exists,
+    private: result.private
+  };
 }
 
 /**
  * Get GitHub repository metadata
- * GET /api/github/repositories/info?owner=...&repo=...
+ * Uses validateRepositoryUrl to get basic info (no separate metadata endpoint available)
  *
  * @param {Object} params
  * @param {string} params.owner - GitHub owner/org
@@ -35,16 +56,16 @@ export async function checkRepositoryExists({ owner, repo }) {
  *
  * @example
  * const info = await getRepositoryInfo({ owner: 'claritybiz', repo: 'app' });
- * // info: { full_name: 'claritybiz/app', default_branch: 'main', ... }
+ * // info: { exists: true, owner: 'claritybiz', repo: 'app', private: true }
  */
 export async function getRepositoryInfo({ owner, repo }) {
-  const query = { owner, repo };
-  return dataService.get('/api/github/repositories/info', query);
+  const url = `https://github.com/${owner}/${repo}`;
+  return validateRepositoryUrl({ url });
 }
 
 /**
  * Create a GitHub repository
- * POST /api/github/repositories
+ * POST /github/repositories
  *
  * @param {Object} params
  * @param {string} params.owner - GitHub owner/org
@@ -65,5 +86,5 @@ export async function createRepository({ owner, repo, description, visibility })
   const body = { owner, repo };
   if (typeof description !== 'undefined') body.description = description;
   if (typeof visibility !== 'undefined') body.visibility = visibility;
-  return dataService.post('/api/github/repositories', body);
+  return dataService.post('/github/repositories', body);
 }
