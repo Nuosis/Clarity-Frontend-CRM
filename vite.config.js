@@ -5,9 +5,16 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 export default defineConfig({
   plugins: [react(), viteSingleFile()],
   server: {
-    port: 1234,
+    port: 1235,
     host: true,
-    open: false
+    open: false,
+    proxy: {
+      '/api': {
+        target: 'https://api.claritybusinesssolutions.ca',
+        changeOrigin: true,
+        secure: true
+      }
+    }
   },
   build: {
     assetsInlineLimit: 100000000,

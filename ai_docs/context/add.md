@@ -1130,7 +1130,7 @@ export default defineConfig(({ mode }) => {
 // Environment-specific configuration
 const config = {
   development: {
-    apiBaseUrl: 'http://192.168.1.60:1235',
+    apiBaseUrl: 'http://localhost:1235',
     enableDevTools: true,
     logLevel: 'debug'
   },

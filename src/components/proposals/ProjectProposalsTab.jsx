@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { useDispatch } from 'react-redux';
 import { fetchProposalsForProject } from '../../api/proposals';
 import { processProposalData, validateProposalData, createCompleteProposal } from '../../services/proposalService';
+import { parseGitHubUrl } from '../../utils/githubUtils';
 import ProposalCreationForm from './ProposalCreationForm';
 import ConceptGallery from './ConceptGallery';
+import SourceDocumentsManager from '../common/SourceDocumentsManager';
 
 /**
  * Project Proposal Tab component - handles a single proposal per project
@@ -14,6 +17,7 @@ import ConceptGallery from './ConceptGallery';
  * @param {Function} props.setLocalProject - Local project state setter
  */
 function ProjectProposalsTab({ project, darkMode, localProject, setLocalProject }) {
+  const dispatch = useDispatch();
   const [proposal, setProposal] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,6 +29,20 @@ function ProjectProposalsTab({ project, darkMode, localProject, setLocalProject 
     concepts: [],
     deliverables: []
   });
+
+  // Get GitHub repository info from project links
+  const repositoryConfig = useMemo(() => {
+    const links = (localProject?.links || project?.links) || [];
+    const githubLink = links.find(link => {
+      const parsed = parseGitHubUrl(link.url);
+      return parsed?.isGitHub;
+    });
+    
+    if (!githubLink) return null;
+    
+    const parsed = parseGitHubUrl(githubLink.url);
+    return parsed?.isGitHub ? { owner: parsed.owner, repo: parsed.repo } : null;
+  }, [localProject?.links, project?.links]);
 
   // Load existing proposal for the project
   useEffect(() => {
@@ -207,6 +225,7 @@ function ProjectProposalsTab({ project, darkMode, localProject, setLocalProject 
     }));
   }, []);
 
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -220,23 +239,37 @@ function ProjectProposalsTab({ project, darkMode, localProject, setLocalProject 
 
   if (!proposal && !isEditing) {
     return (
-      <div className="text-center py-8">
-        <div className={`mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          <p className="text-lg mb-2">No proposal exists for this project</p>
-          <p className="text-sm">Create a proposal to present project details and deliverables to your client.</p>
+      <div>
+        {/* Source Documents Section */}
+        <div className="mb-8">
+          <SourceDocumentsManager
+            repositoryConfig={repositoryConfig}
+            darkMode={darkMode}
+          />
         </div>
-        <button
-          onClick={handleCreate}
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
-        >
-          Create Proposal
-        </button>
+
+        <div className="text-center py-8">
+          <button
+            onClick={handleCreate}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+          >
+            Create Proposal
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div>
+      {/* Source Documents Section */}
+      <div className="mb-8">
+        <SourceDocumentsManager
+          repositoryConfig={repositoryConfig}
+          darkMode={darkMode}
+        />
+      </div>
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold">
@@ -306,6 +339,7 @@ function ProjectProposalsTab({ project, darkMode, localProject, setLocalProject 
               />
             </div>
           </div>
+
 
           {/* Concepts & Assets Section */}
           <div>
@@ -492,6 +526,7 @@ function ProjectProposalsTab({ project, darkMode, localProject, setLocalProject 
           )}
         </div>
       )}
+
     </div>
   );
 }

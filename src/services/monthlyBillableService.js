@@ -52,7 +52,7 @@ export async function getMonthlyBillableHours(organizationId) {
     // Calculate total hours from quantity (assuming quantity represents billable hours)
     const totalHours = data.reduce((sum, record) => {
       const hours = parseFloat(record.quantity) || 0;
-      console.log(`[MonthlyBillable] Record ${record.id}: ${hours} hours`);
+      // console.log(`[MonthlyBillable] Record ${record.id}: ${hours} hours`);
       return sum + hours;
     }, 0);
 

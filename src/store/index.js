@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import proposalReducer from './slices/proposalSlice'
 import proposalViewerReducer from './slices/proposalViewerSlice'
+import documentationReducer from './slices/documentationSlice'
 
 /**
  * Redux store configuration using Redux Toolkit
@@ -9,7 +10,8 @@ import proposalViewerReducer from './slices/proposalViewerSlice'
 export const store = configureStore({
   reducer: {
     proposals: proposalReducer,
-    proposalViewer: proposalViewerReducer
+    proposalViewer: proposalViewerReducer,
+    documentation: documentationReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

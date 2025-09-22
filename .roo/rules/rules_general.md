@@ -1,11 +1,22 @@
 # GENERAL
-- local: http://192.168.1.60:1235
-- backend api url https://api.claritybusinesssolutions.ca/ 
+- local: http://localhost:1235
+- backend api url https://api.claritybusinesssolutions.ca/
 - see /doc for openapi endpoints
 - see /openapi.json for json version of the api endpoints
 - production backend can be accessed via ssh marcus@backend.claritybusinesssolutions.ca. Project is at /opt/clarity-backend/ and is dockerized
 - docker files and config is in /opt/clarity-backend/docker
 - use full paths in your termianl commands
+- openapi.json is available - but alwauys grep for what you are looking for the complete doc is too large
+
+## DESIGN
+- **Emoji's are not icons**
+
+## SSH Connection Rules
+- **CRITICAL**: SSH connections CANNOT maintain persistent sessions in this environment
+- **MUST** use individual SSH commands for each operation: `ssh marcus@backend.claritybusinesssolutions.ca "command"`
+- **NEVER** attempt to establish interactive SSH sessions or tunnels
+- Each SSH command is executed independently and terminates after completion
+- For multiple commands, use separate SSH calls or chain commands with && within a single SSH call
 - Do not create new files that abondon existing file. Edit the existing file to work
 - files should only be created for repeatable, reusable code. Temporary, situation based testing/evaluation should use terminal commands.
 - assume the server is running unless there is evidence to the contrary

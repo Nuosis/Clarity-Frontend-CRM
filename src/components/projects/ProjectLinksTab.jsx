@@ -101,24 +101,6 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
 
   // Memoized renderers
   const renderLink = useCallback((link) => {
-    const gh = parseGitHubUrl(link.url);
-    const isGitHub = gh?.isGitHub && gh.owner && gh.repo;
-    const key = isGitHub ? `${gh.owner}/${gh.repo}` : null;
-    const meta = key ? ghMeta[key] : null;
-
-    const stars = meta?.data?.stars ?? meta?.data?.stargazers_count;
-    const forks = meta?.data?.forks ?? meta?.data?.forks_count;
-    const updatedRaw = meta?.data?.updatedAt ?? meta?.data?.updated_at;
-    const updatedDate = updatedRaw ? new Date(updatedRaw) : null;
-
-    const handleClone = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (isGitHub && navigator?.clipboard?.writeText) {
-        navigator.clipboard.writeText(`git@github.com:${gh.owner}/${gh.repo}.git`).catch(() => {});
-      }
-    };
-
     return (
       <a
         key={link.id}
@@ -132,48 +114,10 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
             : 'text-blue-600 hover:bg-gray-100'}
         `}
       >
-        <span className="inline-flex items-center">
-          <span>{link.title || link.url}</span>
-          {isGitHub && (
-            <span
-              className="ml-2 inline-flex items-center rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-700"
-              aria-label="GitHub repository"
-              title={`${gh.owner}/${gh.repo}`}
-            >
-              GitHub
-            </span>
-          )}
-        </span>
-
-        {isGitHub && (
-          <div className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} flex items-center gap-3`}>
-            {meta?.loading ? (
-              <span>Loading repo info…</span>
-            ) : meta?.error ? (
-              <span>Info unavailable</span>
-            ) : meta?.data ? (
-              <>
-                <span>★ {typeof stars === 'number' ? stars : (stars ?? '—')}</span>
-                <span>⑂ {typeof forks === 'number' ? forks : (forks ?? '—')}</span>
-                {updatedDate && <span>Updated {updatedDate.toLocaleDateString()}</span>}
-              </>
-            ) : (
-              <span>Loading repo info…</span>
-            )}
-            <button
-              onClick={handleClone}
-              className={`ml-2 inline-flex items-center rounded px-1.5 py-0.5 border ${darkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
-              title="Copy clone URL"
-              aria-label={isGitHub ? `Copy clone URL for ${gh.owner}/${gh.repo}` : 'Copy clone URL'}
-              type="button"
-            >
-              Clone
-            </button>
-          </div>
-        )}
+        <span>{link.title || link.url}</span>
       </a>
     );
-  }, [darkMode, ghMeta]);
+  }, [darkMode]);
 
   return (
     <div>

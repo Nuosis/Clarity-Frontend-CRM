@@ -4,7 +4,58 @@
  * Following DEVELOPMENT_GUIDELINES.md API Client Pattern
  */
 
-import supabaseService from '../services/supabaseService'
+import axios from 'axios'
+import { backendConfig } from '../config'
+
+/**
+ * Generate HMAC-SHA256 authentication header for backend API
+ * @param {string} payload - Request payload
+ * @returns {Promise<string>} Authorization header
+ */
+async function generateBackendAuthHeader(payload = '') {
+  const secretKey = import.meta.env.VITE_SECRET_KEY
+  
+  if (!secretKey) {
+    console.warn('[Proposals] SECRET_KEY not available. Using development mode.')
+    const timestamp = Math.floor(Date.now() / 1000)
+    return `Bearer dev-token.${timestamp}`
+  }
+  
+  // Check if Web Crypto API is available
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    console.warn('[Proposals] Web Crypto API not available. Using fallback auth.')
+    const timestamp = Math.floor(Date.now() / 1000)
+    return `Bearer fallback-token.${timestamp}`
+  }
+  
+  const timestamp = Math.floor(Date.now() / 1000)
+  const message = `${timestamp}.${payload}`
+  
+  try {
+    const encoder = new TextEncoder()
+    const keyData = encoder.encode(secretKey)
+    const messageData = encoder.encode(message)
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+    
+    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData)
+    const signatureHex = Array.from(new Uint8Array(signature))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+    
+    return `Bearer ${signatureHex}.${timestamp}`
+  } catch (error) {
+    console.warn('[Proposals] Crypto operation failed, using fallback:', error)
+    const timestamp = Math.floor(Date.now() / 1000)
+    return `Bearer fallback-token.${timestamp}`
+  }
+}
 
 /**
  * Generate secure access token for proposals
@@ -21,114 +72,89 @@ function generateSecureToken() {
  */
 export async function createProposal(proposalData) {
   try {
-    // WIREFRAME: Mock implementation - no real backend calls
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    // Prepare proposal data with secure token
     const proposalWithToken = {
       ...proposalData,
-      id: `prop-${Date.now()}`,
       access_token: generateSecureToken(),
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'draft',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      status: 'draft'
     }
 
-    console.log('[WIREFRAME] Mock creating proposal:', proposalWithToken.title)
-    return { success: true, data: proposalWithToken }
+    const payload = JSON.stringify(proposalWithToken)
+    const authHeader = await generateBackendAuthHeader(payload)
+
+    const response = await axios({
+      method: 'POST',
+      url: `${backendConfig.baseUrl}/proposals/`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      data: proposalWithToken
+    })
+
+    console.log('[Proposals] Created proposal:', response.data.title)
+    return { success: true, data: response.data }
   } catch (error) {
     console.error('[Proposals] Create proposal error:', error)
+    
+    let errorMessage = 'Failed to create proposal'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     }
   }
 }
 
 /**
- * Fetch proposals for a specific project - WIREFRAME IMPLEMENTATION
+ * Fetch proposals for a specific project
  * @param {string} projectId - Project ID
  * @returns {Promise<Object>} Result with proposals data
  */
 export async function fetchProposalsForProject(projectId) {
   try {
-    // WIREFRAME: Mock data for now
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    const mockProposals = [
-      {
-        id: 'prop-1',
-        title: 'Website Development Proposal',
-        description: 'Complete website development with modern design and functionality',
-        status: 'sent',
-        created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        total_price: 12000,
-        selected_price: 9500,
-        access_token: 'token-mock-proposal-1',
-        concepts: [
-          {
-            id: 'concept-1',
-            title: 'Homepage Wireframe',
-            description: 'Initial wireframe showing the layout and structure of the homepage with navigation, hero section, and key content areas.',
-            type: 'wireframe',
-            url: 'https://via.placeholder.com/800x600/4F46E5/FFFFFF?text=Homepage+Wireframe',
-            thumbnailUrl: 'https://via.placeholder.com/200x150/4F46E5/FFFFFF?text=Homepage',
-            order: 0
-          },
-          {
-            id: 'concept-2',
-            title: 'Brand Color Palette',
-            description: 'Proposed color scheme and visual identity elements that will be used throughout the website design.',
-            type: 'mockup',
-            url: 'https://via.placeholder.com/800x600/10B981/FFFFFF?text=Color+Palette',
-            thumbnailUrl: 'https://via.placeholder.com/200x150/10B981/FFFFFF?text=Colors',
-            order: 1
-          }
-        ],
-        deliverables: [
-          {
-            id: 'deliv-1',
-            title: 'Website Design & Development',
-            description: 'Complete responsive website with modern design, including all pages and functionality.',
-            price: 8500,
-            type: 'fixed',
-            estimatedHours: 120,
-            isRequired: true,
-            order: 0
-          },
-          {
-            id: 'deliv-2',
-            title: 'Content Management System',
-            description: 'Custom CMS for easy content updates and management.',
-            price: 2500,
-            type: 'fixed',
-            estimatedHours: 35,
-            isRequired: false,
-            order: 1
-          },
-          {
-            id: 'deliv-3',
-            title: 'SEO Optimization',
-            description: 'Search engine optimization setup and configuration.',
-            price: 1000,
-            type: 'fixed',
-            estimatedHours: 15,
-            isRequired: false,
-            order: 2
-          }
-        ]
+    const authHeader = await generateBackendAuthHeader()
+
+    const response = await axios({
+      method: 'GET',
+      url: `${backendConfig.baseUrl}/proposals/`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      params: {
+        project_id: projectId
       }
-    ]
-    
+    })
+
+    console.log('[Proposals] Fetched proposals for project:', projectId)
     return {
       success: true,
-      data: mockProposals
+      data: response.data.proposals || []
     }
   } catch (error) {
     console.error('[Proposals] Fetch proposals for project error:', error)
+    
+    let errorMessage = 'Failed to fetch proposals'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     }
   }
 }
@@ -140,109 +166,36 @@ export async function fetchProposalsForProject(projectId) {
  */
 export async function fetchProposalByToken(token) {
   try {
-    // WIREFRAME: Mock implementation - no real backend calls
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    console.log('[WIREFRAME] Mock fetching proposal by token:', token)
-    
-    // Mock proposal data
-    const mockProposal = {
-      id: 'prop-123',
-      title: 'Website Redesign Proposal',
-      description: 'Complete redesign of your company website with modern UI/UX',
-      status: 'sent',
-      access_token: token,
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      request_summary: {
-        overview: 'This project involves a complete redesign of your existing website to improve user experience, modernize the visual design, and enhance mobile responsiveness.',
-        objectives: [
-          'Improve user engagement and conversion rates',
-          'Modernize visual design and branding',
-          'Enhance mobile responsiveness',
-          'Optimize for search engines'
-        ],
-        timeline: '6-8 weeks',
-        budget: 15000
-      },
-      concepts: [
-        {
-          id: 'concept-1',
-          title: 'Homepage Wireframe',
-          description: 'Initial wireframe showing the new homepage layout and structure',
-          type: 'wireframe',
-          url: 'https://via.placeholder.com/800x600/007bff/ffffff?text=Homepage+Wireframe',
-          thumbnail_url: 'https://via.placeholder.com/400x300/007bff/ffffff?text=Homepage+Wireframe',
-          order: 0
-        },
-        {
-          id: 'concept-2',
-          title: 'Design Mockups',
-          description: 'High-fidelity mockups showing the final visual design',
-          type: 'mockup',
-          url: 'https://via.placeholder.com/800x600/28a745/ffffff?text=Design+Mockups',
-          thumbnail_url: 'https://via.placeholder.com/400x300/28a745/ffffff?text=Design+Mockups',
-          order: 1
-        }
-      ],
-      deliverables: [
-        {
-          id: 'deliv-1',
-          title: 'Homepage Design & Development',
-          description: 'Complete design and development of the new homepage',
-          price: 5000,
-          type: 'fixed',
-          estimated_hours: null,
-          is_selected: true,
-          is_required: true,
-          order: 0
-        },
-        {
-          id: 'deliv-2',
-          title: 'About & Services Pages',
-          description: 'Design and development of about and services pages',
-          price: 3000,
-          type: 'fixed',
-          estimated_hours: null,
-          is_selected: true,
-          is_required: false,
-          order: 1
-        },
-        {
-          id: 'deliv-3',
-          title: 'Contact & Blog Pages',
-          description: 'Design and development of contact and blog pages',
-          price: 2500,
-          type: 'fixed',
-          estimated_hours: null,
-          is_selected: false,
-          is_required: false,
-          order: 2
-        },
-        {
-          id: 'deliv-4',
-          title: 'SEO Optimization',
-          description: 'Search engine optimization for all pages',
-          price: 1500,
-          type: 'fixed',
-          estimated_hours: null,
-          is_selected: true,
-          is_required: false,
-          order: 3
-        }
-      ],
-      total_price: 12000,
-      selected_price: 9500
-    }
-    
+    const response = await axios({
+      method: 'GET',
+      url: `${backendConfig.baseUrl}/proposals/token/${token}`,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    console.log('[Proposals] Fetched proposal by token:', token)
     return {
       success: true,
-      data: mockProposal
+      data: response.data
     }
   } catch (error) {
-    console.error('[Proposals] Fetch proposal error:', error)
+    console.error('[Proposals] Fetch proposal by token error:', error)
+    
+    let errorMessage = 'Failed to fetch proposal'
+    if (error.response?.status === 404) {
+      errorMessage = 'Proposal not found or access token has expired'
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     }
   }
 }
@@ -296,24 +249,40 @@ export async function fetchProposalsByProject(projectId) {
  */
 export async function updateProposalStatus(proposalId, status) {
   try {
-    // WIREFRAME: Mock implementation - no real backend calls
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    console.log('[WIREFRAME] Mock updating proposal status:', proposalId, status)
-    
+    const updateData = { status }
+    const payload = JSON.stringify(updateData)
+    const authHeader = await generateBackendAuthHeader(payload)
+
+    const response = await axios({
+      method: 'PUT',
+      url: `${backendConfig.baseUrl}/proposals/${proposalId}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      data: updateData
+    })
+
+    console.log('[Proposals] Updated proposal status:', proposalId, status)
     return {
       success: true,
-      data: {
-        id: proposalId,
-        status,
-        updated_at: new Date().toISOString()
-      }
+      data: response.data
     }
   } catch (error) {
     console.error('[Proposals] Update proposal status error:', error)
+    
+    let errorMessage = 'Failed to update proposal status'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     }
   }
 }
@@ -326,24 +295,41 @@ export async function updateProposalStatus(proposalId, status) {
  */
 export async function addProposalConcept(proposalId, conceptData) {
   try {
-    // WIREFRAME: Mock implementation - no real backend calls
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
     const conceptWithProposal = {
       ...conceptData,
-      id: `concept-${Date.now()}`,
-      proposal_id: proposalId,
-      created_at: new Date().toISOString()
+      proposal_id: proposalId
     }
-    
-    console.log('[WIREFRAME] Mock adding concept:', conceptWithProposal.title)
-    
-    return { success: true, data: conceptWithProposal }
+
+    const payload = JSON.stringify(conceptWithProposal)
+    const authHeader = await generateBackendAuthHeader(payload)
+
+    const response = await axios({
+      method: 'POST',
+      url: `${backendConfig.baseUrl}/proposals/${proposalId}/concepts`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      data: conceptWithProposal
+    })
+
+    console.log('[Proposals] Added concept:', response.data.title)
+    return { success: true, data: response.data }
   } catch (error) {
     console.error('[Proposals] Add concept error:', error)
+    
+    let errorMessage = 'Failed to add concept'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     }
   }
 }
@@ -356,24 +342,41 @@ export async function addProposalConcept(proposalId, conceptData) {
  */
 export async function addProposalDeliverable(proposalId, deliverableData) {
   try {
-    // WIREFRAME: Mock implementation - no real backend calls
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
     const deliverableWithProposal = {
       ...deliverableData,
-      id: `deliv-${Date.now()}`,
-      proposal_id: proposalId,
-      created_at: new Date().toISOString()
+      proposal_id: proposalId
     }
-    
-    console.log('[WIREFRAME] Mock adding deliverable:', deliverableWithProposal.title)
-    
-    return { success: true, data: deliverableWithProposal }
+
+    const payload = JSON.stringify(deliverableWithProposal)
+    const authHeader = await generateBackendAuthHeader(payload)
+
+    const response = await axios({
+      method: 'POST',
+      url: `${backendConfig.baseUrl}/proposals/${proposalId}/deliverables`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      data: deliverableWithProposal
+    })
+
+    console.log('[Proposals] Added deliverable:', response.data.title)
+    return { success: true, data: response.data }
   } catch (error) {
     console.error('[Proposals] Add deliverable error:', error)
+    
+    let errorMessage = 'Failed to add deliverable'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     }
   }
 }
@@ -386,26 +389,40 @@ export async function addProposalDeliverable(proposalId, deliverableData) {
  */
 export async function updateDeliverableSelections(proposalId, selectedDeliverableIds) {
   try {
-    // WIREFRAME: Mock implementation - no real backend calls
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    console.log('[WIREFRAME] Mock updating deliverable selections:', proposalId, selectedDeliverableIds)
-    
-    // Mock calculation of selected price
-    const mockSelectedPrice = selectedDeliverableIds.length * 2500 // Mock price calculation
-    
+    const updateData = { selected_deliverable_ids: selectedDeliverableIds }
+    const payload = JSON.stringify(updateData)
+    const authHeader = await generateBackendAuthHeader(payload)
+
+    const response = await axios({
+      method: 'PUT',
+      url: `${backendConfig.baseUrl}/proposals/${proposalId}/deliverables/selections`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      data: updateData
+    })
+
+    console.log('[Proposals] Updated deliverable selections:', proposalId, selectedDeliverableIds)
     return {
       success: true,
-      data: {
-        selectedPrice: mockSelectedPrice,
-        selectedDeliverableIds
-      }
+      data: response.data
     }
   } catch (error) {
     console.error('[Proposals] Update deliverable selections error:', error)
+    
+    let errorMessage = 'Failed to update deliverable selections'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     }
   }
 }
@@ -419,29 +436,43 @@ export async function updateDeliverableSelections(proposalId, selectedDeliverabl
  */
 export async function approveProposal(proposalId, selectedDeliverableIds, totalPrice) {
   try {
-    // WIREFRAME: Mock implementation - no real backend calls
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    console.log('[WIREFRAME] Mock approving proposal:', proposalId, selectedDeliverableIds, totalPrice)
-    
-    // Update proposal status and selections (mock)
-    await updateDeliverableSelections(proposalId, selectedDeliverableIds)
-    
-    const mockResult = {
-      id: proposalId,
+    const approvalData = {
       status: 'approved',
-      approved_at: new Date().toISOString(),
-      approved_deliverables: selectedDeliverableIds,
+      selected_deliverable_ids: selectedDeliverableIds,
       selected_price: totalPrice,
-      updated_at: new Date().toISOString()
+      approved_at: new Date().toISOString()
     }
     
-    return { success: true, data: mockResult }
+    const payload = JSON.stringify(approvalData)
+    const authHeader = await generateBackendAuthHeader(payload)
+
+    const response = await axios({
+      method: 'PUT',
+      url: `${backendConfig.baseUrl}/proposals/${proposalId}/approve`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      data: approvalData
+    })
+
+    console.log('[Proposals] Approved proposal:', proposalId, selectedDeliverableIds, totalPrice)
+    return { success: true, data: response.data }
   } catch (error) {
     console.error('[Proposals] Approve proposal error:', error)
+    
+    let errorMessage = 'Failed to approve proposal'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     }
   }
 }
@@ -453,17 +484,33 @@ export async function approveProposal(proposalId, selectedDeliverableIds, totalP
  */
 export async function deleteProposal(proposalId) {
   try {
-    // WIREFRAME: Mock implementation - no real backend calls
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    console.log('[WIREFRAME] Mock deleting proposal:', proposalId)
-    
-    return { success: true }
+    const authHeader = await generateBackendAuthHeader('')
+
+    const response = await axios({
+      method: 'DELETE',
+      url: `${backendConfig.baseUrl}/proposals/${proposalId}`,
+      headers: {
+        'Authorization': authHeader
+      }
+    })
+
+    console.log('[Proposals] Deleted proposal:', proposalId)
+    return { success: true, data: response.data }
   } catch (error) {
     console.error('[Proposals] Delete proposal error:', error)
+    
+    let errorMessage = 'Failed to delete proposal'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     }
   }
 }

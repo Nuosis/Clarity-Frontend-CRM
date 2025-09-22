@@ -14,7 +14,7 @@ function getJsFiles(dir, fileList = []) {
     const filePath = path.join(dir, file);
     const stat = fs.statSync(filePath);
     
-    if (stat.isDirectory() && !filePath.includes('node_modules')) {
+    if (stat.isdirectory() && !filePath.includes('node_modules')) {
       fileList = getJsFiles(filePath, fileList);
     } else if (
       (file.endsWith('.js') || file.endsWith('.jsx')) && 
