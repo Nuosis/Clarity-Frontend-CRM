@@ -19,7 +19,8 @@ function CustomerDetails({
   customer,
   projects = [],
   onProjectSelect = () => {},
-  onProjectCreate = () => {}
+  onProjectCreate = () => {},
+  isProspect = false
 }) {
   const { darkMode } = useTheme();
   const { setLoading, setCustomerDetails } = useAppStateOperations();
@@ -31,7 +32,9 @@ function CustomerDetails({
   
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
   const [showActivityReport, setShowActivityReport] = useState(false);
+  const [showProspectForm, setShowProspectForm] = useState(false);
   const [groupingError, setGroupingError] = useState(null);
+  const [activeProspectTab, setActiveProspectTab] = useState('touch-history');
 
   // Function to load all sales for this customer
   const loadAllSalesForThisCustomer = useCallback(() => {
@@ -141,15 +144,17 @@ function CustomerDetails({
   return (
     <div className="space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-2">
       {/* Customer Header */}
-      <CustomerHeader 
+      <CustomerHeader
         customer={customer}
-        stats={stats}
+        stats={!isProspect ? stats : null}
         onNewProject={handleProjectCreate}
         onShowActivityReport={() => setShowActivityReport(true)}
+        onEditProspect={() => setShowProspectForm(true)}
+        isProspect={isProspect}
       />
 
       {/* Project Creation Form */}
-      {showNewProjectInput && (
+      {showNewProjectInput && !isProspect && (
         <ProjectCreationForm
           customer={customer}
           onSubmit={handleProjectFormSubmit}
@@ -157,15 +162,26 @@ function CustomerDetails({
         />
       )}
 
+      {/* Prospect Form Modal */}
+      {showProspectForm && isProspect && (
+        <ProspectForm
+          prospect={customer}
+          onClose={() => setShowProspectForm(false)}
+          darkMode={darkMode}
+        />
+      )}
+
       {/* Activity Report Modal */}
-      <ActivityReportModal
-        customer={customer}
-        isOpen={showActivityReport}
-        onClose={() => setShowActivityReport(false)}
-      />
+      {!isProspect && (
+        <ActivityReportModal
+          customer={customer}
+          isOpen={showActivityReport}
+          onClose={() => setShowActivityReport(false)}
+        />
+      )}
 
       {/* Error Display */}
-      {groupingError && (
+      {groupingError && !isProspect && (
         <div className={`
           p-4 mb-6 rounded-lg border
           ${darkMode
@@ -177,16 +193,75 @@ function CustomerDetails({
         </div>
       )}
 
-      {/* Projects Tabs */}
-      <ProjectTabs
-        activeProjects={activeProjects}
-        closedProjects={closedProjects}
-        onProjectSelect={onProjectSelect}
-        setLoading={setLoading}
-      />
+      {/* Projects Tabs - Hidden for Prospects */}
+      {!isProspect && (
+        <ProjectTabs
+          activeProjects={activeProjects}
+          closedProjects={closedProjects}
+          onProjectSelect={onProjectSelect}
+          setLoading={setLoading}
+        />
+      )}
       
-      {/* Customer Information Tabs */}
-      <CustomerTabs />
+      {/* Prospect Tabs */}
+      {isProspect && (
+        <div className={`
+          border rounded-lg
+          ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}
+        `}>
+          {/* Tab Headers */}
+          <div className={`
+            flex border-b
+            ${darkMode ? 'border-gray-700' : 'border-gray-200'}
+          `}>
+            <button
+              onClick={() => setActiveProspectTab('touch-history')}
+              className={`
+                px-6 py-3 font-medium transition-colors
+                ${activeProspectTab === 'touch-history'
+                  ? (darkMode
+                    ? 'border-b-2 border-blue-500 text-blue-400'
+                    : 'border-b-2 border-blue-600 text-blue-600')
+                  : (darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}
+              `}
+            >
+              Touch History
+            </button>
+            <button
+              onClick={() => setActiveProspectTab('email-campaign')}
+              className={`
+                px-6 py-3 font-medium transition-colors
+                ${activeProspectTab === 'email-campaign'
+                  ? (darkMode
+                    ? 'border-b-2 border-blue-500 text-blue-400'
+                    : 'border-b-2 border-blue-600 text-blue-600')
+                  : (darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700')}
+              `}
+            >
+              Email Campaign
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-6">
+            {activeProspectTab === 'touch-history' && (
+              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p>Touch History tracking coming soon...</p>
+                <p className="text-sm mt-2">This will display email, SMS, meetings (Zoom, F2F, etc.) over time</p>
+              </div>
+            )}
+            {activeProspectTab === 'email-campaign' && (
+              <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p>Email Campaign management coming soon...</p>
+                <p className="text-sm mt-2">This will allow you to manage email campaigns for this prospect</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Customer Information Tabs - Hidden for Prospects */}
+      {!isProspect && <CustomerTabs />}
     </div>
   );
 }
@@ -209,7 +284,8 @@ CustomerDetails.propTypes = {
     })
   ),
   onProjectSelect: PropTypes.func,
-  onProjectCreate: PropTypes.func
+  onProjectCreate: PropTypes.func,
+  isProspect: PropTypes.bool
 };
 
 export default React.memo(CustomerDetails);

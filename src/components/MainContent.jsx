@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import TaskTimer from './tasks/TaskTimer';
 import ProjectDetails from './projects/ProjectDetails';
 import CustomerDetails from './customers/CustomerDetails';
+import ProspectDetails from './customers/ProspectDetails';
 import TeamDetails from './teams/TeamDetails';
 import ProductDetails from './products/ProductDetails';
 import ProductForm from './products/ProductForm';
@@ -54,6 +55,7 @@ const MainContent = React.memo(function MainContent({
         showMarketing,
         sidebarMode,
         selectedProduct,
+        selectedProspect,
         products,
         showProductForm
     } = useAppState();
@@ -243,6 +245,15 @@ const MainContent = React.memo(function MainContent({
                     onProjectSelect={handleProjectSelection}
                     onProjectCreate={handlers.handleProjectCreate}
                 />
+            </ErrorBoundary>
+        );
+    }
+
+    // Show Prospect details if selected
+    if (sidebarMode === 'prospect' && selectedProspect) {
+        return (
+            <ErrorBoundary>
+                <ProspectDetails prospect={selectedProspect} />
             </ErrorBoundary>
         );
     }

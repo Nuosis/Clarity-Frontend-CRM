@@ -8,6 +8,72 @@ import CreateQBOCustomerModal from './CreateQBOCustomerModal';
 import RecordDetailsModal from './RecordDetailsModal';
 
 /**
+ * Comprehensive error serialization utility that handles various error object structures
+ * @param {*} error - The error object to serialize
+ * @returns {string} A human-readable error message
+ */
+const serializeError = (error) => {
+  // Handle null/undefined
+  if (!error) return 'Unknown error occurred';
+  
+  // Handle string errors
+  if (typeof error === 'string') return error;
+  
+  // Handle non-object errors
+  if (typeof error !== 'object') return String(error);
+  
+  // Try common error message fields in order of preference
+  const messageFields = [
+    'detail',           // Backend API format
+    'message',          // Standard Error.message
+    'error',            // Generic error field
+    'statusText',       // HTTP status text
+    'data.message',     // Nested message
+    'response.data.detail', // Axios error format
+    'response.data.message',
+    'response.statusText'
+  ];
+  
+  for (const field of messageFields) {
+    const value = field.split('.').reduce((obj, key) => obj?.[key], error);
+    if (value && typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  
+  // Handle QuickBooks SDK fault format
+  if (error.Fault?.Error?.[0]?.Detail) {
+    return error.Fault.Error[0].Detail;
+  }
+  
+  // Handle array errors (take first meaningful message)
+  if (Array.isArray(error) && error.length > 0) {
+    return serializeError(error[0]);
+  }
+  
+  // Handle HTTP status information
+  if (error.status || error.statusCode) {
+    const status = error.status || error.statusCode;
+    const statusText = error.statusText || 'HTTP Error';
+    return `${statusText} (${status})`;
+  }
+  
+  // Try to safely serialize the object
+  try {
+    const serialized = JSON.stringify(error, null, 2);
+    // Truncate very long error messages
+    return serialized.length > 500 ? serialized.substring(0, 500) + '...' : serialized;
+  } catch (serializationError) {
+    // Fallback to toString if JSON serialization fails (circular references, etc.)
+    try {
+      return error.toString();
+    } catch (toStringError) {
+      return 'Error occurred but could not be serialized';
+    }
+  }
+};
+
+/**
  * Component to display individual sales lines for a customer
  * @param {Object} props - Component props
  * @param {Array} props.records - Sales records to display
@@ -530,17 +596,16 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       } catch (emailError) {
         console.warn('Failed to send invoice email:', emailError);
         
-        // Extract the actual error message from the error object
-        let errorMessage = 'Unknown email error';
-        if (typeof emailError === 'string') {
-          errorMessage = emailError;
-        } else if (emailError.error) {
-          errorMessage = emailError.error;
-        } else if (emailError.message) {
-          errorMessage = emailError.message;
-        } else if (emailError.detail) {
-          errorMessage = emailError.detail;
-        }
+        // Use the comprehensive error serialization utility
+        const errorMessage = serializeError(emailError);
+        
+        // Log the full error details for debugging
+        console.error('Email error details:', {
+          originalError: emailError,
+          extractedMessage: errorMessage,
+          errorType: typeof emailError,
+          errorKeys: emailError && typeof emailError === 'object' ? Object.keys(emailError) : 'N/A'
+        });
         
         // Don't fail the entire process if email sending fails
         alert(`Invoice created successfully in QuickBooks Online. However, there was an issue sending the email: ${errorMessage}`);
@@ -796,7 +861,7 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         />
       )}
       
-      {/* Record Details Modal */}
+      {/* Record Details Modal - CACHE BUSTER v2.0 */}
       {showRecordDetailsModal && (
         <RecordDetailsModal
           records={selectedGroupRecords}

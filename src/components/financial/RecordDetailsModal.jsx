@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { fetchFinancialRecordByUUID } from '../../api/financialRecords';
+import { fetchFinancialRecordByUUID, bulkUpdateFinancialRecordsBilledStatus } from '../../api/financialRecords';
 import { processFinancialData } from '../../services/billableHoursService';
 import RecordModal from './RecordModal';
+
+// Component load verification
+console.log('🚀 RecordDetailsModal component loaded/imported');
 
 /**
  * Modal component for displaying detailed records that make up a summary row
@@ -15,12 +18,126 @@ import RecordModal from './RecordModal';
  * @returns {JSX.Element} Record details modal component
  */
 function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMode = false }) {
+  console.log('🚀 RecordDetailsModal component rendered with records:', records.length);
   const [enrichedRecords, setEnrichedRecords] = useState(records);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
+  const [bulkUpdateError, setBulkUpdateError] = useState(null);
+  const [bulkUpdateSuccess, setBulkUpdateSuccess] = useState(null);
 
+
+  // Calculate uninvoiced records for bulk action
+  const uninvoicedRecords = useMemo(() => {
+    console.log('🔍 BULK ACTION DEBUG - useMemo triggered, enrichedRecords length:', enrichedRecords.length);
+    console.log('🔍 BULK ACTION DEBUG - All enriched records:', enrichedRecords.map(r => ({
+      id: r.id || r.recordId,
+      inv_id: r.inv_id,
+      inv_id_type: typeof r.inv_id,
+      f_billed: r.f_billed,
+      billed: r.billed
+    })));
+    
+    if (enrichedRecords.length === 0) {
+      console.log('🔍 BULK ACTION DEBUG - No enriched records yet, returning empty array');
+      return [];
+    }
+    
+    const uninvoiced = enrichedRecords.filter(record => {
+      // Check for various representations of "not invoiced"
+      // Based on the console output, records have inv_id: null when uninvoiced
+      const isUninvoiced = record.inv_id === null ||
+                          record.inv_id === undefined ||
+                          record.inv_id === '' ||
+                          record.inv_id === 0 ||
+                          record.inv_id === '0' ||
+                          record.billed === false ||
+                          record.f_billed === 0 ||
+                          record.f_billed === '0' ||
+                          record.f_billed === null ||
+                          record.f_billed === undefined;
+      
+      console.log(`🔍 BULK ACTION DEBUG - Record ${record.id || record.recordId}: inv_id=${record.inv_id}, f_billed=${record.f_billed}, billed=${record.billed}, isUninvoiced=${isUninvoiced}`);
+      return isUninvoiced;
+    });
+    
+    console.log('🔍 BULK ACTION DEBUG - Uninvoiced records count:', uninvoiced.length);
+    console.log('🔍 BULK ACTION DEBUG - Uninvoiced record IDs:', uninvoiced.map(r => r.id || r.recordId));
+    return uninvoiced;
+  }, [enrichedRecords]);
+
+  // Debug log to see when component renders
+  console.log('🔍 BULK ACTION DEBUG - Component render, uninvoicedRecords.length:', uninvoicedRecords.length);
+
+  // Handle bulk mark as invoiced
+  const handleBulkMarkAsInvoiced = useCallback(async () => {
+    if (uninvoicedRecords.length === 0) {
+      return;
+    }
+
+    setBulkUpdateLoading(true);
+    setBulkUpdateError(null);
+    setBulkUpdateSuccess(null);
+
+    try {
+      // Extract record IDs that need to be updated
+      const recordIds = uninvoicedRecords
+        .map(record => record.recordId || record.id)
+        .filter(id => id); // Filter out any undefined/null IDs
+
+      if (recordIds.length === 0) {
+        throw new Error('No valid record IDs found for bulk update');
+      }
+
+      console.log(`🔄 BULK UPDATE - Starting bulk update for ${recordIds.length} records:`, recordIds);
+
+      // Call the bulk update API
+      const result = await bulkUpdateFinancialRecordsBilledStatus(recordIds, 1);
+
+      console.log('🔄 BULK UPDATE - Result:', result);
+
+      if (result.success) {
+        // Update the local state to reflect the changes
+        setEnrichedRecords(prevRecords =>
+          prevRecords.map(record => {
+            const recordId = record.recordId || record.id;
+            if (recordIds.includes(recordId)) {
+              return { ...record, inv_id: 1, f_billed: 1 };
+            }
+            return record;
+          })
+        );
+
+        setBulkUpdateSuccess(`Successfully marked ${result.successCount} records as invoiced`);
+        
+        // Call the parent's onEditRecord to refresh data if needed
+        if (onEditRecord && typeof onEditRecord === 'function') {
+          // This will trigger a refresh of the parent component's data
+          onEditRecord(null, null);
+        }
+      } else {
+        throw new Error(`Bulk update partially failed: ${result.errorCount} errors out of ${result.totalRecords} records`);
+      }
+    } catch (error) {
+      console.error('🔄 BULK UPDATE - Error:', error);
+      setBulkUpdateError(error.message || 'Failed to update records');
+    } finally {
+      setBulkUpdateLoading(false);
+    }
+  }, [uninvoicedRecords, onEditRecord]);
+
+  // Clear bulk update messages after a delay
+  useEffect(() => {
+    if (bulkUpdateSuccess || bulkUpdateError) {
+      const timer = setTimeout(() => {
+        setBulkUpdateSuccess(null);
+        setBulkUpdateError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [bulkUpdateSuccess, bulkUpdateError]);
 
   // Fetch complete record data with Task and Work Performed information
   useEffect(() => {
@@ -168,32 +285,97 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
       >
         {/* Header */}
         <div className={`
-          px-6 py-4 border-b flex justify-between items-center
+          px-6 py-4 border-b
           ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}
         `}>
-          <div>
-            <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Record Details
-            </h3>
-            <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              {groupTitle} • {records.length} record{records.length !== 1 ? 's' : ''}
-            </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Record Details
+              </h3>
+              <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                {groupTitle} • {records.length} record{records.length !== 1 ? 's' : ''} • Uninvoiced: {uninvoicedRecords.length}
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              {/* Bulk Action Button */}
+              {uninvoicedRecords.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBulkMarkAsInvoiced}
+                  disabled={bulkUpdateLoading}
+                  className={`
+                    inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium
+                    ${bulkUpdateLoading
+                      ? (darkMode
+                          ? 'border-gray-600 bg-gray-700 text-gray-400 cursor-not-allowed'
+                          : 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed')
+                      : (darkMode
+                          ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                          : 'border-blue-500 bg-blue-500 text-white hover:bg-blue-600')
+                    }
+                  `}
+                >
+                  {bulkUpdateLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Mark All as Invoiced ({uninvoicedRecords.length})
+                    </>
+                  )}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className={`
+                  rounded-md p-2 inline-flex items-center justify-center
+                  ${darkMode
+                    ? 'text-gray-400 hover:text-white hover:bg-gray-600'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}
+                `}
+              >
+                <span className="sr-only">Close</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className={`
-              rounded-md p-2 inline-flex items-center justify-center
-              ${darkMode 
-                ? 'text-gray-400 hover:text-white hover:bg-gray-600' 
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}
-            `}
-          >
-            <span className="sr-only">Close</span>
-            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          
+          {/* Bulk Update Feedback Messages */}
+          {(bulkUpdateSuccess || bulkUpdateError) && (
+            <div className="mt-3">
+              {bulkUpdateSuccess && (
+                <div className={`
+                  p-3 rounded-md flex items-center
+                  ${darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'}
+                `}>
+                  <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  {bulkUpdateSuccess}
+                </div>
+              )}
+              {bulkUpdateError && (
+                <div className={`
+                  p-3 rounded-md flex items-center
+                  ${darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'}
+                `}>
+                  <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  {bulkUpdateError}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         {/* Content */}

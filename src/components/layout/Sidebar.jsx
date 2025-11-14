@@ -7,6 +7,7 @@ import { useProject } from '../../hooks/useProject';
 import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
 import { useMarketingContext } from '../../context/MarketingContext';
 import CustomerForm from '../customers/CustomerForm';
+import ProspectForm from '../customers/ProspectForm';
 import TeamForm from '../teams/TeamForm';
 
 // Feature flags
@@ -87,6 +88,9 @@ const CustomerListItem = React.memo(function CustomerListItem({
     // State for delete confirmation dialog
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
+    // Check if this is an optimistic update (being created)
+    const isOptimistic = customer._optimistic === true;
+    
     // // Log customer data for debugging
     // console.log('CustomerListItem - customer data:', {
     //     id: customer.id,
@@ -129,8 +133,16 @@ const CustomerListItem = React.memo(function CustomerListItem({
                 ${customer.isActive
                     ? ''
                     : (darkMode ? 'opacity-50' : 'opacity-60')}
+                ${isOptimistic ? 'animate-pulse' : ''}
             `}
         >
+            {/* Optimistic indicator */}
+            {isOptimistic && (
+                <div className={`
+                    absolute left-0 top-0 bottom-0 w-1
+                    ${darkMode ? 'bg-blue-500' : 'bg-blue-400'}
+                `} />
+            )}
             <div className="flex items-center justify-between w-full relative">
                 <h3 className={`
                     font-medium
@@ -141,10 +153,11 @@ const CustomerListItem = React.memo(function CustomerListItem({
                     {customer.Name}
                 </h3>
                 
-                {/* Action buttons - stacked vertically */}
+                {/* Action buttons - stacked vertically (disabled during optimistic update) */}
                 <div className="flex flex-col">
                     <button
                         onClick={handleStatusToggle}
+                        disabled={isOptimistic}
                         className={`
                             p-1 rounded-md flex items-center justify-center w-6 h-6
                             ${darkMode
@@ -174,6 +187,7 @@ const CustomerListItem = React.memo(function CustomerListItem({
                     </button>
                     <button
                         onClick={handleDeleteClick}
+                        disabled={isOptimistic}
                         className={`
                             p-1 rounded-md flex items-center justify-center w-6 h-6
                             ${darkMode
@@ -402,12 +416,20 @@ function Sidebar({
     onTeamDelete = () => {},
     setShowProductForm,
     selectedMarketingDomain,
-    onMarketingDomainSelect
+    onMarketingDomainSelect,
+    prospects = [],
+    prospectsLoading = false,
+    onProspectSelect,
+    onProspectStatusToggle,
+    onProspectDelete
 }) {
     const { darkMode } = useTheme();
     const { projects, projectRecords } = useProject();
     const { showFinancialActivity, showFileMakerExample, showSupabaseExample, showQboTestPanel, showCustomerForm, showTeamForm, sidebarMode, showProductForm, showMarketing } = useAppState();
     const { setShowFinancialActivity, setShowFileMakerExample, setShowSupabaseExample, setShowQboTestPanel, setShowCustomerForm, setShowTeamForm, setSidebarMode, setSelectedProduct, setShowProductForm: contextSetShowProductForm, setShowMarketing } = useAppStateOperations();
+    
+    // Local state for ProspectForm
+    const [showProspectForm, setShowProspectForm] = useState(false);
     const marketingContext = useMarketingContext();
     
     
@@ -473,7 +495,7 @@ function Sidebar({
                         text-lg font-semibold
                         ${darkMode ? 'text-white' : 'text-gray-900'}
                     `}>
-                        {sidebarMode === 'customer' ? 'Customers' : sidebarMode === 'team' ? 'Teams' : sidebarMode === 'product' ? 'Products' : 'Marketing'}
+                        {sidebarMode === 'prospect' ? 'Prospects' : sidebarMode === 'customer' ? 'Customers' : sidebarMode === 'team' ? 'Teams' : sidebarMode === 'product' ? 'Products' : 'Marketing'}
                     </h2>
                     {sidebarMode === 'customer' ? (
                         <button
@@ -485,6 +507,21 @@ function Sidebar({
                                     : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
                             `}
                             title="Add new customer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
+                    ) : sidebarMode === 'prospect' ? (
+                        <button
+                            onClick={() => setShowProspectForm(true)}
+                            className={`
+                                p-1 rounded-md flex items-center justify-center
+                                ${darkMode
+                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
+                            `}
+                            title="Add new prospect"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -523,24 +560,6 @@ function Sidebar({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
                         </button>
-                    ) : sidebarMode === 'marketing' ? (
-                        <button
-                            onClick={() => {
-                                // TODO: Add functionality to create new marketing domain
-                                console.log('Add new marketing domain');
-                            }}
-                            className={`
-                                p-1 rounded-md flex items-center justify-center
-                                ${darkMode
-                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}
-                            `}
-                            title="Add new marketing domain"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                        </button>
                     ) : null}
                 </div>
                 {sidebarMode === 'customer' && stats && (
@@ -552,8 +571,8 @@ function Sidebar({
                     </div>
                 )}
                 
-                {/* Financial Activity Button - Hide when marketing mode is active */}
-                {sidebarMode !== 'marketing' && (
+                {/* Financial Activity Button - Hide when marketing or prospect mode is active */}
+                {sidebarMode !== 'marketing' && sidebarMode !== 'prospect' && (
                     <button
                         onClick={() => setShowFinancialActivity(true)}
                         className={`
@@ -628,7 +647,38 @@ function Sidebar({
 
             {/* List Content */}
             <div className="flex-1 overflow-y-auto">
-                {sidebarMode === 'marketing' ? (
+                {sidebarMode === 'prospect' ? (
+                    /* Prospect List */
+                    <>
+                        {prospectsLoading ? (
+                            <div className={`
+                                p-4 text-center
+                                ${darkMode ? 'text-gray-400' : 'text-gray-500'}
+                            `}>
+                                Loading prospects...
+                            </div>
+                        ) : prospects.length === 0 ? (
+                            <div className={`
+                                p-4 text-center
+                                ${darkMode ? 'text-gray-400' : 'text-gray-500'}
+                            `}>
+                                No prospects found
+                            </div>
+                        ) : (
+                            prospects.map((prospect) => (
+                                <CustomerListItem
+                                    key={prospect.id}
+                                    customer={prospect}
+                                    isSelected={selectedCustomer?.id === prospect.id}
+                                    darkMode={darkMode}
+                                    onSelect={() => onProspectSelect(prospect)}
+                                    onStatusToggle={onProspectStatusToggle}
+                                    onDelete={onProspectDelete}
+                                />
+                            ))
+                        )}
+                    </>
+                ) : sidebarMode === 'marketing' ? (
                     /* Marketing Domains List */
                     <>
                             {marketingContext.marketingDomains.map(domain => (
@@ -787,6 +837,13 @@ function Sidebar({
                     darkMode={darkMode}
                 />
             )}
+            
+            {showProspectForm && (
+                <ProspectForm
+                    onClose={() => setShowProspectForm(false)}
+                    darkMode={darkMode}
+                />
+            )}
         </div>
     );
 }
@@ -839,7 +896,12 @@ Sidebar.propTypes = {
         focusCount: PropTypes.number,
         isActive: PropTypes.bool
     }),
-    onMarketingDomainSelect: PropTypes.func
+    onMarketingDomainSelect: PropTypes.func,
+    prospects: PropTypes.array,
+    prospectsLoading: PropTypes.bool,
+    onProspectSelect: PropTypes.func,
+    onProspectStatusToggle: PropTypes.func,
+    onProspectDelete: PropTypes.func
 };
 
 export default React.memo(Sidebar);

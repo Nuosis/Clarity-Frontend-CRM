@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import TopNav from './TopNav';
+import useProspect from '../../hooks/useProspect';
 
 // Create theme context
 const ThemeContext = createContext({
@@ -61,27 +62,51 @@ const MemoizedTopNav = React.memo(TopNav);
 export default function AppLayout({ children }) {
   const { darkMode } = useTheme();
 
+  // Integrate prospects hook
+  const {
+    prospects,
+    loading: prospectsLoading,
+    error: prospectsError,
+    handleProspectSelect,
+    handleProspectCreate,
+    handleProspectUpdate,
+    handleProspectDelete,
+    handleProspectStatusToggle
+  } = useProspect();
+
   // Expect exactly two children: Sidebar and MainContent
   const [sidebar, mainContent] = React.Children.toArray(children);
 
+  // Inject props into Sidebar and MainContent dynamically
+  const sidebarWithProps = React.cloneElement(sidebar, {
+    prospects,
+    prospectsLoading,
+    onProspectSelect: handleProspectSelect,
+    onProspectStatusToggle: handleProspectStatusToggle,
+    onProspectDelete: handleProspectDelete
+  });
+
+  const mainContentWithProspects = React.cloneElement(mainContent, {
+    prospects,
+    handleProspectUpdate,
+    handleProspectCreate,
+    handleProspectDelete,
+    handleProspectStatusToggle,
+    prospectsError
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-      {/* Top navigation - full width */}
       <div style={{ position: 'sticky', top: 0, zIndex: 50 }}>
         <MemoizedTopNav />
       </div>
-      
       <div className="flex flex-1 mt-2">
-        {/* Sidebar container - fixed width */}
         <aside className="w-64 flex-shrink-0">
-          {sidebar}
+          {sidebarWithProps}
         </aside>
-
-        {/* Main content area */}
         <div className="flex-1 flex flex-col">
-          {/* Main content with padding */}
           <main className="flex-1 p-6">
-            {mainContent}
+            {mainContentWithProspects}
           </main>
         </div>
       </div>

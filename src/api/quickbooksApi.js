@@ -123,18 +123,43 @@ const makeRequest = async (endpoint, method = 'GET', data = null, options = {}) 
     
     if (!response.ok) {
       const errorText = await response.text();
-      let errorMessage;
+      let errorData = null;
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      
       try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.detail || errorJson.message || `HTTP ${response.status}: ${response.statusText}`;
+        errorData = JSON.parse(errorText);
+        // Extract error message from various possible fields
+        errorMessage = errorData.detail ||
+                     errorData.message ||
+                     errorData.error ||
+                     errorData.error_description ||
+                     (errorData.errors && Array.isArray(errorData.errors) && errorData.errors[0]) ||
+                     errorText ||
+                     errorMessage;
       } catch {
-        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        // If JSON parsing fails, use the raw text or default message
+        errorMessage = errorText || errorMessage;
       }
+      
       if (isDev) {
         // eslint-disable-next-line no-console
-        console.error('[QBO] error', errorMessage);
+        console.error('[QBO] error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          errorText,
+          extractedMessage: errorMessage
+        });
       }
-      throw new Error(errorMessage);
+      
+      // Create a comprehensive error object
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.statusText = response.statusText;
+      error.responseData = errorData;
+      error.responseText = errorText;
+      
+      throw error;
     }
     
     const contentType = response.headers.get('content-type');
@@ -146,7 +171,14 @@ const makeRequest = async (endpoint, method = 'GET', data = null, options = {}) 
   } catch (error) {
     if (isDev) {
       // eslint-disable-next-line no-console
-      console.error('[QBO] request failed:', error);
+      console.error('[QBO] request failed:', {
+        message: error.message,
+        status: error.status,
+        statusText: error.statusText,
+        responseData: error.responseData,
+        responseText: error.responseText,
+        stack: error.stack
+      });
     }
     throw error;
   }

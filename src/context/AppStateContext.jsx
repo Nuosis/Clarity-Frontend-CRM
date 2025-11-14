@@ -9,6 +9,7 @@ export const APP_ACTIONS = {
     SET_ERROR: 'SET_ERROR',
     SET_USER: 'SET_USER',
     SET_SELECTED_CUSTOMER: 'SET_SELECTED_CUSTOMER',
+    SET_SELECTED_PROSPECT: 'SET_SELECTED_PROSPECT',
     SET_SELECTED_PROJECT: 'SET_SELECTED_PROJECT',
     SET_SELECTED_TASK: 'SET_SELECTED_TASK',
     SET_SELECTED_TEAM: 'SET_SELECTED_TEAM',
@@ -55,7 +56,8 @@ const initialState = {
     showCustomerForm: false,
     showTeamForm: false,
     showProductForm: false,
-    sidebarMode: 'customer', // 'customer', 'team', 'product', or 'marketing'
+    sidebarMode: 'customer', // 'customer', 'prospect', 'team', 'product', or 'marketing'
+    selectedProspect: null,
     selectedMarketingDomain: null,
     selectedMarketingFocus: null,
     selectedMarketingContent: null,
@@ -101,11 +103,23 @@ function appReducer(state, action) {
             return {
                 ...state,
                 selectedCustomer: action.payload,
+                selectedProspect: null, // Clear prospect when selecting a customer
                 selectedProject: null, // Clear related selections
                 selectedTask: null,
                 customerDetails: null, // Clear customer details when selecting a new customer
                 showFinancialActivity: false, // Hide financial activity when selecting a customer
                 sidebarMode: 'customer', // Switch to customer mode
+                version: state.version + 1
+            };
+        case APP_ACTIONS.SET_SELECTED_PROSPECT:
+            return {
+                ...state,
+                selectedProspect: action.payload,
+                selectedCustomer: null, // Clear customer when selecting a prospect
+                selectedProject: null,
+                selectedTask: null,
+                showFinancialActivity: false,
+                sidebarMode: 'prospect', // Switch to prospect mode
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_CUSTOMER_DETAILS:
@@ -291,7 +305,11 @@ function appReducer(state, action) {
                 ...state,
                 sidebarMode: action.payload,
                 // Clear selections when switching modes
-                ...(action.payload === 'customer' ? { selectedTeam: null } : { selectedCustomer: null, selectedProject: null, selectedTask: null }),
+                ...(action.payload === 'customer'
+                    ? { selectedTeam: null, selectedProspect: null }
+                    : action.payload === 'prospect'
+                        ? { selectedCustomer: null, selectedProject: null, selectedTask: null }
+                        : { selectedCustomer: null, selectedProspect: null, selectedProject: null, selectedTask: null }),
                 version: state.version + 1
             };
         case APP_ACTIONS.SET_PRODUCTS:
@@ -377,6 +395,10 @@ export function useAppStateOperations() {
 
     const setSelectedCustomer = useCallback((customer) => {
         dispatch({ type: APP_ACTIONS.SET_SELECTED_CUSTOMER, payload: customer });
+    }, [dispatch]);
+
+    const setSelectedProspect = useCallback((prospect) => {
+        dispatch({ type: APP_ACTIONS.SET_SELECTED_PROSPECT, payload: prospect });
     }, [dispatch]);
     
     const setCustomerDetails = useCallback((details) => {
@@ -469,6 +491,7 @@ export function useAppStateOperations() {
         clearError,
         setUser,
         setSelectedCustomer,
+        setSelectedProspect,
         setSelectedProject,
         setSelectedTask,
         setSelectedTeam,

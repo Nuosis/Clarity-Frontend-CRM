@@ -10,6 +10,10 @@ function TopNav() {
   const [isUserHovered, setIsUserHovered] = useState(false);
   
   // Memoize handlers to prevent unnecessary re-renders
+  const handleProspectClick = useCallback(() => {
+    setSidebarMode('prospect');
+  }, [setSidebarMode]);
+
   const handleCustomerClick = useCallback(() => {
     setSidebarMode('customer');
   }, [setSidebarMode]);
@@ -68,6 +72,26 @@ function TopNav() {
         {/* Navigation */}
         <div className="flex h-full transition-all duration-300 ease-in-out" 
              style={{ marginRight: isUserHovered ? '0.5rem' : '0' }}>
+          <button
+            onClick={handleProspectClick}
+            className={`
+              px-6 h-full font-medium flex items-center relative outline-none focus:outline-none focus:ring-0 focus:ring-offset-0 focus:shadow-none border-none hover:border-none active:border-none
+              ${sidebarMode === 'prospect'
+                ? (darkMode ? 'text-white' : 'text-blue-800')
+                : (darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-800')}
+            `}
+            style={buttonResetStyle}
+          >
+            <span className="relative">
+              Prospects
+              <span className={`
+                absolute -bottom-3 left-0 w-full h-0.5 mb-2 transform transition-all duration-300 ease-in-out shadow-md
+                ${sidebarMode === 'prospect'
+                  ? 'bg-gray-400 scale-x-100 shadow-gray-500/50'
+                  : 'scale-x-0 bg-transparent'}
+              `}></span>
+            </span>
+          </button>
           <button
             onClick={handleCustomerClick}
             className={`

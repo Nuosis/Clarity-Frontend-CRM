@@ -390,6 +390,72 @@ export async function updateFinancialRecordBilledStatus(recordId, billedStatus =
 }
 
 /**
+ * Updates the f_billed field for multiple financial records in bulk
+ * @param {Array} recordIds - Array of recordIds to update
+ * @param {number} billedStatus - The billed status (0 = not billed, 1 = billed)
+ * @returns {Promise} Promise resolving to the bulk update results
+ */
+export async function bulkUpdateFinancialRecordsBilledStatus(recordIds, billedStatus = 1) {
+    validateParams({ recordIds, billedStatus }, ['recordIds', 'billedStatus']);
+    
+    if (!Array.isArray(recordIds) || recordIds.length === 0) {
+        throw new Error('recordIds must be a non-empty array');
+    }
+    
+    return handleFileMakerOperation(async () => {
+        // Process records in batches to avoid overwhelming the API
+        const batchSize = 10;
+        const results = [];
+        const errors = [];
+        
+        for (let i = 0; i < recordIds.length; i += batchSize) {
+            const batch = recordIds.slice(i, i + batchSize);
+            
+            // Process batch concurrently
+            const batchPromises = batch.map(async (recordId) => {
+                try {
+                    const params = {
+                        layout: Layouts.RECORDS,
+                        action: Actions.UPDATE,
+                        recordId: recordId,
+                        fieldData: {
+                            f_billed: billedStatus
+                        }
+                    };
+                    
+                    const result = await fetchDataFromFileMaker(params);
+                    return { recordId, success: true, result };
+                } catch (error) {
+                    console.error(`Failed to update record ${recordId}:`, error);
+                    return { recordId, success: false, error: error.message };
+                }
+            });
+            
+            const batchResults = await Promise.all(batchPromises);
+            results.push(...batchResults);
+            
+            // Track errors
+            const batchErrors = batchResults.filter(r => !r.success);
+            errors.push(...batchErrors);
+        }
+        
+        const successCount = results.filter(r => r.success).length;
+        const errorCount = errors.length;
+        
+        console.log(`Bulk update completed: ${successCount} successful, ${errorCount} failed`);
+        
+        return {
+            success: errorCount === 0,
+            totalRecords: recordIds.length,
+            successCount,
+            errorCount,
+            results,
+            errors
+        };
+    });
+}
+
+/**
  * Fetches financial records for a specific date range (simplified for sync)
  * @param {string} startDate - Start date in YYYY-MM-DD format
  * @param {string} endDate - End date in YYYY-MM-DD format

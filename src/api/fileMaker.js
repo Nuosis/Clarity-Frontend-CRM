@@ -40,7 +40,7 @@ function isFileMakerEnvironment() {
  * @param {string} payload - Request payload
  * @returns {Promise<string>} Authorization header
  */
-async function generateBackendAuthHeader(payload = '') {
+export async function generateBackendAuthHeader(payload = '') {
     const secretKey = import.meta.env.VITE_SECRET_KEY;
     
     if (!secretKey) {
