@@ -51,6 +51,8 @@ export function useProject(customerId = null) {
 
     /**
      * Loads projects for a customer
+     * For prospects (Supabase-only customers), custId is the Supabase customer ID
+     * and we need to load all projects then filter client-side
      */
     const loadProjects = useCallback(async (custId) => {
         try {
@@ -59,12 +61,27 @@ export function useProject(customerId = null) {
             
             let projectResult;
             if (custId) {
+                // Try to fetch projects using the customer ID
+                // This will work for FileMaker customers with _custID
                 projectResult = await fetchProjectsForCustomer(custId);
+                
+                // If no projects found and this might be a Supabase-only customer (prospect),
+                // load all projects and filter client-side by the Supabase customer ID
+                const processedProjects = processProjectData(projectResult);
+                
+                // Filter projects by Supabase customer ID if no FileMaker match found
+                // Projects created for prospects store the Supabase customer ID in _custID field
+                const filteredProjects = processedProjects.filter(project =>
+                    project._custID === custId || project.customerId === custId
+                );
+                
+                setProjects(filteredProjects);
             } else {
+                // Load all projects when no customer ID provided
                 projectResult = await fetchProjectsForCustomers([]);
+                const processedProjects = processProjectData(projectResult);
+                setProjects(processedProjects);
             }
-            const processedProjects = processProjectData(projectResult);
-            setProjects(processedProjects);
         } catch (err) {
             setError(err.message);
             console.error('Error loading projects:', err);
@@ -169,37 +186,82 @@ export function useProject(customerId = null) {
         try {
             setLoading(true);
             setError(null);
-            
+
             console.log('Project creation data received:', projectData);
-            
+
             const validation = validateProjectData(projectData);
             console.log('Validation result:', validation);
-            
+
             if (!validation.isValid) {
                 console.log('Validation failed with errors:', validation.errors);
                 throw new Error(validation.errors.join(', '));
             }
-            
+
             // Generate a UUID for the new project
             const projectId = uuidv4();
-            
+
             // Add the UUID to the project data
             const dataWithId = {
                 ...projectData,
                 id: projectId
             };
-            
+
             const formattedData = formatProjectForFileMaker(dataWithId);
             console.log('Formatted data for FileMaker:', formattedData);
-            
+
             const result = await createProject(formattedData);
-            
+
+            // Sync project to Supabase for proposal foreign key support
+            if (user?.supabaseOrgID) {
+                try {
+                    const { insert } = await import('../services/supabaseService');
+
+                    // Map status to Supabase status values
+                    let supabaseStatus = 'active';
+                    const projectStatus = (projectData.status || 'Open').toLowerCase();
+                    if (projectStatus === 'closed' || projectStatus === 'complete' || projectStatus === 'completed') {
+                        supabaseStatus = 'completed';
+                    } else if (projectStatus === 'pending') {
+                        supabaseStatus = 'pending';
+                    } else if (projectStatus === 'on hold' || projectStatus === 'on_hold') {
+                        supabaseStatus = 'on_hold';
+                    } else if (projectStatus === 'cancelled') {
+                        supabaseStatus = 'cancelled';
+                    }
+
+                    const supabaseProjectData = {
+                        id: projectId,
+                        name: projectData.name || projectData.projectName,
+                        customer_id: projectData.customerId || projectData._custID,
+                        status: supabaseStatus,
+                        description: projectData.description || null,
+                        budget: parseFloat(projectData.value) || null,
+                        start_date: projectData.dateStart || null,
+                        target_end_date: projectData.dateEnd || null,
+                        created_by: user.email || user.username || null
+                    };
+
+                    console.log('Syncing project to Supabase:', supabaseProjectData);
+                    const supabaseResult = await insert('projects', supabaseProjectData);
+
+                    if (!supabaseResult.success) {
+                        console.warn('Failed to sync project to Supabase:', supabaseResult.error);
+                        // Don't fail the entire operation if Supabase sync fails
+                    } else {
+                        console.log('Project synced to Supabase successfully');
+                    }
+                } catch (supabaseError) {
+                    console.error('Error syncing project to Supabase:', supabaseError);
+                    // Don't fail the entire operation if Supabase sync fails
+                }
+            }
+
             // Process fixed price or subscription logic if applicable
             if ((projectData.f_fixedPrice === "1" || projectData.f_fixedPrice === 1 ||
                  projectData.isFixedPrice) ||
                 (projectData.f_subscription === "1" || projectData.f_subscription === 1 ||
                  projectData.isSubscription)) {
-                
+
                 // Process the project value according to business rules
                 const projectWithId = {
                     ...projectData,
@@ -209,24 +271,24 @@ export function useProject(customerId = null) {
                     f_subscription: projectData.f_subscription === "1" || projectData.f_subscription === 1 || projectData.isSubscription,
                     value: parseFloat(projectData.value) || 0
                 };
-                
+
                 // Process the project value and create sales entries if needed
                 const { billableStatus } = processProjectValue(projectWithId, false);
-                
+
                 // Update billable status for all time records if needed
                 if (billableStatus !== null) {
                     await updateProjectRecordsBillableStatus(projectId, billableStatus);
                 }
-                
+
                 // Create sales entries if the user has an organization ID
                 if (user?.supabaseOrgID) {
                     await createSalesFromProjectValue(projectWithId, user.supabaseOrgID);
                 }
             }
-            
+
             // Reload projects to get updated list
             await loadProjects(projectData.customerId);
-            
+
             return result;
         } catch (err) {
             setError(err.message);
@@ -238,7 +300,7 @@ export function useProject(customerId = null) {
         } finally {
             setLoading(false);
         }
-    }, [loadProjects]);
+    }, [loadProjects, user]);
 
     /**
      * Updates an existing project

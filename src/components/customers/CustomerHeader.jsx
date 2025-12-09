@@ -8,6 +8,7 @@ function CustomerHeader({
   onNewProject,
   onShowActivityReport,
   onEditProspect,
+  onConvertToCustomer,
   isProspect = false
 }) {
   const { darkMode } = useTheme();
@@ -63,12 +64,20 @@ function CustomerHeader({
               </button>
             </>
           ) : (
-            <button
-              onClick={onEditProspect}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
-            >
-              Edit
-            </button>
+            <>
+              <button
+                onClick={onConvertToCustomer}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md"
+              >
+                Convert to Customer
+              </button>
+              <button
+                onClick={onEditProspect}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+              >
+                Edit
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -130,6 +139,7 @@ CustomerHeader.propTypes = {
   onNewProject: PropTypes.func,
   onShowActivityReport: PropTypes.func,
   onEditProspect: PropTypes.func,
+  onConvertToCustomer: PropTypes.func,
   isProspect: PropTypes.bool
 };
 

@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 import TopNav from './TopNav';
 import useProspect from '../../hooks/useProspect';
+import { lightTheme, darkTheme } from '../../theme';
 
 // Create theme context
 const ThemeContext = createContext({
@@ -45,7 +47,9 @@ export function ThemeProvider({ children }) {
 
   return (
     <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
-      {children}
+      <StyledThemeProvider theme={darkMode ? darkTheme : lightTheme}>
+        {children}
+      </StyledThemeProvider>
     </ThemeContext.Provider>
   );
 }

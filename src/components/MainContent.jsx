@@ -253,7 +253,12 @@ const MainContent = React.memo(function MainContent({
     if (sidebarMode === 'prospect' && selectedProspect) {
         return (
             <ErrorBoundary>
-                <ProspectDetails prospect={selectedProspect} />
+                <ProspectDetails
+                    prospect={selectedProspect}
+                    projects={projects}
+                    onProjectSelect={handleProjectSelection}
+                    onProjectCreate={handlers.handleProjectCreate}
+                />
             </ErrorBoundary>
         );
     }

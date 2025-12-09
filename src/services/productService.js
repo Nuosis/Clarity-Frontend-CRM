@@ -88,10 +88,6 @@ export async function fetchProductsByOrganization(organizationId) {
  */
 export async function createProduct(productData) {
   try {
-    if (!productData.organization_id) {
-      throw new Error('Organization ID is required');
-    }
-
     const validation = validateProductData(productData);
     if (!validation.isValid) {
       return {
@@ -227,10 +223,6 @@ export function validateProductData(data) {
 
   if (data.price === undefined || data.price === null || isNaN(parseFloat(data.price)) || parseFloat(data.price) <= 0) {
     errors.push('Product price must be a positive number');
-  }
-
-  if (!data.organization_id) {
-    errors.push('Organization ID is required');
   }
 
   return {

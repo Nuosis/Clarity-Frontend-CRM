@@ -129,3 +129,63 @@ export function validateProspectData(data) {
 
   return cleaned
 }
+
+/**
+ * Validate prospect data before conversion
+ * @param {Object} prospect - Prospect data to validate
+ * @returns {Object} Validation result with isValid flag and errors/warnings arrays
+ */
+export function validateProspectForConversion(prospect) {
+  const errors = []
+  const warnings = []
+
+  // Check if prospect exists
+  if (!prospect) {
+    errors.push('Prospect data is required')
+    return { isValid: false, errors, warnings }
+  }
+
+  // Check if already converted
+  if (prospect.type !== 'PROSPECT') {
+    errors.push('This record is not a prospect or has already been converted')
+  }
+
+  // Check for required fields
+  if (!prospect.Name && !prospect.FirstName && !prospect.LastName) {
+    errors.push('Prospect must have a name')
+  }
+
+  // Warn about missing contact information (not blocking)
+  if (!prospect.Email) {
+    warnings.push('No email address found')
+  }
+  if (!prospect.Phone) {
+    warnings.push('No phone number found')
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  }
+}
+
+/**
+ * Process conversion result and format for UI
+ * @param {Object} result - Conversion result from API
+ * @returns {Object} Processed conversion result
+ */
+export function processConversionResult(result) {
+  if (!result) {
+    throw new Error('Conversion result is required')
+  }
+
+  return {
+    success: result.conversionSuccess || false,
+    customer: processProspectData([result])[0],
+    fileMakerRecordId: result.fileMakerRecordId,
+    message: result.conversionSuccess 
+      ? 'Prospect successfully converted to customer'
+      : 'Conversion completed with warnings'
+  }
+}

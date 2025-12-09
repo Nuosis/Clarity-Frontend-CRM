@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
+import SourceDocumentsManager from '../common/SourceDocumentsManager'
 
 const GalleryContainer = styled.div`
   display: grid;
@@ -162,8 +163,10 @@ const LightboxInfo = styled.div`
  * Displays proposal concepts/assets with lightbox functionality
  * @param {Object} props - Component props
  * @param {Array} props.concepts - Array of concept objects
+ * @param {Object} props.repositoryConfig - Optional GitHub repository configuration
+ * @param {boolean} props.darkMode - Optional dark mode flag
  */
-const ConceptGallery = ({ concepts }) => {
+const ConceptGallery = ({ concepts, repositoryConfig, darkMode }) => {
   const [lightboxConcept, setLightboxConcept] = useState(null)
   
   const openLightbox = useCallback((concept) => {
@@ -198,12 +201,19 @@ const ConceptGallery = ({ concepts }) => {
            (concept.url && concept.url.match(/\.pdf$/i))
   }, [])
   
-  if (!concepts || concepts.length === 0) {
-    return null
-  }
-  
   return (
     <>
+      {/* Source Documents Section */}
+      {repositoryConfig && (
+        <div style={{ marginBottom: '24px' }}>
+          <SourceDocumentsManager
+            repositoryConfig={repositoryConfig}
+            darkMode={darkMode}
+          />
+        </div>
+      )}
+
+      {(!concepts || concepts.length === 0) ? null : (
       <GalleryContainer>
         {concepts
           .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -238,7 +248,8 @@ const ConceptGallery = ({ concepts }) => {
             </ConceptCard>
           ))}
       </GalleryContainer>
-      
+      )}
+
       {/* Lightbox */}
       {lightboxConcept && (
         <LightboxOverlay
@@ -320,7 +331,12 @@ ConceptGallery.propTypes = {
       thumbnailUrl: PropTypes.string,
       order: PropTypes.number
     })
-  ).isRequired
+  ).isRequired,
+  repositoryConfig: PropTypes.shape({
+    owner: PropTypes.string.isRequired,
+    repo: PropTypes.string.isRequired
+  }),
+  darkMode: PropTypes.bool
 }
 
 export default ConceptGallery

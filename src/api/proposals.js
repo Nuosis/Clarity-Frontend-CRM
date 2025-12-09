@@ -66,47 +66,87 @@ function generateSecureToken() {
 }
 
 /**
- * Create a new proposal
+ * Create a new proposal or update an existing one
  * @param {Object} proposalData - Proposal data
- * @returns {Promise<Object>} Created proposal
+ * @returns {Promise<Object>} Created/updated proposal
  */
 export async function createProposal(proposalData) {
   try {
-    // Prepare proposal data with secure token
-    const proposalWithToken = {
-      ...proposalData,
-      access_token: generateSecureToken(),
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'draft'
+    // Determine if this is an update (has existing ID) or create (new)
+    const isUpdate = !!proposalData.id
+
+    // Map frontend data structure to backend schema
+    // Backend expects: id, project_id, customer_id, title, description (optional)
+    // IMPORTANT: Only include fields the backend schema expects
+    const backendProposalData = {
+      id: proposalData.id || crypto.randomUUID(), // Auto-generate UUID if not provided
+      project_id: proposalData.projectId || proposalData.project_id,
+      customer_id: proposalData.customerId || proposalData.customer_id,
+      title: proposalData.title,
+      description: proposalData.description || '',
+      // Ensure prices are numbers, not strings
+      total_price: parseFloat(proposalData.totalPrice || proposalData.total_price || 0),
+      selected_price: parseFloat(proposalData.selectedPrice || proposalData.selected_price || 0)
     }
 
-    const payload = JSON.stringify(proposalWithToken)
+    // Only set these fields on creation, not on update
+    if (!isUpdate) {
+      backendProposalData.access_token = generateSecureToken()
+      backendProposalData.expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      backendProposalData.status = 'draft'
+    }
+
+    // Remove any undefined values
+    Object.keys(backendProposalData).forEach(key => {
+      if (backendProposalData[key] === undefined) {
+        delete backendProposalData[key]
+      }
+    })
+
+    console.log(`[Proposals] ${isUpdate ? 'Updating' : 'Creating'} proposal:`, backendProposalData)
+
+    const payload = JSON.stringify(backendProposalData)
     const authHeader = await generateBackendAuthHeader(payload)
 
     const response = await axios({
-      method: 'POST',
-      url: `${backendConfig.baseUrl}/proposals/`,
+      method: isUpdate ? 'PUT' : 'POST',
+      url: isUpdate
+        ? `${backendConfig.baseUrl}/proposals/${backendProposalData.id}`
+        : `${backendConfig.baseUrl}/proposals/`,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': authHeader
       },
-      data: proposalWithToken
+      data: backendProposalData
     })
 
-    console.log('[Proposals] Created proposal:', response.data.title)
+    console.log(`[Proposals] ${isUpdate ? 'Updated' : 'Created'} proposal:`, response.data.title)
     return { success: true, data: response.data }
   } catch (error) {
     console.error('[Proposals] Create proposal error:', error)
-    
+    console.error('[Proposals] Error response data:', error.response?.data)
+
     let errorMessage = 'Failed to create proposal'
+
+    // Handle FastAPI validation errors
     if (error.response?.data?.detail) {
-      errorMessage = error.response.data.detail
+      if (Array.isArray(error.response.data.detail)) {
+        // Pydantic validation errors
+        const validationErrors = error.response.data.detail.map(err =>
+          `${err.loc.join('.')}: ${err.msg}`
+        ).join(', ')
+        errorMessage = `Validation error: ${validationErrors}`
+      } else if (typeof error.response.data.detail === 'string') {
+        errorMessage = error.response.data.detail
+      } else {
+        errorMessage = JSON.stringify(error.response.data.detail)
+      }
     } else if (error.response?.data?.message) {
       errorMessage = error.response.data.message
     } else if (error.message) {
       errorMessage = error.message
     }
-    
+
     return {
       success: false,
       error: errorMessage
@@ -117,32 +157,38 @@ export async function createProposal(proposalData) {
 /**
  * Fetch proposals for a specific project
  * @param {string} projectId - Project ID
+ * @param {number} page - Page number (default: 1)
+ * @param {number} pageSize - Page size (default: 50)
  * @returns {Promise<Object>} Result with proposals data
  */
-export async function fetchProposalsForProject(projectId) {
+export async function fetchProposalsForProject(projectId, page = 1, pageSize = 50) {
   try {
     const authHeader = await generateBackendAuthHeader()
 
     const response = await axios({
       method: 'GET',
-      url: `${backendConfig.baseUrl}/proposals/`,
+      url: `${backendConfig.baseUrl}/proposals/project/${projectId}`,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': authHeader
       },
       params: {
-        project_id: projectId
+        page,
+        page_size: pageSize
       }
     })
 
-    console.log('[Proposals] Fetched proposals for project:', projectId)
+    console.log('[Proposals] Fetched proposals for project:', projectId, `(${response.data.proposals?.length || 0} proposals)`)
     return {
       success: true,
-      data: response.data.proposals || []
+      data: response.data.proposals || [],
+      totalCount: response.data.total_count || 0,
+      page: response.data.page || 1,
+      pageSize: response.data.page_size || pageSize
     }
   } catch (error) {
     console.error('[Proposals] Fetch proposals for project error:', error)
-    
+
     let errorMessage = 'Failed to fetch proposals'
     if (error.response?.data?.detail) {
       errorMessage = error.response.data.detail
@@ -151,7 +197,7 @@ export async function fetchProposalsForProject(projectId) {
     } else if (error.message) {
       errorMessage = error.message
     }
-    
+
     return {
       success: false,
       error: errorMessage

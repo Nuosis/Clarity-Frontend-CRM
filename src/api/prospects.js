@@ -400,3 +400,116 @@ export const deleteProspect = async (id) => {
 
   return { success: true }
 }
+
+/**
+ * Convert prospect to customer
+ * Creates FileMaker record and updates Supabase type
+ * @param {string} prospectId - The prospect ID to convert
+ * @param {string} customerType - The customer type to convert to (default: 'CUSTOMER')
+ * @returns {Promise<Object>} The converted customer data
+ */
+export const convertProspectToCustomer = async (prospectId, customerType = 'CUSTOMER') => {
+  // Step 1: Fetch complete prospect data from Supabase
+  const { data: prospect, error: fetchError } = await supabase
+    .from('customers')
+    .select(`
+      *,
+      customer_email(*),
+      customer_phone(*),
+      customer_address(*),
+      customer_settings(*)
+    `)
+    .eq('id', prospectId)
+    .eq('type', 'PROSPECT')
+    .single()
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch prospect: ${fetchError.message}`)
+  }
+
+  if (!prospect) {
+    throw new Error('Prospect not found or already converted')
+  }
+
+  // Step 2: Prepare data for FileMaker customer creation
+  const fileMakerData = {
+    Name: prospect.name || `${prospect.first_name || ''} ${prospect.last_name || ''}`.trim(),
+    FirstName: prospect.first_name || '',
+    LastName: prospect.last_name || '',
+    Email: prospect.customer_email?.[0]?.email || '',
+    Phone: prospect.customer_phone?.[0]?.phone || '',
+    // Add address fields if available
+    Address: prospect.customer_address?.[0]?.address_line1 || '',
+    City: prospect.customer_address?.[0]?.city || '',
+    State: prospect.customer_address?.[0]?.state || '',
+    PostalCode: prospect.customer_address?.[0]?.postal_code || '',
+    Country: prospect.customer_address?.[0]?.country || '',
+    // Add industry from customer_settings if available
+    Industry: prospect.customer_settings?.find(s => s.type === 'industry')?.data || '',
+    // Set as active customer
+    f_active: "1"
+  }
+
+  // Step 3: Create customer in FileMaker via backend API
+  // Import FileMaker API functions
+  const { fetchDataFromFileMaker, Layouts, Actions } = await import('./fileMaker.js')
+  
+  let fileMakerRecordId
+  try {
+    const fileMakerResponse = await fetchDataFromFileMaker({
+      layout: Layouts.CUSTOMERS,
+      action: Actions.CREATE,
+      fieldData: fileMakerData
+    })
+
+    // Extract record ID from FileMaker response
+    fileMakerRecordId = fileMakerResponse.response?.recordId ||
+                        fileMakerResponse.response?.data?.recordId ||
+                        fileMakerResponse.recordId
+
+    if (!fileMakerRecordId) {
+      throw new Error('FileMaker did not return a record ID')
+    }
+
+    console.log('[Prospect Conversion] FileMaker customer created:', fileMakerRecordId)
+  } catch (error) {
+    console.error('[Prospect Conversion] FileMaker creation failed:', error)
+    throw new Error(`Failed to create FileMaker customer: ${error.message}`)
+  }
+
+  // Step 4: Update Supabase record type to mark as converted customer
+  const { data: updatedCustomer, error: updateError } = await supabase
+    .from('customers')
+    .update({
+      type: customerType,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', prospectId)
+    .select(`
+      *,
+      customer_email(*),
+      customer_phone(*),
+      customer_address(*),
+      customer_settings(*)
+    `)
+    .single()
+
+  if (updateError) {
+    console.error('[Prospect Conversion] Supabase update failed:', updateError)
+    // Note: FileMaker record was created, but Supabase update failed
+    // This is a partial failure state that may need manual intervention
+    throw new Error(`FileMaker customer created (ID: ${fileMakerRecordId}), but Supabase update failed: ${updateError.message}`)
+  }
+
+  console.log('[Prospect Conversion] Conversion complete:', {
+    prospectId,
+    fileMakerRecordId,
+    newType: customerType
+  })
+
+  return {
+    ...updatedCustomer,
+    fileMakerRecordId,
+    conversionSuccess: true
+  }
+}

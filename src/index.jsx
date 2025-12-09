@@ -69,6 +69,8 @@ function AppContent() {
     } = useTeamContext();
 
     // Project state and handlers
+    // Use Supabase customer ID for prospects, FileMaker customer ID for regular customers
+    const projectCustomerId = appState.selectedProspect?.id || appState.selectedCustomer?.id;
     const {
         projects,
         error: projectError,
@@ -81,7 +83,7 @@ function AppContent() {
         clearSelectedProject,
         loadProjectDetails,
         projectRecords
-    } = useProject(appState.selectedCustomer?.id);
+    } = useProject(projectCustomerId);
 
     // Task state and handlers
     const {

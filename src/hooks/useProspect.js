@@ -158,6 +158,55 @@ const useProspect = () => {
     [prospects, handleProspectUpdate]
   )
 
+  // Convert prospect to customer
+  const handleProspectConvert = useCallback(
+    async (prospectId) => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Find the prospect
+        const prospect = prospects.find((p) => p.id === prospectId)
+        if (!prospect) {
+          throw new Error('Prospect not found')
+        }
+
+        // Validate prospect data before conversion
+        const validation = prospectService.validateProspectForConversion(prospect)
+        
+        // Block conversion if there are validation errors (not warnings)
+        if (validation.errors.length > 0) {
+          throw new Error(validation.errors.join(', '))
+        }
+
+        // Perform conversion (warnings don't block)
+        const result = await prospectApi.convertProspectToCustomer(prospectId)
+        
+        // Process the result
+        const processedResult = prospectService.processConversionResult(result)
+
+        // Remove from prospects list (now a customer)
+        setProspects(prev => prev.filter(p => p.id !== prospectId))
+
+        // Clear selected prospect if it was the converted one
+        setSelectedProspect(null)
+
+        return {
+          success: true,
+          validation,
+          result: processedResult
+        }
+      } catch (err) {
+        console.error('Failed to convert prospect:', err)
+        setError(err.message)
+        throw err // Throw error for consistent error handling
+      } finally {
+        setLoading(false)
+      }
+    },
+    [prospects, setSelectedProspect]
+  )
+
   // Load prospects at mount
   useEffect(() => {
     loadProspects()
@@ -173,6 +222,7 @@ const useProspect = () => {
     handleProspectUpdate,
     handleProspectDelete,
     handleProspectStatusToggle,
+    handleProspectConvert,
   }
 }
 
