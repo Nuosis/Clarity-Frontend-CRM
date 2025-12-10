@@ -211,49 +211,51 @@ export function useProject(customerId = null) {
 
             const result = await createProject(formattedData);
 
+            console.log('[PROJECT SYNC] Starting Supabase sync for project:', projectId);
+
             // Sync project to Supabase for proposal foreign key support
-            if (user?.supabaseOrgID) {
-                try {
-                    const { insert } = await import('../services/supabaseService');
+            // Always sync projects in web app environment since proposals require projects table
+            try {
+                const { insert } = await import('../services/supabaseService');
 
-                    // Map status to Supabase status values
-                    let supabaseStatus = 'active';
-                    const projectStatus = (projectData.status || 'Open').toLowerCase();
-                    if (projectStatus === 'closed' || projectStatus === 'complete' || projectStatus === 'completed') {
-                        supabaseStatus = 'completed';
-                    } else if (projectStatus === 'pending') {
-                        supabaseStatus = 'pending';
-                    } else if (projectStatus === 'on hold' || projectStatus === 'on_hold') {
-                        supabaseStatus = 'on_hold';
-                    } else if (projectStatus === 'cancelled') {
-                        supabaseStatus = 'cancelled';
-                    }
-
-                    const supabaseProjectData = {
-                        id: projectId,
-                        name: projectData.name || projectData.projectName,
-                        customer_id: projectData.customerId || projectData._custID,
-                        status: supabaseStatus,
-                        description: projectData.description || null,
-                        budget: parseFloat(projectData.value) || null,
-                        start_date: projectData.dateStart || null,
-                        target_end_date: projectData.dateEnd || null,
-                        created_by: user.email || user.username || null
-                    };
-
-                    console.log('Syncing project to Supabase:', supabaseProjectData);
-                    const supabaseResult = await insert('projects', supabaseProjectData);
-
-                    if (!supabaseResult.success) {
-                        console.warn('Failed to sync project to Supabase:', supabaseResult.error);
-                        // Don't fail the entire operation if Supabase sync fails
-                    } else {
-                        console.log('Project synced to Supabase successfully');
-                    }
-                } catch (supabaseError) {
-                    console.error('Error syncing project to Supabase:', supabaseError);
-                    // Don't fail the entire operation if Supabase sync fails
+                // Map status to Supabase status values
+                let supabaseStatus = 'active';
+                const projectStatus = (projectData.status || 'Open').toLowerCase();
+                if (projectStatus === 'closed' || projectStatus === 'complete' || projectStatus === 'completed') {
+                    supabaseStatus = 'completed';
+                } else if (projectStatus === 'pending') {
+                    supabaseStatus = 'pending';
+                } else if (projectStatus === 'on hold' || projectStatus === 'on_hold') {
+                    supabaseStatus = 'on_hold';
+                } else if (projectStatus === 'cancelled') {
+                    supabaseStatus = 'cancelled';
                 }
+
+                const supabaseProjectData = {
+                    id: projectId,
+                    name: projectData.name || projectData.projectName,
+                    customer_id: projectData.customerId || projectData._custID,
+                    status: supabaseStatus,
+                    description: projectData.description || null,
+                    budget: parseFloat(projectData.value) || null,
+                    start_date: projectData.dateStart || null,
+                    target_end_date: projectData.dateEnd || null,
+                    created_by: user?.email || user?.username || null
+                };
+
+                console.log('Syncing project to Supabase:', supabaseProjectData);
+                const supabaseResult = await insert('projects', supabaseProjectData);
+
+                if (!supabaseResult.success) {
+                    console.error('Failed to sync project to Supabase:', supabaseResult.error);
+                    // Show error to user since proposals won't work without this
+                    showError(`Project created in FileMaker but failed to sync to Supabase: ${supabaseResult.error}`);
+                } else {
+                    console.log('Project synced to Supabase successfully');
+                }
+            } catch (supabaseError) {
+                console.error('Error syncing project to Supabase:', supabaseError);
+                showError(`Project created in FileMaker but failed to sync to Supabase: ${supabaseError.message}`);
             }
 
             // Process fixed price or subscription logic if applicable
