@@ -1,6 +1,6 @@
 import { fetchDataFromFileMaker } from '../api/fileMaker';
 import { query } from './supabaseService';
-import { loadOrganizationProducts } from './productService';
+import { loadAllProductsToState } from './productService';
 // Note: We don't directly import useProducts here since hooks can only be used in React components
 
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff delays in ms
@@ -193,32 +193,22 @@ class InitializationService {
      * @returns {Promise<Object>} - Object containing success status and products data
      */
     /**
-     * Loads products for the current user's organization
+     * Loads all products (single-tenancy)
      * This method is kept for backward compatibility
      * New components should use the useProducts hook directly
      *
-     * @param {string} organizationId - The organization ID to load products for
      * @param {Function} setProducts - Function to update the products state
      * @param {Function} setLoading - Function to update the loading state
      * @param {Function} setError - Function to update the error state
      * @returns {Promise<Object>} - Object containing success status and products data
      */
-    async loadProducts(organizationId, setProducts, setLoading, setError) {
+    async loadProducts(setProducts, setLoading, setError) {
         this.currentPhase = 'loading_products';
         try {
-            if (!organizationId) {
-                console.warn('Cannot load products: Organization ID is missing');
-                return {
-                    success: false,
-                    error: 'Organization ID is required',
-                    data: []
-                };
-            }
-
-            console.log(`Loading products for organization: ${organizationId}`);
+            console.log('Loading all products (single-tenancy)');
             // The useProducts hook will handle this more gracefully in React components,
             // but we keep this method for backward compatibility
-            return await loadOrganizationProducts(organizationId, setProducts, setLoading, setError);
+            return await loadAllProductsToState(setProducts, setLoading, setError);
         } catch (error) {
             console.error('Error loading products:', error);
             if (setError) {

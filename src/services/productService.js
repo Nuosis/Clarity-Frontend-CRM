@@ -4,30 +4,16 @@
 import { query, insert, update, remove } from './supabaseService';
 
 /**
- * Fetches all products for a specific organization
- * @param {string} organizationId - The organization ID to fetch products for
+ * Fetches all products (single-tenancy)
  * @returns {Promise<Object>} - Object containing success status and products data
  */
-export async function fetchProductsByOrganization(organizationId) {
-  if (!organizationId) {
-    console.error('Cannot fetch products: Organization ID is missing');
-    return {
-      success: false,
-      error: 'Organization ID is required',
-      data: []
-    };
-  }
-
+export async function fetchAllProducts() {
   try {
-    console.log(`Fetching products for organization: ${organizationId}`);
-    
+    console.log('Fetching all products');
+
     // Use query for regular database operations
     const result = await query('products', {
       select: '*',
-      eq: {
-        column: 'organization_id',
-        value: organizationId
-      },
       order: {
         column: 'name',
         ascending: true
@@ -46,7 +32,7 @@ export async function fetchProductsByOrganization(organizationId) {
 
     // Handle null or undefined data gracefully
     if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
-      console.log(`No products found for organization: ${organizationId}`);
+      console.log('No products found');
       return {
         success: true,
         data: []
@@ -374,43 +360,29 @@ export function calculateProductStats(products) {
 }
 
 /**
- * Loads products for an organization and updates the app state
- * @param {string} organizationId - The organization ID to load products for
+ * Loads all products and updates the app state (single-tenancy)
  * @param {Function} setProducts - Function to update the products state
  * @param {Function} setLoading - Function to update the loading state
  * @param {Function} setError - Function to update the error state
  * @returns {Promise<Object>} - Object containing success status and products data
  */
-export async function loadOrganizationProducts(organizationId, setProducts, setLoading, setError) {
-  // Handle null or undefined organizationId gracefully
-  if (!organizationId) {
-    console.log('Cannot load products: Organization ID is missing or null');
-    if (setProducts) setProducts([]);
-    if (setError) setError('Organization ID is required');
-    if (setLoading) setLoading(false);
-    return {
-      success: false,
-      error: 'Organization ID is required',
-      data: []
-    };
-  }
-
+export async function loadAllProductsToState(setProducts, setLoading, setError) {
   try {
     if (setLoading) setLoading(true);
-    
-    const result = await fetchProductsByOrganization(organizationId);
-    
+
+    const result = await fetchAllProducts();
+
     if (!result.success) {
       throw new Error(result.error || 'Failed to load products');
     }
-    
-    // The data is already processed by fetchProductsByOrganization
+
+    // The data is already processed by fetchAllProducts
     const productsData = result.data || [];
-    
+
     // Update the app state with the products if setProducts function is provided
     if (setProducts) setProducts(productsData);
     if (setLoading) setLoading(false);
-    
+
     // Return the already processed data
     return {
       success: true,
@@ -418,9 +390,9 @@ export async function loadOrganizationProducts(organizationId, setProducts, setL
     };
   } catch (error) {
     console.error('Error loading products:', error);
-    setError(error.message);
-    setLoading(false);
-    
+    if (setError) setError(error.message);
+    if (setLoading) setLoading(false);
+
     return {
       success: false,
       error: error.message,

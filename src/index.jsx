@@ -102,7 +102,7 @@ function AppContent() {
         handleTimerAdjust,
         clearSelectedTask
     } = useTask(appState.selectedProject?.id);
-    const { loadProductsForOrganization } = useProducts();
+    const { loadProducts } = useProducts();
     const { loadUnbilledSalesForOrganization } = useSales();
 
     // Marketing domain state
@@ -193,11 +193,12 @@ function AppContent() {
                         loadingStateManager.setLoading('initialization', true, 'Retrieving Supabase user ID...');
                         const supabaseIds = await initializationService.fetchSupabaseUserId(userContext, setUser);
 
-                        // Load products and sales if organization ID is available
+                        // Load products and sales (single-tenancy)
+                        loadingStateManager.setLoading('initialization', true, 'Loading products...');
+                        await loadProducts();
+
+                        // Load sales if organization ID is available
                         if (supabaseIds && supabaseIds.supabaseOrgId) {
-                            loadingStateManager.setLoading('initialization', true, 'Loading products...');
-                            await loadProductsForOrganization(supabaseIds.supabaseOrgId);
-                            
                             loadingStateManager.setLoading('initialization', true, 'Loading sales...');
                             await loadUnbilledSalesForOrganization(supabaseIds.supabaseOrgId);
                         }
@@ -222,12 +223,13 @@ function AppContent() {
                         const supabaseIds = await initializationService.fetchSupabaseUserId(webAppUser, setUser);
                         console.log('[App] fetchSupabaseUserId result:', supabaseIds);
                         
-                        // Load products and sales if organization ID is available
+                        // Load products (single-tenancy)
+                        loadingStateManager.setLoading('initialization', true, 'Loading products...');
+                        await loadProducts();
+
+                        // Load sales if organization ID is available
                         if (supabaseIds && supabaseIds.supabaseOrgId) {
-                            console.log('[App] Loading products and sales for org ID:', supabaseIds.supabaseOrgId);
-                            loadingStateManager.setLoading('initialization', true, 'Loading products...');
-                            await loadProductsForOrganization(supabaseIds.supabaseOrgId);
-                            
+                            console.log('[App] Loading sales for org ID:', supabaseIds.supabaseOrgId);
                             loadingStateManager.setLoading('initialization', true, 'Loading sales...');
                             await loadUnbilledSalesForOrganization(supabaseIds.supabaseOrgId);
                         } else {
@@ -272,7 +274,7 @@ function AppContent() {
         setLoading,
         setUser,
         setAuthentication,
-        loadProductsForOrganization,
+        loadProducts,
         loadUnbilledSalesForOrganization
     ]);
 

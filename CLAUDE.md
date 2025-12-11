@@ -15,6 +15,50 @@ The application manages customers, projects, tasks, time tracking, proposals, ma
 - FileMaker support is maintained for backward compatibility only
 - Focus development on web app environment with direct Supabase + Backend API integration
 
+## ⚠️ CRITICAL: Backend Change Protocol
+
+**🚨 DO NOT DIRECTLY MODIFY BACKEND INFRASTRUCTURE 🚨**
+
+You do **NOT** have permission to make changes to:
+- Database schema (tables, columns, indexes, constraints)
+- Backend API endpoints or business logic
+- Database migrations
+- Server configuration
+- Environment variables on the backend
+
+**Required Process for Backend Changes:**
+
+1. **Create a Backend Change Request Document:**
+   - Use format: `BACKEND_CHANGE_REQUEST_XXX_[FEATURE_NAME].md`
+   - Include: SQL changes, API contract changes, testing requirements, rollback plan
+   - Document frontend assumptions and implementation status
+   - List all affected areas and migration impact
+
+2. **Submit Request to User:**
+   - User will forward request to backend team
+   - Wait for backend team approval and implementation
+   - Do not proceed with frontend code that depends on unapproved backend changes
+
+3. **After Backend Approval:**
+   - Implement frontend code assuming approved schema/API changes
+   - Clearly document dependencies in code comments
+   - Test against dev environment once backend changes are deployed
+
+**Example:**
+```markdown
+# ❌ WRONG - Direct SSH database modification
+ssh marcus@backend.claritybusinesssolutions.ca "docker exec supabase-db psql..."
+
+# ✅ CORRECT - Create change request document
+Create: BACKEND_CHANGE_REQUEST_001_PRODUCT_SUBSCRIPTIONS.md
+```
+
+**Why This Matters:**
+- Database changes affect multiple systems and teams
+- Schema migrations require careful planning and testing
+- Backend team needs to coordinate deployments
+- Unauthorized changes can cause production incidents
+
 ## Development Commands
 
 ### Local Development

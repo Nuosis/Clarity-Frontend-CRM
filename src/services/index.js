@@ -94,7 +94,7 @@ export {
 
 // Product service exports
 export {
-    fetchProductsByOrganization,
+    fetchAllProducts,
     createProduct,
     updateProduct,
     deleteProduct,
@@ -102,8 +102,21 @@ export {
     formatProductForDisplay,
     groupProductsByPriceRange,
     calculateProductStats,
-    loadOrganizationProducts
+    loadAllProductsToState
 } from './productService';
+
+// Product relationships service exports
+export {
+    fetchProductRelationships,
+    fetchParentProducts,
+    createProductRelationship,
+    updateProductRelationship,
+    deleteProductRelationship,
+    validateRelationshipData,
+    getRelationshipTypeLabel,
+    getRelationshipTypeDescription,
+    RELATIONSHIP_TYPES
+} from './productRelationshipsService';
 
 // Sales service exports
 export {

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useProducts } from '../../hooks/useProducts';
 import ProductForm from './ProductForm';
+import RelatedProductsSection from './RelatedProductsSection';
 
 function ProductDetails({ product, onUpdate, onDelete }) {
   const { darkMode } = useTheme();
@@ -101,8 +102,36 @@ function ProductDetails({ product, onUpdate, onDelete }) {
           </h3>
           <p className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             ${product.price.toFixed(2)}
+            {product.is_subscription && product.subscription_frequency && (
+              <span className="text-sm font-normal ml-2">
+                /{product.subscription_frequency}
+              </span>
+            )}
+            {product.is_one_time && (
+              <span className="text-sm font-normal ml-2">(one-time)</span>
+            )}
           </p>
         </div>
+
+        {product.is_subscription && (
+          <div>
+            <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Subscription Details
+            </h3>
+            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              {product.included_units > 0 ? (
+                <p>Includes {product.included_units} {product.unit_type || 'units'}</p>
+              ) : (
+                <p>Pay-as-you-go (no base usage)</p>
+              )}
+              {product.overage_rate > 0 && (
+                <p className="mt-1">
+                  ${product.overage_rate.toFixed(2)} per additional {product.unit_type || 'unit'}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mb-6">
@@ -112,6 +141,15 @@ function ProductDetails({ product, onUpdate, onDelete }) {
         <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           {product.description || 'No description available.'}
         </p>
+      </div>
+
+      {/* Related Products Section */}
+      <div className="mt-6">
+        <RelatedProductsSection
+          productId={product.id}
+          productName={product.name}
+          onEdit={true}
+        />
       </div>
 
       {/* Delete confirmation dialog */}

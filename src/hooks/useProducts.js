@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAppState, useAppStateOperations } from '../context/AppStateContext';
 import {
-  fetchProductsByOrganization,
+  fetchAllProducts,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -15,7 +15,7 @@ import {
  * Handles initialization of products during app startup
  */
 export function useProducts() {
-  const { user, products: stateProducts, selectedProduct } = useAppState();
+  const { products: stateProducts, selectedProduct } = useAppState();
   const { setProducts, setSelectedProduct, setLoading: setAppLoading, setError: setAppError } = useAppStateOperations();
   
   const [loading, setLoading] = useState(false);
@@ -37,46 +37,37 @@ export function useProducts() {
     }
   }, [stateProducts]);
 
-  // Auto-initialize products when user changes and has an organization ID
+  // Auto-initialize products on mount (single-tenancy)
   useEffect(() => {
-    if (user?.supabaseOrgID && !initialized) {
-      loadProductsForOrganization(user.supabaseOrgID);
+    if (!initialized) {
+      loadProducts();
     }
-  }, [user?.supabaseOrgID, initialized]);
+  }, [initialized]);
 
   /**
-   * Loads products for a specific organization
+   * Loads all products (single-tenancy)
    * Used during initialization and can be called manually if needed
    */
-  const loadProductsForOrganization = useCallback(async (organizationId) => {
-    if (!organizationId) {
-      console.warn('Cannot load products: Organization ID is missing');
-      return {
-        success: false,
-        error: 'Organization ID is required',
-        data: []
-      };
-    }
-
+  const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       setAppLoading(true);
-      
-      console.log(`Loading products for organization: ${organizationId}`);
-      const result = await fetchProductsByOrganization(organizationId);
-      
+
+      console.log('Loading all products');
+      const result = await fetchAllProducts();
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to load products');
       }
-      
-      // The data is already processed by fetchProductsByOrganization
+
+      // The data is already processed by fetchAllProducts
       const productsData = result.data || [];
-      
+
       // Update the app state with the products
       setProducts(productsData);
       setInitialized(true);
-      
+
       return {
         success: true,
         data: productsData
@@ -114,34 +105,22 @@ export function useProducts() {
   }, [stateProducts, setSelectedProduct]);
 
   /**
-   * Creates a new product
+   * Creates a new product (single-tenancy)
    */
   const handleProductCreate = useCallback(async (productData) => {
-    if (!user?.supabaseOrgID) {
-      const error = 'Cannot create product: Organization ID is missing';
-      setError(error);
-      return { success: false, error };
-    }
-
     try {
       setLoading(true);
       setError(null);
-      
-      // Ensure organization_id is set
-      const productWithOrg = {
-        ...productData,
-        organization_id: user.supabaseOrgID
-      };
-      
-      const result = await createProduct(productWithOrg);
-      
+
+      const result = await createProduct(productData);
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to create product');
       }
-      
+
       // Update local state by reloading products
-      await loadProductsForOrganization(user.supabaseOrgID);
-      
+      await loadProducts();
+
       return result;
     } catch (err) {
       setError(err.message);
@@ -150,7 +129,7 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  }, [user, loadProductsForOrganization]);
+  }, [loadProducts]);
 
   /**
    * Updates an existing product
@@ -165,32 +144,21 @@ export function useProducts() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await updateProduct(productId, productData);
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to update product');
       }
-      
-      // Update local state
-      if (user?.supabaseOrgID) {
-        await loadProductsForOrganization(user.supabaseOrgID);
-      } else {
-        // Fallback if no organization ID is available
-        setProducts(prevProducts => 
-          prevProducts.map(product => 
-            product.id === productId
-              ? { ...product, ...productData }
-              : product
-          )
-        );
-      }
-      
+
+      // Update local state by reloading products
+      await loadProducts();
+
       // Update selected product if it's the one being updated
       if (selectedProduct?.id === productId) {
         setSelectedProduct({ ...selectedProduct, ...productData });
       }
-      
+
       return result;
     } catch (err) {
       setError(err.message);
@@ -199,7 +167,7 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  }, [user, selectedProduct, setProducts, setSelectedProduct, loadProductsForOrganization]);
+  }, [selectedProduct, setSelectedProduct, loadProducts]);
 
   /**
    * Deletes a product
@@ -214,28 +182,21 @@ export function useProducts() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await deleteProduct(productId);
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to delete product');
       }
-      
-      // Update local state
-      if (user?.supabaseOrgID) {
-        await loadProductsForOrganization(user.supabaseOrgID);
-      } else {
-        // Fallback if no organization ID is available
-        setProducts(prevProducts => 
-          prevProducts.filter(product => product.id !== productId)
-        );
-      }
-      
+
+      // Update local state by reloading products
+      await loadProducts();
+
       // Clear selected product if it's the one being deleted
       if (selectedProduct?.id === productId) {
         setSelectedProduct(null);
       }
-      
+
       return result;
     } catch (err) {
       setError(err.message);
@@ -244,7 +205,7 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  }, [user, selectedProduct, setProducts, setSelectedProduct, loadProductsForOrganization]);
+  }, [selectedProduct, setSelectedProduct, loadProducts]);
 
   /**
    * Gets products grouped by price range
@@ -268,14 +229,14 @@ export function useProducts() {
     selectedProduct,
     stats,
     initialized,
-    
+
     // Actions
-    loadProductsForOrganization,
+    loadProducts,
     handleProductSelect,
     handleProductCreate,
     handleProductUpdate,
     handleProductDelete,
-    
+
     // Utility functions
     getProductsByPriceRange,
     formatProduct,

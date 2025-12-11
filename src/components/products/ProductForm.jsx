@@ -14,25 +14,38 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
     ...(isEditing && product?.id ? { id: product.id } : {}),
     name: product?.name || '',
     price: product?.price || 0,
-    description: product?.description || ''
+    description: product?.description || '',
+    is_subscription: product?.is_subscription || false,
+    subscription_frequency: product?.subscription_frequency || 'monthly',
+    is_one_time: product?.is_one_time || false,
+    included_units: product?.included_units || 0,
+    unit_type: product?.unit_type || '',
+    overage_rate: product?.overage_rate || 0
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     let processedValue = value;
-    
-    // Convert price to number
-    if (name === 'price') {
+
+    // Handle checkboxes
+    if (type === 'checkbox') {
+      processedValue = checked;
+    }
+    // Convert numeric fields
+    else if (name === 'price' || name === 'overage_rate') {
       processedValue = parseFloat(value) || 0;
     }
-    
+    else if (name === 'included_units') {
+      processedValue = parseInt(value) || 0;
+    }
+
     setFormData({
       ...formData,
       [name]: processedValue
     });
-    
+
     // Clear error for this field if it exists
     if (errors[name]) {
       setErrors({
@@ -157,9 +170,9 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
           )}
         </div>
         
-        <div className="mb-6">
-          <label 
-            htmlFor="description" 
+        <div className="mb-4">
+          <label
+            htmlFor="description"
             className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
           >
             Description
@@ -172,13 +185,146 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
             rows="4"
             className={`
               w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2
-              ${darkMode 
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600' 
+              ${darkMode
+                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}
             `}
           />
         </div>
-        
+
+        {/* Product Type Checkboxes */}
+        <div className="mb-4 border-t pt-4">
+          <h3 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            Product Type
+          </h3>
+
+          <div className="flex gap-6">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                name="is_one_time"
+                checked={formData.is_one_time}
+                onChange={handleChange}
+                className="mr-2"
+              />
+              <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                One-Time Purchase
+              </span>
+            </label>
+
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                name="is_subscription"
+                checked={formData.is_subscription}
+                onChange={handleChange}
+                className="mr-2"
+              />
+              <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                Subscription
+              </span>
+            </label>
+          </div>
+        </div>
+
+        {/* Subscription Fields - Show only if is_subscription is checked */}
+        {formData.is_subscription && (
+          <div className="mb-4 border-t pt-4">
+            <h3 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              Subscription Details
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Billing Frequency
+                </label>
+                <select
+                  name="subscription_frequency"
+                  value={formData.subscription_frequency}
+                  onChange={handleChange}
+                  className={`
+                    w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2
+                    ${darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600'
+                      : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}
+                  `}
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Unit Type (e.g., minutes, hours, API calls)
+                </label>
+                <input
+                  type="text"
+                  name="unit_type"
+                  value={formData.unit_type}
+                  onChange={handleChange}
+                  placeholder="minutes"
+                  className={`
+                    w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2
+                    ${darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600'
+                      : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}
+                  `}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Included Units (0 for pay-as-you-go)
+                </label>
+                <input
+                  type="number"
+                  name="included_units"
+                  value={formData.included_units}
+                  onChange={handleChange}
+                  min="0"
+                  className={`
+                    w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2
+                    ${darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600'
+                      : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}
+                  `}
+                />
+                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Set to 0 for pure pay-as-you-go (no usage = no charge)
+                </p>
+              </div>
+
+              <div>
+                <label className={`block mb-2 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Overage Rate (per unit)
+                </label>
+                <input
+                  type="number"
+                  name="overage_rate"
+                  value={formData.overage_rate}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  className={`
+                    w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2
+                    ${darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600'
+                      : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}
+                  `}
+                />
+                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Rate charged per additional unit beyond included amount
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end space-x-3">
           <button
             type="button"
