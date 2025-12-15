@@ -55,13 +55,13 @@ function RelatedProductsSection({ productId, productName, onEdit = false }) {
     if (items.length === 0 && !onEdit) return null;
 
     return (
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-3">
+      <div className="mb-3">
+        <div className="flex justify-between items-center mb-2">
           <div>
-            <h4 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            <h4 className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
               {title}
             </h4>
-            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
               {description}
             </p>
           </div>
@@ -71,60 +71,57 @@ function RelatedProductsSection({ productId, productName, onEdit = false }) {
                 setSelectedType(type);
                 setShowAddModal(true);
               }}
-              className="px-3 py-1 text-sm bg-primary text-white rounded-md hover:bg-primary-hover"
+              className="px-2 py-1 text-xs bg-primary text-white rounded hover:bg-primary-hover flex-shrink-0"
             >
-              Add {title}
+              + Add
             </button>
           )}
         </div>
 
         {items.length === 0 ? (
-          <p className={`text-sm italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+          <p className={`text-xs italic ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
             No {title.toLowerCase()} configured
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {items.map(item => (
               <div
                 key={item.id}
                 className={`
-                  p-3 rounded-md border
-                  ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}
+                  p-2 rounded border text-sm
+                  ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
                 `}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`font-medium truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         {getProductName(item.child_product_id)}
                       </span>
                       {item.is_required && (
-                        <span className="px-2 py-0.5 text-xs bg-red-600 text-white rounded">
+                        <span className="px-1.5 py-0.5 text-[10px] bg-red-600 text-white rounded flex-shrink-0">
                           Required
                         </span>
                       )}
                       {item.quantity_multiplier > 1 && (
-                        <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                          × {item.quantity_multiplier}
+                        <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} flex-shrink-0`}>
+                          ×{item.quantity_multiplier}
                         </span>
                       )}
                     </div>
                     {item.price_override !== null && (
-                      <div className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Special price: ${parseFloat(item.price_override).toFixed(2)}
+                      <div className={`text-xs mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        ${parseFloat(item.price_override).toFixed(2)}
                       </div>
                     )}
                   </div>
                   {onEdit && (
                     <button
                       onClick={() => handleDelete(item.id, getProductName(item.child_product_id))}
-                      className={`
-                        p-1 text-gray-400 hover:text-red-600
-                        transition-colors duration-200
-                      `}
+                      className="p-1 text-gray-400 hover:text-red-600 transition-colors duration-200 flex-shrink-0"
                       title="Remove"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
@@ -171,10 +168,11 @@ function RelatedProductsSection({ productId, productName, onEdit = false }) {
   }
 
   return (
-    <div className={`p-6 rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-      <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+    <div className={`rounded-lg ${darkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      <h3 className={`text-base font-bold p-3 border-b ${darkMode ? 'text-white border-gray-700' : 'text-gray-800 border-gray-300'}`}>
         Related Products
       </h3>
+      <div className="p-3 space-y-3">
 
       {renderRelationshipGroup(
         'Add-ons',
@@ -206,14 +204,14 @@ function RelatedProductsSection({ productId, productName, onEdit = false }) {
 
       {/* Pricing Tiers Section - Always visible in edit mode */}
       {(Object.keys(requiredChoiceGroups).length > 0 || onEdit) && (
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-3">
+        <div className="mb-3">
+          <div className="flex justify-between items-center mb-2">
             <div>
-              <h4 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              <h4 className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                 Pricing Tiers
               </h4>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Customer must select one option from each tier group
+              <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                Customer must select one option
               </p>
             </div>
             {onEdit && (
@@ -222,84 +220,71 @@ function RelatedProductsSection({ productId, productName, onEdit = false }) {
                   setSelectedType(RELATIONSHIP_TYPES.REQUIRED_CHOICE);
                   setShowAddModal(true);
                 }}
-                className="px-3 py-1 text-sm bg-primary text-white rounded-md hover:bg-primary-hover"
+                className="px-2 py-1 text-xs bg-primary text-white rounded hover:bg-primary-hover flex-shrink-0"
               >
-                Add Pricing Tier
+                + Add
               </button>
             )}
           </div>
 
           {Object.keys(requiredChoiceGroups).length === 0 ? (
-            <p className={`text-sm italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              No pricing tiers configured yet. Use the "Add Pricing Tier" button to create mutually exclusive pricing options (e.g., Pay-As-You-Go, Small Business, Medium Business).
+            <p className={`text-xs italic ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
+              No pricing tiers configured. Add mutually exclusive options.
             </p>
           ) : (
             Object.entries(requiredChoiceGroups).map(([groupName, items]) => (
-            <div key={groupName} className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <h5 className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {groupName.charAt(0).toUpperCase() + groupName.slice(1)} Options
-                </h5>
-                {onEdit && (
-                  <button
-                    onClick={() => {
-                      setSelectedType(RELATIONSHIP_TYPES.REQUIRED_CHOICE);
-                      setShowAddModal(true);
-                    }}
-                    className="px-2 py-1 text-xs bg-primary text-white rounded hover:bg-primary-hover"
-                  >
-                    Add Option
-                  </button>
-                )}
-              </div>
+            <div key={groupName} className="mb-2">
+              <h5 className={`text-xs font-medium mb-1.5 ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>
+                {groupName.charAt(0).toUpperCase() + groupName.slice(1).replace(/_/g, ' ')}
+              </h5>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {items.map(item => {
                   const childProduct = products.find(p => p.id === item.child_product_id);
                   return (
                     <div
                       key={item.id}
                       className={`
-                        p-3 rounded-md border-l-4 border-blue-500
+                        p-2 rounded border-l-2 border-blue-500 text-sm
                         ${darkMode ? 'bg-gray-800' : 'bg-blue-50'}
                       `}
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`font-medium truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                               {getProductName(item.child_product_id)}
                             </span>
                             {item.is_required && (
-                              <span className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded">
+                              <span className="px-1.5 py-0.5 text-[10px] bg-blue-600 text-white rounded flex-shrink-0">
                                 Required
                               </span>
                             )}
                           </div>
                           {childProduct && (
-                            <div className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            <div className={`text-xs mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                               ${parseFloat(childProduct.price).toFixed(2)}
-                              {childProduct.is_subscription && ` / ${childProduct.subscription_frequency}`}
+                              {childProduct.is_subscription && `/${childProduct.subscription_frequency}`}
                               {childProduct.is_subscription && childProduct.included_units > 0 && (
-                                <span className="ml-2">
-                                  ({childProduct.included_units} {childProduct.unit_type} included)
+                                <span className="ml-1">
+                                  ({childProduct.included_units} {childProduct.unit_type})
                                 </span>
                               )}
                             </div>
                           )}
                           {item.price_override !== null && (
-                            <div className={`text-sm mt-1 font-semibold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
-                              Special bundle price: ${parseFloat(item.price_override).toFixed(2)}
+                            <div className={`text-xs mt-0.5 font-medium ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                              Bundle: ${parseFloat(item.price_override).toFixed(2)}
                             </div>
                           )}
                         </div>
                         {onEdit && (
                           <button
                             onClick={() => handleDelete(item.id, getProductName(item.child_product_id))}
-                            className="p-1 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                            className="p-1 text-gray-400 hover:text-red-600 transition-colors duration-200 flex-shrink-0"
                             title="Remove"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
@@ -334,6 +319,7 @@ function RelatedProductsSection({ productId, productName, onEdit = false }) {
           }}
         />
       )}
+      </div>
     </div>
   );
 }

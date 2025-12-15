@@ -165,23 +165,31 @@ const useProspect = () => {
         setLoading(true)
         setError(null)
 
-        // Find the prospect
+        console.log('[useProspect] Converting prospect ID:', prospectId)
+        console.log('[useProspect] Available prospects:', prospects.map(p => ({ id: p.id, name: p.Name })))
+
+        // Find the prospect in local state
         const prospect = prospects.find((p) => p.id === prospectId)
-        if (!prospect) {
-          throw new Error('Prospect not found')
+
+        // If prospect not found in local state, it might still exist in the database
+        // We'll let the API handle the validation and error
+        if (prospect) {
+          console.log('[useProspect] Found prospect in local state:', prospect.Name)
+
+          // Validate prospect data before conversion
+          const validation = prospectService.validateProspectForConversion(prospect)
+
+          // Block conversion if there are validation errors (not warnings)
+          if (validation.errors.length > 0) {
+            throw new Error(validation.errors.join(', '))
+          }
+        } else {
+          console.log('[useProspect] Prospect not found in local state, proceeding with API call')
         }
 
-        // Validate prospect data before conversion
-        const validation = prospectService.validateProspectForConversion(prospect)
-        
-        // Block conversion if there are validation errors (not warnings)
-        if (validation.errors.length > 0) {
-          throw new Error(validation.errors.join(', '))
-        }
-
-        // Perform conversion (warnings don't block)
+        // Perform conversion (API will validate existence)
         const result = await prospectApi.convertProspectToCustomer(prospectId)
-        
+
         // Process the result
         const processedResult = prospectService.processConversionResult(result)
 
@@ -193,7 +201,7 @@ const useProspect = () => {
 
         return {
           success: true,
-          validation,
+          validation: prospect ? prospectService.validateProspectForConversion(prospect) : null,
           result: processedResult
         }
       } catch (err) {

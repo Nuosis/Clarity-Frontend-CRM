@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useProducts } from '../../hooks/useProducts';
 import { useSnackBar } from '../../context/SnackBarContext';
+import ProductRequirementsBuilder from './ProductRequirementsBuilder';
 
 function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
   const { darkMode } = useTheme();
@@ -20,10 +21,12 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
     is_one_time: product?.is_one_time || false,
     included_units: product?.included_units || 0,
     unit_type: product?.unit_type || '',
-    overage_rate: product?.overage_rate || 0
+    overage_rate: product?.overage_rate || 0,
+    metadata: product?.metadata || { requirements: [] }
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showRequirements, setShowRequirements] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -57,15 +60,15 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
 
   const validate = () => {
     const newErrors = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Product name is required';
     }
-    
-    if (formData.price <= 0) {
-      newErrors.price = 'Price must be greater than zero';
+
+    if (formData.price < 0) {
+      newErrors.price = 'Price cannot be negative';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -324,6 +327,38 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
             </div>
           </div>
         )}
+
+        {/* Customer Requirements Section */}
+        <div className="mb-4 border-t pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              Customer Requirements
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowRequirements(!showRequirements)}
+              className="text-sm text-primary hover:underline"
+            >
+              {showRequirements ? 'Hide' : 'Configure'}
+            </button>
+          </div>
+
+          {showRequirements && (
+            <ProductRequirementsBuilder
+              requirements={formData.metadata?.requirements || []}
+              onChange={(newRequirements) => {
+                setFormData({
+                  ...formData,
+                  metadata: {
+                    ...formData.metadata,
+                    requirements: newRequirements
+                  }
+                });
+              }}
+              darkMode={darkMode}
+            />
+          )}
+        </div>
 
         <div className="flex justify-end space-x-3">
           <button

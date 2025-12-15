@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useSnackBar } from '../context/SnackBarContext';
-import { query, insert } from '../services/supabaseService';
+import { query, insert, update, remove } from '../services/supabaseService';
 
 /**
  * Custom hook for managing customer data in Supabase
@@ -194,6 +194,179 @@ export function useSupabaseCustomer() {
   }, []);
 
   /**
+   * Update an existing customer in Supabase
+   * @param {string} customerId - Customer UUID (FileMaker __ID)
+   * @param {Object} customer - Updated customer data
+   * @param {Object} user - User data
+   * @returns {Promise<Object>} Result of the operation
+   */
+  const updateCustomerInSupabase = useCallback(async (customerId, customer, user) => {
+    try {
+      // 1. Update customer record
+      const customerUpdateData = {};
+      if (customer.Name) {
+        customerUpdateData.business_name = customer.Name;
+      }
+
+      if (Object.keys(customerUpdateData).length > 0) {
+        const customerResult = await update('customers', customerUpdateData, {
+          column: 'id',
+          operator: 'eq',
+          value: customerId
+        });
+
+        if (!customerResult.success) {
+          throw new Error(`Failed to update customer: ${customerResult.error}`);
+        }
+      }
+
+      // 2. Update customer email if provided
+      if (customer.Email) {
+        // First, check if email exists for this customer
+        const existingEmailResult = await query('customer_email', {
+          select: '*',
+          filter: {
+            column: 'customer_id',
+            operator: 'eq',
+            value: customerId
+          }
+        });
+
+        const existingEmails = existingEmailResult.success && existingEmailResult.data ? existingEmailResult.data : [];
+
+        if (existingEmails.length > 0) {
+          // Update existing email
+          const emailUpdateResult = await update('customer_email',
+            { email: customer.Email },
+            {
+              column: 'customer_id',
+              operator: 'eq',
+              value: customerId
+            }
+          );
+
+          if (!emailUpdateResult.success) {
+            console.error("[ERROR] Failed to update customer email:", emailUpdateResult.error);
+          }
+        } else {
+          // Create new email record
+          const emailResult = await insert('customer_email', {
+            customer_id: customerId,
+            email: customer.Email,
+            is_primary: true
+          });
+
+          if (!emailResult.success) {
+            console.error("[ERROR] Failed to create customer email:", emailResult.error);
+          }
+        }
+      }
+
+      // 3. Update customer phone if provided
+      if (customer.Phone) {
+        // First, check if phone exists for this customer
+        const existingPhoneResult = await query('customer_phone', {
+          select: '*',
+          filter: {
+            column: 'customer_id',
+            operator: 'eq',
+            value: customerId
+          }
+        });
+
+        const existingPhones = existingPhoneResult.success && existingPhoneResult.data ? existingPhoneResult.data : [];
+
+        if (existingPhones.length > 0) {
+          // Update existing phone
+          const phoneUpdateResult = await update('customer_phone',
+            { phone: customer.Phone },
+            {
+              column: 'customer_id',
+              operator: 'eq',
+              value: customerId
+            }
+          );
+
+          if (!phoneUpdateResult.success) {
+            console.error("[ERROR] Failed to update customer phone:", phoneUpdateResult.error);
+          }
+        } else {
+          // Create new phone record
+          const phoneResult = await insert('customer_phone', {
+            customer_id: customerId,
+            phone: customer.Phone,
+            is_primary: true
+          });
+
+          if (!phoneResult.success) {
+            console.error("[ERROR] Failed to create customer phone:", phoneResult.error);
+          }
+        }
+      }
+
+      // 4. Update customer address if provided
+      if (customer.City || customer.State || customer.Address || customer.PostalCode || customer.Country) {
+        // First, check if address exists for this customer
+        const existingAddressResult = await query('customer_address', {
+          select: '*',
+          filter: {
+            column: 'customer_id',
+            operator: 'eq',
+            value: customerId
+          }
+        });
+
+        const existingAddresses = existingAddressResult.success && existingAddressResult.data ? existingAddressResult.data : [];
+
+        const addressData = {
+          address_line1: customer.Address || '',
+          city: customer.City || '',
+          state: customer.State || '',
+          postal_code: customer.PostalCode || '',
+          country: customer.Country || ''
+        };
+
+        if (existingAddresses.length > 0) {
+          // Update existing address
+          const addressUpdateResult = await update('customer_address',
+            addressData,
+            {
+              column: 'customer_id',
+              operator: 'eq',
+              value: customerId
+            }
+          );
+
+          if (!addressUpdateResult.success) {
+            console.error("[ERROR] Failed to update customer address:", addressUpdateResult.error);
+          }
+        } else {
+          // Create new address record
+          const addressResult = await insert('customer_address', {
+            customer_id: customerId,
+            ...addressData
+          });
+
+          if (!addressResult.success) {
+            console.error("[ERROR] Failed to create customer address:", addressResult.error);
+          }
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Customer updated in Supabase'
+      };
+    } catch (error) {
+      console.error("[ERROR] Error updating customer in Supabase:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }, []);
+
+  /**
    * Fetch or create customer in Supabase
    * @param {Object} customer - Customer data
    * @param {Object} user - User data
@@ -307,6 +480,7 @@ export function useSupabaseCustomer() {
     customerData,
     fetchOrCreateCustomerInSupabase,
     createCustomerInSupabase,
+    updateCustomerInSupabase,
     linkCustomerToOrganization,
     parseSupabaseData
   };

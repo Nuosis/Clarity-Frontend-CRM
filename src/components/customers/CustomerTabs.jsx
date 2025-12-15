@@ -4,6 +4,7 @@ import { useSales } from '../../hooks/useSales';
 import { useAppState } from '../../context/AppStateContext';
 import { parseDate, formatDate, formatYearMonth, formatMonthYear } from '../../utils/dateUtils';
 import SalesModal from './SalesModal';
+import CustomerSettings from './CustomerSettings';
 
 function CustomerTabs() {
   const { darkMode } = useTheme();
@@ -296,50 +297,8 @@ function CustomerTabs() {
         )}
         
         {/* Customer Settings Tab */}
-        {activeTab === 'settings' && (
-          <div>
-            <h4 className="text-lg font-medium mb-4">Customer Information</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h5 className="font-medium mb-2">Billing Information</h5>
-                <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Billable Currency</label>
-                    <div className="text-base">USD</div>
-                  </div>
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Billing Address</label>
-                    <div className="text-base">
-                      {customerDetails?.Address || '123 Business St.'}<br />
-                      {customerDetails?.City || 'San Francisco'}, {customerDetails?.State || 'CA'} {customerDetails?.PostalCode || '94103'}<br />
-                      {customerDetails?.Country || 'USA'}
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Payment Terms</label>
-                    <div className="text-base">Net 30</div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h5 className="font-medium mb-2">Contact Information</h5>
-                <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Primary Contact</label>
-                    <div className="text-base">John Smith</div>
-                  </div>
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Email</label>
-                    <div className="text-base">{customerDetails?.Email || 'john@example.com'}</div>
-                  </div>
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Phone</label>
-                    <div className="text-base">{customerDetails?.Phone || '555-123-4567'}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        {activeTab === 'settings' && customerDetails && (
+          <CustomerSettings customer={customerDetails} />
         )}
       </div>
       

@@ -196,6 +196,87 @@ export async function deleteProduct(productId) {
 }
 
 /**
+ * Validates requirements metadata structure
+ * @param {Array} requirements - Requirements array from metadata
+ * @returns {Object} - { isValid, errors }
+ */
+export function validateRequirementsMetadata(requirements) {
+  const errors = [];
+
+  if (!Array.isArray(requirements)) {
+    errors.push('Requirements must be an array');
+    return { isValid: false, errors };
+  }
+
+  requirements.forEach((req, idx) => {
+    const reqNum = idx + 1;
+
+    if (!req.id) {
+      errors.push(`Requirement ${reqNum}: Missing ID`);
+    }
+
+    if (!req.name?.trim()) {
+      errors.push(`Requirement ${reqNum}: Name is required`);
+    }
+
+    if (!['list', 'form'].includes(req.type)) {
+      errors.push(`Requirement ${reqNum}: Type must be 'list' or 'form'`);
+    }
+
+    if (!Array.isArray(req.fields)) {
+      errors.push(`Requirement ${reqNum}: Fields must be an array`);
+    } else if (req.fields.length === 0) {
+      errors.push(`Requirement ${reqNum}: At least one field is required`);
+    } else {
+      // Validate fields
+      const fieldKeys = [];
+      req.fields.forEach((field, fIdx) => {
+        const fieldNum = fIdx + 1;
+
+        if (!field.id) {
+          errors.push(`Requirement ${reqNum}, Field ${fieldNum}: Missing ID`);
+        }
+
+        if (!field.key?.trim()) {
+          errors.push(`Requirement ${reqNum}, Field ${fieldNum}: Key is required`);
+        } else {
+          // Check for snake_case format
+          const snakeCaseRegex = /^[a-z][a-z0-9_]*$/;
+          if (!snakeCaseRegex.test(field.key)) {
+            errors.push(`Requirement ${reqNum}, Field ${fieldNum}: Key must be lowercase with underscores (snake_case)`);
+          }
+          // Check for duplicate keys
+          if (fieldKeys.includes(field.key)) {
+            errors.push(`Requirement ${reqNum}, Field ${fieldNum}: Duplicate field key '${field.key}'`);
+          }
+          fieldKeys.push(field.key);
+        }
+
+        if (!field.label?.trim()) {
+          errors.push(`Requirement ${reqNum}, Field ${fieldNum}: Label is required`);
+        }
+
+        const validTypes = ['text', 'textarea', 'number', 'phone', 'email', 'select', 'checkbox'];
+        if (!validTypes.includes(field.type)) {
+          errors.push(`Requirement ${reqNum}, Field ${fieldNum}: Invalid field type '${field.type}'`);
+        }
+
+        if (field.type === 'select') {
+          if (!field.options || !Array.isArray(field.options) || field.options.length === 0) {
+            errors.push(`Requirement ${reqNum}, Field ${fieldNum}: Select type requires at least one option`);
+          }
+        }
+      });
+    }
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+/**
  * Validates product data before creation/update
  * @param {Object} data - Product data to validate
  * @returns {Object} - Validation result { isValid, errors }
@@ -207,8 +288,16 @@ export function validateProductData(data) {
     errors.push('Product name is required');
   }
 
-  if (data.price === undefined || data.price === null || isNaN(parseFloat(data.price)) || parseFloat(data.price) <= 0) {
-    errors.push('Product price must be a positive number');
+  if (data.price === undefined || data.price === null || isNaN(parseFloat(data.price)) || parseFloat(data.price) < 0) {
+    errors.push('Product price cannot be negative');
+  }
+
+  // Validate metadata requirements if present
+  if (data.metadata && data.metadata.requirements) {
+    const reqValidation = validateRequirementsMetadata(data.metadata.requirements);
+    if (!reqValidation.isValid) {
+      errors.push(...reqValidation.errors);
+    }
   }
 
   return {

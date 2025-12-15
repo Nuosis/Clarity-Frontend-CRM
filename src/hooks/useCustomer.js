@@ -14,6 +14,8 @@ import {
     formatCustomerForFileMaker,
     calculateCustomerStats
 } from '../services';
+import { useSupabaseCustomer } from './useSupabaseCustomer';
+import { useAppState } from '../context/AppStateContext';
 
 /**
  * Hook for managing customer state and operations
@@ -24,6 +26,8 @@ export function useCustomer() {
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [stats, setStats] = useState(null);
+    const { updateCustomerInSupabase } = useSupabaseCustomer();
+    const { user } = useAppState();
 
     // Update stats when customers change
     useEffect(() => {
@@ -109,29 +113,59 @@ export function useCustomer() {
         try {
             setLoading(true);
             setError(null);
-            
+
             const validation = validateCustomerData(customerData);
             if (!validation.isValid) {
                 throw new Error(validation.errors.join(', '));
             }
-            
+
             const formattedData = formatCustomerForFileMaker(customerData);
+
+            // 1. Update customer in FileMaker first
             const result = await updateCustomer(customerId, formattedData);
-            
+            console.log('FileMaker customer updated:', result);
+
+            // 2. Update customer in Supabase after successful FileMaker update
+            if (user && user.supabaseOrgID) {
+                try {
+                    const supabaseCustomerData = {
+                        Name: customerData.name || customerData.Name,
+                        Email: customerData.email || customerData.Email,
+                        Phone: customerData.phone || customerData.Phone,
+                        Address: customerData.Address,
+                        City: customerData.City,
+                        State: customerData.State,
+                        PostalCode: customerData.PostalCode,
+                        Country: customerData.Country
+                    };
+
+                    const supabaseResult = await updateCustomerInSupabase(customerId, supabaseCustomerData, user);
+                    if (supabaseResult && supabaseResult.success) {
+                        console.log('Supabase customer updated:', supabaseResult.message);
+                    } else {
+                        console.warn('Failed to update customer in Supabase:', supabaseResult?.error);
+                        // Don't fail the entire operation if Supabase update fails
+                    }
+                } catch (supabaseError) {
+                    console.error('Error updating customer in Supabase:', supabaseError);
+                    // Don't fail the entire operation if Supabase update fails
+                }
+            }
+
             // Update local state
-            setCustomers(prevCustomers => 
-                prevCustomers.map(customer => 
+            setCustomers(prevCustomers =>
+                prevCustomers.map(customer =>
                     customer.id === customerId
                         ? { ...customer, ...customerData }
                         : customer
                 )
             );
-            
+
             // Update selected customer if it's the one being updated
             if (selectedCustomer?.id === customerId) {
                 setSelectedCustomer(prev => ({ ...prev, ...customerData }));
             }
-            
+
             return result;
         } catch (err) {
             setError(err.message);
@@ -140,7 +174,7 @@ export function useCustomer() {
         } finally {
             setLoading(false);
         }
-    }, [selectedCustomer]);
+    }, [selectedCustomer, user, updateCustomerInSupabase]);
 
     /**
      * Toggles customer active status

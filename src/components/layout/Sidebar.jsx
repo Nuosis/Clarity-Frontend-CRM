@@ -467,7 +467,7 @@ function Sidebar({
             }
             return acc;
         }, { activeCustomers: [], inactiveCustomers: [] });
-        
+
         // Destructure from groups
         const { activeCustomers } = groups;
 
@@ -479,6 +479,13 @@ function Sidebar({
             }
         };
     }, [customers, monthlyBillableHours]);
+
+    // Memoize sorted products list
+    const sortedProducts = useMemo(() => {
+        return [...products].sort((a, b) => {
+            return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        });
+    }, [products]);
 
     return (
         <div className={`
@@ -810,7 +817,7 @@ function Sidebar({
                 ) : (
                     /* Product List */
                     <>
-                        {products.map(product => (
+                        {sortedProducts.map(product => (
                             <ProductListItem
                                 key={product.id}
                                 product={product}
@@ -872,9 +879,9 @@ Sidebar.propTypes = {
         id: PropTypes.string.isRequired
     }),
     selectedProduct: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        name: PropTypes.string.isRequired,
-        price: PropTypes.number.isRequired,
+        id: PropTypes.string,
+        name: PropTypes.string,
+        price: PropTypes.number,
         description: PropTypes.string
     }),
     customerStats: PropTypes.shape({
