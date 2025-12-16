@@ -261,7 +261,7 @@ function CustomerDetails({
       )}
       
       {/* Customer Information Tabs - Hidden for Prospects */}
-      {!isProspect && <CustomerTabs />}
+      {!isProspect && <CustomerTabs customer={customer} />}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useSupabaseCustomer } from '../../hooks/useSupabaseCustomer';
 import { useCustomer } from '../../hooks/useCustomer';
 import { useSnackBar } from '../../context/SnackBarContext';
 import { query, insert, update, remove } from '../../services/supabaseService';
+import { toE164, formatPhoneDisplay, formatPhoneInput, isValidPhone } from '../../utils/phoneUtils';
 
 function CustomerSettings({ customer }) {
   const { darkMode } = useTheme();
@@ -21,6 +22,7 @@ function CustomerSettings({ customer }) {
     Name: '',
     Email: '',
     Phone: '',
+    PhoneType: '',
     Address: '',
     City: '',
     State: '',
@@ -40,6 +42,7 @@ function CustomerSettings({ customer }) {
   const [showAddAddress, setShowAddAddress] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newPhoneType, setNewPhoneType] = useState('Business');
   const [newAddress, setNewAddress] = useState({
     address_line1: '',
     city: '',
@@ -52,9 +55,10 @@ function CustomerSettings({ customer }) {
   useEffect(() => {
     if (customer) {
       setFormData({
-        Name: customer.Name || '',
+        Name: customer.Name || customer.business_name || '',
         Email: customer.Email || '',
         Phone: customer.Phone || customer.phone || '',
+        PhoneType: customer.PhoneType || '',
         Address: customer.Address || '',
         City: customer.City || '',
         State: customer.State || '',
@@ -64,12 +68,28 @@ function CustomerSettings({ customer }) {
     }
   }, [customer]);
 
+  // Update formData.Phone and PhoneType when primary phone is loaded from Supabase
+  useEffect(() => {
+    if (phones.length > 0 && !isEditing) {
+      const primaryPhone = phones.find(p => p.is_primary);
+      if (primaryPhone) {
+        setFormData(prev => ({
+          ...prev,
+          Phone: primaryPhone.phone,
+          PhoneType: primaryPhone.type || ''
+        }));
+      }
+    }
+  }, [phones, isEditing]);
+
   // Load additional contact information from Supabase
   useEffect(() => {
-    if (customer && customer.__ID) {
-      loadContactInformation(customer.__ID);
+    // Try both __ID (FileMaker) and id (Supabase UUID)
+    const customerId = customer?.__ID || customer?.id;
+    if (customerId) {
+      loadContactInformation(customerId);
     }
-  }, [customer?.__ID]);
+  }, [customer?.__ID, customer?.id]);
 
   const loadContactInformation = async (customerId) => {
     setIsLoadingContacts(true);
@@ -129,18 +149,36 @@ function CustomerSettings({ customer }) {
   };
 
   const handleSave = async () => {
-    if (!customer || !customer.__ID) {
+    const customerId = customer?.__ID || customer?.id;
+    if (!customer || !customerId) {
       showError('Customer ID not found');
+      return;
+    }
+
+    // Validate phone if provided
+    if (formData.Phone && !isValidPhone(formData.Phone)) {
+      showError('Please enter a valid phone number');
       return;
     }
 
     setIsSaving(true);
     try {
+      // Convert phone to E.164 format if provided
+      const dataToSave = {
+        ...formData,
+        Phone: formData.Phone ? toE164(formData.Phone) : formData.Phone
+      };
+
       // Update customer in both FileMaker and Supabase
-      await handleCustomerUpdate(customer.__ID, formData);
+      await handleCustomerUpdate(customerId, dataToSave);
 
       showError('Customer information updated successfully');
       setIsEditing(false);
+
+      // Update form data with formatted phone for display
+      if (dataToSave.Phone) {
+        setFormData(prev => ({ ...prev, Phone: formatPhoneDisplay(dataToSave.Phone) }));
+      }
     } catch (error) {
       console.error('Error updating customer:', error);
       showError(`Failed to update customer: ${error.message}`);
@@ -150,11 +188,12 @@ function CustomerSettings({ customer }) {
   };
 
   const handleAddEmail = async () => {
-    if (!newEmail || !customer?.__ID) return;
+    const customerId = customer?.__ID || customer?.id;
+    if (!newEmail || !customerId) return;
 
     try {
       const result = await insert('customer_email', {
-        customer_id: customer.__ID,
+        customer_id: customerId,
         email: newEmail,
         is_primary: emails.length === 0
       });
@@ -163,7 +202,7 @@ function CustomerSettings({ customer }) {
         showError('Email added successfully');
         setNewEmail('');
         setShowAddEmail(false);
-        await loadContactInformation(customer.__ID);
+        await loadContactInformation(customerId);
       } else {
         showError(`Failed to add email: ${result.error}`);
       }
@@ -174,6 +213,7 @@ function CustomerSettings({ customer }) {
   };
 
   const handleRemoveEmail = async (emailId) => {
+    const customerId = customer?.__ID || customer?.id;
     try {
       const result = await remove('customer_email', {
         column: 'id',
@@ -183,7 +223,7 @@ function CustomerSettings({ customer }) {
 
       if (result.success) {
         showError('Email removed successfully');
-        await loadContactInformation(customer.__ID);
+        await loadContactInformation(customerId);
       } else {
         showError(`Failed to remove email: ${result.error}`);
       }
@@ -194,6 +234,7 @@ function CustomerSettings({ customer }) {
   };
 
   const handleTogglePrimaryEmail = async (emailId) => {
+    const customerId = customer?.__ID || customer?.id;
     try {
       // Set all emails to non-primary
       for (const email of emails) {
@@ -208,7 +249,7 @@ function CustomerSettings({ customer }) {
       }
 
       showError('Primary email updated');
-      await loadContactInformation(customer.__ID);
+      await loadContactInformation(customerId);
     } catch (error) {
       console.error('Error updating primary email:', error);
       showError('Failed to update primary email');
@@ -216,21 +257,32 @@ function CustomerSettings({ customer }) {
   };
 
   const handleAddPhone = async () => {
-    if (!newPhone || !customer?.__ID) return;
+    const customerId = customer?.__ID || customer?.id;
+    if (!newPhone || !customerId) return;
+
+    // Validate phone number
+    if (!isValidPhone(newPhone)) {
+      showError('Please enter a valid phone number');
+      return;
+    }
 
     try {
+      // Convert to E.164 format for storage
+      const e164Phone = toE164(newPhone);
+
       const result = await insert('customer_phone', {
-        customer_id: customer.__ID,
-        phone: newPhone,
+        customer_id: customerId,
+        phone: e164Phone,
         is_primary: phones.length === 0,
-        type: 'Business'
+        type: newPhoneType || 'Business'
       });
 
       if (result.success) {
         showError('Phone added successfully');
         setNewPhone('');
+        setNewPhoneType('Business');
         setShowAddPhone(false);
-        await loadContactInformation(customer.__ID);
+        await loadContactInformation(customerId);
       } else {
         showError(`Failed to add phone: ${result.error}`);
       }
@@ -241,6 +293,7 @@ function CustomerSettings({ customer }) {
   };
 
   const handleRemovePhone = async (phoneId) => {
+    const customerId = customer?.__ID || customer?.id;
     try {
       const result = await remove('customer_phone', {
         column: 'id',
@@ -250,7 +303,7 @@ function CustomerSettings({ customer }) {
 
       if (result.success) {
         showError('Phone removed successfully');
-        await loadContactInformation(customer.__ID);
+        await loadContactInformation(customerId);
       } else {
         showError(`Failed to remove phone: ${result.error}`);
       }
@@ -261,6 +314,7 @@ function CustomerSettings({ customer }) {
   };
 
   const handleTogglePrimaryPhone = async (phoneId) => {
+    const customerId = customer?.__ID || customer?.id;
     try {
       // Set all phones to non-primary
       for (const phone of phones) {
@@ -275,7 +329,7 @@ function CustomerSettings({ customer }) {
       }
 
       showError('Primary phone updated');
-      await loadContactInformation(customer.__ID);
+      await loadContactInformation(customerId);
     } catch (error) {
       console.error('Error updating primary phone:', error);
       showError('Failed to update primary phone');
@@ -283,11 +337,12 @@ function CustomerSettings({ customer }) {
   };
 
   const handleAddAddress = async () => {
-    if (!customer?.__ID) return;
+    const customerId = customer?.__ID || customer?.id;
+    if (!customerId) return;
 
     try {
       const result = await insert('customer_address', {
-        customer_id: customer.__ID,
+        customer_id: customerId,
         ...newAddress
       });
 
@@ -301,7 +356,7 @@ function CustomerSettings({ customer }) {
           country: ''
         });
         setShowAddAddress(false);
-        await loadContactInformation(customer.__ID);
+        await loadContactInformation(customerId);
       } else {
         showError(`Failed to add address: ${result.error}`);
       }
@@ -312,6 +367,7 @@ function CustomerSettings({ customer }) {
   };
 
   const handleRemoveAddress = async (addressId) => {
+    const customerId = customer?.__ID || customer?.id;
     try {
       const result = await remove('customer_address', {
         column: 'id',
@@ -321,7 +377,7 @@ function CustomerSettings({ customer }) {
 
       if (result.success) {
         showError('Address removed successfully');
-        await loadContactInformation(customer.__ID);
+        await loadContactInformation(customerId);
       } else {
         showError(`Failed to remove address: ${result.error}`);
       }
@@ -352,6 +408,7 @@ function CustomerSettings({ customer }) {
                   Name: customer.Name || '',
                   Email: customer.Email || '',
                   Phone: customer.Phone || customer.phone || '',
+                  PhoneType: customer.PhoneType || '',
                   Address: customer.Address || '',
                   City: customer.City || '',
                   State: customer.State || '',
@@ -422,17 +479,42 @@ function CustomerSettings({ customer }) {
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Phone</label>
               {isEditing ? (
-                <input
-                  type="tel"
-                  name="Phone"
-                  value={formData.Phone}
-                  onChange={handleInputChange}
-                  className={`w-full p-2 rounded-md border ${
-                    darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
-                  }`}
-                />
+                <div className="space-y-2">
+                  <input
+                    type="tel"
+                    name="Phone"
+                    value={formData.Phone}
+                    onChange={(e) => {
+                      const formatted = formatPhoneInput(e.target.value);
+                      setFormData(prev => ({ ...prev, Phone: formatted }));
+                    }}
+                    placeholder="(555) 123-4567"
+                    className={`w-full p-2 rounded-md border ${
+                      darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                    }`}
+                  />
+                  <input
+                    type="text"
+                    name="PhoneType"
+                    value={formData.PhoneType}
+                    onChange={handleInputChange}
+                    placeholder="Type (e.g., Cell, SMS, Business)"
+                    className={`w-full p-2 rounded-md border text-sm ${
+                      darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                    }`}
+                  />
+                </div>
               ) : (
-                <div className="text-base">{formData.Phone || 'N/A'}</div>
+                <div className="text-base flex items-center gap-2">
+                  {formatPhoneDisplay(formData.Phone) || 'N/A'}
+                  {formData.PhoneType && (
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      darkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {formData.PhoneType}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -529,170 +611,194 @@ function CustomerSettings({ customer }) {
           </div>
         </div>
 
-        {/* Additional Emails */}
-        <div>
-          <div className="flex justify-between items-center mb-3">
-            <h5 className="font-medium">Additional Emails</h5>
-            <button
-              onClick={() => setShowAddEmail(true)}
-              className={`p-1 rounded-full ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-              title="Add email"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
-          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-            {isLoadingContacts ? (
-              <div className="text-sm">Loading...</div>
-            ) : emails.length === 0 ? (
-              <div className="text-sm text-gray-500">No additional emails</div>
-            ) : (
-              <div className="space-y-2">
-                {emails.map((email) => (
-                  <div key={email.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm">{email.email}</span>
-                      {email.is_primary && (
-                        <span className="text-xs px-2 py-0.5 bg-primary text-white rounded">Primary</span>
-                      )}
-                    </div>
-                    <div className="flex space-x-1">
-                      {!email.is_primary && (
+        {/* Additional Emails & Phones (Combined) */}
+        <div className="space-y-6">
+          {/* Additional Emails */}
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <h5 className="font-medium">Additional Emails</h5>
+              <button
+                onClick={() => setShowAddEmail(true)}
+                className={`p-1 rounded-full ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                title="Add email"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+              {isLoadingContacts ? (
+                <div className="text-sm">Loading...</div>
+              ) : emails.length === 0 ? (
+                <div className="text-sm text-gray-500">No additional emails</div>
+              ) : (
+                <div className="space-y-2">
+                  {emails.map((email) => (
+                    <div key={email.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm">{email.email}</span>
+                        {email.is_primary && (
+                          <span className="text-xs px-2 py-0.5 bg-primary text-white rounded">Primary</span>
+                        )}
+                      </div>
+                      <div className="flex space-x-1">
+                        {!email.is_primary && (
+                          <button
+                            onClick={() => handleTogglePrimaryEmail(email.id)}
+                            className={`p-1 text-xs rounded ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                            title="Set as primary"
+                          >
+                            ⭐
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleTogglePrimaryEmail(email.id)}
-                          className={`p-1 text-xs rounded ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                          title="Set as primary"
+                          onClick={() => handleRemoveEmail(email.id)}
+                          className={`p-1 text-red-500 rounded ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                          title="Remove"
                         >
-                          ⭐
+                          ✕
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleRemoveEmail(email.id)}
-                        className={`p-1 text-red-500 rounded ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                        title="Remove"
-                      >
-                        ✕
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {showAddEmail && (
-              <div className="mt-3 flex space-x-2">
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="email@example.com"
-                  className={`flex-1 p-2 rounded-md border ${
-                    darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
-                  }`}
-                />
-                <button
-                  onClick={handleAddEmail}
-                  className="px-3 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
-                >
-                  Add
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAddEmail(false);
-                    setNewEmail('');
-                  }}
-                  className={`px-3 py-2 rounded-md ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+              {showAddEmail && (
+                <div className="mt-3 flex space-x-2">
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    className={`flex-1 p-2 rounded-md border ${
+                      darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                    }`}
+                  />
+                  <button
+                    onClick={handleAddEmail}
+                    className="px-3 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAddEmail(false);
+                      setNewEmail('');
+                    }}
+                    className={`px-3 py-2 rounded-md ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Additional Phones */}
-        <div>
-          <div className="flex justify-between items-center mb-3">
-            <h5 className="font-medium">Additional Phones</h5>
-            <button
-              onClick={() => setShowAddPhone(true)}
-              className={`p-1 rounded-full ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-              title="Add phone"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
-          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-            {isLoadingContacts ? (
-              <div className="text-sm">Loading...</div>
-            ) : phones.length === 0 ? (
-              <div className="text-sm text-gray-500">No additional phones</div>
-            ) : (
-              <div className="space-y-2">
-                {phones.map((phone) => (
-                  <div key={phone.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm">{phone.phone}</span>
-                      {phone.type && (
-                        <span className="text-xs text-gray-500">({phone.type})</span>
-                      )}
-                      {phone.is_primary && (
-                        <span className="text-xs px-2 py-0.5 bg-primary text-white rounded">Primary</span>
-                      )}
-                    </div>
-                    <div className="flex space-x-1">
-                      {!phone.is_primary && (
+          {/* Additional Phones */}
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <h5 className="font-medium">Additional Phones</h5>
+              <button
+                onClick={() => setShowAddPhone(true)}
+                className={`p-1 rounded-full ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                title="Add phone"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+              {isLoadingContacts ? (
+                <div className="text-sm">Loading...</div>
+              ) : phones.length === 0 ? (
+                <div className="text-sm text-gray-500">No additional phones</div>
+              ) : (
+                <div className="space-y-2">
+                  {phones.map((phone) => (
+                    <div key={phone.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{formatPhoneDisplay(phone.phone)}</span>
+                        {phone.type && (
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            darkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {phone.type}
+                          </span>
+                        )}
+                        {phone.is_primary && (
+                          <span className="text-xs px-2 py-0.5 bg-primary text-white rounded">Primary</span>
+                        )}
+                      </div>
+                      <div className="flex space-x-1">
+                        {!phone.is_primary && (
+                          <button
+                            onClick={() => handleTogglePrimaryPhone(phone.id)}
+                            className={`p-1 text-xs rounded ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                            title="Set as primary"
+                          >
+                            ⭐
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleTogglePrimaryPhone(phone.id)}
-                          className={`p-1 text-xs rounded ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                          title="Set as primary"
+                          onClick={() => handleRemovePhone(phone.id)}
+                          className={`p-1 text-red-500 rounded ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+                          title="Remove"
                         >
-                          ⭐
+                          ✕
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleRemovePhone(phone.id)}
-                        className={`p-1 text-red-500 rounded ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-                        title="Remove"
-                      >
-                        ✕
-                      </button>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              )}
+              {showAddPhone && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex space-x-2">
+                    <input
+                      type="tel"
+                      value={newPhone}
+                      onChange={(e) => {
+                        const formatted = formatPhoneInput(e.target.value);
+                        setNewPhone(formatted);
+                      }}
+                      placeholder="(555) 123-4567"
+                      className={`flex-1 p-2 rounded-md border ${
+                        darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                      }`}
+                    />
+                    <input
+                      type="text"
+                      value={newPhoneType}
+                      onChange={(e) => setNewPhoneType(e.target.value)}
+                      placeholder="Type"
+                      className={`w-24 p-2 rounded-md border text-sm ${
+                        darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                      }`}
+                    />
                   </div>
-                ))}
-              </div>
-            )}
-            {showAddPhone && (
-              <div className="mt-3 flex space-x-2">
-                <input
-                  type="tel"
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                  placeholder="555-123-4567"
-                  className={`flex-1 p-2 rounded-md border ${
-                    darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
-                  }`}
-                />
-                <button
-                  onClick={handleAddPhone}
-                  className="px-3 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
-                >
-                  Add
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAddPhone(false);
-                    setNewPhone('');
-                  }}
-                  className={`px-3 py-2 rounded-md ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleAddPhone}
+                      className="px-3 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddPhone(false);
+                        setNewPhone('');
+                        setNewPhoneType('Business');
+                      }}
+                      className={`px-3 py-2 rounded-md ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

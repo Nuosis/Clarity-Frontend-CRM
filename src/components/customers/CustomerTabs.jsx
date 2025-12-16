@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useSales } from '../../hooks/useSales';
 import { useAppState } from '../../context/AppStateContext';
@@ -6,7 +7,7 @@ import { parseDate, formatDate, formatYearMonth, formatMonthYear } from '../../u
 import SalesModal from './SalesModal';
 import CustomerSettings from './CustomerSettings';
 
-function CustomerTabs() {
+function CustomerTabs({ customer }) {
   const { darkMode } = useTheme();
   const [activeTab, setActiveTab] = useState('sales');
   const { sales, formatSale } = useSales();
@@ -14,6 +15,9 @@ function CustomerTabs() {
   const [customerSales, setCustomerSales] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
+
+  // Use customerDetails from AppState if available, otherwise fallback to customer prop
+  const currentCustomer = customerDetails || customer;
 
   // Filter sales for the current customer
   useEffect(() => {
@@ -297,15 +301,19 @@ function CustomerTabs() {
         )}
         
         {/* Customer Settings Tab */}
-        {activeTab === 'settings' && customerDetails && (
-          <CustomerSettings customer={customerDetails} />
+        {activeTab === 'settings' && (
+          currentCustomer ? (
+            <CustomerSettings customer={currentCustomer} />
+          ) : (
+            <div>Loading customer details...</div>
+          )
         )}
       </div>
       
       {/* Sales Modal */}
-      {customerDetails && (
+      {currentCustomer && (
         <SalesModal
-          customer={customerDetails}
+          customer={currentCustomer}
           isOpen={isSalesModalOpen}
           onClose={() => setIsSalesModalOpen(false)}
         />
@@ -313,5 +321,9 @@ function CustomerTabs() {
     </div>
   );
 }
+
+CustomerTabs.propTypes = {
+  customer: PropTypes.object
+};
 
 export default CustomerTabs;
