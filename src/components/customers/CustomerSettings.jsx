@@ -7,6 +7,10 @@ import { useCustomer } from '../../hooks/useCustomer';
 import { useSnackBar } from '../../context/SnackBarContext';
 import { query, insert, update, remove } from '../../services/supabaseService';
 import { toE164, formatPhoneDisplay, formatPhoneInput, isValidPhone } from '../../utils/phoneUtils';
+import { createClient } from '@supabase/supabase-js';
+import { supabaseUrl, supabaseAnonKey } from '../../config.js';
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 function CustomerSettings({ customer }) {
   const { darkMode } = useTheme();
@@ -29,6 +33,9 @@ function CustomerSettings({ customer }) {
     PostalCode: '',
     Country: ''
   });
+
+  // State for VAPI Testing flag
+  const [vapiTesting, setVapiTesting] = useState(false);
 
   // State for additional contacts
   const [emails, setEmails] = useState([]);
@@ -132,6 +139,21 @@ function CustomerSettings({ customer }) {
       if (addressesResult.success && addressesResult.data) {
         setAddresses(addressesResult.data);
       }
+
+      // Load VAPI Testing setting using direct Supabase client
+      const { data: vapiSetting, error: vapiError } = await supabase
+        .from('customer_settings')
+        .select('*')
+        .eq('customer_id', customerId)
+        .eq('type', 'VAPI_TEST')
+        .maybeSingle();
+
+      if (!vapiError && vapiSetting) {
+        const value = vapiSetting.data;
+        setVapiTesting(value === true || value === 'true' || value === '1');
+      } else {
+        setVapiTesting(false);
+      }
     } catch (error) {
       console.error('Error loading contact information:', error);
       showError('Failed to load contact information');
@@ -184,6 +206,71 @@ function CustomerSettings({ customer }) {
       showError(`Failed to update customer: ${error.message}`);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const saveVapiTestingSetting = async (customerId, value) => {
+    try {
+      // Check if setting already exists using direct Supabase client
+      const { data: existingSetting, error: queryError } = await supabase
+        .from('customer_settings')
+        .select('id')
+        .eq('customer_id', customerId)
+        .eq('type', 'VAPI_TEST')
+        .maybeSingle();
+
+      if (queryError) {
+        throw new Error(`Failed to query settings: ${queryError.message}`);
+      }
+
+      const settingData = value.toString();
+
+      if (existingSetting) {
+        // Update existing setting
+        const { error: updateError } = await supabase
+          .from('customer_settings')
+          .update({ data: settingData })
+          .eq('id', existingSetting.id);
+
+        if (updateError) {
+          throw new Error(`Failed to update setting: ${updateError.message}`);
+        }
+      } else {
+        // Insert new setting
+        const { error: insertError } = await supabase
+          .from('customer_settings')
+          .insert([{
+            id: crypto.randomUUID(),
+            customer_id: customerId,
+            type: 'VAPI_TEST',
+            data: settingData
+          }]);
+
+        if (insertError) {
+          throw new Error(`Failed to insert setting: ${insertError.message}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving VAPI Testing setting:', error);
+      throw error;
+    }
+  };
+
+  const handleVapiTestingToggle = async (checked) => {
+    const customerId = customer?.__ID || customer?.id;
+    if (!customerId) return;
+
+    // Optimistically update UI
+    setVapiTesting(checked);
+
+    try {
+      await saveVapiTestingSetting(customerId, checked);
+      showError(`VAPI Testing ${checked ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      console.error('Error updating VAPI Testing:', error);
+      showError(`Failed to update VAPI Testing: ${error.message}`);
+      // Revert on error
+      setVapiTesting(!checked);
     }
   };
 
@@ -452,6 +539,22 @@ function CustomerSettings({ customer }) {
               ) : (
                 <div className="text-base">{formData.Name || 'N/A'}</div>
               )}
+            </div>
+
+            {/* VAPI Testing Flag */}
+            <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={vapiTesting}
+                  onChange={(e) => handleVapiTestingToggle(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                />
+                <span className="text-sm font-medium">VAPI Testing</span>
+              </label>
+              <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Enable VAPI testing for this customer (saves automatically)
+              </p>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
+import { query } from '../../services/supabaseService';
 
 function CustomerHeader({
   customer,
@@ -12,6 +13,46 @@ function CustomerHeader({
   isProspect = false
 }) {
   const { darkMode } = useTheme();
+  const [vapiTesting, setVapiTesting] = useState(false);
+
+  // Load VAPI Testing flag
+  useEffect(() => {
+    const loadVapiTestingFlag = async () => {
+      const customerId = customer?.__ID || customer?.id;
+      if (!customerId) return;
+
+      try {
+        const result = await query('customer_settings', {
+          select: '*',
+          filter: [
+            {
+              column: 'customer_id',
+              operator: 'eq',
+              value: customerId
+            },
+            {
+              column: 'type',
+              operator: 'eq',
+              value: 'VAPI_TEST'
+            }
+          ]
+        });
+
+        if (result.success && result.data && result.data.length > 0) {
+          const setting = result.data[0];
+          const value = setting.data;
+          setVapiTesting(value === true || value === 'true' || value === '1');
+        } else {
+          setVapiTesting(false);
+        }
+      } catch (error) {
+        console.error('Error loading VAPI Testing flag:', error);
+        setVapiTesting(false);
+      }
+    };
+
+    loadVapiTestingFlag();
+  }, [customer?.__ID, customer?.id]);
   
   return (
     <div className={`
@@ -33,6 +74,17 @@ function CustomerHeader({
                 }
               `}>
                 {customer.Industry}
+              </span>
+            )}
+            {vapiTesting && (
+              <span className={`
+                px-3 py-1 rounded-full text-sm font-medium
+                ${darkMode
+                  ? 'bg-green-900/30 text-green-300 border border-green-700/50'
+                  : 'bg-green-100 text-green-700 border border-green-200'
+                }
+              `}>
+                VAPI Testing
               </span>
             )}
           </div>
