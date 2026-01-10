@@ -94,23 +94,27 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Comprehensive backend API requirements document created at 'requirements/platform-filemaker-removal/BACKEND_API_REQUIREMENTS.md' (85KB). Analyzed all 60+ FileMaker operations across 9 API modules and mapped them to required backend endpoints. Key findings: Backend already has FileMaker proxy endpoints (/filemaker/{layout}/records) that currently proxy to FileMaker but need to be updated to query Supabase directly. Documented detailed requirements for 7 major resources (Customers, Projects, Tasks, Financial Records, Teams, Notes, Links) with exact operation mappings. Created 5 Backend Change Requests (BCR-001 through BCR-005) covering: FileMaker-to-Supabase conversion, financial records table clarification, project-related tables verification, QuickBooks integration update, and bulk update optimization. Identified critical questions for backend team including table mapping clarification (e.g., dapiRecords → time_entries vs customer_sales). Document includes authentication requirements (HMAC-SHA256), response format requirements, migration strategy, and endpoint status matrix. Ready for backend team review."
+      "implementation_notes": "Implemented a comprehensive backend API requirements spec to replace FileMaker usage by auditing 60+ operations across 9 API modules and mapping them to existing and needed endpoints, noting the backend already exposes '/filemaker/{layout}/records' proxies that should be converted to query Supabase while preserving HMAC-SHA256 auth and response compatibility. Added the main deliverable 'requirements/platform-filemaker-removal/BACKEND_API_REQUIREMENTS.md' (about 85KB) detailing CRUD/query patterns per resource plus backend change requests (BCR-001 through BCR-005) and open questions around 'dapiRecords' table and related project tables. Updated 'tasks.json' to mark the work complete and verified the project still builds successfully via 'npm run build'."
     },
     {
       "id": "TSK0005",
       "title": "Document authentication changes needed",
       "description": "Define web-only authentication requirements. Document removal of AUTH_METHODS.FILEMAKER, changes to SignIn component, removal of FileMaker auto-detection, and Supabase-only auth flow.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "files": [
-        "requirements/platform-filemaker-removal/auth-requirements.md"
+        "requirements/platform-filemaker-removal/authentication-requirements.md"
       ],
       "references": [
         "src/services/dataService.js:18-22",
         "src/components/auth/SignIn.jsx:24-66",
         "src/index.jsx:117-139",
         "src/context/AppStateContext.jsx:68-77"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive authentication requirements document at 'requirements/platform-filemaker-removal/authentication-requirements.md' (43KB) detailing the complete removal of FileMaker authentication infrastructure. Documented current dual-environment detection system across SignIn component (src/components/auth/SignIn.jsx:24-66), app initialization handlers (src/index.jsx:117-160), and environment context management (src/services/dataService.js:13-46). Specified file-by-file changes including removal of ~500 lines of code across 6 core files: removal of FileMaker detection logic, simplification of request/response interceptors, and consolidation to Supabase-only authentication flow. Included detailed implementation checklist, security considerations, testing requirements, and migration risk assessment. Key decision: recommend Option A (immediate removal) over gradual deprecation for cleaner migration boundary and reduced maintenance burden."
     },
     {
       "id": "TSK0006",
