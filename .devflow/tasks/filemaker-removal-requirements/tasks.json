@@ -132,17 +132,20 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive 7-phase migration plan (MIGRATION_PLAN.md, ~500KB) detailing step-by-step removal of FileMaker dependencies. Plan covers: Phase 1 - API Layer Migration (convert 60+ fetchDataFromFileMaker calls to HTTP in 11 files), Phase 2 - Data Service Simplification (remove ~250 lines of FileMaker routing from dataService.js), Phase 3 - Authentication Simplification (remove FileMaker detection from SignIn.jsx), Phase 4 - Environment Detection Removal (simplify AppStateContext and initialization), Phase 5 - Configuration Cleanup (remove fm-gofer package and env vars), Phase 6 - Testing & Verification (comprehensive test plan), Phase 7 - Documentation Updates. Includes detailed conversion patterns, file-by-file implementation guides, rollback procedures, success criteria, and appendices with reference tables and verification commands. Total estimated implementation time: 11-19 hours across all phases."
+      "implementation_notes": "Implemented a comprehensive FileMaker removal migration plan to move the frontend to a single Supabase plus Backend API routing path and eliminate dual-environment FileMaker logic. Added the main deliverable at 'requirements/platform-filemaker-removal/MIGRATION_PLAN.md' detailing 7 sequential phases, file-by-file conversion guidance, testing and rollback procedures, and key decisions like a clean-break approach while preserving existing endpoint paths for compatibility. Updated 'tasks.json' to mark the work complete and verified the project still builds successfully after the documentation changes."
     },
     {
       "id": "TSK0007",
       "title": "Define acceptance criteria",
       "description": "Document what 'done' looks like: No FileMaker references, all tests pass, authentication works, all CRUD operations work via backend/Supabase, no environment detection code remains.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "files": [
         "requirements/platform-filemaker-removal/acceptance-criteria.md"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Created comprehensive acceptance criteria document defining precise, measurable criteria for FileMaker removal completion. Documented 40 specific acceptance criteria across 8 categories: Code Removal (10 criteria), Functionality (3), Authentication (5), Data Operations (5), Performance (4), Testing (4), Documentation (4), and Deployment Readiness (5). Each criterion includes verification commands, expected outcomes, and pass/fail thresholds. Key decisions: Defined minimum passing score of 38/40 (95%) with 2 deferrable items (memory leak testing and code comment cleanup). Included complete verification script, summary checklist, and acceptance decision matrix. Verified project still builds successfully after documentation changes (build completed in 2.44s with only pre-existing export warnings unrelated to this work). Document provides actionable criteria that Phase 2 implementation can use to verify each change systematically."
     },
     {
       "id": "TSK0008",
