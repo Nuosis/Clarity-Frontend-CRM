@@ -1,0 +1,117 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-10T19:30:00.000Z",
+  "feature": {
+    "name": "Customers Migration Requirements",
+    "slug": "customers-migration-requirements",
+    "description": "Document requirements for migrating Customers feature from FileMaker to Supabase",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "Follow Backend Change Protocol - no direct database modifications",
+    "Use standardized documentation template structure",
+    "Include code references with file:line format",
+    "Document all edge cases and failure scenarios",
+    "Provide concrete examples for API contracts",
+    "Consider organization scoping and multi-tenancy"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Create requirements folder structure",
+      "description": "Create requirements/customers/ directory and README.md overview file",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": []
+    },
+    {
+      "id": "TSK0002",
+      "title": "Document current FileMaker implementation",
+      "description": "Analyze and document src/api/customers.js, customerService.js, useCustomer.js hook and create current-implementation.md showing call flows",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001"]
+    },
+    {
+      "id": "TSK0003",
+      "title": "Investigate Supabase schema",
+      "description": "Query Supabase for customers and related tables (customer_contacts, customer_email, customer_phone, customer_address, customer_sales) and document structure",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001"]
+    },
+    {
+      "id": "TSK0004",
+      "title": "Map FileMaker fields to Supabase schema",
+      "description": "Create data-model-mapping.md documenting field-by-field mapping from devCustomers layout to Supabase tables with data types and constraints",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0002", "TSK0003"]
+    },
+    {
+      "id": "TSK0005",
+      "title": "Define API endpoint contracts",
+      "description": "Create api-contracts.md specifying all required backend endpoints (list, get, create, update, delete, toggle status) with request/response examples",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0002", "TSK0004"]
+    },
+    {
+      "id": "TSK0006",
+      "title": "Document authorization requirements",
+      "description": "Create authorization.md covering RLS policies, organization scoping, user roles, and permission requirements",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0003"]
+    },
+    {
+      "id": "TSK0007",
+      "title": "Analyze dual-write patterns",
+      "description": "Review dualWriteService.js and useSupabaseCustomer.js to understand current FileMaker→Supabase synchronization behavior",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0002"]
+    },
+    {
+      "id": "TSK0008",
+      "title": "Design ID reconciliation strategy",
+      "description": "Document how to map FileMaker __ID and recordId to Supabase UUIDs, including lookup tables or migration mappings",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0004", "TSK0007"]
+    },
+    {
+      "id": "TSK0009",
+      "title": "Create migration plan",
+      "description": "Create migration-plan.md with data backfill strategy, cutover plan, rollback procedures, and validation steps",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0008"]
+    },
+    {
+      "id": "TSK0010",
+      "title": "Document edge cases",
+      "description": "Identify and document edge cases: concurrent updates, partial failures, network issues, orphaned records, duplicate detection",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0002", "TSK0005"]
+    },
+    {
+      "id": "TSK0011",
+      "title": "Define acceptance criteria",
+      "description": "Create acceptance-criteria.md with test cases, success metrics, performance requirements, and validation procedures",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0005", "TSK0009", "TSK0010"]
+    },
+    {
+      "id": "TSK0012",
+      "title": "Review and validate documentation",
+      "description": "Review all documentation for completeness, consistency, and actionability for backend team",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0002", "TSK0004", "TSK0005", "TSK0006", "TSK0009", "TSK0011"]
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+{
+  "tasks": [
+    {
+      "id": "INS0001",
+      "title": "Migrate Customers From FileMaker to Supabase",
+      "description": "Phase 1 requirements: Migrate Customers feature from FileMaker to Supabase. Create a documentation folder under requirements/ covering current FileMaker implementation, data model mapping, API contracts needed from backend, migration steps, edge cases, and acceptance criteria.\n\nDeliverables:\n- requirements/customers/README.md summarizing current behavior and FM dependencies\n- Data model mapping: FileMaker devCustomers fields -> Supabase tables/columns (including IDs, relationships)\n- Required backend endpoints or RPCs (list, detail, create, update, toggle status, delete)\n- Auth/authorization requirements (org scoping, roles)\n- Migration plan for existing records and ID reconciliation\n- Test plan + acceptance criteria\n- References to relevant code files (src/api/customers.js, customer components/services)\n\n\n**Context:** Customers is currently FileMaker-primary via src/api/customers.js calling fetchDataFromFileMaker() against Layouts.CUSTOMERS (devCustomers). Multiple UI components depend on FM-shaped data. To remove FileMaker dependency, backend needs Supabase schema + endpoints matching current UI usage, plus a data migration strategy from FileMaker IDs to Supabase UUIDs and relationship integrity.",
+      "status": "escalated",
+      "complexity": "complex",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:21:30.154Z",
+      "updatedAt": "2026-01-10T19:26:13.842Z",
+      "escalatedToFeature": "customers-migration-requirements",
+      "execution_summary": "Execution completed"
+    },
+    {
+      "id": "INS0002",
+      "title": "Document Projects migration to Supabase",
+      "description": "Phase 1 requirements: Migrate Projects feature from FileMaker to Supabase. Create a documentation folder under requirements/projects/ that fully documents current implementation, related entities (notes/links/objectives/images if applicable), and backend Supabase requirements.\n\nDeliverables:\n- requirements/projects/README.md describing current Project flows and FM dependencies\n- Data model mapping: FileMaker devProjects (+ any related layouts used) -> Supabase tables\n- Required backend endpoints/RPCs: list by customer, detail, create, update, delete, status changes, fetch related data\n- Relationship requirements (customer_id, assigned staff/team, status enums, etc.)\n- Migration plan and data backfill approach\n- Acceptance criteria and test plan\n- Code references: src/api/projects.js, project services/components, notes/links APIs if coupled\n\n\n**Context:** Projects is FileMaker-primary via src/api/projects.js and related fetches for associated data. Removing FM requires a complete Supabase schema and API surface compatible with existing UI, including project status transitions and any related data currently pulled from FileMaker layouts.",
+      "status": "escalated",
+      "complexity": "complex",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:21:36.048Z",
+      "updatedAt": "2026-01-10T19:30:00.000Z",
+      "escalatedToFeature": "projects-migration-requirements",
+      "execution_summary": "Execution completed"
+    },
+    {
+      "id": "INS0003",
+      "title": "Migrate Tasks and Timer to Supabase",
+      "description": "Phase 1 requirements: Migrate Tasks + Timer feature from FileMaker to Supabase. Create documentation under requirements/tasks/ describing task CRUD, timer start/stop/pause, and financial record generation currently tied to FileMaker + dual-write.\n\nDeliverables:\n- requirements/tasks/README.md documenting current task & timer behavior\n- Data model mapping: FileMaker devTasks + timer fields -> Supabase tasks/time_entries/customer_sales (or equivalent)\n- Backend requirements:\n  - endpoints/RPCs for task list/detail/create/update/status\n  - timer start/stop/pause semantics, idempotency, concurrency rules\n  - financial/billable record creation rules (what happens on stop)\n  - reconciliation strategy replacing financialSyncService dual-system logic\n- Migration strategy for existing tasks and historical time/financial records\n- Acceptance criteria, test cases (race conditions, offline/refresh, partial failures)\n- Code references: src/api/tasks.js, src/services/dualWriteService.js, financialSyncService usage, TaskTimer component\n\n\n**Context:** Tasks and time tracking are FileMaker-primary, with a dual-write layer (src/services/dualWriteService.js) syncing timer outcomes to Supabase customer_sales. A full migration requires capturing timer business rules and replacing FileMaker as the generator of authoritative time/financial records.",
+      "status": "escalated",
+      "complexity": "complex",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:21:42.909Z",
+      "updatedAt": "2026-01-10T19:26:13.843Z",
+      "escalatedToFeature": "tasks-migration-requirements",
+      "execution_summary": "Execution completed"
+    },
+    {
+      "id": "INS0004",
+      "title": "Migrate Teams from FileMaker to Supabase",
+      "description": "Phase 1 requirements: Migrate Teams feature from FileMaker to Supabase. Create documentation under requirements/teams/ describing team CRUD, staff assignment, and any project/team relationships.\n\nDeliverables:\n- requirements/teams/README.md documenting current Teams feature and FM usage\n- Data model mapping: FileMaker devTeams (and staff/team relationship representation) -> Supabase tables (teams, team_members, etc.)\n- Backend endpoints/RPCs needed: list, detail, create, update, delete, assign/remove staff, fetch team projects/staff\n- Authorization/scoping requirements\n- Migration approach for existing teams and memberships\n- Acceptance criteria and test plan\n- Code references: src/api/teams.js, team components/services\n\n\n**Context:** Teams is implemented via FileMaker API calls (src/api/teams.js). Migration requires modeling memberships/relationships explicitly in Supabase and providing backend endpoints compatible with existing UI flows.",
+      "status": "escalated",
+      "complexity": "complex",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:21:47.171Z",
+      "updatedAt": "2026-01-10T19:26:13.844Z",
+      "escalatedToFeature": "teams-supabase-migration",
+      "execution_summary": "Execution completed"
+    },
+    {
+      "id": "INS0005",
+      "title": "Migrate Notes from FileMaker to Supabase",
+      "description": "Phase 1 requirements: Migrate Notes feature from FileMaker to Supabase. Create documentation under requirements/notes/ for notes CRUD and associations (customer/project/task), including any visibility rules.\n\nDeliverables:\n- requirements/notes/README.md documenting current notes behavior\n- Data model mapping: FileMaker devNotes -> Supabase notes table(s), including polymorphic association strategy if needed\n- Backend endpoints/RPCs: list by parent entity, create, update, delete\n- Migration/backfill plan for existing notes\n- Acceptance criteria and test plan\n- Code references: src/api/notes.js and where notes are surfaced in UI\n\n\n**Context:** Notes CRUD currently uses FileMaker layout devNotes via src/api/notes.js. Migrating notes is relatively self-contained but depends on how notes relate to customers/projects/tasks in Supabase.",
+      "status": "escalated",
+      "complexity": "complex",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:21:52.124Z",
+      "updatedAt": "2026-01-10T19:26:13.845Z",
+      "escalatedToFeature": "notes-migration-requirements",
+      "execution_summary": "Execution completed"
+    },
+    {
+      "id": "INS0006",
+      "title": "Migrate Links from FileMaker to Supabase",
+      "description": "Phase 1 requirements: Migrate Links feature from FileMaker to Supabase. Create documentation under requirements/links/ describing links CRUD and associations (customer/project/task) and any validation.\n\nDeliverables:\n- requirements/links/README.md documenting current links behavior\n- Data model mapping: FileMaker devLinks -> Supabase links table(s)\n- Backend endpoints/RPCs: list by parent entity, create, update, delete\n- Migration/backfill plan\n- Acceptance criteria and test plan\n- Code references: src/api/links.js and UI usage\n\n\n**Context:** Links CRUD is implemented via FileMaker layout devLinks using src/api/links.js. Migrating requires a Supabase schema and endpoints to support existing UI flows.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:21:54.990Z",
+      "updatedAt": "2026-01-10T20:16:39.154Z"
+    },
+    {
+      "id": "INS0007",
+      "title": "Migrate financial records to Supabase",
+      "description": "Phase 1 requirements: Migrate Financial Records (billing/customer sales) from FileMaker to Supabase, and remove FileMaker-based sync tooling. Create documentation under requirements/financial-records/.\n\nDeliverables:\n- requirements/financial-records/README.md documenting current financial record flows\n- Data mapping: FileMaker dapiRecords fields -> Supabase customer_sales (and related tables)\n- Backend endpoints/RPCs required: query by date range/customer/org, unpaid, monthly/quarterly/yearly summaries\n- Define source-of-truth behavior (replace FM) and how records are created (esp. from timer stop)\n- Plan to retire/replace financialSyncService.js reconciliation logic\n- Acceptance criteria and test plan\n- Code references: src/api/financialRecords.js, src/services/financialSyncService.js, billableHoursService.js, relevant components\n\n\n**Context:** Financial records are pulled from FileMaker (dapiRecords) and reconciled into Supabase via financialSyncService. Full migration requires defining Supabase as the authoritative store and ensuring timer/billing flows write directly to Supabase.",
+      "status": "done",
+      "complexity": "simple",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:22:00.223Z",
+      "updatedAt": "2026-01-10T19:48:31.021Z",
+      "review": {
+        "passed": true,
+        "findings": [],
+        "reviewed_at": "2026-01-10T19:55:03.096Z"
+      },
+      "implementation_notes": "Created comprehensive Phase 1 documentation for financial records migration from FileMaker to Supabase. Deliverables include: (1) README.md documenting current flows, data mapping FM→Supabase, backend RPC requirements, source-of-truth behavior, timer integration points, migration plan, acceptance criteria, and test plan with code references; (2) BACKEND_CHANGE_REQUEST_001 document with complete SQL for 7 RPC functions, 5 performance indexes, migration script, testing requirements, rollback procedure, and deployment plan. Documentation captures 50,000+ historical records migration strategy, timer→billing record creation flow, QuickBooks integration requirements, and deprecation plan for financialSyncService.js reconciliation logic. All requirements validated against existing customer_sales schema (verified via SSH) and current FileMaker implementation (3 source files analyzed: financialRecords.js, financialSyncService.js, billableHoursService.js totaling 1,897 lines).",
+      "execution_summary": "**Summary:** Created comprehensive Phase 1 documentation for financial records migration from FileMaker to Supabase. Deliverables include: (1) README.md documenting current flows, data mapping FM→Supabase, backend RPC requirements, source-of-truth behavior, timer integration points, migration plan, acceptance criteria, and test plan with code references; (2) BACKEND_CHANGE_REQUEST_001 document with complete SQL for 7 RPC functions, 5 performance indexes, migration script, testing requirements, rollback procedure, and deployment plan. Documentation captures 50,000+ historical records migration strategy, timer→billing record creation flow, QuickBooks integration requirements, and deprecation plan for financialSyncService.js reconciliation logic. All requirements validated against existing customer_sales schema (verified via SSH) and current FileMaker implementation (3 source files analyzed: financialRecords.js, financialSyncService.js, billableHoursService.js totaling 1,897 lines)."
+    },
+    {
+      "id": "INS0008",
+      "title": "Migrate QuickBooks Integration to Supabase",
+      "description": "Phase 1 requirements: Migrate QuickBooks initialization/integration off of FileMaker script execution to backend/Supabase (edge function or server API). Create documentation under requirements/quickbooks/.\n\nDeliverables:\n- requirements/quickbooks/README.md documenting current QB flows\n- Identify every place QB is invoked from FileMaker (e.g., Initialize QB via JS) and expected inputs/outputs\n- Define backend/Supabase implementation requirements (OAuth, tokens, org scoping, retries, error handling)\n- API contract for frontend to trigger init/test/sync\n- Plan to remove FileMaker script dependency\n- Acceptance criteria and test plan\n- Code references: src/api/fileMaker.js (initializeQuickBooks), financial UI panels\n\n\n**Context:** QuickBooks is currently triggered through FileMaker script execution in src/api/fileMaker.js, used by financial panels. To eliminate FileMaker dependency, these operations must move to backend/Supabase with equivalent API contracts.",
+      "status": "escalated",
+      "complexity": "complex",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:22:05.362Z",
+      "updatedAt": "2026-01-10T19:48:31.099Z",
+      "escalatedToFeature": "quickbooks-migration-requirements",
+      "execution_summary": "Execution completed"
+    },
+    {
+      "id": "INS0009",
+      "title": "Document Supabase-First Without FileMaker Bridge",
+      "description": "Phase 1 requirements: Remove FileMaker bridge/environment routing by documenting replacement Supabase-first architecture needs (request routing, auth, initialization). Create documentation under requirements/platform-filemaker-removal/.\n\nDeliverables:\n- requirements/platform-filemaker-removal/README.md describing current environment detection + routing\n- Inventory of FileMaker bridge touchpoints (FMGofer, window.FileMaker, fetchDataFromFileMaker)\n- Define required backend API surface to replace fileMaker.js operations (or confirm direct Supabase usage)\n- Auth/session requirements in web-only mode; remove FILEMAKER auth method\n- Migration plan to simplify src/services/dataService.js to a single routing path\n- Acceptance criteria and rollout plan\n- Code references: src/services/dataService.js, src/api/fileMaker.js, initializationService, SignIn, useFileMakerBridge\n\n\n**Context:** Even after migrating features, the platform still routes requests differently in FileMaker vs web app environments via dataService.js and the FileMaker bridge. A phase-1 requirements doc should guide backend needs and the eventual phase-2 code refactor to remove FileMaker infrastructure safely.",
+      "status": "escalated",
+      "complexity": "complex",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:22:11.374Z",
+      "updatedAt": "2026-01-10T19:48:31.162Z",
+      "escalatedToFeature": "filemaker-removal-requirements",
+      "execution_summary": "Execution completed"
+    },
+    {
+      "id": "INS0010",
+      "title": "Add Customers requirements doc template",
+      "description": "Update INS0001 (Customers migration requirements) to include a standardized documentation template set in requirements/customers/.\n\nAdd/ensure deliverables:\n- requirements/customers/README.md (overview, current FM behavior, user flows)\n- requirements/customers/current-implementation.md (frontend call graph, relevant files)\n- requirements/customers/data-model-mapping.md (FM -> Supabase schema mapping, IDs)\n- requirements/customers/api-contracts.md (endpoints/RPCs, request/response examples)\n- requirements/customers/authorization.md (RLS, org scoping, roles)\n- requirements/customers/migration-plan.md (backfill, ID reconciliation, cutover)\n- requirements/customers/acceptance-criteria.md (test cases, edge cases)\n\nInclude links/references to code locations and known FM layouts/fields used.\n\n**Context:** User confirmed adding a consistent documentation template per requirements folder is desired. This task ensures Customers documentation includes the full template set for backend implementation guidance.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:23:26.231Z",
+      "updatedAt": "2026-01-10T20:16:39.195Z"
+    },
+    {
+      "id": "INS0011",
+      "title": "Standardize Projects Migration Requirements Docs",
+      "description": "Update INS0002 (Projects migration requirements) to include standardized documentation templates in requirements/projects/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md\n- data-model-mapping.md\n- api-contracts.md\n- authorization.md\n- migration-plan.md\n- acceptance-criteria.md\n\nEnsure project-related entities are covered (notes/links/objectives/images if applicable) and document required backend contracts for related-data fetches.\n\n**Context:** Projects is FileMaker-primary. User wants uniform requirements documentation structure across features for backend dev consumption.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:23:27.254Z",
+      "updatedAt": "2026-01-10T20:48:46.920Z"
+    },
+    {
+      "id": "INS0012",
+      "title": "Standardize tasks timer migration docs",
+      "description": "Update INS0003 (Tasks & Timer migration requirements) to include standardized documentation templates in requirements/tasks/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md (task CRUD + timer call flows + dualWriteService interactions)\n- data-model-mapping.md (tasks, time entries, financial/customer_sales mapping)\n- api-contracts.md (task endpoints + timer start/stop/pause, idempotency)\n- authorization.md\n- migration-plan.md\n- acceptance-criteria.md (race conditions, partial failures, reconciliation)\n\nExplicitly capture timer semantics currently implemented via FileMaker and dual-write.\n\n**Context:** Tasks/timer is hybrid (FileMaker + Supabase dual-write). Uniform docs are needed to implement backend Supabase equivalents.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:23:28.075Z",
+      "updatedAt": "2026-01-10T20:16:38.896Z"
+    },
+    {
+      "id": "INS0013",
+      "title": "Standardize Teams Migration Requirements Docs",
+      "description": "Update INS0004 (Teams migration requirements) to include standardized documentation templates in requirements/teams/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md\n- data-model-mapping.md (teams, team_members)\n- api-contracts.md\n- authorization.md\n- migration-plan.md\n- acceptance-criteria.md\n\nInclude staff assignment and any project/team relationship behaviors currently provided by FileMaker.\n\n**Context:** Teams currently depends on FileMaker. User wants consistent requirement doc structure to drive backend implementation.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:23:28.688Z",
+      "updatedAt": "2026-01-10T20:16:38.966Z"
+    },
+    {
+      "id": "INS0014",
+      "title": "Standardize Notes Migration Docs Templates",
+      "description": "Update INS0005 (Notes migration requirements) to include standardized documentation templates in requirements/notes/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md\n- data-model-mapping.md (notes + associations)\n- api-contracts.md\n- authorization.md\n- migration-plan.md\n- acceptance-criteria.md\n\nClarify association strategy (customer/project/task) and any sorting/filtering behavior.\n\n**Context:** Notes is FileMaker-dependent; needs consistent template docs to help backend implement Supabase version.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:23:29.507Z",
+      "updatedAt": "2026-01-10T20:16:38.989Z"
+    },
+    {
+      "id": "INS0015",
+      "title": "Standardize Links Migration Documentation Templates",
+      "description": "Update INS0006 (Links migration requirements) to include standardized documentation templates in requirements/links/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md\n- data-model-mapping.md (links + associations)\n- api-contracts.md\n- authorization.md\n- migration-plan.md\n- acceptance-criteria.md\n\nDocument URL validation rules and association strategy (customer/project/task).\n\n**Context:** Links is FileMaker-dependent; user requested consistent documentation templates for backend dev.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:23:30.342Z",
+      "updatedAt": "2026-01-10T20:16:39.013Z"
+    },
+    {
+      "id": "INS0016",
+      "title": "Standardize financial records migration templates",
+      "description": "Update INS0007 (Financial records migration requirements) to include standardized documentation templates in requirements/financial-records/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md (financialRecords API + financialSyncService reconciliation)\n- data-model-mapping.md (dapiRecords -> customer_sales and related tables)\n- api-contracts.md (queries, summaries, unpaid, date ranges)\n- authorization.md\n- migration-plan.md (replace FM as source of truth, retire sync tooling)\n- acceptance-criteria.md\n\nInclude how timer stop should create/update financial records in Supabase-only design.\n\n**Context:** Financial records are currently FileMaker-sourced with Supabase reconciliation. Consistent templates are needed to implement authoritative Supabase backend.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:23:31.044Z",
+      "updatedAt": "2026-01-10T20:16:39.035Z"
+    },
+    {
+      "id": "INS0017",
+      "title": "Add QuickBooks documentation templates",
+      "description": "Update INS0008 (QuickBooks migration requirements) to include standardized documentation templates in requirements/quickbooks/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md (where FM scripts are invoked, expected behavior)\n- data-model-mapping.md (token storage, org config tables if needed)\n- api-contracts.md (init/test/sync endpoints)\n- authorization.md\n- migration-plan.md (move off FM scripts)\n- acceptance-criteria.md\n\nCapture error handling, retries, and OAuth/token lifecycle requirements.\n\n**Context:** QuickBooks integration currently depends on FileMaker script execution. User requested consistent templates for backend implementation documentation.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:23:31.760Z",
+      "updatedAt": "2026-01-10T20:16:39.059Z"
+    },
+    {
+      "id": "INS0018",
+      "title": "Standardize FileMaker Removal Documentation",
+      "description": "Update INS0009 (Platform FileMaker removal requirements) to include standardized documentation templates in requirements/platform-filemaker-removal/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md (environment detection, dataService routing, FMGofer)\n- data-model-mapping.md (if any platform config tables needed)\n- api-contracts.md (backend API surface needed to replace FM operations)\n- authorization.md\n- migration-plan.md (cutover plan, removal order, deprecations)\n- acceptance-criteria.md\n\nDocument the target ‘single path’ request routing and how frontend should authenticate without FILEMAKER auth method.\n\n**Context:** Even after feature migrations, FileMaker bridge and environment routing remain. Uniform docs guide backend + later frontend refactor.",
+      "status": "pending",
+      "complexity": "unknown",
+      "priority": "medium",
+      "createdAt": "2026-01-10T19:23:32.402Z",
+      "updatedAt": "2026-01-10T20:16:39.082Z"
+    }
+  ]
+}

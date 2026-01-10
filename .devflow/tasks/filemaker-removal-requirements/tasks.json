@@ -1,0 +1,136 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-10T00:00:00Z",
+  "feature": {
+    "name": "FileMaker Removal Requirements",
+    "slug": "filemaker-removal-requirements",
+    "description": "Document requirements for removing FileMaker bridge infrastructure and transitioning to Supabase-first architecture",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "Follow CLAUDE.md backend change protocol - document requirements but do NOT modify backend",
+    "Reference actual code with file:line patterns",
+    "No timeline estimates - focus on what needs to be done",
+    "All documentation goes in requirements/platform-filemaker-removal/",
+    "Must be thorough - this will guide Phase 2 implementation"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Create README.md with architecture overview",
+      "description": "Document current environment detection and routing architecture. Cover ENVIRONMENT_TYPES, AUTH_METHODS, setEnvironmentContext, and how requests flow differently in FileMaker vs Web App modes.",
+      "status": "in_progress",
+      "priority": "high",
+      "files": [
+        "requirements/platform-filemaker-removal/README.md"
+      ],
+      "references": [
+        "src/services/dataService.js:12-22",
+        "src/services/dataService.js:43-54",
+        "src/components/auth/SignIn.jsx:24-66"
+      ],
+      "executionPid": 57703,
+      "sessionId": "63c93d29-92a2-488c-9a68-a611048ae8a6"
+    },
+    {
+      "id": "TSK0002",
+      "title": "Document current architecture in architecture.md",
+      "description": "Create detailed architectural documentation showing how FileMaker bridge works, including FMGofer usage, window.FileMaker detection, axios interceptors, and the convertToFileMakerCall function.",
+      "status": "queued",
+      "priority": "high",
+      "files": [
+        "requirements/platform-filemaker-removal/architecture.md"
+      ],
+      "references": [
+        "src/api/fileMaker.js:1-501",
+        "src/services/dataService.js:108-161",
+        "src/services/dataService.js:176-216"
+      ]
+    },
+    {
+      "id": "TSK0003",
+      "title": "Create comprehensive inventory in inventory.md",
+      "description": "Inventory all FileMaker touchpoints including: useFileMakerBridge hook, window.FileMaker checks, FMGofer imports, fetchDataFromFileMaker calls, and FILEMAKER constants. List all affected files with line numbers.",
+      "status": "queued",
+      "priority": "high",
+      "files": [
+        "requirements/platform-filemaker-removal/inventory.md"
+      ],
+      "references": [
+        "src/hooks/index.js:3-64",
+        "src/api/customers.js:1-135",
+        "src/api/projects.js",
+        "src/api/tasks.js",
+        "src/api/teams.js",
+        "src/api/notes.js",
+        "src/api/links.js"
+      ]
+    },
+    {
+      "id": "TSK0004",
+      "title": "Define backend API requirements",
+      "description": "Document which backend endpoints must exist to replace all FileMaker operations. Review fileMaker.js operations (read, create, update, delete) and map to backend endpoints. Note: This creates a BACKEND_CHANGE_REQUEST if new endpoints needed.",
+      "status": "queued",
+      "priority": "high",
+      "files": [
+        "requirements/platform-filemaker-removal/backend-api-requirements.md"
+      ],
+      "references": [
+        "src/api/fileMaker.js:89-239",
+        "src/services/dataService.js:383-453",
+        "src/config.js:38-40"
+      ]
+    },
+    {
+      "id": "TSK0005",
+      "title": "Document authentication changes needed",
+      "description": "Define web-only authentication requirements. Document removal of AUTH_METHODS.FILEMAKER, changes to SignIn component, removal of FileMaker auto-detection, and Supabase-only auth flow.",
+      "status": "queued",
+      "priority": "high",
+      "files": [
+        "requirements/platform-filemaker-removal/auth-requirements.md"
+      ],
+      "references": [
+        "src/services/dataService.js:18-22",
+        "src/components/auth/SignIn.jsx:24-66",
+        "src/index.jsx:117-139",
+        "src/context/AppStateContext.jsx:68-77"
+      ]
+    },
+    {
+      "id": "TSK0006",
+      "title": "Create migration plan",
+      "description": "Write step-by-step migration plan to simplify dataService.js to single routing path. Include: 1) Remove environment detection, 2) Remove FileMaker interceptors, 3) Simplify to Supabase+Backend only, 4) Update all API files, 5) Remove FileMaker configs.",
+      "status": "queued",
+      "priority": "high",
+      "files": [
+        "requirements/platform-filemaker-removal/migration-plan.md"
+      ],
+      "references": [
+        "src/services/dataService.js:166-258",
+        "src/api/fileMaker.js"
+      ]
+    },
+    {
+      "id": "TSK0007",
+      "title": "Define acceptance criteria",
+      "description": "Document what 'done' looks like: No FileMaker references, all tests pass, authentication works, all CRUD operations work via backend/Supabase, no environment detection code remains.",
+      "status": "queued",
+      "priority": "medium",
+      "files": [
+        "requirements/platform-filemaker-removal/acceptance-criteria.md"
+      ]
+    },
+    {
+      "id": "TSK0008",
+      "title": "Create rollout plan",
+      "description": "Define safe deployment strategy: Feature flag approach, gradual rollout, rollback plan, monitoring requirements, user communication strategy.",
+      "status": "queued",
+      "priority": "medium",
+      "files": [
+        "requirements/platform-filemaker-removal/rollout-plan.md"
+      ]
+    }
+  ]
+}

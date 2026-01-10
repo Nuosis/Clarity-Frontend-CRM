@@ -1,0 +1,108 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-10T19:30:00.000Z",
+  "feature": {
+    "name": "Links Migration Requirements",
+    "slug": "links-migration-requirements",
+    "description": "Phase 1 requirements documentation for migrating Links feature from FileMaker to Supabase",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "DO NOT modify backend infrastructure directly - create Backend Change Request documents",
+    "DO NOT implement code changes - this is Phase 1 (documentation only)",
+    "Follow standardized requirements documentation template",
+    "Document all current FileMaker behavior accurately",
+    "Include code references with file paths and line numbers"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Document Current Links Implementation",
+      "description": "Create current-implementation.md documenting how links work in FileMaker, including API calls, service layer, UI components, and user workflows",
+      "status": "pending",
+      "priority": "high",
+      "files": [
+        "requirements/links/current-implementation.md"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "TSK0002",
+      "title": "Create Data Model Mapping",
+      "description": "Create data-model-mapping.md mapping FileMaker devLinks fields to Supabase links table, documenting schema gaps and required changes",
+      "status": "pending",
+      "priority": "high",
+      "files": [
+        "requirements/links/data-model-mapping.md"
+      ],
+      "dependencies": ["TSK0001"]
+    },
+    {
+      "id": "TSK0003",
+      "title": "Define API Contracts",
+      "description": "Create api-contracts.md specifying all required backend endpoints/RPCs with request/response examples and validation rules",
+      "status": "pending",
+      "priority": "high",
+      "files": [
+        "requirements/links/api-contracts.md"
+      ],
+      "dependencies": ["TSK0002"]
+    },
+    {
+      "id": "TSK0004",
+      "title": "Document Authorization Requirements",
+      "description": "Create authorization.md defining RLS policies, organization scoping, and access control rules for links",
+      "status": "pending",
+      "priority": "medium",
+      "files": [
+        "requirements/links/authorization.md"
+      ],
+      "dependencies": ["TSK0002"]
+    },
+    {
+      "id": "TSK0005",
+      "title": "Create Migration Plan",
+      "description": "Create migration-plan.md detailing data export, ID mapping, transformation, import, and validation steps",
+      "status": "pending",
+      "priority": "high",
+      "files": [
+        "requirements/links/migration-plan.md"
+      ],
+      "dependencies": ["TSK0002", "TSK0003"]
+    },
+    {
+      "id": "TSK0006",
+      "title": "Define Acceptance Criteria",
+      "description": "Create acceptance-criteria.md with test cases covering all CRUD operations, associations, validation, and edge cases",
+      "status": "pending",
+      "priority": "medium",
+      "files": [
+        "requirements/links/acceptance-criteria.md"
+      ],
+      "dependencies": ["TSK0001", "TSK0003"]
+    },
+    {
+      "id": "TSK0007",
+      "title": "Create Backend Change Request",
+      "description": "Create BACKEND_CHANGE_REQUEST_LINKS.md documenting required schema changes (add task_id column, modify constraints)",
+      "status": "pending",
+      "priority": "high",
+      "files": [
+        "BACKEND_CHANGE_REQUEST_LINKS.md"
+      ],
+      "dependencies": ["TSK0002"]
+    },
+    {
+      "id": "TSK0008",
+      "title": "Create Requirements README",
+      "description": "Create requirements/links/README.md as overview and quick reference to all requirements documentation",
+      "status": "pending",
+      "priority": "medium",
+      "files": [
+        "requirements/links/README.md"
+      ],
+      "dependencies": ["TSK0001", "TSK0002", "TSK0003", "TSK0004", "TSK0005", "TSK0006"]
+    }
+  ]
+}

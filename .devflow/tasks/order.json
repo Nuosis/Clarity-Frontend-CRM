@@ -1,0 +1,39 @@
+{
+  "features": [
+    {
+      "slug": "filemaker-removal-requirements",
+      "name": "FileMaker Platform Removal Requirements",
+      "description": "Document requirements for removing FileMaker bridge infrastructure and transitioning to Supabase-first architecture, including environment routing analysis, backend API surface definition, and migration planning"
+    },
+    {
+      "slug": "customers-migration-requirements",
+      "name": "Customers Migration Requirements",
+      "description": "Document requirements for migrating Customers feature from FileMaker to Supabase, including data model mapping, API contracts, authorization, and migration strategy"
+    },
+    {
+      "slug": "projects-migration-requirements",
+      "name": "Projects Migration Requirements",
+      "description": "Document requirements for migrating Projects feature from FileMaker to Supabase, including all related entities (objectives, steps, images, links, notes), business logic (fixed price/subscription), and comprehensive API contracts"
+    },
+    {
+      "slug": "tasks-migration-requirements",
+      "name": "Tasks Migration Requirements",
+      "description": "Document requirements for migrating Tasks and Timer features from FileMaker to Supabase, including task CRUD, timer start/stop/pause semantics, financial record generation, dual-write reconciliation, and historical data migration strategy"
+    },
+    {
+      "slug": "teams-supabase-migration",
+      "name": "Teams Supabase Migration",
+      "description": "Migrate Teams feature from FileMaker to Supabase-backed architecture with full backend API support, including teams, staff, team membership relationships, and project assignments"
+    },
+    {
+      "slug": "notes-migration-requirements",
+      "name": "Notes Migration Requirements",
+      "description": "Create comprehensive requirements documentation for migrating Notes feature from FileMaker to Supabase, including polymorphic associations (projects/tasks/customers), data model design, API contracts, authorization, and migration planning"
+    },
+    {
+      "slug": "quickbooks-migration-requirements",
+      "name": "QuickBooks Migration Requirements",
+      "description": "Document requirements for migrating QuickBooks integration from FileMaker script execution to backend/Supabase, including OAuth flow, token management, organization scoping, invoice generation, and error handling"
+    }
+  ]
+}

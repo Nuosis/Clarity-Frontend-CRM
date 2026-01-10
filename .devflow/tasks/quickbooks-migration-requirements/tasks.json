@@ -1,0 +1,76 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-10T20:00:00.000Z",
+  "feature": {
+    "name": "QuickBooks Migration Requirements",
+    "slug": "quickbooks-migration-requirements",
+    "description": "Document QuickBooks integration migration from FileMaker to backend/Supabase",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "DO NOT modify backend infrastructure or database schema",
+    "Follow Backend Change Protocol for any backend requirements",
+    "Document only - do not implement code changes yet",
+    "Reference existing code files with line numbers",
+    "Include code examples for clarity"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Create README.md with QuickBooks overview",
+      "description": "Create requirements/quickbooks/README.md documenting current QuickBooks integration, FileMaker dependencies, and migration objectives",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0002",
+      "title": "Document current QuickBooks implementation",
+      "description": "Create current-implementation.md analyzing initializeQuickBooks function, FileMaker script behavior, existing quickbooksApi.js client, and UI integration points",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0003",
+      "title": "Map QuickBooks data model requirements",
+      "description": "Create data-model-mapping.md documenting token storage requirements, organization configuration, QB entity mappings, and Supabase schema needs",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0004",
+      "title": "Define QuickBooks API contracts",
+      "description": "Create api-contracts.md specifying backend endpoints for QB initialization, OAuth flow, token refresh, invoice generation, customer sync, and testing operations",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0005",
+      "title": "Document authorization requirements",
+      "description": "Create authorization.md covering OAuth flow, token lifecycle, organization scoping, RLS policies, and security considerations",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0006",
+      "title": "Create migration plan",
+      "description": "Create migration-plan.md with step-by-step approach to migrate from FileMaker scripts to backend API, including rollback procedures and cutover strategy",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0007",
+      "title": "Define acceptance criteria and test plan",
+      "description": "Create acceptance-criteria.md with test cases covering OAuth flow, token refresh, invoice generation, error handling, retry logic, and edge cases",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0008",
+      "title": "Create backend change request document",
+      "description": "Create BACKEND_CHANGE_REQUEST_001_QUICKBOOKS_MIGRATION.md following the backend change protocol with SQL, API contracts, testing requirements, and rollback plan",
+      "status": "pending",
+      "priority": "high"
+    }
+  ]
+}

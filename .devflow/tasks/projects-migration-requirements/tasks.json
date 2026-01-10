@@ -1,0 +1,190 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-10T19:30:00.000Z",
+  "feature": {
+    "name": "Projects Migration Requirements",
+    "slug": "projects-migration-requirements",
+    "description": "Document the complete Projects feature migration from FileMaker to Supabase with all related entities and business logic",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "Follow the 7-file standardized documentation template structure",
+    "Document ALL FileMaker layouts used by Projects (devProjects, devProjectObjectives, devProjectObjSteps, devProjectImages, devProjectLinks, devNotes, devRecords)",
+    "Include complete API contracts with request/response examples",
+    "Document business logic for fixed price and subscription projects",
+    "Reference existing code files and line numbers",
+    "Ensure migration plan addresses relationship integrity",
+    "Do NOT modify backend infrastructure - documentation only"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Create README.md overview",
+      "description": "Create requirements/projects/README.md documenting: project overview, current FileMaker behavior, user flows (create/update/delete project, manage objectives/steps/links/images/notes, status changes, team assignment), and key terminology",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0002",
+      "title": "Document current implementation",
+      "description": "Create requirements/projects/current-implementation.md documenting: frontend call graph from UI → hooks → services → API, all relevant files (components, hooks, services, API), FileMaker layouts used, data flow diagrams, and current state management patterns",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0003",
+      "title": "Map core Projects data model",
+      "description": "In requirements/projects/data-model-mapping.md, document FileMaker devProjects layout fields → Supabase projects table mapping. Include: field types, constraints, status enum values, pricing fields (f_fixedPrice, f_subscription, value), date fields, team/customer relationships, and UUID vs recordId handling",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0004",
+      "title": "Map Project Objectives data model",
+      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjectives layout → Supabase project_objectives table mapping. Include: objective text, status, order, completed flag, project_id foreign key, and relationship to objective steps",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0005",
+      "title": "Map Objective Steps data model",
+      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjSteps layout → Supabase project_objective_steps table mapping. Include: step text, order, completed flag, objective_id foreign key, and nested relationship structure",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0006",
+      "title": "Map Project Images data model",
+      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectImages layout → Supabase project_images table mapping. Include: image URL, title, description, project_id foreign key, and any storage considerations",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0007",
+      "title": "Document Links table integration",
+      "description": "In requirements/projects/data-model-mapping.md, document how existing Supabase links table integrates with projects. Review current schema (has project_id FK), document any gaps (title field missing?), and link filtering requirements",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0008",
+      "title": "Document Notes relationship to projects",
+      "description": "In requirements/projects/data-model-mapping.md, document FileMaker devNotes layout usage with projects (via _fkID field). Define how notes should be stored in Supabase (polymorphic association vs project_notes table) and querying patterns",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0009",
+      "title": "Document Time Records relationship",
+      "description": "In requirements/projects/data-model-mapping.md, document FileMaker devRecords layout relationship to projects (_projectID field). Include: billable hours calculation, unbilled hours tracking, and how this integrates with existing time_entries or customer_sales tables in Supabase",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0010",
+      "title": "Define core project API contracts",
+      "description": "In requirements/projects/api-contracts.md, define endpoints/RPCs: list projects by customer, get project detail, create project, update project, delete project, update project status. Include request/response examples, error cases, and UUID handling",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0011",
+      "title": "Define objectives API contracts",
+      "description": "In requirements/projects/api-contracts.md, add endpoints/RPCs for: list objectives by project, create objective, update objective, delete objective, toggle objective completion, reorder objectives. Include step handling",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0012",
+      "title": "Define objective steps API contracts",
+      "description": "In requirements/projects/api-contracts.md, add endpoints/RPCs for: list steps by objective, create step, update step, delete step, toggle step completion, reorder steps",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0013",
+      "title": "Define images and links API contracts",
+      "description": "In requirements/projects/api-contracts.md, add endpoints/RPCs for project images (list, create, delete) and confirm links API contracts work with existing links table (list by project_id, create, delete)",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0014",
+      "title": "Define team assignment API contract",
+      "description": "In requirements/projects/api-contracts.md, add endpoint/RPC for updating project team assignment (_teamID field). Include request/response and how this relates to teams table",
+      "status": "pending",
+      "priority": "low"
+    },
+    {
+      "id": "TSK0015",
+      "title": "Document fixed price business logic",
+      "description": "In requirements/projects/api-contracts.md or data-model-mapping.md, document fixed price project logic: when f_fixedPrice=true, create 50% sellable entry on project start (dateStart), create 50% sales entry on project completion (dateEnd), and set all time records as non-billable",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0016",
+      "title": "Document subscription business logic",
+      "description": "In requirements/projects/api-contracts.md or data-model-mapping.md, document subscription project logic: when f_subscription=true, create monthly sales entries from dateStart to dateEnd (or today if no end date), each entry equal to project value",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0017",
+      "title": "Document authorization requirements",
+      "description": "Create requirements/projects/authorization.md documenting: RLS policies needed for projects and all related tables, organization scoping, user role permissions (create/update/delete), team-based access control, and customer relationship authorization",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0018",
+      "title": "Create migration plan for projects",
+      "description": "Create requirements/projects/migration-plan.md documenting: data backfill approach for devProjects → projects table, UUID preservation strategy, recordId handling, relationship integrity checks, and cutover plan",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0019",
+      "title": "Create migration plan for related entities",
+      "description": "In requirements/projects/migration-plan.md, add migration approach for objectives, steps, images, links, and notes. Include: foreign key reconciliation, order preservation for objectives/steps, and handling orphaned records",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0020",
+      "title": "Create acceptance criteria for core operations",
+      "description": "Create requirements/projects/acceptance-criteria.md documenting test cases for: create/update/delete project, status transitions, team assignment, customer relationship integrity, and UUID consistency",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0021",
+      "title": "Create acceptance criteria for related entities",
+      "description": "In requirements/projects/acceptance-criteria.md, add test cases for: objectives CRUD, steps CRUD, images CRUD, links CRUD, notes filtering, completion tracking, and ordering/reordering",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0022",
+      "title": "Create acceptance criteria for business logic",
+      "description": "In requirements/projects/acceptance-criteria.md, add test cases for: fixed price sales generation (50/50 split), subscription monthly sales creation, billable status changes, edge cases (no dates, overlapping dates, project type changes), and sales entry idempotency",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0023",
+      "title": "Add workflow diagrams",
+      "description": "Create requirements/projects/workflows.md with mermaid diagrams showing: project creation flow, objective/step management flow, fixed price project value processing flow, subscription sales generation flow, and status change flow",
+      "status": "pending",
+      "priority": "low"
+    },
+    {
+      "id": "TSK0024",
+      "title": "Review and validate documentation completeness",
+      "description": "Review all 7 documentation files for completeness, consistency, and accuracy. Ensure all FileMaker layouts are covered, all API contracts are defined, migration plan is actionable, and acceptance criteria are comprehensive",
+      "status": "pending",
+      "priority": "high"
+    }
+  ]
+}

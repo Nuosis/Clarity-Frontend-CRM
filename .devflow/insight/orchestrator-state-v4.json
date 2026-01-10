@@ -1,0 +1,4532 @@
+{
+  "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+  "status": "running",
+  "currentCycle": 3,
+  "currentPhase": null,
+  "log": [
+    {
+      "id": "log-0-plan-1767311847899-1767311847899",
+      "timestamp": "2026-01-01T23:57:27.899Z",
+      "cycle": 0,
+      "actor": "planner",
+      "type": "plan",
+      "content": {
+        "type": "plan",
+        "data": {
+          "goal": "Establish initial coverage across 4 core categories: user-capability, api-layer, data-layer, and ui-presentation",
+          "rationale": "Fresh discovery start with all 7 categories at 0% coverage. Following breadth-first strategy, targeting the 4 most fundamental categories first to understand the React app structure. Will cover remaining 3 categories (integration, infrastructure, platform) in subsequent cycles.",
+          "successCriteria": [
+            "Identify at least 5 user-facing features or capabilities",
+            "Discover the primary API communication patterns (REST/GraphQL endpoints, state management)",
+            "Map data flow architecture (Redux/Zustand/Context, local storage, caching)",
+            "Catalog main UI components and presentation patterns"
+          ],
+          "constraints": [
+            "Allocate one subagent per category minimum",
+            "Shallow exploration only - identify and list, don't trace deeply yet",
+            "Focus on src/ directory as primary source",
+            "Stay within token budget for initial broad sweep"
+          ],
+          "isComplete": false,
+          "summary": "Starting fresh discovery on React CRM frontend. All 7 categories need exploration - covering 4 core categories this cycle, 3 remaining next cycle.",
+          "decision": {
+            "type": "continue",
+            "strategy": "widen"
+          },
+          "focusCategories": [
+            "user-capability",
+            "api-layer",
+            "data-layer",
+            "ui-presentation"
+          ],
+          "explorationQuestions": [
+            "What are the main user workflows and features in this CRM?",
+            "How does the frontend communicate with backend APIs?",
+            "What state management solution is used for data flow?",
+            "What are the primary UI components and design patterns?"
+          ]
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 384
+    },
+    {
+      "id": "log-0-execution_plan-1767311861923-1767311861923",
+      "timestamp": "2026-01-01T23:57:41.923Z",
+      "cycle": 0,
+      "actor": "executor",
+      "type": "execution_plan",
+      "content": {
+        "type": "execution_plan",
+        "data": {
+          "subagents": [
+            {
+              "id": "scout-user-workflows",
+              "category": "user-capability",
+              "focusArea": "User workflows and interactive features",
+              "task": "Identify main user workflows in this CRM. Scan pages, components, and forms to list: what users can do (create contacts, manage deals, etc.), entry points for each workflow, and key interactive elements. Focus on business capabilities, not technical implementation.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/pages/**/*.tsx",
+                "src/components/**/*Form*.tsx",
+                "src/components/**/*Modal*.tsx"
+              ],
+              "excludePatterns": [
+                "**/*.test.tsx",
+                "**/*.stories.tsx",
+                "src/components/**/UI/**"
+              ]
+            },
+            {
+              "id": "scout-api-communication",
+              "category": "api-layer",
+              "focusArea": "Frontend-backend API communication",
+              "task": "Map how frontend communicates with backend APIs. Identify: API client setup, endpoint patterns, request/response handling, authentication flow. Look for axios configs, fetch wrappers, or API service modules.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/services/**/*.ts",
+                "src/api/**/*.ts",
+                "src/lib/**/*api*.ts",
+                "src/utils/**/*fetch*.ts"
+              ],
+              "excludePatterns": [
+                "**/*.test.ts",
+                "**/*.d.ts"
+              ]
+            },
+            {
+              "id": "scout-state-management",
+              "category": "data-layer",
+              "focusArea": "State management and data flow",
+              "task": "Identify state management solution and data flow patterns. Look for: Redux/Zustand stores, Context providers, local state patterns, data fetching strategies. List key stores and their purposes.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/store/**/*.ts",
+                "src/context/**/*.tsx",
+                "src/hooks/**/*use*.ts",
+                "src/providers/**/*.tsx"
+              ],
+              "excludePatterns": [
+                "**/*.test.ts"
+              ]
+            },
+            {
+              "id": "scout-ui-components",
+              "category": "ui-presentation",
+              "focusArea": "UI components and design patterns",
+              "task": "Catalog primary UI components and design patterns. Identify: component library structure, reusable UI elements, styling approach (CSS modules/styled-components/Tailwind), layout patterns. Focus on the design system foundation.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/components/UI/**/*.tsx",
+                "src/components/common/**/*.tsx",
+                "src/styles/**/*",
+                "src/components/**/*Button*.tsx"
+              ],
+              "excludePatterns": [
+                "**/*.test.tsx",
+                "**/*.stories.tsx",
+                "src/components/**/pages/**"
+              ]
+            }
+          ],
+          "synthesisStrategy": "merge",
+          "expectedOutputs": [
+            "List of main CRM workflows and user capabilities",
+            "API communication architecture overview",
+            "State management solution and store inventory",
+            "UI component library and design pattern catalog"
+          ],
+          "timeoutStrategy": "debrief"
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 640
+    },
+    {
+      "id": "log-0-discovery-1767312021317-1767312021317",
+      "timestamp": "2026-01-02T00:00:21.317Z",
+      "cycle": 0,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-user-workflows",
+          "category": "user-capability",
+          "discoveredItems": [
+            {
+              "name": "Create Customer",
+              "slug": "create-customer",
+              "category": "user-capability",
+              "description": "Create new customers with contact info, financial settings (charge rate, currency), and database credentials. Syncs to both FileMaker and Supabase.",
+              "primaryLocation": "src/components/customers/CustomerForm.jsx",
+              "relatedFiles": [
+                "src/components/layout/Sidebar.jsx",
+                "src/components/customers/CustomerDetails.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Add customer name and contact",
+                "Set charge rate and currency (USD/EUR)",
+                "Configure database access",
+                "Pre-pay and funds tracking"
+              ]
+            },
+            {
+              "name": "Create Prospect",
+              "slug": "create-prospect",
+              "category": "user-capability",
+              "description": "Create or update sales prospects with contact details, industry, and full address information for marketing outreach.",
+              "primaryLocation": "src/components/customers/ProspectForm.jsx",
+              "relatedFiles": [
+                "src/components/customers/ProspectDetails.jsx",
+                "src/components/layout/Sidebar.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Add prospect contact info",
+                "Track industry",
+                "Store full address",
+                "Update existing prospects"
+              ]
+            },
+            {
+              "name": "Convert Prospect to Customer",
+              "slug": "convert-prospect-to-customer",
+              "category": "user-capability",
+              "description": "Convert qualified prospects into full customers with validation warnings and confirmation workflow.",
+              "primaryLocation": "src/components/customers/ConvertProspectModal.jsx",
+              "relatedFiles": [
+                "src/components/customers/ProspectDetails.jsx",
+                "src/services/prospectService.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Validate prospect data",
+                "Show conversion warnings",
+                "Confirm before converting",
+                "Migrate to customer record"
+              ]
+            },
+            {
+              "name": "Create Project",
+              "slug": "create-project",
+              "category": "user-capability",
+              "description": "Create projects for customers with different billing types: billable (hourly), fixed cost, or subscription with monthly fees.",
+              "primaryLocation": "src/components/customers/ProjectCreationForm.jsx",
+              "relatedFiles": [
+                "src/components/customers/CustomerDetails.jsx",
+                "src/components/customers/ProspectDetails.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Set project name",
+                "Choose billing type (billable/fixed/subscription)",
+                "Set project value",
+                "Configure start date"
+              ]
+            },
+            {
+              "name": "Manage Project Status",
+              "slug": "manage-project-status",
+              "category": "user-capability",
+              "description": "Toggle projects between Open and Closed status, and delete projects with confirmation dialog.",
+              "primaryLocation": "src/components/projects/ProjectDetails.jsx",
+              "relatedFiles": [
+                "src/components/customers/CustomerDetails.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Toggle open/closed status",
+                "Delete project with confirmation",
+                "View project details"
+              ]
+            },
+            {
+              "name": "Task Time Tracking",
+              "slug": "task-time-tracking",
+              "category": "user-capability",
+              "description": "Start, pause, resume, and stop timers on tasks to track billable hours with adjustment capabilities.",
+              "primaryLocation": "src/components/tasks/TaskTimer.jsx",
+              "relatedFiles": [
+                "src/components/tasks/TaskList.jsx",
+                "src/components/projects/ProjectTasksTab.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Start timer on task",
+                "Pause and resume",
+                "Stop and record time",
+                "View elapsed and adjusted time"
+              ]
+            },
+            {
+              "name": "Task Management",
+              "slug": "task-management",
+              "category": "user-capability",
+              "description": "View tasks, expand for details, manage task status, and add notes and links to tasks within projects.",
+              "primaryLocation": "src/components/tasks/TaskList.jsx",
+              "relatedFiles": [
+                "src/components/projects/ProjectTasksTab.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "View task list",
+                "Expand task details",
+                "Start timer from task",
+                "Add notes and links"
+              ]
+            },
+            {
+              "name": "Create Proposal",
+              "slug": "create-proposal",
+              "category": "user-capability",
+              "description": "Create project proposals with title, description, objectives, timeline, budget, and deliverables with pricing.",
+              "primaryLocation": "src/components/proposals/ProposalCreationForm.jsx",
+              "relatedFiles": [
+                "src/components/proposals/ProposalCreationFormEnhanced.jsx",
+                "src/components/projects/ProjectProposalsTab.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Set proposal title and description",
+                "Add project objectives",
+                "Define timeline and budget",
+                "Configure deliverables with pricing"
+              ]
+            },
+            {
+              "name": "Enhanced Proposal Creation",
+              "slug": "enhanced-proposal-creation",
+              "category": "user-capability",
+              "description": "Advanced proposal creation with multi-tab interface, packages, deliverables, and source document management.",
+              "primaryLocation": "src/components/proposals/ProposalCreationFormEnhanced.jsx",
+              "relatedFiles": [
+                "src/components/proposals/ProposalTabs.jsx",
+                "src/api/proposalExtended.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Multi-tab proposal interface",
+                "Package configuration",
+                "Deliverables management",
+                "Source document handling"
+              ]
+            },
+            {
+              "name": "Create Team",
+              "slug": "create-team",
+              "category": "user-capability",
+              "description": "Create new teams to organize staff members and assign them to projects.",
+              "primaryLocation": "src/components/teams/TeamForm.jsx",
+              "relatedFiles": [
+                "src/components/teams/TeamDetails.jsx",
+                "src/components/layout/Sidebar.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Create team with name",
+                "Organize staff into teams"
+              ]
+            },
+            {
+              "name": "Manage Team Staff",
+              "slug": "manage-team-staff",
+              "category": "user-capability",
+              "description": "Add and remove staff members from teams, view team projects, and manage team assignments.",
+              "primaryLocation": "src/components/teams/TeamDetails.jsx",
+              "relatedFiles": [
+                "src/context/TeamContext.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "View team staff",
+                "Add staff to team",
+                "Remove staff from team",
+                "View team projects"
+              ]
+            },
+            {
+              "name": "Create Product",
+              "slug": "create-product",
+              "category": "user-capability",
+              "description": "Create products with pricing, subscription options, included units, and overage rates for sales.",
+              "primaryLocation": "src/components/products/ProductForm.jsx",
+              "relatedFiles": [
+                "src/components/products/ProductDetails.jsx",
+                "src/components/products/ProductRequirementsBuilder.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Set product name and price",
+                "Configure subscription settings",
+                "Define included units",
+                "Set overage rates"
+              ]
+            },
+            {
+              "name": "Manage Product",
+              "slug": "manage-product",
+              "category": "user-capability",
+              "description": "View, edit, and delete products with related products section and product requirements management.",
+              "primaryLocation": "src/components/products/ProductDetails.jsx",
+              "relatedFiles": [
+                "src/components/products/ProductForm.jsx",
+                "src/components/products/RelatedProductsSection.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "View product details",
+                "Edit product",
+                "Delete product",
+                "Manage related products"
+              ]
+            },
+            {
+              "name": "Record Sale",
+              "slug": "record-sale",
+              "category": "user-capability",
+              "description": "Record product sales for customers with quantity, pricing, date, and notes.",
+              "primaryLocation": "src/components/customers/SalesModal.jsx",
+              "relatedFiles": [
+                "src/hooks/useSales.js",
+                "src/components/customers/CustomerDetails.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Select product",
+                "Set quantity",
+                "Calculate total price",
+                "Add sale notes"
+              ]
+            },
+            {
+              "name": "Edit Sales Record",
+              "slug": "edit-sales-record",
+              "category": "user-capability",
+              "description": "Edit existing sales records with validation and targeted update capability.",
+              "primaryLocation": "src/components/financial/RecordModal.jsx",
+              "relatedFiles": [
+                "src/components/customers/ActivityReportModal.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Edit record details",
+                "Validate sale data",
+                "Update quantities and prices"
+              ]
+            },
+            {
+              "name": "Create QuickBooks Customer",
+              "slug": "create-quickbooks-customer",
+              "category": "integration",
+              "description": "Create customers in QuickBooks Online with currency selection and contact information sync.",
+              "primaryLocation": "src/components/financial/CreateQBOCustomerModal.jsx",
+              "relatedFiles": [
+                "src/components/financial/FinancialSyncPanel.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Set display and company name",
+                "Add contact details",
+                "Select currency (CAD/USD/EUR/GBP/AUD)",
+                "Sync to QuickBooks"
+              ]
+            },
+            {
+              "name": "Financial Sync",
+              "slug": "financial-sync",
+              "category": "integration",
+              "description": "Synchronize financial records between devRecords and customer_sales with date range selection and preview.",
+              "primaryLocation": "src/components/financial/FinancialSyncPanel.jsx",
+              "relatedFiles": [
+                "src/hooks/useFinancialSync.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Check sync status",
+                "Preview sync changes",
+                "Sync current/previous month",
+                "Sync pending only"
+              ]
+            },
+            {
+              "name": "Email Marketing Campaign",
+              "slug": "email-marketing-campaign",
+              "category": "user-capability",
+              "description": "Send bulk email campaigns for information sessions with eligible customer filtering and CSV import.",
+              "primaryLocation": "src/components/marketing/MarketingPanel.jsx",
+              "relatedFiles": [
+                "src/components/marketing/EligibleEmailsModal.jsx",
+                "src/api/marketing.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Filter eligible recipients",
+                "Send test emails",
+                "Import CSV recipient list",
+                "Configure email subject and batching"
+              ]
+            },
+            {
+              "name": "Customer Activity Report",
+              "slug": "customer-activity-report",
+              "category": "user-capability",
+              "description": "Generate and view customer activity reports with timeframe selection, email export, and record editing.",
+              "primaryLocation": "src/components/customers/ActivityReportModal.jsx",
+              "relatedFiles": [
+                "src/hooks/useCustomerActivity.js",
+                "src/services/mailjetService.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Select activity timeframe",
+                "View activity data",
+                "Export to PDF",
+                "Email report to customer"
+              ]
+            },
+            {
+              "name": "Create GitHub File",
+              "slug": "create-github-file",
+              "category": "user-capability",
+              "description": "Create new files in GitHub repositories with content editor, file upload mode, and commit messages.",
+              "primaryLocation": "src/components/projects/FileCreateModal.jsx",
+              "relatedFiles": [
+                "src/components/projects/FileEditModal.jsx",
+                "src/components/projects/FolderCreateModal.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Create new files",
+                "Upload files",
+                "Set commit messages",
+                "Choose file location"
+              ]
+            },
+            {
+              "name": "Customer Details View",
+              "slug": "customer-details-view",
+              "category": "user-capability",
+              "description": "View customer information, projects, sales stats, unbilled hours, and manage customer-related actions.",
+              "primaryLocation": "src/components/customers/CustomerDetails.jsx",
+              "relatedFiles": [
+                "src/components/customers/CustomerHeader.jsx",
+                "src/components/customers/CustomerTabs.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "View customer stats",
+                "See open projects",
+                "Track unbilled hours",
+                "Create new projects"
+              ]
+            },
+            {
+              "name": "Prospect Details View",
+              "slug": "prospect-details-view",
+              "category": "user-capability",
+              "description": "View prospect information with touch history, email campaigns, and project management tabs.",
+              "primaryLocation": "src/components/customers/ProspectDetails.jsx",
+              "relatedFiles": [
+                "src/components/customers/EmailCampaignEditor.jsx",
+                "src/components/customers/ProspectForm.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "View touch history",
+                "Manage email campaigns",
+                "Edit prospect",
+                "Convert to customer"
+              ]
+            }
+          ],
+          "traces": [],
+          "confidence": 92,
+          "gaps": [],
+          "tokenUsed": 45000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 2744
+    },
+    {
+      "id": "log-0-discovery-1767312021331-1767312021331",
+      "timestamp": "2026-01-02T00:00:21.331Z",
+      "cycle": 0,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-api-communication",
+          "category": "api-layer",
+          "discoveredItems": [
+            {
+              "name": "dataService",
+              "slug": "data-service-client",
+              "category": "api-layer",
+              "description": "Environment-aware axios client that routes requests based on FileMaker vs WebApp context. Creates axios instance with request/response interceptors that add HMAC auth for webapp or route through FileMaker bridge.",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [
+                "src/config.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Environment detection",
+                "HMAC authentication",
+                "FileMaker bridge routing",
+                "Backend API routing"
+              ]
+            },
+            {
+              "name": "supabaseService",
+              "slug": "supabase-service",
+              "category": "api-layer",
+              "description": "Supabase client singleton using @supabase/supabase-js. Provides unified client with PKCE auth flow and HMAC auth for backend API calls. Used for direct Supabase table operations.",
+              "primaryLocation": "src/services/supabaseService.js",
+              "relatedFiles": [
+                "src/config.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Supabase client creation",
+                "Admin operations",
+                "Backend API proxy",
+                "HMAC authentication"
+              ]
+            },
+            {
+              "name": "backendConfig",
+              "slug": "backend-config",
+              "category": "infrastructure",
+              "description": "Central configuration for backend API URLs. Exports baseUrl (api.claritybusinesssolutions.ca), fileMakerApiUrl, and quickBooksApiUrl.",
+              "primaryLocation": "src/config.js",
+              "relatedFiles": [],
+              "confidence": "high",
+              "capabilities": [
+                "API URL configuration",
+                "Supabase config",
+                "FileMaker config"
+              ]
+            },
+            {
+              "name": "generateBackendAuthHeader",
+              "slug": "hmac-auth-header",
+              "category": "api-layer",
+              "description": "HMAC-SHA256 authentication header generator using Web Crypto API. Format: Bearer {signatureHex}.{timestamp}. Uses VITE_SECRET_KEY env var. Implemented in multiple files.",
+              "primaryLocation": "src/api/fileMaker.js",
+              "relatedFiles": [
+                "src/services/dataService.js",
+                "src/services/supabaseService.js",
+                "src/api/proposals.js",
+                "src/api/proposalExtended.js",
+                "src/api/quickbooksApi.js",
+                "src/api/marketing.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "HMAC-SHA256 signing",
+                "Timestamp-based authentication",
+                "Fallback for dev mode"
+              ]
+            },
+            {
+              "name": "fileMakerApi",
+              "slug": "filemaker-api-client",
+              "category": "api-layer",
+              "description": "FileMaker Data API client that routes requests through backend. Supports read/create/update/delete actions on layouts. Uses fm-gofer for WebViewer bridge or axios for backend API.",
+              "primaryLocation": "src/api/fileMaker.js",
+              "relatedFiles": [
+                "src/api/customers.js",
+                "src/api/projects.js",
+                "src/api/tasks.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "CRUD operations on layouts",
+                "Script execution",
+                "Backend API routing",
+                "Bridge detection"
+              ]
+            },
+            {
+              "name": "fileMakerEdgeFunction",
+              "slug": "filemaker-edge-client",
+              "category": "api-layer",
+              "description": "DEPRECATED FileMaker edge function client using fetch. Direct HMAC-authenticated requests to /filemaker/* endpoints for records, scripts, and containers.",
+              "primaryLocation": "src/api/fileMakerEdgeFunction.js",
+              "relatedFiles": [],
+              "confidence": "high",
+              "capabilities": [
+                "Record CRUD",
+                "Script execution",
+                "Container upload/download"
+              ]
+            },
+            {
+              "name": "proposalsApi",
+              "slug": "proposals-api",
+              "category": "api-layer",
+              "description": "Proposal API module using axios with HMAC auth. Endpoints: /proposals/, /proposals/project/{id}, /proposals/token/{token}, /proposals/{id}/concepts, /proposals/{id}/deliverables, /proposals/{id}/approve.",
+              "primaryLocation": "src/api/proposals.js",
+              "relatedFiles": [
+                "src/api/proposalExtended.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Create/update proposals",
+                "Fetch by project/token",
+                "Manage concepts/deliverables",
+                "Approve proposals"
+              ]
+            },
+            {
+              "name": "proposalExtendedApi",
+              "slug": "proposal-extended-api",
+              "category": "api-layer",
+              "description": "Extended proposal API module with centralized apiRequest() wrapper. Uses axios with HMAC auth for packages, requirements, and deliverables operations.",
+              "primaryLocation": "src/api/proposalExtended.js",
+              "relatedFiles": [
+                "src/api/proposals.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "API request wrapper",
+                "Error handling",
+                "Response normalization"
+              ]
+            },
+            {
+              "name": "quickbooksApi",
+              "slug": "quickbooks-api-client",
+              "category": "integration",
+              "description": "QuickBooks Online API client using fetch. HMAC-authenticated requests to /quickbooks/* endpoints. Supports OAuth flow, customers, invoices, bills, items, vendors, and webhooks.",
+              "primaryLocation": "src/api/quickbooksApi.js",
+              "relatedFiles": [],
+              "confidence": "high",
+              "capabilities": [
+                "OAuth authorization",
+                "Customer CRUD",
+                "Invoice CRUD",
+                "Bill CRUD",
+                "Query execution",
+                "Webhook management"
+              ]
+            },
+            {
+              "name": "prospectsApi",
+              "slug": "prospects-api",
+              "category": "api-layer",
+              "description": "Prospects API using direct Supabase client. CRUD operations on customers table filtered by type='PROSPECT'. Handles related tables: customer_email, customer_phone, customer_address.",
+              "primaryLocation": "src/api/prospects.js",
+              "relatedFiles": [],
+              "confidence": "high",
+              "capabilities": [
+                "Fetch prospects",
+                "Create/update/delete prospects",
+                "Convert to customer"
+              ]
+            },
+            {
+              "name": "marketingApi",
+              "slug": "marketing-api",
+              "category": "api-layer",
+              "description": "Marketing API for bulk email operations using fetch. HMAC-authenticated requests for email campaigns. Includes CSV parsing for recipient lists.",
+              "primaryLocation": "src/api/marketing.js",
+              "relatedFiles": [],
+              "confidence": "high",
+              "capabilities": [
+                "Bulk email sending",
+                "HMAC authentication",
+                "CSV parsing"
+              ]
+            },
+            {
+              "name": "mailjetApi",
+              "slug": "mailjet-api",
+              "category": "integration",
+              "description": "Mailjet email API using axios. HMAC-authenticated POST to /mailjet/send-email endpoint. Validates email addresses and formats payload.",
+              "primaryLocation": "src/api/mailjet.js",
+              "relatedFiles": [
+                "src/api/fileMaker.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Send email via backend",
+                "Email validation",
+                "HMAC authentication"
+              ]
+            },
+            {
+              "name": "customersApi",
+              "slug": "customers-api",
+              "category": "api-layer",
+              "description": "Customer CRUD operations using fileMaker.js abstraction. Wraps handleFileMakerOperation() for fetchCustomers, fetchCustomerById, updateCustomer, createCustomer.",
+              "primaryLocation": "src/api/customers.js",
+              "relatedFiles": [
+                "src/api/fileMaker.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Customer CRUD",
+                "Status toggle",
+                "FileMaker layout operations"
+              ]
+            },
+            {
+              "name": "githubApi",
+              "slug": "github-api",
+              "category": "integration",
+              "description": "GitHub API client reusing dataService (axios with HMAC auth). Repository operations: validate, check exists, create, get contents, file CRUD, folder creation.",
+              "primaryLocation": "src/api/github.js",
+              "relatedFiles": [
+                "src/services/dataService.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Repository validation",
+                "File/folder CRUD",
+                "Template repository creation"
+              ]
+            },
+            {
+              "name": "apiIndex",
+              "slug": "api-index-exports",
+              "category": "infrastructure",
+              "description": "Central API export module re-exporting all API functions from fileMaker, customers, teams, projects, tasks modules.",
+              "primaryLocation": "src/api/index.js",
+              "relatedFiles": [
+                "src/api/fileMaker.js",
+                "src/api/customers.js",
+                "src/api/teams.js",
+                "src/api/projects.js",
+                "src/api/tasks.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Centralized exports",
+                "API module aggregation"
+              ]
+            }
+          ],
+          "traces": [],
+          "confidence": 95,
+          "gaps": [],
+          "tokenUsed": 42000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 1773
+    },
+    {
+      "id": "log-0-discovery-1767312021337-1767312021337",
+      "timestamp": "2026-01-02T00:00:21.337Z",
+      "cycle": 0,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-state-management",
+          "category": "data-layer",
+          "discoveredItems": [
+            {
+              "name": "Redux Store Configuration",
+              "slug": "redux-store-config",
+              "category": "data-layer",
+              "description": "Central Redux Toolkit store configuration combining proposal, proposalViewer, and documentation slices",
+              "primaryLocation": "src/store/index.js",
+              "relatedFiles": [
+                "src/store/slices/proposalSlice.js",
+                "src/store/slices/proposalViewerSlice.js",
+                "src/store/slices/documentationSlice.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Proposal Redux Slice",
+              "slug": "proposal-slice",
+              "category": "data-layer",
+              "description": "Redux slice managing proposal CRUD operations with async thunks for API integration, handles creating, fetching, and emailing proposals",
+              "primaryLocation": "src/store/slices/proposalSlice.js",
+              "relatedFiles": [
+                "src/api/proposals.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Proposal Viewer Redux Slice",
+              "slug": "proposal-viewer-slice",
+              "category": "data-layer",
+              "description": "Redux slice for customer-facing proposal viewing, handles deliverable selection, pricing calculations, and proposal approval workflow",
+              "primaryLocation": "src/store/slices/proposalViewerSlice.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "Documentation Redux Slice",
+              "slug": "documentation-slice",
+              "category": "data-layer",
+              "description": "Redux slice for GitHub repository documentation management, handles file CRUD operations with GitHub API integration",
+              "primaryLocation": "src/store/slices/documentationSlice.js",
+              "relatedFiles": [
+                "src/api/github.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "AppStateContext",
+              "slug": "app-state-context",
+              "category": "data-layer",
+              "description": "Central React Context with useReducer for global app state including authentication, environment detection, selected entities (customer/project/task/team), UI states, and sidebar mode",
+              "primaryLocation": "src/context/AppStateContext.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "TeamContext",
+              "slug": "team-context",
+              "category": "data-layer",
+              "description": "React Context provider wrapping useTeam hook, provides team management state and operations including staff assignments and project associations",
+              "primaryLocation": "src/context/TeamContext.jsx",
+              "relatedFiles": [
+                "src/hooks/useTeam.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "MarketingContext",
+              "slug": "marketing-context",
+              "category": "data-layer",
+              "description": "React Context for marketing domain management, integrates with AppStateContext dispatch for marketing-related state updates",
+              "primaryLocation": "src/context/MarketingContext.jsx",
+              "relatedFiles": [
+                "src/context/AppStateContext.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "ProjectContext",
+              "slug": "project-context",
+              "category": "data-layer",
+              "description": "React Context for project records management, fetches project records from FileMaker on mount using recordQueueManager",
+              "primaryLocation": "src/context/ProjectContext.jsx",
+              "relatedFiles": [
+                "src/services/recordQueueManager.js",
+                "src/api/index.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "SnackBarContext",
+              "slug": "snackbar-context",
+              "category": "ui-presentation",
+              "description": "React Context for global notification/toast system, provides showError, showSuccess, showInfo methods for app-wide notifications",
+              "primaryLocation": "src/context/SnackBarContext.jsx",
+              "relatedFiles": [
+                "src/components/global/SnackBar.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "useCustomer Hook",
+              "slug": "use-customer-hook",
+              "category": "data-layer",
+              "description": "Custom hook for customer state management with local useState, handles CRUD operations with dual-write to FileMaker and Supabase",
+              "primaryLocation": "src/hooks/useCustomer.js",
+              "relatedFiles": [
+                "src/api/index.js",
+                "src/services/index.js",
+                "src/hooks/useSupabaseCustomer.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "useProject Hook",
+              "slug": "use-project-hook",
+              "category": "data-layer",
+              "description": "Custom hook for project state management, handles project CRUD with FileMaker and Supabase sync, includes objective creation and team assignment",
+              "primaryLocation": "src/hooks/useProject.js",
+              "relatedFiles": [
+                "src/api/index.js",
+                "src/services/projectService.js",
+                "src/services/salesService.js",
+                "src/context/ProjectContext.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "useTeam Hook",
+              "slug": "use-team-hook",
+              "category": "data-layer",
+              "description": "Custom hook for team state management, handles team CRUD, staff assignments, and project associations with FileMaker API",
+              "primaryLocation": "src/hooks/useTeam.js",
+              "relatedFiles": [
+                "src/api/index.js",
+                "src/services/index.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "useFileMakerBridge Hook",
+              "slug": "use-filemaker-bridge-hook",
+              "category": "integration",
+              "description": "Custom hook for FileMaker WebViewer bridge detection and connection status with retry logic",
+              "primaryLocation": "src/hooks/index.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "useLoadingState Hook",
+              "slug": "use-loading-state-hook",
+              "category": "data-layer",
+              "description": "Utility hook for managing loading and error states, provides startLoading, stopLoading, and clearError methods",
+              "primaryLocation": "src/hooks/index.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "useSelection Hook",
+              "slug": "use-selection-hook",
+              "category": "data-layer",
+              "description": "Utility hook for managing selection state with optional callback on select",
+              "primaryLocation": "src/hooks/index.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "useFormState Hook",
+              "slug": "use-form-state-hook",
+              "category": "data-layer",
+              "description": "Utility hook for managing form state with validation support, provides handleChange, validateForm, and resetForm methods",
+              "primaryLocation": "src/hooks/index.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "usePagination Hook",
+              "slug": "use-pagination-hook",
+              "category": "data-layer",
+              "description": "Utility hook for managing client-side pagination with page navigation methods",
+              "primaryLocation": "src/hooks/index.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "useSorting Hook",
+              "slug": "use-sorting-hook",
+              "category": "data-layer",
+              "description": "Utility hook for managing sorting state with toggleSort and sortItems methods",
+              "primaryLocation": "src/hooks/index.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "useFilters Hook",
+              "slug": "use-filters-hook",
+              "category": "data-layer",
+              "description": "Utility hook for managing filter state with applyFilter, clearFilter, and filterItems methods",
+              "primaryLocation": "src/hooks/index.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "useTask Hook",
+              "slug": "use-task-hook",
+              "category": "data-layer",
+              "description": "Custom hook for task state management (referenced but not fully read)",
+              "primaryLocation": "src/hooks/useTask.js",
+              "relatedFiles": [],
+              "confidence": "medium"
+            },
+            {
+              "name": "useProducts Hook",
+              "slug": "use-products-hook",
+              "category": "data-layer",
+              "description": "Custom hook for products state management (referenced but not fully read)",
+              "primaryLocation": "src/hooks/useProducts.js",
+              "relatedFiles": [],
+              "confidence": "medium"
+            },
+            {
+              "name": "useSales Hook",
+              "slug": "use-sales-hook",
+              "category": "data-layer",
+              "description": "Custom hook for sales state management (referenced but not fully read)",
+              "primaryLocation": "src/hooks/useSales.js",
+              "relatedFiles": [],
+              "confidence": "medium"
+            },
+            {
+              "name": "useProspect Hook",
+              "slug": "use-prospect-hook",
+              "category": "data-layer",
+              "description": "Custom hook for prospect state management with Supabase integration (referenced but not fully read)",
+              "primaryLocation": "src/hooks/useProspect.js",
+              "relatedFiles": [],
+              "confidence": "medium"
+            },
+            {
+              "name": "useProposalExtended Hook",
+              "slug": "use-proposal-extended-hook",
+              "category": "data-layer",
+              "description": "Custom hook for extended proposal system with packages and deliverables (referenced but not fully read)",
+              "primaryLocation": "src/hooks/useProposalExtended.js",
+              "relatedFiles": [],
+              "confidence": "medium"
+            },
+            {
+              "name": "useFinancialSync Hook",
+              "slug": "use-financial-sync-hook",
+              "category": "integration",
+              "description": "Custom hook for QuickBooks financial synchronization (referenced but not fully read)",
+              "primaryLocation": "src/hooks/useFinancialSync.js",
+              "relatedFiles": [],
+              "confidence": "medium"
+            }
+          ],
+          "traces": [],
+          "confidence": 90,
+          "gaps": [
+            "src/hooks/useTask.js",
+            "src/hooks/useProducts.js",
+            "src/hooks/useSales.js",
+            "src/hooks/useProspect.js",
+            "src/hooks/useProposalExtended.js",
+            "src/hooks/useFinancialSync.js",
+            "src/hooks/useNote.js",
+            "src/hooks/useBillableHours.js",
+            "src/hooks/useCustomerActivity.js",
+            "src/hooks/useSalesActivity.js",
+            "src/hooks/useLink.js",
+            "src/hooks/useProductRelationships.js",
+            "src/hooks/useSupabaseCustomer.js"
+          ],
+          "tokenUsed": 45000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 2098
+    },
+    {
+      "id": "log-0-discovery-1767312021343-1767312021343",
+      "timestamp": "2026-01-02T00:00:21.343Z",
+      "cycle": 0,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-ui-components",
+          "category": "ui-presentation",
+          "discoveredItems": [
+            {
+              "name": "Tailwind CSS Configuration",
+              "slug": "tailwind-css-styling",
+              "category": "infrastructure",
+              "description": "Primary styling approach using Tailwind CSS with @tailwind directives in style.css. Dark mode supported via 'dark:' prefix classes.",
+              "primaryLocation": "src/style.css",
+              "relatedFiles": [
+                "src/index.css",
+                "src/theme.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Theme System",
+              "slug": "theme-system",
+              "category": "infrastructure",
+              "description": "Dual theme system with lightTheme and darkTheme objects for styled-components integration. Includes colors, shadows, radius, and transitions.",
+              "primaryLocation": "src/theme.js",
+              "relatedFiles": [
+                "src/components/layout/AppLayout.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "ThemeProvider",
+              "slug": "theme-provider",
+              "category": "infrastructure",
+              "description": "React context provider for dark mode management. Auto-detects system preference, toggles 'dark' class on html element, integrates with styled-components.",
+              "primaryLocation": "src/components/layout/AppLayout.jsx",
+              "relatedFiles": [
+                "src/theme.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "AppLayout",
+              "slug": "app-layout",
+              "category": "ui-presentation",
+              "description": "Main layout component with sticky top nav, 64-width sidebar, and flexible main content area. Flex-based layout structure.",
+              "primaryLocation": "src/components/layout/AppLayout.jsx",
+              "relatedFiles": [
+                "src/components/layout/TopNav.jsx",
+                "src/components/layout/Sidebar.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "TopNav",
+              "slug": "top-nav",
+              "category": "ui-presentation",
+              "description": "Top navigation bar with logo, navigation buttons (Prospects, Customers, Products, Teams, Marketing), and user profile with hover-reveal logout.",
+              "primaryLocation": "src/components/layout/TopNav.jsx",
+              "relatedFiles": [
+                "src/components/layout/AppLayout.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Sidebar",
+              "slug": "sidebar",
+              "category": "ui-presentation",
+              "description": "Navigation sidebar with customer/prospect/product lists. Contains memoized list item components (CustomerListItem, ProductListItem) with dark mode support.",
+              "primaryLocation": "src/components/layout/Sidebar.jsx",
+              "relatedFiles": [
+                "src/components/layout/AppLayout.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "SnackBar",
+              "slug": "snackbar",
+              "category": "ui-presentation",
+              "description": "Toast notification component. Fixed position at bottom center, supports error/success/info types with color-coded backgrounds, auto-dismisses after 3 seconds.",
+              "primaryLocation": "src/components/global/SnackBar.jsx",
+              "relatedFiles": [
+                "src/context/SnackBarContext.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "SnackBarContext",
+              "slug": "snackbar-context",
+              "category": "data-layer",
+              "description": "Context provider for global notifications. Provides showError, showSuccess, showInfo methods throughout the app.",
+              "primaryLocation": "src/context/SnackBarContext.jsx",
+              "relatedFiles": [
+                "src/components/global/SnackBar.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "LoadingSpinner",
+              "slug": "loading-spinner",
+              "category": "ui-presentation",
+              "description": "Animated CSS spinner with size variants (sm/md/lg). Supports Tailwind color classes or custom hex/rgb colors.",
+              "primaryLocation": "src/components/loading/LoadingSpinner.jsx",
+              "relatedFiles": [
+                "src/components/loading/Loading.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Loading",
+              "slug": "loading-component",
+              "category": "ui-presentation",
+              "description": "Loading indicator wrapper combining LoadingSpinner with optional message text. Centered flex layout with spacing.",
+              "primaryLocation": "src/components/loading/Loading.jsx",
+              "relatedFiles": [
+                "src/components/loading/LoadingSpinner.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "ProgressBar",
+              "slug": "progress-bar",
+              "category": "ui-presentation",
+              "description": "Progress indicator with manager subscription pattern. Shows percentage, customizable color, animated width transitions.",
+              "primaryLocation": "src/components/ProgressBar.jsx",
+              "relatedFiles": [
+                "src/classes/ProgressBarManager.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "ErrorBoundary",
+              "slug": "error-boundary",
+              "category": "ui-presentation",
+              "description": "React error boundary with retry functionality. Shows error message, stack trace in dev mode, integrates with loadingStateManager and SnackBar for non-critical errors.",
+              "primaryLocation": "src/components/ErrorBoundary.jsx",
+              "relatedFiles": [
+                "src/services/loadingStateManager.js",
+                "src/context/SnackBarContext.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "TextInput Modal",
+              "slug": "text-input-modal",
+              "category": "ui-presentation",
+              "description": "Modal dialog with textarea input. Dark mode aware, includes submit/cancel buttons, disabled state for empty input.",
+              "primaryLocation": "src/components/global/TextInput.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "Modal Pattern",
+              "slug": "modal-pattern",
+              "category": "ui-presentation",
+              "description": "Standard modal pattern: fixed inset-0 with black bg-opacity-50 overlay, centered flex container, rounded-lg content with header, body, and footer sections.",
+              "primaryLocation": "src/components/common/RepositoryConfigModal.jsx",
+              "relatedFiles": [
+                "src/components/global/TextInput.jsx",
+                "src/components/tasks/TaskTimer.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "ProjectCard",
+              "slug": "project-card",
+              "category": "ui-presentation",
+              "description": "Clickable card component for project display. Shows project name, status badge, type badge (Fixed Cost/Subscription/Billable), and date info.",
+              "primaryLocation": "src/components/customers/ProjectCard.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "Badge Pattern",
+              "slug": "badge-pattern",
+              "category": "ui-presentation",
+              "description": "Status and type badges using px-2 py-1 text-xs/sm rounded-full with color-coded backgrounds for dark/light modes.",
+              "primaryLocation": "src/components/customers/ProjectCard.jsx",
+              "relatedFiles": [
+                "src/components/layout/Sidebar.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Tab Pattern",
+              "slug": "tab-pattern",
+              "category": "ui-presentation",
+              "description": "Tab navigation with underline indicator. Uses relative positioning with absolute bottom-0 indicator bar, transitions on selection.",
+              "primaryLocation": "src/components/customers/CustomerTabs.jsx",
+              "relatedFiles": [
+                "src/components/layout/TopNav.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "TaskTimer",
+              "slug": "task-timer",
+              "category": "user-capability",
+              "description": "Time tracking widget with start/pause/resume/stop controls, elapsed time display, time adjustment buttons, and stop dialog with description input.",
+              "primaryLocation": "src/components/tasks/TaskTimer.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "TimerControls",
+              "slug": "timer-controls",
+              "category": "ui-presentation",
+              "description": "Memoized control buttons for timer. Green start, yellow pause, blue resume, red stop buttons with consistent styling.",
+              "primaryLocation": "src/components/tasks/TaskTimer.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "ProjectReportButton",
+              "slug": "project-report-button",
+              "category": "ui-presentation",
+              "description": "Async action button with loading state. Shows spinner during PDF generation, disabled when loading, customizable children.",
+              "primaryLocation": "src/components/financial/ProjectReportButton.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "Button Patterns",
+              "slug": "button-patterns",
+              "category": "ui-presentation",
+              "description": "Multiple button styles: primary (bg-blue-500/bg-primary), success (bg-green-600), warning (bg-yellow-600), danger (bg-red-600), neutral (bg-gray-200/700 dark mode).",
+              "primaryLocation": "src/components/tasks/TaskTimer.jsx",
+              "relatedFiles": [
+                "src/components/financial/ProjectReportButton.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Form Input Pattern",
+              "slug": "form-input-pattern",
+              "category": "ui-presentation",
+              "description": "Standard form inputs with dark mode support. Uses px-3 py-2 border rounded-md, focus:ring-2 focus:ring-blue-500, dark mode bg-gray-700 border-gray-600.",
+              "primaryLocation": "src/components/common/RepositoryConfigModal.jsx",
+              "relatedFiles": [
+                "src/components/customers/CustomerForm.jsx",
+                "src/components/auth/SignIn.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Form Validation Pattern",
+              "slug": "form-validation-pattern",
+              "category": "ui-presentation",
+              "description": "Client-side validation with errors state object. Error messages shown in red text below inputs, border-red-500 on invalid fields.",
+              "primaryLocation": "src/components/common/RepositoryConfigModal.jsx",
+              "relatedFiles": [
+                "src/components/customers/CustomerForm.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "SignIn",
+              "slug": "sign-in",
+              "category": "user-capability",
+              "description": "Authentication component with FileMaker auto-detection and Supabase email/password form. Environment-aware authentication flow.",
+              "primaryLocation": "src/components/auth/SignIn.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "CustomerForm",
+              "slug": "customer-form",
+              "category": "user-capability",
+              "description": "Multi-field form for customer creation. Includes text inputs, checkboxes, number inputs with controlled state and validation.",
+              "primaryLocation": "src/components/customers/CustomerForm.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "RepositoryConfigModal",
+              "slug": "repository-config-modal",
+              "category": "ui-presentation",
+              "description": "Configuration modal with radio button input method selection, form validation, live URL preview, and action buttons.",
+              "primaryLocation": "src/components/common/RepositoryConfigModal.jsx",
+              "relatedFiles": [
+                "src/components/common/SourceDocumentsManager.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "SourceDocumentsManager",
+              "slug": "source-documents-manager",
+              "category": "user-capability",
+              "description": "Document management component with repository integration. Uses Redux for state, includes add/config modals.",
+              "primaryLocation": "src/components/common/SourceDocumentsManager.jsx",
+              "relatedFiles": [
+                "src/components/common/RepositoryConfigModal.jsx",
+                "src/components/proposals/SourceDocumentsList.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Table Pattern",
+              "slug": "table-pattern",
+              "category": "ui-presentation",
+              "description": "Data tables with divide-y dividers, themed headers (bg-gray-700/bg-gray-50), expandable rows, and consistent cell padding (px-6 py-3/4).",
+              "primaryLocation": "src/components/customers/CustomerTabs.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "Icon Buttons",
+              "slug": "icon-buttons",
+              "category": "ui-presentation",
+              "description": "Circular icon buttons (w-8 h-8 rounded-full) with hover states. Uses inline SVG icons with currentColor fill.",
+              "primaryLocation": "src/components/customers/CustomerTabs.jsx",
+              "relatedFiles": [
+                "src/components/layout/TopNav.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "MainContent",
+              "slug": "main-content",
+              "category": "ui-presentation",
+              "description": "Central routing component that renders different detail views (Project, Customer, Prospect, Team, Product) based on selection state.",
+              "primaryLocation": "src/components/MainContent.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "Slider Toggle",
+              "slug": "slider-toggle",
+              "category": "ui-presentation",
+              "description": "Custom CSS toggle switch. 40x20px slider with rounded corners, smooth transition, and themed colors.",
+              "primaryLocation": "src/style.css",
+              "relatedFiles": [],
+              "confidence": "high"
+            }
+          ],
+          "traces": [],
+          "confidence": 92,
+          "gaps": [],
+          "tokenUsed": 45000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 2773
+    },
+    {
+      "id": "log-0-synthesis-1767312076429-1767312076429",
+      "timestamp": "2026-01-02T00:01:16.429Z",
+      "cycle": 0,
+      "actor": "executor",
+      "type": "synthesis",
+      "content": {
+        "type": "synthesis",
+        "data": {
+          "cycleNumber": 0,
+          "confirmedFeatures": [],
+          "pendingItems": [],
+          "conflicts": [],
+          "confidenceUpdate": {},
+          "nextCycleSuggestions": [
+            "Retry synthesis with more focused subagents"
+          ]
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 49
+    },
+    {
+      "id": "log-1-plan-1767312086533-1767312086533",
+      "timestamp": "2026-01-02T00:01:26.533Z",
+      "cycle": 1,
+      "actor": "planner",
+      "type": "plan",
+      "content": {
+        "type": "plan",
+        "data": {
+          "goal": "Expand coverage to 4 unexplored categories: ui-presentation, api-layer, data-layer, and infrastructure",
+          "rationale": "6 of 7 categories remain completely unexplored (0% coverage). Must achieve breadth before deepening user-capability. These 4 categories represent core app architecture (UI, API, data, infrastructure) and will provide foundation for understanding the 92 discovered user capabilities.",
+          "successCriteria": [
+            "ui-presentation: Identify at least 5 UI components and their organization patterns",
+            "api-layer: Discover primary API communication patterns and key endpoints",
+            "data-layer: Map state management approach and data flow patterns",
+            "infrastructure: Identify authentication, routing, and error handling mechanisms"
+          ],
+          "constraints": [
+            "Do NOT deepen user-capability features yet - breadth first",
+            "One subagent per category minimum",
+            "Focus on identifying what exists, not tracing deeply",
+            "Stay within remaining 13701 token budget"
+          ],
+          "isComplete": false,
+          "summary": "Strong user-capability discovery (92 features) but 6 categories unexplored. Must establish breadth across all categories before deepening any single area.",
+          "decision": {
+            "type": "continue",
+            "strategy": "widen"
+          },
+          "focusCategories": [
+            "ui-presentation",
+            "api-layer",
+            "data-layer",
+            "infrastructure"
+          ],
+          "explorationQuestions": [
+            "What UI component library and structure is used?",
+            "How does the frontend communicate with backend services?",
+            "Where and how is application state managed?",
+            "What authentication and routing infrastructure exists?"
+          ],
+          "feedbackResponse": []
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 388
+    },
+    {
+      "id": "log-1-execution_plan-1767312100052-1767312100052",
+      "timestamp": "2026-01-02T00:01:40.052Z",
+      "cycle": 1,
+      "actor": "executor",
+      "type": "execution_plan",
+      "content": {
+        "type": "execution_plan",
+        "data": {
+          "subagents": [
+            {
+              "id": "scout-ui-components",
+              "category": "ui-presentation",
+              "focusArea": "UI component library and structure",
+              "task": "Identify the UI component library used (Material-UI, Ant Design, custom, etc.) and catalog the component structure. Note: shared components, layout components, form components, and styling approach. Focus on what UI framework/library powers the interface.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/components/**/*.jsx",
+                "src/components/**/*.js",
+                "package.json",
+                "src/styles/**/*"
+              ],
+              "excludePatterns": [
+                "src/components/customers/**/*",
+                "**/*.test.js",
+                "**/*.test.jsx"
+              ]
+            },
+            {
+              "id": "scout-api-communication",
+              "category": "api-layer",
+              "focusArea": "Frontend-backend communication layer",
+              "task": "Identify how the frontend communicates with backend services. Find: API client setup, base URLs, request/response handling, error handling patterns. Look for axios, fetch wrappers, or API service modules.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/services/**/*.js",
+                "src/api/**/*.js",
+                "src/lib/**/*.js",
+                "src/utils/**/*.js"
+              ],
+              "excludePatterns": [
+                "**/*.test.js"
+              ]
+            },
+            {
+              "id": "scout-state-management",
+              "category": "data-layer",
+              "focusArea": "Application state management",
+              "task": "Identify state management approach and structure. Find: Redux stores, Context providers, local state patterns, state management library used. Note how application data flows and is stored.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/store/**/*.js",
+                "src/context/**/*.js",
+                "src/redux/**/*.js",
+                "src/state/**/*.js"
+              ],
+              "excludePatterns": [
+                "**/*.test.js"
+              ]
+            },
+            {
+              "id": "scout-infrastructure",
+              "category": "infrastructure",
+              "focusArea": "Authentication and routing infrastructure",
+              "task": "Identify authentication system and routing setup. Find: auth providers, protected routes, login/logout mechanisms, route definitions. Note what routing library is used and how authentication is handled.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/auth/**/*.js",
+                "src/routes/**/*.js",
+                "src/router/**/*.js",
+                "src/App.js",
+                "src/App.jsx"
+              ],
+              "excludePatterns": [
+                "**/*.test.js"
+              ]
+            }
+          ],
+          "synthesisStrategy": "merge",
+          "expectedOutputs": [
+            "UI component library and structure inventory",
+            "Frontend-backend communication patterns",
+            "State management architecture",
+            "Authentication and routing infrastructure"
+          ],
+          "timeoutStrategy": "debrief"
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 598
+    },
+    {
+      "id": "log-1-discovery-1767312237694-1767312237694",
+      "timestamp": "2026-01-02T00:03:57.694Z",
+      "cycle": 1,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-ui-components",
+          "category": "ui-presentation",
+          "discoveredItems": [
+            {
+              "name": "Tailwind CSS Framework",
+              "slug": "tailwind-css-framework",
+              "category": "infrastructure",
+              "description": "Primary styling framework using utility-first CSS classes with dark mode support via dark: prefix",
+              "primaryLocation": "package.json",
+              "relatedFiles": [
+                "src/components/global/TextInput.jsx",
+                "src/components/global/SnackBar.jsx",
+                "src/components/ErrorBoundary.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "styled-components Library",
+              "slug": "styled-components-library",
+              "category": "infrastructure",
+              "description": "CSS-in-JS library for component-level theming, primarily used in proposal components",
+              "primaryLocation": "package.json",
+              "relatedFiles": [
+                "src/theme.js",
+                "src/components/proposals/SummaryTab.jsx",
+                "src/components/proposals/ProposalTabs.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Theme Configuration",
+              "slug": "theme-configuration",
+              "category": "infrastructure",
+              "description": "Light and dark theme objects with colors, shadows, radius, and transitions for styled-components",
+              "primaryLocation": "src/theme.js",
+              "relatedFiles": [
+                "src/components/layout/AppLayout.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Heroicons React",
+              "slug": "heroicons-react",
+              "category": "ui-presentation",
+              "description": "Icon library from Tailwind Labs, used sparingly in components like SourceDocumentsList",
+              "primaryLocation": "package.json",
+              "relatedFiles": [
+                "src/components/proposals/SourceDocumentsList.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "ThemeProvider",
+              "slug": "theme-provider",
+              "category": "infrastructure",
+              "description": "Context-based theme management with dark mode toggle, integrates styled-components StyledThemeProvider",
+              "primaryLocation": "src/components/layout/AppLayout.jsx",
+              "relatedFiles": [
+                "src/theme.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "AppLayout",
+              "slug": "app-layout",
+              "category": "ui-presentation",
+              "description": "Main layout component wrapping TopNav and children, provides dark mode context",
+              "primaryLocation": "src/components/layout/AppLayout.jsx",
+              "relatedFiles": [
+                "src/components/layout/TopNav.jsx",
+                "src/components/layout/Sidebar.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Sidebar",
+              "slug": "sidebar",
+              "category": "ui-presentation",
+              "description": "Navigation sidebar with customer, prospect, product, and team list items using Tailwind classes",
+              "primaryLocation": "src/components/layout/Sidebar.jsx",
+              "relatedFiles": [
+                "src/components/layout/AppLayout.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "TopNav",
+              "slug": "top-nav",
+              "category": "ui-presentation",
+              "description": "Top navigation bar with mode toggles (customer, prospect, product, team, marketing) and user info",
+              "primaryLocation": "src/components/layout/TopNav.jsx",
+              "relatedFiles": [
+                "src/components/layout/AppLayout.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "MainContent",
+              "slug": "main-content",
+              "category": "ui-presentation",
+              "description": "Content router component that renders appropriate detail views based on sidebar mode and selection",
+              "primaryLocation": "src/components/MainContent.jsx",
+              "relatedFiles": [
+                "src/components/projects/ProjectDetails.jsx",
+                "src/components/products/ProductDetails.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "TextInput",
+              "slug": "text-input",
+              "category": "ui-presentation",
+              "description": "Modal text input component with dark mode support using Tailwind utility classes",
+              "primaryLocation": "src/components/global/TextInput.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "SnackBar",
+              "slug": "snack-bar",
+              "category": "ui-presentation",
+              "description": "Global notification toast component with success/info/error variants using Tailwind colors",
+              "primaryLocation": "src/components/global/SnackBar.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "LoadingSpinner",
+              "slug": "loading-spinner",
+              "category": "ui-presentation",
+              "description": "Animated spinner component with size variants (sm/md/lg) using Tailwind animation classes",
+              "primaryLocation": "src/components/loading/LoadingSpinner.jsx",
+              "relatedFiles": [
+                "src/components/loading/Loading.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "ProgressBar",
+              "slug": "progress-bar",
+              "category": "ui-presentation",
+              "description": "Animated progress bar component with percentage display using Tailwind classes",
+              "primaryLocation": "src/components/ProgressBar.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "ErrorBoundary",
+              "slug": "error-boundary",
+              "category": "ui-presentation",
+              "description": "React error boundary with dark mode fallback UI using Tailwind classes",
+              "primaryLocation": "src/components/ErrorBoundary.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "SummaryTab",
+              "slug": "summary-tab",
+              "category": "ui-presentation",
+              "description": "Proposal summary component using styled-components with theme-based styling for package cards",
+              "primaryLocation": "src/components/proposals/SummaryTab.jsx",
+              "relatedFiles": [
+                "src/components/proposals/ProposalTabs.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "RepositoryConfigModal",
+              "slug": "repository-config-modal",
+              "category": "ui-presentation",
+              "description": "GitHub repository configuration modal using Tailwind-styled form elements",
+              "primaryLocation": "src/components/common/RepositoryConfigModal.jsx",
+              "relatedFiles": [
+                "src/components/common/SourceDocumentsManager.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "SourceDocumentsManager",
+              "slug": "source-documents-manager",
+              "category": "ui-presentation",
+              "description": "Standalone source document management component with Redux integration",
+              "primaryLocation": "src/components/common/SourceDocumentsManager.jsx",
+              "relatedFiles": [
+                "src/components/proposals/SourceDocumentsList.jsx",
+                "src/components/proposals/AddSourceModal.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "SignIn",
+              "slug": "sign-in",
+              "category": "user-capability",
+              "description": "Authentication component with environment detection for FileMaker vs Supabase auth",
+              "primaryLocation": "src/components/auth/SignIn.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "TaskList",
+              "slug": "task-list",
+              "category": "ui-presentation",
+              "description": "Task listing component with expandable items, timer integration, using Tailwind classes",
+              "primaryLocation": "src/components/tasks/TaskList.jsx",
+              "relatedFiles": [
+                "src/components/tasks/TaskTimer.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "FinancialChart",
+              "slug": "financial-chart",
+              "category": "ui-presentation",
+              "description": "Chart.js wrapper component with react-chartjs-2 for bar and line financial charts",
+              "primaryLocation": "src/components/financial/FinancialChart.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "ProductForm",
+              "slug": "product-form",
+              "category": "ui-presentation",
+              "description": "Product creation/edit form with subscription and pricing fields using Tailwind classes",
+              "primaryLocation": "src/components/products/ProductForm.jsx",
+              "relatedFiles": [
+                "src/components/products/ProductRequirementsBuilder.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Chart.js Integration",
+              "slug": "chartjs-integration",
+              "category": "integration",
+              "description": "Chart.js with react-chartjs-2 wrapper for data visualization in financial components",
+              "primaryLocation": "package.json",
+              "relatedFiles": [
+                "src/components/financial/FinancialChart.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Redux Toolkit State",
+              "slug": "redux-toolkit-state",
+              "category": "data-layer",
+              "description": "Redux Toolkit with react-redux for complex state in proposals and documentation",
+              "primaryLocation": "package.json",
+              "relatedFiles": [
+                "src/components/common/SourceDocumentsManager.jsx"
+              ],
+              "confidence": "high"
+            }
+          ],
+          "traces": [],
+          "confidence": 95,
+          "gaps": [],
+          "tokenUsed": 42000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 1839
+    },
+    {
+      "id": "log-1-discovery-1767312237703-1767312237703",
+      "timestamp": "2026-01-02T00:03:57.703Z",
+      "cycle": 1,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-api-communication",
+          "category": "api-layer",
+          "discoveredItems": [
+            {
+              "name": "dataService",
+              "slug": "data-service",
+              "category": "api-layer",
+              "description": "Environment-aware data service that routes requests based on current environment (FileMaker vs Web App). Creates axios client with HMAC-SHA256 auth and interceptors for environment-aware routing.",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [
+                "src/config.js",
+                "src/api/fileMaker.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Environment detection",
+                "HMAC authentication",
+                "Axios interceptors",
+                "FileMaker bridge routing"
+              ]
+            },
+            {
+              "name": "backendConfig",
+              "slug": "backend-config",
+              "category": "infrastructure",
+              "description": "Central configuration for backend API base URLs including main API, FileMaker API, and QuickBooks API endpoints at api.claritybusinesssolutions.ca",
+              "primaryLocation": "src/config.js",
+              "relatedFiles": [
+                "src/services/dataService.js",
+                "src/services/supabaseService.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "hmacAuthHeader",
+              "slug": "hmac-auth-header",
+              "category": "api-layer",
+              "description": "HMAC-SHA256 authentication header generator using Web Crypto API. Format: Bearer {signature}.{timestamp} where message = timestamp.payload. Used across all backend API modules.",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [
+                "src/api/fileMaker.js",
+                "src/api/proposals.js",
+                "src/api/proposalExtended.js",
+                "src/api/quickbooksApi.js",
+                "src/api/marketing.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "supabaseService",
+              "slug": "supabase-service",
+              "category": "api-layer",
+              "description": "Supabase service that routes calls through backend API (api.claritybusinesssolutions.ca). Supports select, insert, update, delete operations with HMAC authentication and filter mapping.",
+              "primaryLocation": "src/services/supabaseService.js",
+              "relatedFiles": [
+                "src/config.js",
+                "src/api/prospects.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Backend API routing",
+                "CRUD operations",
+                "Filter mapping",
+                "HMAC auth"
+              ]
+            },
+            {
+              "name": "fileMakerApiClient",
+              "slug": "filemaker-api-client",
+              "category": "api-layer",
+              "description": "FileMaker API client using axios. Routes through backend API for web app or uses FMGofer bridge for FileMaker environment. Supports CRUD, find, and script execution operations.",
+              "primaryLocation": "src/api/fileMaker.js",
+              "relatedFiles": [
+                "src/config.js",
+                "src/api/customers.js",
+                "src/api/projects.js",
+                "src/api/tasks.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Environment detection",
+                "Backend routing",
+                "FileMaker bridge",
+                "CRUD operations"
+              ]
+            },
+            {
+              "name": "quickbooksApiClient",
+              "slug": "quickbooks-api-client",
+              "category": "integration",
+              "description": "QuickBooks Online API client using native fetch. Connects to backend at api.claritybusinesssolutions.ca/quickbooks. Includes comprehensive error handling with status codes and response data parsing.",
+              "primaryLocation": "src/api/quickbooksApi.js",
+              "relatedFiles": [
+                "src/services/financialSyncService.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "OAuth flow",
+                "Customer CRUD",
+                "Invoice CRUD",
+                "Bill CRUD",
+                "Query execution",
+                "Webhook handling"
+              ]
+            },
+            {
+              "name": "proposalsApiClient",
+              "slug": "proposals-api-client",
+              "category": "api-layer",
+              "description": "Proposals API module using axios with HMAC auth. Handles proposal CRUD, deliverables, concepts, and approval workflows via backend API.",
+              "primaryLocation": "src/api/proposals.js",
+              "relatedFiles": [
+                "src/config.js",
+                "src/api/proposalExtended.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Create/update proposals",
+                "Fetch by project/token",
+                "Deliverable management",
+                "Approval workflow"
+              ]
+            },
+            {
+              "name": "proposalExtendedApi",
+              "slug": "proposal-extended-api",
+              "category": "api-layer",
+              "description": "Extended proposal API with apiRequest wrapper function. Handles requirements, packages, package-deliverable associations, and complete package creation flows.",
+              "primaryLocation": "src/api/proposalExtended.js",
+              "relatedFiles": [
+                "src/config.js",
+                "src/api/proposals.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Requirements CRUD",
+                "Packages CRUD",
+                "Package-deliverable linking",
+                "Complete proposal data fetch"
+              ]
+            },
+            {
+              "name": "marketingApiClient",
+              "slug": "marketing-api-client",
+              "category": "api-layer",
+              "description": "Marketing API for bulk email operations using native fetch. Includes CSV parsing, HMAC signature creation, and email template validation.",
+              "primaryLocation": "src/api/marketing.js",
+              "relatedFiles": [],
+              "confidence": "high",
+              "capabilities": [
+                "Bulk email sending",
+                "CSV import",
+                "Template validation",
+                "Campaign status"
+              ]
+            },
+            {
+              "name": "prospectsApiClient",
+              "slug": "prospects-api-client",
+              "category": "api-layer",
+              "description": "Prospects API using direct Supabase client (not backend routed). Handles PROSPECT type customers with normalized data across related tables (email, phone, address, settings).",
+              "primaryLocation": "src/api/prospects.js",
+              "relatedFiles": [
+                "src/config.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Direct Supabase access",
+                "Normalized data handling",
+                "Prospect CRUD",
+                "Customer conversion"
+              ]
+            },
+            {
+              "name": "axiosClientInterceptors",
+              "slug": "axios-client-interceptors",
+              "category": "api-layer",
+              "description": "Axios request/response interceptors in dataService. Request interceptor adds HMAC auth for webapp or marks for FileMaker routing. Response interceptor handles FileMaker conversion.",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "errorHandlingPatterns",
+              "slug": "error-handling-patterns",
+              "category": "api-layer",
+              "description": "Consistent error handling across API modules. Extracts error messages from response.data.detail, message, error fields. Returns {success: false, error: message} or throws enriched Error objects.",
+              "primaryLocation": "src/api/quickbooksApi.js",
+              "relatedFiles": [
+                "src/api/proposalExtended.js",
+                "src/api/fileMaker.js",
+                "src/services/supabaseService.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "apiIndexExports",
+              "slug": "api-index-exports",
+              "category": "api-layer",
+              "description": "Central API export module re-exporting all domain-specific API functions from customers, teams, projects, tasks, financialRecords, and QuickBooks modules.",
+              "primaryLocation": "src/api/index.js",
+              "relatedFiles": [
+                "src/api/customers.js",
+                "src/api/teams.js",
+                "src/api/projects.js",
+                "src/api/tasks.js",
+                "src/api/financialRecords.js",
+                "src/api/quickbooksApi.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "fileMakerEdgeFunction",
+              "slug": "filemaker-edge-function",
+              "category": "api-layer",
+              "description": "DEPRECATED FileMaker edge function client using native fetch. Direct calls to api.claritybusinesssolutions.ca/filemaker endpoints for records, scripts, and container operations.",
+              "primaryLocation": "src/api/fileMakerEdgeFunction.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "fileMakerOperationWrapper",
+              "slug": "filemaker-operation-wrapper",
+              "category": "api-layer",
+              "description": "handleFileMakerOperation wrapper function that provides consistent error handling for FileMaker operations. Used by domain API modules (customers, projects, tasks).",
+              "primaryLocation": "src/api/fileMaker.js",
+              "relatedFiles": [
+                "src/api/customers.js",
+                "src/api/projects.js",
+                "src/api/tasks.js",
+                "src/api/teams.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "layoutAndActionConstants",
+              "slug": "layout-action-constants",
+              "category": "api-layer",
+              "description": "Exported Layouts and Actions constants for FileMaker API. Layouts: CUSTOMERS, PROJECTS, TASKS, STAFF, etc. Actions: READ, CREATE, UPDATE, DELETE.",
+              "primaryLocation": "src/api/fileMaker.js",
+              "relatedFiles": [
+                "src/api/customers.js",
+                "src/api/projects.js",
+                "src/api/tasks.js"
+              ],
+              "confidence": "high"
+            }
+          ],
+          "traces": [],
+          "confidence": 95,
+          "gaps": [],
+          "tokenUsed": 42000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 1869
+    },
+    {
+      "id": "log-1-discovery-1767312237708-1767312237708",
+      "timestamp": "2026-01-02T00:03:57.708Z",
+      "cycle": 1,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-state-management",
+          "category": "data-layer",
+          "discoveredItems": [
+            {
+              "name": "Redux Store Configuration",
+              "slug": "redux-store-config",
+              "category": "data-layer",
+              "description": "Redux Toolkit store with 3 slices: proposals, proposalViewer, documentation. Uses configureStore with devTools enabled in development.",
+              "primaryLocation": "src/store/index.js",
+              "relatedFiles": [
+                "src/store/slices/proposalSlice.js",
+                "src/store/slices/proposalViewerSlice.js",
+                "src/store/slices/documentationSlice.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Redux state management",
+                "Dev tools integration",
+                "Serializable check middleware"
+              ]
+            },
+            {
+              "name": "Proposal Redux Slice",
+              "slug": "proposal-slice",
+              "category": "data-layer",
+              "description": "Redux slice for proposal CRUD operations with async thunks for create, fetch, and email sending. Manages proposals array, currentProposal, and loading states.",
+              "primaryLocation": "src/store/slices/proposalSlice.js",
+              "relatedFiles": [
+                "src/api/proposals.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "createProposal",
+                "fetchProposalsForProject",
+                "sendProposalEmail"
+              ]
+            },
+            {
+              "name": "Proposal Viewer Redux Slice",
+              "slug": "proposal-viewer-slice",
+              "category": "data-layer",
+              "description": "Redux slice for proposal viewing and approval workflow. Manages selected deliverables, price calculations, and approval states with toggleDeliverable action.",
+              "primaryLocation": "src/store/slices/proposalViewerSlice.js",
+              "relatedFiles": [],
+              "confidence": "high",
+              "capabilities": [
+                "fetchProposalByToken",
+                "approveProposal",
+                "toggleDeliverable",
+                "resetViewer"
+              ]
+            },
+            {
+              "name": "Documentation Redux Slice",
+              "slug": "documentation-slice",
+              "category": "data-layer",
+              "description": "Redux slice for GitHub repository documentation management. Handles file/folder CRUD operations, content caching, and navigation state.",
+              "primaryLocation": "src/store/slices/documentationSlice.js",
+              "relatedFiles": [
+                "src/api/github.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "fetchRepositoryContents",
+                "fetchFileContent",
+                "createRepositoryFile",
+                "updateRepositoryFile",
+                "deleteRepositoryFile",
+                "createRepositoryFolder"
+              ]
+            },
+            {
+              "name": "AppStateContext",
+              "slug": "app-state-context",
+              "category": "data-layer",
+              "description": "Central React Context using useReducer for app-wide state. Manages user, selections (customer/prospect/project/task/team/product), authentication, environment detection, sidebar mode, and UI visibility flags.",
+              "primaryLocation": "src/context/AppStateContext.jsx",
+              "relatedFiles": [],
+              "confidence": "high",
+              "capabilities": [
+                "useAppState",
+                "useAppDispatch",
+                "useAppStateOperations",
+                "39 action types"
+              ]
+            },
+            {
+              "name": "TeamContext",
+              "slug": "team-context",
+              "category": "data-layer",
+              "description": "React Context provider wrapping useTeam hook. Exposes team state (teams, staff, projects, stats) and operations (CRUD, staff/project assignment).",
+              "primaryLocation": "src/context/TeamContext.jsx",
+              "relatedFiles": [
+                "src/hooks/useTeam.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "useTeamContext",
+                "loadTeams",
+                "handleTeamSelect",
+                "handleTeamCreate",
+                "handleTeamUpdate",
+                "handleTeamDelete",
+                "handleAssignStaffToTeam"
+              ]
+            },
+            {
+              "name": "ProjectContext",
+              "slug": "project-context",
+              "category": "data-layer",
+              "description": "React Context for project records fetched from FileMaker. Uses useState with useRef for fetch-once pattern via recordQueueManager.",
+              "primaryLocation": "src/context/ProjectContext.jsx",
+              "relatedFiles": [
+                "src/services/recordQueueManager.js",
+                "src/api/index.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "useProjectRecords",
+                "FileMaker integration"
+              ]
+            },
+            {
+              "name": "MarketingContext",
+              "slug": "marketing-context",
+              "category": "data-layer",
+              "description": "React Context for marketing domains and campaigns. Delegates state to AppStateContext, provides local marketingDomains array and dispatch wrappers.",
+              "primaryLocation": "src/context/MarketingContext.jsx",
+              "relatedFiles": [
+                "src/context/AppStateContext.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "useMarketingContext",
+                "setSelectedMarketingDomain",
+                "toggleMarketingDomainStatus",
+                "setShowMarketing"
+              ]
+            },
+            {
+              "name": "SnackBarContext",
+              "slug": "snackbar-context",
+              "category": "ui-presentation",
+              "description": "React Context for global notifications using useState. Provides showError, showSuccess, showInfo methods and renders SnackBar component.",
+              "primaryLocation": "src/context/SnackBarContext.jsx",
+              "relatedFiles": [
+                "src/components/global/SnackBar.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "useSnackBar",
+                "showError",
+                "showSuccess",
+                "showInfo"
+              ]
+            }
+          ],
+          "traces": [],
+          "confidence": 95,
+          "gaps": [],
+          "tokenUsed": 28500,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 1113
+    },
+    {
+      "id": "log-1-discovery-1767312237714-1767312237714",
+      "timestamp": "2026-01-02T00:03:57.714Z",
+      "cycle": 1,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-infrastructure",
+          "category": "infrastructure",
+          "discoveredItems": [
+            {
+              "name": "SignIn Component",
+              "slug": "signin-component",
+              "category": "user-capability",
+              "description": "Authentication component handling dual-environment login (FileMaker bridge and Supabase email/password)",
+              "primaryLocation": "src/components/auth/SignIn.jsx",
+              "relatedFiles": [
+                "src/services/supabaseService.js",
+                "src/index.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "FileMaker environment detection",
+                "Supabase email/password authentication",
+                "Auto-detection timeout handling"
+              ]
+            },
+            {
+              "name": "Supabase Auth Service",
+              "slug": "supabase-auth-service",
+              "category": "api-layer",
+              "description": "Supabase authentication service providing signInWithEmail and signOut functions using @supabase/supabase-js",
+              "primaryLocation": "src/services/supabaseService.js",
+              "relatedFiles": [
+                "src/components/auth/SignIn.jsx",
+                "src/config.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Email/password sign-in",
+                "Sign-out with session clearing",
+                "Session persistence"
+              ]
+            },
+            {
+              "name": "Environment Context",
+              "slug": "environment-context",
+              "category": "data-layer",
+              "description": "Environment type constants and context setter for routing between FileMaker and webapp modes",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [
+                "src/index.jsx",
+                "src/context/AppStateContext.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "FILEMAKER environment type",
+                "WEBAPP environment type",
+                "setEnvironmentContext",
+                "getEnvironmentContext"
+              ]
+            },
+            {
+              "name": "AppStateContext Authentication",
+              "slug": "appstate-authentication",
+              "category": "data-layer",
+              "description": "React context managing authentication state (isAuthenticated, user, method) and environment detection",
+              "primaryLocation": "src/context/AppStateContext.jsx",
+              "relatedFiles": [
+                "src/index.jsx",
+                "src/services/dataService.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "SET_AUTHENTICATION action",
+                "SET_ENVIRONMENT action",
+                "Authentication state tracking",
+                "Environment detection state"
+              ]
+            },
+            {
+              "name": "App Authentication Flow",
+              "slug": "app-authentication-flow",
+              "category": "user-capability",
+              "description": "Main app entry point handling authentication callbacks and conditional rendering of SignIn or main content",
+              "primaryLocation": "src/index.jsx",
+              "relatedFiles": [
+                "src/components/auth/SignIn.jsx",
+                "src/context/AppStateContext.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "handleFileMakerDetected callback",
+                "handleSupabaseAuth callback",
+                "handleDetectionComplete callback"
+              ]
+            },
+            {
+              "name": "Protected Content Gate",
+              "slug": "protected-content-gate",
+              "category": "user-capability",
+              "description": "Authentication check in AppContent that renders SignIn if not authenticated, otherwise renders main layout",
+              "primaryLocation": "src/index.jsx",
+              "relatedFiles": [
+                "src/components/auth/SignIn.jsx",
+                "src/components/layout/AppLayout.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Logout Handler",
+              "slug": "logout-handler",
+              "category": "user-capability",
+              "description": "Logout function in TopNav that resets application state and reloads the page",
+              "primaryLocation": "src/components/layout/TopNav.jsx",
+              "relatedFiles": [
+                "src/context/AppStateContext.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "State reset via resetState()",
+                "Page reload for clean logout"
+              ]
+            },
+            {
+              "name": "MainContent View Router",
+              "slug": "maincontent-view-router",
+              "category": "ui-presentation",
+              "description": "Conditional rendering component that switches between CustomerDetails, ProspectDetails, TeamDetails, ProductDetails, MarketingPanel based on sidebarMode and selected entities",
+              "primaryLocation": "src/components/MainContent.jsx",
+              "relatedFiles": [
+                "src/components/customers/CustomerDetails.jsx",
+                "src/components/customers/ProspectDetails.jsx",
+                "src/components/teams/TeamDetails.jsx",
+                "src/components/products/ProductDetails.jsx",
+                "src/components/marketing/MarketingPanel.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "HMAC Backend Authentication",
+              "slug": "hmac-backend-auth",
+              "category": "api-layer",
+              "description": "HMAC-SHA256 authentication header generation for backend API requests using Web Crypto API",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [
+                "src/services/supabaseService.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "HMAC-SHA256 signature generation",
+                "Timestamp-based auth tokens",
+                "Development mode fallback"
+              ]
+            }
+          ],
+          "traces": [],
+          "confidence": 95,
+          "gaps": [],
+          "tokenUsed": 28500,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 1067
+    },
+    {
+      "id": "log-1-synthesis-1767312286973-1767312286973",
+      "timestamp": "2026-01-02T00:04:46.973Z",
+      "cycle": 1,
+      "actor": "executor",
+      "type": "synthesis",
+      "content": {
+        "type": "synthesis",
+        "data": {
+          "cycleNumber": 1,
+          "confirmedFeatures": [
+            {
+              "name": "Tailwind CSS Framework",
+              "slug": "tailwind-css-framework",
+              "category": "ui-presentation",
+              "description": "Primary styling framework using utility-first CSS classes with dark mode support via dark: prefix",
+              "capabilities": [
+                "Style components",
+                "Dark mode theming",
+                "Responsive design"
+              ],
+              "actors": [
+                "Developer"
+              ],
+              "primaryDirectory": "package.json",
+              "services": [],
+              "dataTouched": [],
+              "dependencies": [],
+              "completeness": {
+                "status": "functional",
+                "score": 100,
+                "gaps": []
+              },
+              "traceDepth": {
+                "level": "shallow",
+                "filesRead": 1,
+                "flowsMapped": 0,
+                "capabilitiesTraced": 3,
+                "capabilitiesTotal": 3,
+                "confidence": "high",
+                "notes": "Found in package.json with extensive usage across components"
+              }
+            },
+            {
+              "name": "Styled Components Library",
+              "slug": "styled-components-library",
+              "category": "ui-presentation",
+              "description": "CSS-in-JS library for component-level theming, primarily used in proposal components",
+              "capabilities": [
+                "Component styling",
+                "Theme integration",
+                "Dynamic styling"
+              ],
+              "actors": [
+                "Developer"
+              ],
+              "primaryDirectory": "package.json",
+              "services": [],
+              "dataTouched": [],
+              "dependencies": [
+                "theme-configuration"
+              ],
+              "completeness": {
+                "status": "functional",
+                "score": 90,
+                "gaps": []
+              },
+              "traceDepth": {
+                "level": "shallow",
+                "filesRead": 2,
+                "flowsMapped": 1,
+                "capabilitiesTraced": 3,
+                "capabilitiesTotal": 3,
+                "confidence": "high",
+                "notes": "Used with ThemeProvider integration"
+              }
+            },
+            {
+              "name": "Theme Configuration",
+              "slug": "theme-configuration",
+              "category": "ui-presentation",
+              "description": "Light and dark theme objects with colors, shadows, radius, and transitions for styled-components",
+              "capabilities": [
+                "Define theme colors",
+                "Configure shadows and radius",
+                "Set transitions"
+              ],
+              "actors": [
+                "System"
+              ],
+              "primaryDirectory": "src",
+              "services": [],
+              "dataTouched": [],
+              "dependencies": [],
+              "completeness": {
+                "status": "functional",
+                "score": 95,
+                "gaps": []
+              },
+              "traceDepth": {
+                "level": "deep",
+                "filesRead": 1,
+                "flowsMapped": 1,
+                "capabilitiesTraced": 3,
+                "capabilitiesTotal": 3,
+                "confidence": "high",
+                "notes": "Complete theme definition in src/theme.js"
+              }
+            },
+            {
+              "name": "Application Layout System",
+              "slug": "app-layout-system",
+              "category": "ui-presentation",
+              "description": "Complete layout system including AppLayout, Sidebar, TopNav, and MainContent components",
+              "capabilities": [
+                "Navigation",
+                "Mode switching",
+                "Dark mode toggle",
+                "Content routing"
+              ],
+              "actors": [
+                "User",
+                "System"
+              ],
+              "primaryDirectory": "src/components/layout",
+              "services": [
+                "ThemeProvider"
+              ],
+              "dataTouched": [
+                "user info",
+                "navigation state"
+              ],
+              "dependencies": [
+                "theme-configuration"
+              ],
+              "completeness": {
+                "status": "functional",
+                "score": 95,
+                "gaps": []
+              },
+              "traceDepth": {
+                "level": "deep",
+                "filesRead": 4,
+                "flowsMapped": 3,
+                "capabilitiesTraced": 4,
+                "capabilitiesTotal": 4,
+                "confidence": "high",
+                "notes": "Comprehensive layout system with AppLayout, Sidebar, TopNav, MainContent"
+              }
+            },
+            {
+              "name": "Global UI Components",
+              "slug": "global-ui-components",
+              "category": "ui-presentation",
+              "description": "Collection of reusable UI components including TextInput, SnackBar, LoadingSpinner, ProgressBar, and ErrorBoundary",
+              "capabilities": [
+                "User input",
+                "Notifications",
+                "Loading states",
+                "Error handling",
+                "Progress indication"
+              ],
+              "actors": [
+                "User",
+                "System"
+              ],
+              "primaryDirectory": "src/components/global",
+              "services": [],
+              "dataTouched": [],
+              "dependencies": [
+                "tailwind-css-framework"
+              ],
+              "completeness": {
+                "status": "functional",
+                "score": 90,
+                "gaps": []
+              },
+              "traceDepth": {
+                "level": "shallow",
+                "filesRead": 5,
+                "flowsMapped": 0,
+                "capabilitiesTraced": 5,
+                "capabilitiesTotal": 5,
+                "confidence": "high",
+                "notes": "Complete set of global UI components with dark mode support"
+              }
+            },
+            {
+              "name": "Environment-Aware Data Service",
+              "slug": "environment-aware-data-service",
+              "category": "api-layer",
+              "description": "Environment-aware data service that routes requests based on current environment (FileMaker vs Web App) with HMAC-SHA256 authentication",
+              "capabilities": [
+                "Route API requests",
+                "HMAC authentication",
+                "Environment detection"
+              ],
+              "actors": [
+                "System"
+              ],
+              "primaryDirectory": "src/services",
+              "services": [
+                "axios"
+              ],
+              "dataTouched": [
+                "API requests"
+              ],
+              "dependencies": [],
+              "completeness": {
+                "status": "functional",
+                "score": 95,
+                "gaps": []
+              },
+              "traceDepth": {
+                "level": "deep",
+                "filesRead": 2,
+                "flowsMapped": 2,
+                "capabilitiesTraced": 3,
+                "capabilitiesTotal": 3,
+                "confidence": "high",
+                "notes": "Central data service with axios interceptors and HMAC auth"
+              }
+            },
+            {
+              "name": "Backend API Configuration",
+              "slug": "backend-config",
+              "category": "api-layer",
+              "description": "Central configuration for backend API base URLs including main API, FileMaker API, and QuickBooks API endpoints",
+              "capabilities": [
+                "Configure API endpoints",
+                "Environment routing"
+              ],
+              "actors": [
+                "System"
+              ],
+              "primaryDirectory": "src",
+              "services": [],
+              "dataTouched": [],
+              "dependencies": [],
+              "completeness": {
+                "status": "functional",
+                "score": 100,
+                "gaps": []
+              },
+              "traceDepth": {
+                "level": "shallow",
+                "filesRead": 1,
+                "flowsMapped": 0,
+                "capabilitiesTraced": 2,
+                "capabilitiesTotal": 2,
+                "confidence": "high",
+                "notes": "Configuration in src/config.js"
+              }
+            },
+            {
+              "name": "Domain-Specific API Clients",
+              "slug": "domain-api-clients",
+              "category": "api-layer",
+              "description": "Collection of specialized API clients for FileMaker, QuickBooks, Supabase, Proposals, Marketing, and Prospects",
+              "capabilities": [
+                "FileMaker operations",
+                "QuickBooks integration",
+                "Proposal management",
+                "Marketing operations",
+                "Prospect handling"
+              ],
+              "actors": [
+                "System"
+              ],
+              "primaryDirectory": "src/api",
+              "services": [
+                "axios",
+                "fetch",
+                "supabase"
+              ],
+              "dataTouched": [
+                "customers",
+                "projects",
+                "tasks",
+                "proposals",
+                "financial records"
+              ],
+              "dependencies": [
+                "environment-aware-data-service",
+                "backend-config"
+              ],
+              "completeness": {
+                "status": "functional",
+                "score": 90,
+                "gaps": [
+                  "Some API clients use deprecated patterns"
+                ]
+              },
+              "traceDepth": {
+                "level": "deep",
+                "filesRead": 8,
+                "flowsMapped": 5,
+                "capabilitiesTraced": 5,
+                "capabilitiesTotal": 5,
+                "confidence": "high",
+                "notes": "Comprehensive API layer with consistent error handling patterns"
+              }
+            },
+            {
+              "name": "Redux Toolkit State Management",
+              "slug": "redux-toolkit-state",
+              "category": "data-layer",
+              "description": "Redux Toolkit store with slices for proposals, proposal viewer, and documentation management",
+              "capabilities": [
+                "Proposal CRUD",
+                "Proposal viewing workflow",
+                "Documentation management",
+                "State persistence"
+              ],
+              "actors": [
+                "System"
+              ],
+              "primaryDirectory": "src/store",
+              "services": [
+                "Redux Toolkit",
+                "react-redux"
+              ],
+              "dataTouched": [
+                "proposals",
+                "documentation",
+                "deliverables"
+              ],
+              "dependencies": [],
+              "completeness": {
+                "status": "functional",
+                "score": 90,
+                "gaps": []
+              },
+              "traceDepth": {
+                "level": "deep",
+                "filesRead": 4,
+                "flowsMapped": 3,
+                "capabilitiesTraced": 4,
+                "capabilitiesTotal": 4,
+                "confidence": "high",
+                "notes": "Complete Redux setup with async thunks and proper slice structure"
+              }
+            },
+            {
+              "name": "React Context State Management",
+              "slug": "react-context-state",
+              "category": "data-layer",
+              "description": "Collection of React Contexts for app state, teams, projects, marketing, and notifications",
+              "capabilities": [
+                "App-wide state",
+                "Team management",
+                "Project context",
+                "Marketing state",
+                "Global notifications"
+              ],
+              "actors": [
+                "System"
+              ],
+              "primaryDirectory": "src/context",
+              "services": [
+                "React Context",
+                "useReducer",
+                "useState"
+              ],
+              "dataTouched": [
+                "user data",
+                "teams",
+                "projects",
+                "marketing campaigns",
+                "notifications"
+              ],
+              "dependencies": [],
+              "completeness": {
+                "status": "functional",
+                "score": 85,
+                "gaps": [
+                  "Some contexts have overlapping responsibilities"
+                ]
+              },
+              "traceDepth": {
+                "level": "deep",
+                "filesRead": 5,
+                "flowsMapped": 2,
+                "capabilitiesTraced": 5,
+                "capabilitiesTotal": 5,
+                "confidence": "high",
+                "notes": "Comprehensive context system with AppStateContext as central hub"
+              }
+            },
+            {
+              "name": "Dual-Environment Authentication",
+              "slug": "dual-environment-auth",
+              "category": "infrastructure",
+              "description": "Authentication system supporting both FileMaker bridge and Supabase email/password authentication",
+              "capabilities": [
+                "FileMaker bridge auth",
+                "Supabase email auth",
+                "Environment detection",
+                "Session management"
+              ],
+              "actors": [
+                "User",
+                "System"
+              ],
+              "primaryDirectory": "src/components/auth",
+              "services": [
+                "Supabase",
+                "FileMaker"
+              ],
+              "dataTouched": [
+                "user credentials",
+                "session state"
+              ],
+              "dependencies": [
+                "environment-aware-data-service"
+              ],
+              "completeness": {
+                "status": "functional",
+                "score": 90,
+                "gaps": []
+              },
+              "traceDepth": {
+                "level": "deep",
+                "filesRead": 5,
+                "flowsMapped": 2,
+                "capabilitiesTraced": 4,
+                "capabilitiesTotal": 4,
+                "confidence": "high",
+                "notes": "Complete authentication flow with environment-aware routing"
+              }
+            },
+            {
+              "name": "Application Routing and Protection",
+              "slug": "app-routing-protection",
+              "category": "infrastructure",
+              "description": "Application entry point with authentication gates and conditional content rendering",
+              "capabilities": [
+                "Route protection",
+                "Authentication gates",
+                "Content switching",
+                "View routing"
+              ],
+              "actors": [
+                "System"
+              ],
+              "primaryDirectory": "src",
+              "services": [
+                "React Router"
+              ],
+              "dataTouched": [
+                "authentication state",
+                "route state"
+              ],
+              "dependencies": [
+                "dual-environment-auth"
+              ],
+              "completeness": {
+                "status": "functional",
+                "score": 85,
+                "gaps": [
+                  "Complex conditional rendering could be simplified"
+                ]
+              },
+              "traceDepth": {
+                "level": "deep",
+                "filesRead": 3,
+                "flowsMapped": 2,
+                "capabilitiesTraced": 4,
+                "capabilitiesTotal": 4,
+                "confidence": "high",
+                "notes": "Authentication protection with view routing in MainContent"
+              }
+            }
+          ],
+          "pendingItems": [],
+          "conflicts": [],
+          "confidenceUpdate": {
+            "ui-presentation": 95,
+            "api-layer": 95,
+            "data-layer": 95,
+            "infrastructure": 95
+          },
+          "nextCycleSuggestions": [
+            "Deep trace specific user workflows (task management, proposal creation)",
+            "Investigate integration patterns between Redux and Context states",
+            "Explore user-capability features that leverage this infrastructure",
+            "Map data flows between API clients and state management systems"
+          ]
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 2300
+    },
+    {
+      "id": "log-2-plan-1767312297706-1767312297706",
+      "timestamp": "2026-01-02T00:04:57.706Z",
+      "cycle": 2,
+      "actor": "planner",
+      "type": "plan",
+      "content": {
+        "type": "plan",
+        "data": {
+          "goal": "Expand coverage to unexplored categories: ui-presentation, data-layer, and platform while addressing api-layer and infrastructure gaps",
+          "rationale": "4 of 7 categories remain unexplored (ui-presentation, data-layer, platform at 0%, plus api-layer and infrastructure at LOW). Must prioritize breadth-first exploration before deepening user-capability. Current cycle should focus on these unexplored categories to establish baseline coverage.",
+          "successCriteria": [
+            "ui-presentation: Identify component library structure, theme system, and layout patterns",
+            "data-layer: Map Redux store structure, state management patterns, and data persistence",
+            "platform: Discover build configuration, deployment setup, and development tooling",
+            "api-layer: Find REST/GraphQL clients, request patterns, and response handling",
+            "infrastructure: Identify auth systems, error handling, and logging infrastructure"
+          ],
+          "constraints": [
+            "Do NOT deepen user-capability until other categories have coverage",
+            "One subagent per category minimum",
+            "Focus on discovering what exists rather than tracing flows",
+            "Stay within 11054 token budget"
+          ],
+          "isComplete": false,
+          "summary": "Good progress on user-capability (129 features) but 4 categories remain unexplored. Must achieve breadth across all 7 categories before deepening any single category.",
+          "decision": {
+            "type": "continue",
+            "strategy": "widen"
+          },
+          "focusCategories": [
+            "ui-presentation",
+            "data-layer",
+            "platform",
+            "api-layer",
+            "infrastructure"
+          ],
+          "explorationQuestions": [
+            "What UI components and design system exist?",
+            "How is application state structured in Redux/Context?",
+            "What build tools and deployment configuration are used?",
+            "Which API clients handle data fetching?",
+            "What authentication and error handling infrastructure exists?"
+          ],
+          "feedbackResponse": []
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 447
+    },
+    {
+      "id": "log-2-execution_plan-1767312316174-1767312316174",
+      "timestamp": "2026-01-02T00:05:16.174Z",
+      "cycle": 2,
+      "actor": "executor",
+      "type": "execution_plan",
+      "content": {
+        "type": "execution_plan",
+        "data": {
+          "subagents": [
+            {
+              "id": "scout-ui-components",
+              "category": "ui-presentation",
+              "focusArea": "React components and design system",
+              "task": "Identify all UI components in the design system. For each component, note: component name, props interface, styling approach (CSS modules/styled-components/etc), reusability level. Focus on shared/reusable components, not page-specific ones.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/components/**/*.jsx",
+                "src/components/**/*.js",
+                "src/ui/**/*.jsx"
+              ],
+              "excludePatterns": [
+                "src/components/customers/**/*",
+                "**/*.test.js",
+                "**/*.stories.js"
+              ]
+            },
+            {
+              "id": "scout-state-management",
+              "category": "data-layer",
+              "focusArea": "Application state structure and management",
+              "task": "Identify state management approach and structure. Look for Redux stores, Context providers, state slices, reducers, selectors. For each store/context, note: name, data shape, actions/mutations available.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/store/**/*.js",
+                "src/context/**/*.js",
+                "src/redux/**/*.js",
+                "src/state/**/*.js",
+                "src/**/reducer*.js"
+              ],
+              "excludePatterns": [
+                "**/*.test.js"
+              ]
+            },
+            {
+              "id": "scout-build-platform",
+              "category": "platform",
+              "focusArea": "Build tools and deployment configuration",
+              "task": "Identify build and deployment setup. Examine package.json scripts, webpack/vite config, build tools, environment configuration, deployment scripts. Note: bundler type, build commands, environment variables, deployment targets.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "package.json",
+                "webpack.config.js",
+                "vite.config.js",
+                "*.config.js",
+                "scripts/**/*.js",
+                ".env*",
+                "Dockerfile"
+              ],
+              "excludePatterns": [
+                "node_modules/**/*"
+              ]
+            },
+            {
+              "id": "scout-api-clients",
+              "category": "api-layer",
+              "focusArea": "Data fetching and API client modules",
+              "task": "Identify API client setup and data fetching patterns. Look for axios instances, fetch wrappers, API service modules, endpoint configurations. For each client, note: base URL setup, interceptors, error handling, request/response transformation.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/services/**/*.js",
+                "src/api/**/*.js",
+                "src/lib/**/*api*.js",
+                "src/utils/**/*fetch*.js"
+              ],
+              "excludePatterns": [
+                "**/*.test.js"
+              ]
+            },
+            {
+              "id": "scout-auth-infrastructure",
+              "category": "infrastructure",
+              "focusArea": "Authentication and error handling systems",
+              "task": "Identify authentication mechanisms and error handling infrastructure. Look for auth providers, login/logout logic, protected route components, error boundaries, global error handlers. Note: auth method (JWT/session), error handling strategy, protected route implementation.",
+              "tokenBudget": 90000,
+              "expectedOutput": "items",
+              "priorityPatterns": [
+                "src/auth/**/*.js",
+                "src/hooks/**/*auth*.js",
+                "src/components/**/*Auth*.jsx",
+                "src/utils/**/*error*.js",
+                "src/**/*ErrorBoundary*.jsx"
+              ],
+              "excludePatterns": [
+                "**/*.test.js"
+              ]
+            }
+          ],
+          "synthesisStrategy": "merge",
+          "expectedOutputs": [
+            "UI component inventory with design system structure",
+            "State management architecture and stores",
+            "Build and deployment configuration summary",
+            "API client modules and fetching patterns",
+            "Authentication and error handling infrastructure"
+          ],
+          "timeoutStrategy": "debrief"
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 800
+    },
+    {
+      "id": "log-2-discovery-1767312438489-1767312438489",
+      "timestamp": "2026-01-02T00:07:18.489Z",
+      "cycle": 2,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-state-management",
+          "category": "data-layer",
+          "discoveredItems": [
+            {
+              "name": "Redux Store Configuration",
+              "slug": "redux-store-configuration",
+              "category": "data-layer",
+              "description": "Central Redux store configured with Redux Toolkit, combining proposal, proposalViewer, and documentation reducers. Uses configureStore with serializable check middleware and dev tools.",
+              "primaryLocation": "src/store/index.js",
+              "relatedFiles": [
+                "src/store/slices/proposalSlice.js",
+                "src/store/slices/proposalViewerSlice.js",
+                "src/store/slices/documentationSlice.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Proposal Slice",
+              "slug": "proposal-slice",
+              "category": "data-layer",
+              "description": "Redux slice for proposal management with async thunks for createProposal, fetchProposalsForProject, sendProposalEmail. State shape: { proposals, currentProposal, loading, creating, sending, error }. Actions: clearError. Selectors: selectProposalCreating, selectProposalError, selectProposals, selectCurrentProposal.",
+              "primaryLocation": "src/store/slices/proposalSlice.js",
+              "relatedFiles": [
+                "src/api/proposals.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Proposal Viewer Slice",
+              "slug": "proposal-viewer-slice",
+              "category": "data-layer",
+              "description": "Redux slice for proposal viewing and approval. State shape: { proposal, selectedDeliverables, totalPrice, loading, approving, error, approvalError }. Async thunks: fetchProposalByToken, approveProposal. Actions: clearError, toggleDeliverable, resetViewer. Multiple selectors for viewer state.",
+              "primaryLocation": "src/store/slices/proposalViewerSlice.js",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "Documentation Slice",
+              "slug": "documentation-slice",
+              "category": "data-layer",
+              "description": "Redux slice for GitHub repository documentation management. State shape: { contents, contentsLoading, contentsError, files, fileLoading, fileError, fileOperationLoading, fileOperationError, lastOperation, selectedFile, currentPath, currentRepo }. Async thunks: fetchRepositoryContents, fetchFileContent, createRepositoryFile, updateRepositoryFile, deleteRepositoryFile, createRepositoryFolder. Multiple actions for clearing errors and setting selections.",
+              "primaryLocation": "src/store/slices/documentationSlice.js",
+              "relatedFiles": [
+                "src/api/github.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "AppState Context",
+              "slug": "app-state-context",
+              "category": "data-layer",
+              "description": "Central React Context using useReducer pattern. State shape includes: loading, error, user, selectedCustomer/Project/Task/Team/Product/Sale/Prospect, customerDetails, UI toggles (showFinancialActivity, showFileMakerExample, etc.), sidebarMode, products, sales, authentication { isAuthenticated, user, method }, environment { type, detectionComplete }. 30+ action types in APP_ACTIONS. Exports useAppState, useAppDispatch, useAppStateOperations hooks.",
+              "primaryLocation": "src/context/AppStateContext.jsx",
+              "relatedFiles": [],
+              "confidence": "high"
+            },
+            {
+              "name": "Team Context",
+              "slug": "team-context",
+              "category": "data-layer",
+              "description": "React Context wrapping useTeam hook. Exposes state: teams, loading, error, selectedTeam, teamStaff, teamProjects, allStaff, stats. Actions: loadTeams, loadAllStaff, handleTeamSelect/Create/Update/Delete, handleAssignStaffToTeam, handleRemoveStaffFromTeam, handleAssignProjectToTeam, handleRemoveProjectFromTeam, clearError, clearSelectedTeam.",
+              "primaryLocation": "src/context/TeamContext.jsx",
+              "relatedFiles": [
+                "src/hooks/useTeam.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Project Context",
+              "slug": "project-context",
+              "category": "data-layer",
+              "description": "React Context for FileMaker project records. Uses useState with useRef flags to prevent duplicate fetches. State shape: { projectRecords, projectContext }. Fetches records from FileMaker layout on mount using recordQueueManager. Exports useProjectRecords hook.",
+              "primaryLocation": "src/context/ProjectContext.jsx",
+              "relatedFiles": [
+                "src/services/recordQueueManager.js",
+                "src/api/index.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Marketing Context",
+              "slug": "marketing-context",
+              "category": "data-layer",
+              "description": "React Context for marketing domain management. Uses AppStateContext for dispatch. Exposes local marketingDomains array (email, youtube, linkedin, twitter). State from AppStateContext: selectedMarketingDomain/Focus/Content, showMarketing, loading, error. Actions: setSelectedMarketingDomain/Focus/Content, toggleMarketingDomainStatus, setShowMarketing.",
+              "primaryLocation": "src/context/MarketingContext.jsx",
+              "relatedFiles": [
+                "src/context/AppStateContext.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "SnackBar Context",
+              "slug": "snackbar-context",
+              "category": "ui-presentation",
+              "description": "React Context for global notification/toast management. Uses useState for notification state { message, type }. Exposes actions: showError, showSuccess, showInfo. Renders SnackBar component when notification exists.",
+              "primaryLocation": "src/context/SnackBarContext.jsx",
+              "relatedFiles": [
+                "src/components/global/SnackBar.jsx"
+              ],
+              "confidence": "high"
+            }
+          ],
+          "traces": [],
+          "confidence": 95,
+          "gaps": [],
+          "tokenUsed": 32000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 1262
+    },
+    {
+      "id": "log-2-discovery-1767312438500-1767312438500",
+      "timestamp": "2026-01-02T00:07:18.500Z",
+      "cycle": 2,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-build-platform",
+          "category": "platform",
+          "discoveredItems": [
+            {
+              "name": "Vite Build System",
+              "slug": "vite-build-system",
+              "category": "infrastructure",
+              "description": "Vite-based build system with React plugin and single-file output for FileMaker embedding",
+              "primaryLocation": "vite.config.js",
+              "relatedFiles": [
+                "package.json"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Dev server on port 1235",
+                "Single-file bundle via vite-plugin-singlefile",
+                "API proxy to backend",
+                "Inline all assets for FileMaker WebViewer deployment"
+              ]
+            },
+            {
+              "name": "NPM Scripts Configuration",
+              "slug": "npm-scripts-config",
+              "category": "infrastructure",
+              "description": "Build and deployment scripts defined in package.json for dev, build, test, and deploy operations",
+              "primaryLocation": "package.json",
+              "relatedFiles": [
+                "vite.config.js",
+                "scripts/upload.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "npm run dev",
+                "npm run build",
+                "npm run deploy-to-fm",
+                "npm test",
+                "npm run docs"
+              ]
+            },
+            {
+              "name": "FileMaker Upload Script",
+              "slug": "filemaker-upload-script",
+              "category": "infrastructure",
+              "description": "Script to upload built HTML to FileMaker server via fmp:// URL protocol",
+              "primaryLocation": "scripts/upload.js",
+              "relatedFiles": [
+                "widget.config.js",
+                "package.json"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Opens FileMaker with built index.html path",
+                "Uses widget.config.js for server settings"
+              ]
+            },
+            {
+              "name": "Widget Configuration",
+              "slug": "widget-config",
+              "category": "infrastructure",
+              "description": "FileMaker widget deployment configuration with server and upload script settings",
+              "primaryLocation": "widget.config.js",
+              "relatedFiles": [
+                "scripts/upload.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Environment Variables Config",
+              "slug": "environment-variables-config",
+              "category": "infrastructure",
+              "description": "VITE_ prefixed environment variables for Supabase, API keys, and feature flags",
+              "primaryLocation": "src/config.js",
+              "relatedFiles": [
+                ".env",
+                ".env.example"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "VITE_SUPABASE_URL",
+                "VITE_SUPABASE_ANON_KEY",
+                "VITE_SUPABASE_SERVICE_ROLE_KEY",
+                "VITE_SECRET_KEY",
+                "VITE_API_URL",
+                "VITE_SHOW_FM_API",
+                "VITE_SHOW_SPB_API",
+                "VITE_TEST_QB"
+              ]
+            },
+            {
+              "name": "Jest Test Configuration",
+              "slug": "jest-test-config",
+              "category": "infrastructure",
+              "description": "Jest testing configuration with jsdom environment and babel transform",
+              "primaryLocation": "jest.config.js",
+              "relatedFiles": [
+                "babel.config.js",
+                "package.json"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "JSDOM environment",
+                "Babel transform for JS/JSX",
+                "CSS module mocking"
+              ]
+            },
+            {
+              "name": "Babel Configuration",
+              "slug": "babel-config",
+              "category": "infrastructure",
+              "description": "Babel preset configuration for React and modern JS compilation",
+              "primaryLocation": "babel.config.js",
+              "relatedFiles": [
+                "jest.config.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "PostCSS Configuration",
+              "slug": "postcss-config",
+              "category": "infrastructure",
+              "description": "PostCSS config with Tailwind CSS and Autoprefixer plugins",
+              "primaryLocation": "postcss.config.js",
+              "relatedFiles": [
+                "tailwind.config.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "ESLint Configuration",
+              "slug": "eslint-config",
+              "category": "infrastructure",
+              "description": "ESLint flat config with React, React Hooks, and React Refresh plugins",
+              "primaryLocation": "eslint.config.js",
+              "relatedFiles": [
+                "package.json"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Rollup Docs Bundle",
+              "slug": "rollup-docs-bundle",
+              "category": "infrastructure",
+              "description": "Rollup configuration for generating documentation bundle with all source files",
+              "primaryLocation": "rollup.docs.config.js",
+              "relatedFiles": [
+                "package.json"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Non-minified bundle for docs",
+                "Bundle visualization output"
+              ]
+            },
+            {
+              "name": "CodeQL Security Analysis",
+              "slug": "codeql-security-analysis",
+              "category": "infrastructure",
+              "description": "GitHub Actions workflow for CodeQL security scanning on push and PRs to main",
+              "primaryLocation": ".github/workflows/codeql-analysis.yml",
+              "relatedFiles": [],
+              "confidence": "high",
+              "capabilities": [
+                "JavaScript code scanning",
+                "Scheduled weekly scan",
+                "PR analysis"
+              ]
+            },
+            {
+              "name": "M2M Auth Test Script",
+              "slug": "m2m-auth-test-script",
+              "category": "infrastructure",
+              "description": "Test script for HMAC-SHA256 M2M authentication with backend API",
+              "primaryLocation": "scripts/m2m-auth-test.js",
+              "relatedFiles": [
+                "src/services/dataService.js"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Financial Sync Script",
+              "slug": "financial-sync-script",
+              "category": "infrastructure",
+              "description": "Manual sync script for billing records from FileMaker to Supabase",
+              "primaryLocation": "scripts/sync-missing-records.js",
+              "relatedFiles": [
+                "src/services/financialSyncService.js"
+              ],
+              "confidence": "high"
+            }
+          ],
+          "traces": [],
+          "confidence": 95,
+          "gaps": [],
+          "tokenUsed": 25000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 1155
+    },
+    {
+      "id": "log-2-discovery-1767312438504-1767312438504",
+      "timestamp": "2026-01-02T00:07:18.504Z",
+      "cycle": 2,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-api-clients",
+          "category": "api-layer",
+          "discoveredItems": [
+            {
+              "name": "Data Service Axios Client",
+              "slug": "data-service-axios-client",
+              "category": "api-layer",
+              "description": "Environment-aware axios client with HMAC-SHA256 auth, request/response interceptors for FileMaker/WebApp routing",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [
+                "src/config.js",
+                "src/api/fileMaker.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "HMAC-SHA256 authentication",
+                "Environment detection routing",
+                "Request interceptors for auth injection",
+                "Response interceptors for FileMaker conversion",
+                "30s timeout",
+                "GET/POST/PUT/PATCH/DELETE methods"
+              ]
+            },
+            {
+              "name": "Supabase Service Client",
+              "slug": "supabase-service-client",
+              "category": "api-layer",
+              "description": "Supabase JS client with PKCE auth, session persistence, and backend API routing for CRUD operations",
+              "primaryLocation": "src/services/supabaseService.js",
+              "relatedFiles": [
+                "src/config.js",
+                "src/api/prospects.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Auto token refresh",
+                "Session persistence",
+                "PKCE auth flow",
+                "Backend API proxy for select/insert/update/delete",
+                "Admin operations with service role key"
+              ]
+            },
+            {
+              "name": "QuickBooks API Client",
+              "slug": "quickbooks-api-client",
+              "category": "integration",
+              "description": "Native fetch-based client for QuickBooks Online API with HMAC auth, org ID headers, and comprehensive error handling",
+              "primaryLocation": "src/api/quickbooksApi.js",
+              "relatedFiles": [
+                "src/config.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "HMAC-SHA256 authentication",
+                "Organization ID header injection",
+                "OAuth authorization flow",
+                "Customers/Invoices/Bills/Items/Vendors CRUD",
+                "Custom query execution",
+                "Webhook management"
+              ]
+            },
+            {
+              "name": "FileMaker Bridge Client",
+              "slug": "filemaker-bridge-client",
+              "category": "integration",
+              "description": "Dual-mode client supporting both FM-Gofer bridge (WebViewer) and backend API with axios for web app environment",
+              "primaryLocation": "src/api/fileMaker.js",
+              "relatedFiles": [
+                "src/services/dataService.js",
+                "src/api/customers.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Environment auto-detection",
+                "FileMaker script execution via FMGofer",
+                "Backend API fallback for web app",
+                "HMAC-SHA256 authentication",
+                "Layout-based CRUD operations"
+              ]
+            },
+            {
+              "name": "Proposal Extended API Client",
+              "slug": "proposal-extended-api-client",
+              "category": "api-layer",
+              "description": "Axios-based API client for proposal system with HMAC auth, standardized error handling, and success/failure response wrapper",
+              "primaryLocation": "src/api/proposalExtended.js",
+              "relatedFiles": [
+                "src/config.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "HMAC-SHA256 authentication",
+                "Requirements/Packages/Deliverables/Requests CRUD",
+                "Bulk operations",
+                "Complete proposal data fetching"
+              ]
+            },
+            {
+              "name": "Mailjet Email API Client",
+              "slug": "mailjet-email-api-client",
+              "category": "integration",
+              "description": "Axios-based email sending client through backend API with validation and HMAC authentication",
+              "primaryLocation": "src/api/mailjet.js",
+              "relatedFiles": [
+                "src/config.js",
+                "src/api/fileMaker.js",
+                "src/utils/validation.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Email validation",
+                "HTML/text email support",
+                "HMAC authentication via fileMaker module",
+                "Error handling with detailed messages"
+              ]
+            },
+            {
+              "name": "GitHub API Client",
+              "slug": "github-api-client",
+              "category": "integration",
+              "description": "Minimal client using dataService for repository operations with HMAC auth inherited from data service",
+              "primaryLocation": "src/api/github.js",
+              "relatedFiles": [
+                "src/services/dataService.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Repository validation/creation",
+                "Template-based repo creation",
+                "File/folder CRUD operations",
+                "Content retrieval"
+              ]
+            },
+            {
+              "name": "Prospects Supabase Client",
+              "slug": "prospects-supabase-client",
+              "category": "api-layer",
+              "description": "Direct Supabase JS client for prospects with normalized data structure across customers/email/phone/address tables",
+              "primaryLocation": "src/api/prospects.js",
+              "relatedFiles": [
+                "src/config.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Direct Supabase queries",
+                "Normalized data joins",
+                "Client-side UUID generation",
+                "Rollback on partial failure"
+              ]
+            },
+            {
+              "name": "Backend Config",
+              "slug": "backend-api-config",
+              "category": "infrastructure",
+              "description": "Centralized backend API configuration with base URLs for main API, FileMaker, and QuickBooks endpoints",
+              "primaryLocation": "src/config.js",
+              "relatedFiles": [
+                "src/services/dataService.js",
+                "src/api/quickbooksApi.js",
+                "src/api/proposalExtended.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Base URL: https://api.claritybusinesssolutions.ca",
+                "FileMaker API URL",
+                "QuickBooks API URL"
+              ]
+            },
+            {
+              "name": "HMAC Auth Header Generator",
+              "slug": "hmac-auth-header-generator",
+              "category": "infrastructure",
+              "description": "Web Crypto API-based HMAC-SHA256 signature generator for backend authentication, duplicated across multiple modules",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [
+                "src/api/fileMaker.js",
+                "src/api/quickbooksApi.js",
+                "src/api/proposalExtended.js",
+                "src/services/supabaseService.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Timestamp-based message signing",
+                "Fallback for missing secret key",
+                "Fallback for unavailable Web Crypto API",
+                "Bearer token format: signature.timestamp"
+              ]
+            }
+          ],
+          "traces": [],
+          "confidence": 95,
+          "gaps": [],
+          "tokenUsed": 45000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 1310
+    },
+    {
+      "id": "log-2-discovery-1767312438510-1767312438510",
+      "timestamp": "2026-01-02T00:07:18.510Z",
+      "cycle": 2,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-auth-infrastructure",
+          "category": "infrastructure",
+          "discoveredItems": [
+            {
+              "name": "ErrorBoundary Component",
+              "slug": "error-boundary-component",
+              "category": "infrastructure",
+              "description": "React class-based error boundary that catches component errors, shows fallback UI with retry button, integrates with loadingStateManager and SnackBarContext for non-critical error handling",
+              "primaryLocation": "src/components/ErrorBoundary.jsx",
+              "relatedFiles": [
+                "src/services/loadingStateManager.js",
+                "src/context/AppStateContext.jsx",
+                "src/context/SnackBarContext.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Catch React component errors",
+                "Display fallback UI with error message",
+                "Retry functionality via resetState",
+                "Non-critical errors shown in SnackBar"
+              ]
+            },
+            {
+              "name": "SignIn Authentication Component",
+              "slug": "signin-auth-component",
+              "category": "user-capability",
+              "description": "Dual-environment authentication component that auto-detects FileMaker environment (via window.FMGofer/FileMaker) or presents Supabase email/password login form for web app",
+              "primaryLocation": "src/components/auth/SignIn.jsx",
+              "relatedFiles": [
+                "src/services/supabaseService.js",
+                "src/index.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "FileMaker environment detection",
+                "Supabase email/password authentication",
+                "Environment callback notifications"
+              ]
+            },
+            {
+              "name": "Supabase Auth Functions",
+              "slug": "supabase-auth-functions",
+              "category": "api-layer",
+              "description": "Authentication functions using Supabase client: signInWithPassword, signOut, getSession. Uses PKCE flow with auto-refresh tokens and persistent sessions",
+              "primaryLocation": "src/services/supabaseService.js",
+              "relatedFiles": [
+                "src/config/index.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Email/password sign-in",
+                "Sign out",
+                "Session retrieval",
+                "PKCE auth flow"
+              ]
+            },
+            {
+              "name": "HMAC Backend Auth Header Generator",
+              "slug": "hmac-backend-auth",
+              "category": "api-layer",
+              "description": "Generates HMAC-SHA256 authentication headers for backend API requests using Web Crypto API. Format: Bearer {signature}.{timestamp}",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [
+                "src/services/supabaseService.js"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "HMAC-SHA256 signature generation",
+                "Timestamp-based auth",
+                "Fallback for missing crypto API"
+              ]
+            },
+            {
+              "name": "Environment Types Constants",
+              "slug": "environment-types-constants",
+              "category": "infrastructure",
+              "description": "Constants defining dual environment types (FILEMAKER, WEBAPP) and authentication methods (FILEMAKER, SUPABASE) for environment-aware routing",
+              "primaryLocation": "src/services/dataService.js",
+              "relatedFiles": [
+                "src/index.jsx",
+                "src/context/AppStateContext.jsx"
+              ],
+              "confidence": "high"
+            },
+            {
+              "name": "Authentication State Management",
+              "slug": "auth-state-management",
+              "category": "data-layer",
+              "description": "AppStateContext manages authentication state with isAuthenticated, user, and method fields. Includes setAuthentication and resetState actions for auth flow",
+              "primaryLocation": "src/context/AppStateContext.jsx",
+              "relatedFiles": [
+                "src/index.jsx",
+                "src/components/auth/SignIn.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Track isAuthenticated state",
+                "Store user object",
+                "Track auth method (filemaker/supabase)",
+                "Reset state for logout"
+              ]
+            },
+            {
+              "name": "SnackBar Error Notification System",
+              "slug": "snackbar-error-notifications",
+              "category": "ui-presentation",
+              "description": "Context-based notification system providing showError, showSuccess, showInfo functions for displaying global toast notifications via SnackBar component",
+              "primaryLocation": "src/context/SnackBarContext.jsx",
+              "relatedFiles": [
+                "src/components/global/SnackBar.jsx",
+                "src/components/ErrorBoundary.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Show error notifications",
+                "Show success notifications",
+                "Show info notifications",
+                "Auto-dismiss notifications"
+              ]
+            },
+            {
+              "name": "TopNav Logout Handler",
+              "slug": "topnav-logout-handler",
+              "category": "user-capability",
+              "description": "Logout functionality in TopNav component that resets application state via resetState and reloads page for clean auth state",
+              "primaryLocation": "src/components/layout/TopNav.jsx",
+              "relatedFiles": [
+                "src/context/AppStateContext.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Clear application state",
+                "Return to login screen"
+              ]
+            },
+            {
+              "name": "Loading State Manager",
+              "slug": "loading-state-manager",
+              "category": "infrastructure",
+              "description": "Singleton class managing global loading states with key-based tracking, message support, and listener subscription pattern for UI synchronization",
+              "primaryLocation": "src/services/loadingStateManager.js",
+              "relatedFiles": [
+                "src/components/ErrorBoundary.jsx",
+                "src/index.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Track multiple loading states by key",
+                "Global loading state aggregation",
+                "Subscriber notification pattern",
+                "Clear all states on error recovery"
+              ]
+            },
+            {
+              "name": "Authentication Gate Pattern",
+              "slug": "auth-gate-pattern",
+              "category": "infrastructure",
+              "description": "In index.jsx, app renders SignIn component when !isAuthenticated, preventing access to main content. Acts as route protection without dedicated ProtectedRoute component",
+              "primaryLocation": "src/index.jsx",
+              "relatedFiles": [
+                "src/components/auth/SignIn.jsx",
+                "src/context/AppStateContext.jsx"
+              ],
+              "confidence": "high",
+              "capabilities": [
+                "Gate all app content behind auth",
+                "Conditional SignIn rendering"
+              ]
+            }
+          ],
+          "traces": [],
+          "confidence": 92,
+          "gaps": [],
+          "tokenUsed": 28000,
+          "timedOut": false
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 1335
+    },
+    {
+      "id": "log-2-discovery-1767312438517-1767312438517",
+      "timestamp": "2026-01-02T00:07:18.517Z",
+      "cycle": 2,
+      "actor": "subagent",
+      "type": "discovery",
+      "content": {
+        "type": "discovery",
+        "data": {
+          "subagentId": "scout-ui-components",
+          "category": "ui-presentation",
+          "discoveredItems": [],
+          "confidence": 0,
+          "gaps": [
+            "Error: Killed due to budget exceeded"
+          ],
+          "tokenUsed": 0,
+          "timedOut": false,
+          "partialReason": "Killed due to budget exceeded"
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 64
+    },
+    {
+      "id": "log-2-synthesis-1767312489890-1767312489890",
+      "timestamp": "2026-01-02T00:08:09.890Z",
+      "cycle": 2,
+      "actor": "executor",
+      "type": "synthesis",
+      "content": {
+        "type": "synthesis",
+        "data": {
+          "cycleNumber": 2,
+          "confirmedFeatures": [],
+          "pendingItems": [],
+          "conflicts": [],
+          "confidenceUpdate": {},
+          "nextCycleSuggestions": [
+            "Retry synthesis with more focused subagents"
+          ]
+        }
+      },
+      "condensation": "full",
+      "tokenEstimate": 49
+    }
+  ],
+  "logIndex": {
+    "byCycle": {
+      "0": [
+        "log-0-plan-1767311847899-1767311847899",
+        "log-0-execution_plan-1767311861923-1767311861923",
+        "log-0-discovery-1767312021317-1767312021317",
+        "log-0-discovery-1767312021331-1767312021331",
+        "log-0-discovery-1767312021337-1767312021337",
+        "log-0-discovery-1767312021343-1767312021343",
+        "log-0-synthesis-1767312076429-1767312076429"
+      ],
+      "1": [
+        "log-1-plan-1767312086533-1767312086533",
+        "log-1-execution_plan-1767312100052-1767312100052",
+        "log-1-discovery-1767312237694-1767312237694",
+        "log-1-discovery-1767312237703-1767312237703",
+        "log-1-discovery-1767312237708-1767312237708",
+        "log-1-discovery-1767312237714-1767312237714",
+        "log-1-synthesis-1767312286973-1767312286973"
+      ],
+      "2": [
+        "log-2-plan-1767312297706-1767312297706",
+        "log-2-execution_plan-1767312316174-1767312316174",
+        "log-2-discovery-1767312438489-1767312438489",
+        "log-2-discovery-1767312438500-1767312438500",
+        "log-2-discovery-1767312438504-1767312438504",
+        "log-2-discovery-1767312438510-1767312438510",
+        "log-2-discovery-1767312438517-1767312438517",
+        "log-2-synthesis-1767312489890-1767312489890"
+      ]
+    },
+    "byType": {
+      "plan": [
+        "log-0-plan-1767311847899-1767311847899",
+        "log-1-plan-1767312086533-1767312086533",
+        "log-2-plan-1767312297706-1767312297706"
+      ],
+      "execution_plan": [
+        "log-0-execution_plan-1767311861923-1767311861923",
+        "log-1-execution_plan-1767312100052-1767312100052",
+        "log-2-execution_plan-1767312316174-1767312316174"
+      ],
+      "discovery": [
+        "log-0-discovery-1767312021317-1767312021317",
+        "log-0-discovery-1767312021331-1767312021331",
+        "log-0-discovery-1767312021337-1767312021337",
+        "log-0-discovery-1767312021343-1767312021343",
+        "log-1-discovery-1767312237694-1767312237694",
+        "log-1-discovery-1767312237703-1767312237703",
+        "log-1-discovery-1767312237708-1767312237708",
+        "log-1-discovery-1767312237714-1767312237714",
+        "log-2-discovery-1767312438489-1767312438489",
+        "log-2-discovery-1767312438500-1767312438500",
+        "log-2-discovery-1767312438504-1767312438504",
+        "log-2-discovery-1767312438510-1767312438510",
+        "log-2-discovery-1767312438517-1767312438517"
+      ],
+      "synthesis": [
+        "log-0-synthesis-1767312076429-1767312076429",
+        "log-1-synthesis-1767312286973-1767312286973",
+        "log-2-synthesis-1767312489890-1767312489890"
+      ],
+      "consolidation": [],
+      "debrief": [],
+      "user_feedback": [],
+      "error": [],
+      "progress": []
+    },
+    "byActor": {
+      "planner": [
+        "log-0-plan-1767311847899-1767311847899",
+        "log-1-plan-1767312086533-1767312086533",
+        "log-2-plan-1767312297706-1767312297706"
+      ],
+      "executor": [
+        "log-0-execution_plan-1767311861923-1767311861923",
+        "log-0-synthesis-1767312076429-1767312076429",
+        "log-1-execution_plan-1767312100052-1767312100052",
+        "log-1-synthesis-1767312286973-1767312286973",
+        "log-2-execution_plan-1767312316174-1767312316174",
+        "log-2-synthesis-1767312489890-1767312489890"
+      ],
+      "subagent": [
+        "log-0-discovery-1767312021317-1767312021317",
+        "log-0-discovery-1767312021331-1767312021331",
+        "log-0-discovery-1767312021337-1767312021337",
+        "log-0-discovery-1767312021343-1767312021343",
+        "log-1-discovery-1767312237694-1767312237694",
+        "log-1-discovery-1767312237703-1767312237703",
+        "log-1-discovery-1767312237708-1767312237708",
+        "log-1-discovery-1767312237714-1767312237714",
+        "log-2-discovery-1767312438489-1767312438489",
+        "log-2-discovery-1767312438500-1767312438500",
+        "log-2-discovery-1767312438504-1767312438504",
+        "log-2-discovery-1767312438510-1767312438510",
+        "log-2-discovery-1767312438517-1767312438517"
+      ],
+      "system": [],
+      "user": []
+    }
+  },
+  "currentResults": {
+    "features": [
+      {
+        "name": "Tailwind CSS Framework",
+        "slug": "tailwind-css-framework",
+        "category": "ui-presentation",
+        "description": "Primary styling framework using utility-first CSS classes with dark mode support via dark: prefix",
+        "capabilities": [
+          "Style components",
+          "Dark mode theming",
+          "Responsive design"
+        ],
+        "actors": [
+          "Developer"
+        ],
+        "primaryDirectory": "package.json",
+        "services": [],
+        "dataTouched": [],
+        "dependencies": [],
+        "completeness": {
+          "status": "functional",
+          "score": 100,
+          "gaps": []
+        },
+        "traceDepth": {
+          "level": "shallow",
+          "filesRead": 1,
+          "flowsMapped": 0,
+          "capabilitiesTraced": 3,
+          "capabilitiesTotal": 3,
+          "confidence": "high",
+          "notes": "Found in package.json with extensive usage across components"
+        }
+      },
+      {
+        "name": "Styled Components Library",
+        "slug": "styled-components-library",
+        "category": "ui-presentation",
+        "description": "CSS-in-JS library for component-level theming, primarily used in proposal components",
+        "capabilities": [
+          "Component styling",
+          "Theme integration",
+          "Dynamic styling"
+        ],
+        "actors": [
+          "Developer"
+        ],
+        "primaryDirectory": "package.json",
+        "services": [],
+        "dataTouched": [],
+        "dependencies": [
+          "theme-configuration"
+        ],
+        "completeness": {
+          "status": "functional",
+          "score": 90,
+          "gaps": []
+        },
+        "traceDepth": {
+          "level": "shallow",
+          "filesRead": 2,
+          "flowsMapped": 1,
+          "capabilitiesTraced": 3,
+          "capabilitiesTotal": 3,
+          "confidence": "high",
+          "notes": "Used with ThemeProvider integration"
+        }
+      },
+      {
+        "name": "Theme Configuration",
+        "slug": "theme-configuration",
+        "category": "ui-presentation",
+        "description": "Light and dark theme objects with colors, shadows, radius, and transitions for styled-components",
+        "capabilities": [
+          "Define theme colors",
+          "Configure shadows and radius",
+          "Set transitions"
+        ],
+        "actors": [
+          "System"
+        ],
+        "primaryDirectory": "src",
+        "services": [],
+        "dataTouched": [],
+        "dependencies": [],
+        "completeness": {
+          "status": "functional",
+          "score": 95,
+          "gaps": []
+        },
+        "traceDepth": {
+          "level": "deep",
+          "filesRead": 1,
+          "flowsMapped": 1,
+          "capabilitiesTraced": 3,
+          "capabilitiesTotal": 3,
+          "confidence": "high",
+          "notes": "Complete theme definition in src/theme.js"
+        }
+      },
+      {
+        "name": "Application Layout System",
+        "slug": "app-layout-system",
+        "category": "ui-presentation",
+        "description": "Complete layout system including AppLayout, Sidebar, TopNav, and MainContent components",
+        "capabilities": [
+          "Navigation",
+          "Mode switching",
+          "Dark mode toggle",
+          "Content routing"
+        ],
+        "actors": [
+          "User",
+          "System"
+        ],
+        "primaryDirectory": "src/components/layout",
+        "services": [
+          "ThemeProvider"
+        ],
+        "dataTouched": [
+          "user info",
+          "navigation state"
+        ],
+        "dependencies": [
+          "theme-configuration"
+        ],
+        "completeness": {
+          "status": "functional",
+          "score": 95,
+          "gaps": []
+        },
+        "traceDepth": {
+          "level": "deep",
+          "filesRead": 4,
+          "flowsMapped": 3,
+          "capabilitiesTraced": 4,
+          "capabilitiesTotal": 4,
+          "confidence": "high",
+          "notes": "Comprehensive layout system with AppLayout, Sidebar, TopNav, MainContent"
+        }
+      },
+      {
+        "name": "Global UI Components",
+        "slug": "global-ui-components",
+        "category": "ui-presentation",
+        "description": "Collection of reusable UI components including TextInput, SnackBar, LoadingSpinner, ProgressBar, and ErrorBoundary",
+        "capabilities": [
+          "User input",
+          "Notifications",
+          "Loading states",
+          "Error handling",
+          "Progress indication"
+        ],
+        "actors": [
+          "User",
+          "System"
+        ],
+        "primaryDirectory": "src/components/global",
+        "services": [],
+        "dataTouched": [],
+        "dependencies": [
+          "tailwind-css-framework"
+        ],
+        "completeness": {
+          "status": "functional",
+          "score": 90,
+          "gaps": []
+        },
+        "traceDepth": {
+          "level": "shallow",
+          "filesRead": 5,
+          "flowsMapped": 0,
+          "capabilitiesTraced": 5,
+          "capabilitiesTotal": 5,
+          "confidence": "high",
+          "notes": "Complete set of global UI components with dark mode support"
+        }
+      },
+      {
+        "name": "Environment-Aware Data Service",
+        "slug": "environment-aware-data-service",
+        "category": "api-layer",
+        "description": "Environment-aware data service that routes requests based on current environment (FileMaker vs Web App) with HMAC-SHA256 authentication",
+        "capabilities": [
+          "Route API requests",
+          "HMAC authentication",
+          "Environment detection"
+        ],
+        "actors": [
+          "System"
+        ],
+        "primaryDirectory": "src/services",
+        "services": [
+          "axios"
+        ],
+        "dataTouched": [
+          "API requests"
+        ],
+        "dependencies": [],
+        "completeness": {
+          "status": "functional",
+          "score": 95,
+          "gaps": []
+        },
+        "traceDepth": {
+          "level": "deep",
+          "filesRead": 2,
+          "flowsMapped": 2,
+          "capabilitiesTraced": 3,
+          "capabilitiesTotal": 3,
+          "confidence": "high",
+          "notes": "Central data service with axios interceptors and HMAC auth"
+        }
+      },
+      {
+        "name": "Backend API Configuration",
+        "slug": "backend-config",
+        "category": "api-layer",
+        "description": "Central configuration for backend API base URLs including main API, FileMaker API, and QuickBooks API endpoints",
+        "capabilities": [
+          "Configure API endpoints",
+          "Environment routing"
+        ],
+        "actors": [
+          "System"
+        ],
+        "primaryDirectory": "src",
+        "services": [],
+        "dataTouched": [],
+        "dependencies": [],
+        "completeness": {
+          "status": "functional",
+          "score": 100,
+          "gaps": []
+        },
+        "traceDepth": {
+          "level": "shallow",
+          "filesRead": 1,
+          "flowsMapped": 0,
+          "capabilitiesTraced": 2,
+          "capabilitiesTotal": 2,
+          "confidence": "high",
+          "notes": "Configuration in src/config.js"
+        }
+      },
+      {
+        "name": "Domain-Specific API Clients",
+        "slug": "domain-api-clients",
+        "category": "api-layer",
+        "description": "Collection of specialized API clients for FileMaker, QuickBooks, Supabase, Proposals, Marketing, and Prospects",
+        "capabilities": [
+          "FileMaker operations",
+          "QuickBooks integration",
+          "Proposal management",
+          "Marketing operations",
+          "Prospect handling"
+        ],
+        "actors": [
+          "System"
+        ],
+        "primaryDirectory": "src/api",
+        "services": [
+          "axios",
+          "fetch",
+          "supabase"
+        ],
+        "dataTouched": [
+          "customers",
+          "projects",
+          "tasks",
+          "proposals",
+          "financial records"
+        ],
+        "dependencies": [
+          "environment-aware-data-service",
+          "backend-config"
+        ],
+        "completeness": {
+          "status": "functional",
+          "score": 90,
+          "gaps": [
+            "Some API clients use deprecated patterns"
+          ]
+        },
+        "traceDepth": {
+          "level": "deep",
+          "filesRead": 8,
+          "flowsMapped": 5,
+          "capabilitiesTraced": 5,
+          "capabilitiesTotal": 5,
+          "confidence": "high",
+          "notes": "Comprehensive API layer with consistent error handling patterns"
+        }
+      },
+      {
+        "name": "Redux Toolkit State Management",
+        "slug": "redux-toolkit-state",
+        "category": "data-layer",
+        "description": "Redux Toolkit store with slices for proposals, proposal viewer, and documentation management",
+        "capabilities": [
+          "Proposal CRUD",
+          "Proposal viewing workflow",
+          "Documentation management",
+          "State persistence"
+        ],
+        "actors": [
+          "System"
+        ],
+        "primaryDirectory": "src/store",
+        "services": [
+          "Redux Toolkit",
+          "react-redux"
+        ],
+        "dataTouched": [
+          "proposals",
+          "documentation",
+          "deliverables"
+        ],
+        "dependencies": [],
+        "completeness": {
+          "status": "functional",
+          "score": 90,
+          "gaps": []
+        },
+        "traceDepth": {
+          "level": "deep",
+          "filesRead": 4,
+          "flowsMapped": 3,
+          "capabilitiesTraced": 4,
+          "capabilitiesTotal": 4,
+          "confidence": "high",
+          "notes": "Complete Redux setup with async thunks and proper slice structure"
+        }
+      },
+      {
+        "name": "React Context State Management",
+        "slug": "react-context-state",
+        "category": "data-layer",
+        "description": "Collection of React Contexts for app state, teams, projects, marketing, and notifications",
+        "capabilities": [
+          "App-wide state",
+          "Team management",
+          "Project context",
+          "Marketing state",
+          "Global notifications"
+        ],
+        "actors": [
+          "System"
+        ],
+        "primaryDirectory": "src/context",
+        "services": [
+          "React Context",
+          "useReducer",
+          "useState"
+        ],
+        "dataTouched": [
+          "user data",
+          "teams",
+          "projects",
+          "marketing campaigns",
+          "notifications"
+        ],
+        "dependencies": [],
+        "completeness": {
+          "status": "functional",
+          "score": 85,
+          "gaps": [
+            "Some contexts have overlapping responsibilities"
+          ]
+        },
+        "traceDepth": {
+          "level": "deep",
+          "filesRead": 5,
+          "flowsMapped": 2,
+          "capabilitiesTraced": 5,
+          "capabilitiesTotal": 5,
+          "confidence": "high",
+          "notes": "Comprehensive context system with AppStateContext as central hub"
+        }
+      },
+      {
+        "name": "Dual-Environment Authentication",
+        "slug": "dual-environment-auth",
+        "category": "infrastructure",
+        "description": "Authentication system supporting both FileMaker bridge and Supabase email/password authentication",
+        "capabilities": [
+          "FileMaker bridge auth",
+          "Supabase email auth",
+          "Environment detection",
+          "Session management"
+        ],
+        "actors": [
+          "User",
+          "System"
+        ],
+        "primaryDirectory": "src/components/auth",
+        "services": [
+          "Supabase",
+          "FileMaker"
+        ],
+        "dataTouched": [
+          "user credentials",
+          "session state"
+        ],
+        "dependencies": [
+          "environment-aware-data-service"
+        ],
+        "completeness": {
+          "status": "functional",
+          "score": 90,
+          "gaps": []
+        },
+        "traceDepth": {
+          "level": "deep",
+          "filesRead": 5,
+          "flowsMapped": 2,
+          "capabilitiesTraced": 4,
+          "capabilitiesTotal": 4,
+          "confidence": "high",
+          "notes": "Complete authentication flow with environment-aware routing"
+        }
+      },
+      {
+        "name": "Application Routing and Protection",
+        "slug": "app-routing-protection",
+        "category": "infrastructure",
+        "description": "Application entry point with authentication gates and conditional content rendering",
+        "capabilities": [
+          "Route protection",
+          "Authentication gates",
+          "Content switching",
+          "View routing"
+        ],
+        "actors": [
+          "System"
+        ],
+        "primaryDirectory": "src",
+        "services": [
+          "React Router"
+        ],
+        "dataTouched": [
+          "authentication state",
+          "route state"
+        ],
+        "dependencies": [
+          "dual-environment-auth"
+        ],
+        "completeness": {
+          "status": "functional",
+          "score": 85,
+          "gaps": [
+            "Complex conditional rendering could be simplified"
+          ]
+        },
+        "traceDepth": {
+          "level": "deep",
+          "filesRead": 3,
+          "flowsMapped": 2,
+          "capabilitiesTraced": 4,
+          "capabilitiesTotal": 4,
+          "confidence": "high",
+          "notes": "Authentication protection with view routing in MainContent"
+        }
+      }
+    ],
+    "confidenceByCategory": {
+      "ui-presentation": 95,
+      "api-layer": 95,
+      "data-layer": 95,
+      "infrastructure": 95
+    },
+    "overallConfidence": 95
+  },
+  "pendingFeedback": [],
+  "contextBudget": {
+    "maxCycleTokens": 10000000,
+    "maxSubagentTokens": 90000,
+    "currentCycleUsed": 0,
+    "totalUsed": 26057
+  },
+  "activeSubagents": [],
+  "startedAt": "2026-01-01T23:57:18.297Z",
+  "lastUpdatedAt": "2026-01-02T00:08:09.904Z"
+}

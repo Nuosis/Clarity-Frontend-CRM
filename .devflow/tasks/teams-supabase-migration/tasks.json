@@ -1,0 +1,104 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-10T00:00:00Z",
+  "feature": {
+    "name": "Teams Supabase Migration",
+    "slug": "teams-supabase-migration",
+    "description": "Migrate Teams feature from FileMaker to Supabase-backed architecture with backend API support",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "DO NOT directly modify backend infrastructure - create backend change requests instead",
+    "All database schema changes require BACKEND_CHANGE_REQUEST document",
+    "Maintain data integrity - no data loss during migration",
+    "All operations must be scoped to user's organization",
+    "Follow existing project patterns for API/service/hook structure"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Create requirements documentation",
+      "description": "Document current Teams feature, FileMaker usage, data model, and migration requirements under requirements/teams/",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0002",
+      "title": "Create backend change request document",
+      "description": "Create BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md with database schema, API endpoints, authorization requirements, and migration approach",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0003",
+      "title": "Wait for backend implementation",
+      "description": "Backend team implements database schema (teams, staff, team_members tables, projects.team_id column) and API endpoints",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0004",
+      "title": "Create data migration script",
+      "description": "Build script to migrate teams, staff, and team_members data from FileMaker to Supabase, preserving all relationships",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0005",
+      "title": "Refactor src/api/teams.js",
+      "description": "Replace all FileMaker API calls with Backend API endpoints, update error handling to use HTTP patterns",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0006",
+      "title": "Update src/services/teamService.js",
+      "description": "Update data processing functions to handle Backend API response format instead of FileMaker fieldData structure",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0007",
+      "title": "Verify src/hooks/useTeam.js compatibility",
+      "description": "Test and update useTeam hook to ensure it works correctly with new API responses, update state management if needed",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0008",
+      "title": "Test team components",
+      "description": "Verify TeamDetails.jsx and TeamForm.jsx work correctly with new backend, update data format handling if needed",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "TSK0009",
+      "title": "Execute data migration",
+      "description": "Run migration script to transfer all team data from FileMaker to Supabase, validate record counts and relationships",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0010",
+      "title": "Create migration validation script",
+      "description": "Build script to compare FileMaker and Supabase data, verify all teams, staff, and memberships migrated correctly",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0011",
+      "title": "Integration testing",
+      "description": "Test complete team workflows: create team, add staff, assign projects, update, delete. Verify all CRUD operations work end-to-end",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "TSK0012",
+      "title": "Update documentation",
+      "description": "Update CLAUDE.md and other docs to reflect Supabase-backed teams implementation, remove FileMaker references from teams section",
+      "status": "pending",
+      "priority": "low"
+    }
+  ]
+}
