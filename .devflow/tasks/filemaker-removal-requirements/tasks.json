@@ -20,7 +20,7 @@
       "id": "TSK0001",
       "title": "Create README.md with architecture overview",
       "description": "Document current environment detection and routing architecture. Cover ENVIRONMENT_TYPES, AUTH_METHODS, setEnvironmentContext, and how requests flow differently in FileMaker vs Web App modes.",
-      "status": "in_progress",
+      "status": "done",
       "priority": "high",
       "files": [
         "requirements/platform-filemaker-removal/README.md"
@@ -30,14 +30,16 @@
         "src/services/dataService.js:43-54",
         "src/components/auth/SignIn.jsx:24-66"
       ],
-      "executionPid": 57703,
-      "sessionId": "63c93d29-92a2-488c-9a68-a611048ae8a6"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented comprehensive documentation of the current environment detection and routing architecture by adding '/requirements/platform-filemaker-removal/ENVIRONMENT_DETECTION_AND_ROUTING_ARCHITECTURE.md'. The doc captures the end-to-end initialization and request routing flow across FileMaker and WebApp environments, including detailed file and line references for key logic in 'SignIn.jsx', 'dataService.js', and the FileMaker bridge wrapper. It also records key decisions and implications for migration, emphasizing centralized routing via axios interceptors, UI-layer transparency, and a phased path to move API usage from FileMaker-first wrappers to 'dataService' calls."
     },
     {
       "id": "TSK0002",
       "title": "Document current architecture in architecture.md",
       "description": "Create detailed architectural documentation showing how FileMaker bridge works, including FMGofer usage, window.FileMaker detection, axios interceptors, and the convertToFileMakerCall function.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "files": [
         "requirements/platform-filemaker-removal/architecture.md"
@@ -46,7 +48,11 @@
         "src/api/fileMaker.js:1-501",
         "src/services/dataService.js:108-161",
         "src/services/dataService.js:176-216"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive architectural documentation at requirements/platform-filemaker-removal/architecture.md covering: 1) Bridge initialization via message events and FMGofer library, 2) Environment detection in SignIn component with 3-second polling, 3) Global environment context management, 4) Request/response axios interceptors for transparent routing, 5) convertToFileMakerCall transformation function, 6) HMAC-SHA256 authentication for backend, 7) useFileMakerBridge hook with retry logic, 8) Legacy API pattern using FileMaker params, 9) Complete request flows for FileMaker, Web App, and Modern paths, 10) Backend translation layer mapping FileMaker actions to HTTP, 11) Complete file reference map with line numbers. Documentation includes detailed code examples, flow diagrams, mapping tables, and implications for Phase 2 removal. All references verified against actual codebase with specific line numbers."
     },
     {
       "id": "TSK0003",
