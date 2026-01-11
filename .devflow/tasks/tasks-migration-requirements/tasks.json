@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-10T19:45:00Z",
+  "updated_at": "2026-01-10T22:30:00Z",
   "feature": {
     "name": "Tasks Migration Requirements",
     "slug": "tasks-migration-requirements",
@@ -67,14 +67,20 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive documentation of financial record generation triggered by timer stop operations. Created '.devflow/tasks/tasks-migration-requirements/FINANCIAL_RECORD_GENERATION.md' with complete coverage of: (1) Architecture overview with system component diagram, (2) Step-by-step financial record creation flow from timer stop through FileMaker API calls, (3) Fixed-price project detection logic with field mapping and business rules, (4) Customer sales record creation including product name formatting (capital letters + numbers format), customer lookup/creation with organization linking, (5) Dual-write orchestration pattern with withDualWrite wrapper and timer-specific handler, (6) Complete field mappings between FileMaker devRecords and Supabase customer_sales table, (7) Migration strategy with 3 phases (dual-write, Supabase-primary, FileMaker read-only), (8) Edge cases and error scenarios (missing org ID, duplicate financial_id, customer not synced), (9) Reconciliation strategy for data consistency, and (10) Two complete example flows comparing hourly vs fixed-price project behavior. Verified Supabase customer_sales table schema via SSH database query showing UNIQUE constraint on financial_id, foreign key constraints, and complete column structure. Updated '.devflow/tasks/tasks.json' to mark TSK0004 complete with detailed completion notes and metadata. No backend or implementation code changes - documentation only."
+      "implementation_notes": "Implemented comprehensive documentation for the timer stop to financial record generation flow, covering fixed-price project detection, customer_sales insertion logic, and dual-write orchestration from FileMaker to Supabase. Added the new doc at '.devflow/tasks/tasks-migration-requirements/FINANCIAL_RECORD_GENERATION.md' and referenced key logic across 'taskService.js', 'salesService.js', 'dualWriteService.js', and 'financialRecords.js' with specific line ranges, including the decision to skip sales creation when 'customers_Projects::f_fixedPrice' is set. Verified the Supabase 'customer_sales' table schema via SSH, confirmed tasks JSON validity, and ensured the project build still passes, with the important decision noted that this was documentation-only with no runtime code changes."
     },
     {
       "id": "TSK0005",
       "title": "Map FileMaker devTasks layout to Supabase schema",
       "description": "Verify if Supabase tasks table exists, document FileMaker devTasks field structure, and create mapping to target Supabase schema including field types, constraints, and indexes",
-      "status": "queued",
-      "priority": "high"
+      "status": "done",
+      "priority": "high",
+      "completed_at": "2026-01-10T22:30:00Z",
+      "completion_notes": "Verified Supabase tasks table does NOT exist (only automation-related tables: tasks_scheduled, tasks_paused, task_dependencies, task_executions, task_state_transitions, task_templates, task_execution_steps, task_rollback_actions). Created comprehensive FILEMAKER_DEVTASKS_MAPPING_SUMMARY.md documentation covering FileMaker devTasks layout field structure (__ID, _projectID, _staffID, task, type, f_completed, notes, DateCreated, DateModified), complete field-by-field mapping to proposed Supabase tasks table schema with UUID primary keys, foreign key relationships, indexes, constraints, triggers, and migration strategy. Documented data type conversions (boolean 0/1 to true/false, MM/DD/YYYY to ISO 8601 timestamps, FileMaker IDs to UUIDs via filemaker_id_mappings), all required indexes for performance (project_id, staff_id, organization_id, is_completed, status), constraints (NOT NULL, CHECK, FK cascades), and triggers (updated_at auto-update, actual_hours rollup from time_entries). Includes complete transformation examples, API integration points, and verification checklist with backend team requirements. Build verified successfully.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive mapping documentation for FileMaker devTasks to Supabase tasks schema, delivered in 'requirements/tasks/FILEMAKER_DEVTASKS_MAPPING_SUMMARY.md'. Verified via SSH that Supabase tasks table does not exist (only automation tables present). Documented complete field mappings from FileMaker layout (devTasks with 9 core fields) to proposed Supabase schema (18 columns including UUIDs, foreign keys, status enum, timestamps). Included ID reconciliation strategy via filemaker_id_mappings table, data type conversion logic (boolean, timestamp, numeric), all necessary indexes (7 core indexes), constraints (NOT NULL, CHECK, FK cascades), and triggers (updated_at, actual_hours rollup). Provided complete transformation examples and API integration patterns. Updated tasks.json with completion metadata and verified project build compiles successfully (only pre-existing warnings). Key decision: documented target schema without modifying backend (following Backend Change Protocol from CLAUDE.md)."
     },
     {
       "id": "TSK0006",
