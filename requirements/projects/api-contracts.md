@@ -33,7 +33,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 - Notes functionality requires `notes` table to be created first
 - Core project operations (endpoints 1-6) can be implemented with current schema BUT have limited fields
 
-**Total Endpoints Documented**: 23 (6 core + 11 objectives/steps + 6 images/links)
+**Total Endpoints Documented**: 24 (6 core + 11 objectives/steps + 6 images/links + 1 team assignment)
 
 ## Core Project Operations
 
@@ -1402,11 +1402,25 @@ const title = new URL(link).hostname; // "github.com" from "https://github.com/u
 
 ---
 
-### Team Assignment
+### 24. Update Project Team Assignment
 
 **Endpoint**: `POST /rpc/update_project_team`
 
-**Description**: Update project team assignment
+**Description**: Update or remove project team assignment (_teamID field)
+
+**⚠️ Schema Status**:
+- ❌ `projects.team_id` column does NOT exist in current Supabase schema (verified 2025-01-10)
+- ✅ FileMaker devProjects has `_teamID` field
+- ⚠️ **BLOCKING**: Requires backend change to add `team_id UUID` column to projects table
+- **Frontend Code**: ProjectTeamTab.jsx:74-81 (updates _teamID field)
+
+**Proposed Schema Addition**:
+```sql
+ALTER TABLE projects
+ADD COLUMN team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
+
+CREATE INDEX idx_projects_team_id ON projects(team_id);
+```
 
 **Request**:
 ```json
@@ -1421,22 +1435,167 @@ const title = new URL(link).hostname; // "github.com" from "https://github.com/u
 {
   "success": true,
   "data": {
-    "project_id": "uuid-project-456",
+    "id": "uuid-project-456",
     "team_id": "uuid-team-new",
+    "updated_at": "2024-01-22T21:00:00Z",
+    "team": {
+      "id": "uuid-team-new",
+      "name": "Backend Development Team",
+      "organization_id": "uuid-org-001"
+    }
+  }
+}
+```
+
+**Request (Remove Team Assignment)**:
+```json
+{
+  "project_id": "uuid-project-456",
+  "team_id": null
+}
+```
+
+**Response (Team Removed)**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-project-456",
+    "team_id": null,
     "updated_at": "2024-01-22T21:00:00Z"
   }
 }
 ```
 
 **Validation**:
-- `project_id` required
-- `team_id` can be null (remove team assignment) or valid team UUID
-- If team_id provided, team must exist and belong to same organization as project
+- `project_id` required (UUID format)
+- `team_id` optional, can be:
+  - Valid team UUID (assigns team to project)
+  - `null` (removes team assignment)
+- If `team_id` provided (not null):
+  - Team must exist in teams table
+  - Team must belong to same organization as project (organization_id match)
+  - User must have edit permission for both project and team
+- User must have edit permission for project's organization
+
+**Business Logic**:
+1. **Organization Validation**:
+   ```sql
+   -- Verify team and project share same organization
+   SELECT p.organization_id = t.organization_id AS valid
+   FROM projects p
+   JOIN teams t ON t.id = :team_id
+   WHERE p.id = :project_id;
+   ```
+2. **Team Capacity**: No limit on projects per team (one team can have many projects)
+3. **Project Team Limit**: One project can have only ONE team assigned at a time
+4. **Cascade Behavior**: If team is deleted, `projects.team_id` is SET NULL (project remains, team assignment removed)
+5. **Audit Trail**: Updates `projects.updated_at` timestamp
+
+**Relationship to Teams Table**:
+
+The teams table structure (FileMaker devTeams layout):
+```sql
+-- Teams table schema (if it exists in Supabase)
+CREATE TABLE teams (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  organization_id UUID REFERENCES organizations(id) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Team members (staff assigned to teams)
+CREATE TABLE team_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
+  staff_id UUID REFERENCES staff(id) ON DELETE CASCADE NOT NULL,
+  role VARCHAR(255),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**Team Assignment Usage**:
+- Teams represent groups of staff members working together
+- Assigning a team to a project gives visibility into which team is responsible
+- Frontend displays team name and members on ProjectTeamTab component
+- Team assignment is **optional** - projects can exist without a team
+- Use case: Filter projects by team, view team workload, assign new projects to available teams
+
+**FileMaker Field Mapping**:
+- FileMaker `_teamID` → Supabase `team_id` (UUID → UUID)
+- FileMaker uses `devTeams` layout for team data (teamService.js:22-36)
+- FileMaker uses `devTeamMembers` layout for staff assignments
+- Frontend code: teamService.js, ProjectTeamTab.jsx, TeamContext.jsx
+
+**Frontend Implementation** (Code: ProjectTeamTab.jsx:72-95):
+```javascript
+// User selects team from dropdown
+const updatedProject = { ...localProject, _teamID: team.id };
+
+// Call backend to update project
+await onTeamChange(localProject.recordId, team.id);
+
+// FileMaker API format (current implementation):
+{
+  layout: 'devProjects',
+  action: 'update',
+  recordId: project.recordId,
+  fieldData: {
+    _teamID: teamId  // Can be null to unassign
+  }
+}
+
+// Supabase RPC format (future):
+await rpc('update_project_team', {
+  project_id: projectId,
+  team_id: teamId  // Can be null to unassign
+});
+```
 
 **Errors**:
-- 400: Validation failure, team not in same organization
-- 403: User not authorized
+- 400: Invalid project_id or team_id format
+- 403: User not authorized to edit project or assign team
 - 404: Project or team not found
+- 422: Team belongs to different organization than project
+
+**Integration with Project Listing**:
+
+When fetching projects with team information:
+```sql
+-- Get projects with team details
+SELECT
+  p.id, p.name, p.status, p.team_id,
+  t.name AS team_name,
+  COUNT(tm.id) AS team_member_count
+FROM projects p
+LEFT JOIN teams t ON t.id = p.team_id
+LEFT JOIN team_members tm ON tm.team_id = t.id
+WHERE p.customer_id = :customer_id
+GROUP BY p.id, p.name, p.status, p.team_id, t.name
+ORDER BY p.created_at DESC;
+```
+
+**Code References**:
+- **Frontend Service**: teamService.js:242-249 (assignProjectToExistingTeam)
+- **UI Component**: ProjectTeamTab.jsx:5-129 (team selection modal)
+- **Context**: TeamContext.jsx (teams state management)
+- **FileMaker Layout**: devProjects._teamID field
+- **FileMaker Teams Layout**: devTeams (team data source)
+
+**Migration Notes**:
+- ⚠️ **Schema Gap**: Supabase projects table missing `team_id` column
+- FileMaker has `_teamID` field with team assignments
+- Migration must preserve team assignments: `_teamID → team_id`
+- Verify teams table exists in Supabase before migration
+- If teams table doesn't exist, team assignments will be LOST
+- Recommendation: Create teams table and team_id column BEFORE projects migration
+
+**Related Endpoints**:
+- `GET /rpc/get_team_projects` - List all projects assigned to a specific team
+- `GET /rpc/get_team_detail` - Fetch team with assigned projects and staff members
+- `POST /rpc/create_team` - Create new team
+- `POST /rpc/assign_staff_to_team` - Add staff member to team
 
 ---
 

@@ -181,14 +181,16 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive API contracts for project images and links by expanding requirements/projects/api-contracts.md with 6 new endpoints (18-20 for images, 21-23 for links), including complete request/response examples, validation rules, error cases, and implementation status warnings. Verified via SSH that the Supabase links table exists (with customer_id, organization_id, project_id FKs) while project_images table does not exist, and documented schema gaps including the missing title column in links (frontend workaround: derive from URL hostname per projectService.js:97) and required NOT NULL constraints (customer_id, organization_id). Added summary section documenting implementation blockers (project_images table creation required), recommendations for backend team (create project_images table, optionally add title to links), code references (projectService.js:64-78, 86-98; links.js:8-29; ProjectLinksTab.jsx:144-159), FileMaker layout references (devProjectImages, devProjectLinks, devLinks), storage considerations (URL-based not binary), GitHub integration behavior, and URL length validation (VARCHAR 2048 limit). Renumbered step endpoints 16-17 to maintain consistent numbering, updated overview section to reflect 23 total endpoints, verified build compiles successfully, and marked task complete in tasks.json."
+      "implementation_notes": "Implemented and documented six new API contract endpoints for project images and project links in 'requirements/projects/api-contracts.md', including request and response examples, validation rules, error cases, business logic, and code references. Renumbered existing endpoints for consistency, updated the overview to reflect 23 total endpoints, and added a dedicated summary and verification section. Key decisions and findings captured were that images are URL references (not binary storage) and are blocked pending creation of a new 'project_images' table, while links are ready but have an optional schema improvement to add a 'title' column. Verified 'npm run build' succeeds and marked the task complete in 'tasks.json'."
     },
     {
       "id": "TSK0014",
       "title": "Define team assignment API contract",
       "description": "In requirements/projects/api-contracts.md, add endpoint/RPC for updating project team assignment (_teamID field). Include request/response and how this relates to teams table",
-      "status": "queued",
-      "priority": "low"
+      "status": "in_progress",
+      "priority": "low",
+      "executionPid": 34340,
+      "sessionId": "74165e80-189f-4adb-ae41-4f990479e6cb"
     },
     {
       "id": "TSK0015",
