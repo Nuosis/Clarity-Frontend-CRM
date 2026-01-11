@@ -16,22 +16,18 @@ import {
 /**
  * Processes team data from the API.
  *
- * @param {Object} team Raw team data from API.
+ * @param {Object} team Raw team data from Backend API/Supabase.
  * @returns {Object} Processed team data.
  */
 export function processTeamData(team) {
     if (!team) return null;
-    
-    // Check if data is in fieldData structure (common in FileMaker responses)
-    const fieldData = team.fieldData || team;
-    
+
     return {
-        ...team,
-        id: fieldData.__ID || team.__ID || team.id,
-        name: fieldData.name || team.name || 'Unnamed Team',
-        createdAt: fieldData['~CreationTimestamp'] || team['~CreationTimestamp'] || team.createdAt || new Date().toISOString(),
-        modifiedAt: fieldData['~ModificationTimestamp'] || team['~ModificationTimestamp'] || team.modifiedAt || new Date().toISOString(),
-        recordId: team.recordId || fieldData.recordId
+        id: team.id,
+        name: team.name || 'Unnamed Team',
+        organizationId: team.organization_id,
+        createdAt: team.created_at || new Date().toISOString(),
+        modifiedAt: team.updated_at || new Date().toISOString()
     };
 }
 
@@ -39,23 +35,23 @@ export function processTeamData(team) {
 /**
  * Processes staff data from the API.
  *
- * @param {Object} staff Raw staff data from API.
+ * @param {Object} staff Raw staff data from Backend API/Supabase.
  * @returns {Object} Processed staff data.
  */
 export function processStaffData(staff) {
     if (!staff) return null;
-    // Check if data is in fieldData structure (common in FileMaker responses)
-    const fieldData = staff.fieldData || staff;
-    
+
     return {
-        ...staff,
-        id: fieldData.__ID || staff.__ID || staff.id,
-        name: fieldData.name || staff.name || 'Unnamed Staff',
-        role: fieldData.role || staff.role || '',
-        image: fieldData.image_base64 || staff.image_base64 || null,
-        createdAt: fieldData['~CreationTimestamp'] || staff['~CreationTimestamp'] || staff.createdAt || new Date().toISOString(),
-        modifiedAt: fieldData['~ModificationTimestamp'] || staff['~ModificationTimestamp'] || staff.modifiedAt || new Date().toISOString(),
-        recordId: staff.recordId || fieldData.recordId
+        id: staff.id,
+        name: staff.name || 'Unnamed Staff',
+        title: staff.title || '',
+        email: staff.email || '',
+        phone: staff.phone || '',
+        image: staff.profile_image_url || null,
+        isActive: staff.is_active !== undefined ? staff.is_active : true,
+        organizationId: staff.organization_id,
+        createdAt: staff.created_at || new Date().toISOString(),
+        modifiedAt: staff.updated_at || new Date().toISOString()
     };
 }
 
@@ -63,26 +59,22 @@ export function processStaffData(staff) {
 /**
  * Processes team member data from the API.
  *
- * @param {Object} teamMember Raw team member data from API.
+ * @param {Object} teamMember Raw team member data from Backend API/Supabase.
  * @returns {Object} Processed team member data.
  */
 export function processTeamMemberData(teamMember) {
     if (!teamMember) return null;
-    // Check if data is in fieldData structure (common in FileMaker responses)
-    const fieldData = teamMember.fieldData || teamMember;
-    
+
     const staffDetails = teamMember.staffDetails ? processStaffData(teamMember.staffDetails) : null;
-    
+
     return {
-        ...teamMember,
-        id: fieldData.__ID || teamMember.__ID || teamMember.id,
-        teamId: fieldData._teamID || teamMember._teamID || teamMember.teamId,
-        staffId: fieldData._staffID || teamMember._staffID || teamMember.staffId,
-        role: fieldData.role || teamMember.role || '',
+        id: teamMember.id,
+        teamId: teamMember.teamId,
+        staffId: teamMember.staffId,
+        role: teamMember.role || '',
         staffDetails,
-        createdAt: fieldData['~CreationTimestamp'] || teamMember['~CreationTimestamp'] || teamMember.createdAt || new Date().toISOString(),
-        modifiedAt: fieldData['~ModificationTimestamp'] || teamMember['~ModificationTimestamp'] || teamMember.modifiedAt || new Date().toISOString(),
-        recordId: teamMember.recordId || fieldData.recordId
+        createdAt: teamMember.created_at || new Date().toISOString(),
+        modifiedAt: teamMember.updated_at || new Date().toISOString()
     };
 }
 
