@@ -36,14 +36,16 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive backend change request document BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md following the established format from financial records migration. The document includes: complete database schema for teams, staff, and team_members tables with proper constraints and indexes; projects.team_id column addition; full RLS policies for organization-scoped access; database triggers for updated_at and organization consistency checks; REST API endpoint specifications for all CRUD operations; RPC functions for team statistics and bulk operations; detailed migration script with FileMaker ETL including image upload to Supabase Storage; comprehensive testing requirements (unit, integration, performance); rollback procedures; performance benchmarks and scaling considerations; deployment steps and timeline. The document provides everything the backend team needs to implement the Teams migration with proper security, data integrity, and performance. Aligned with existing backend change request patterns and includes all necessary SQL, validation logic, and migration procedures."
+      "implementation_notes": "Implemented a comprehensive backend change request for the Teams migration from FileMaker to Supabase, covering schema (teams, staff, team_members and projects.team_id), RLS policies, triggers, RPCs, REST endpoints, indexes, ETL migration script, testing, rollback, and deployment plan. Added the new document as 'BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md' and updated '.devflow/tasks/teams-supabase-migration/tasks.json' to mark TSK0002 complete. Confirmed the project still builds successfully and noted that any build warnings were pre-existing and unrelated."
     },
     {
       "id": "TSK0003",
       "title": "Wait for backend implementation",
       "description": "Backend team implements database schema (teams, staff, team_members tables, projects.team_id column) and API endpoints",
-      "status": "queued",
-      "priority": "high"
+      "status": "in_progress",
+      "priority": "high",
+      "executionPid": 18880,
+      "sessionId": "6dd403b8-b8aa-432e-8ddd-1ecbc8c5c7ae"
     },
     {
       "id": "TSK0004",
