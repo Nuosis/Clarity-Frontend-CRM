@@ -262,6 +262,7 @@ App (index.jsx)
 - **initializationService.js**: App startup, environment detection, user context
 - **loadingStateManager.js**: Global loading states with progress messages
 - **dualWriteService.js**: Synchronizes data between FileMaker and Supabase
+- **teamService.js**: Team, staff, and team member management (Supabase-backed)
 - **proposalExtendedService.js**: Extended proposal system with packages/deliverables
 - **financialSyncService.js**: QuickBooks synchronization
 - **mailjetService.js**: Email campaign management
@@ -284,17 +285,19 @@ App (index.jsx)
 
 ## External Integrations
 
-### FileMaker Integration
+### FileMaker Integration (Legacy)
 - **Bridge:** fm-gofer library (`useFileMakerBridge` hook)
 - **Layouts:** devCustomers, devProjects, devTasks, devRecords
 - **Server:** `https://server.claritybusinesssolutions.ca/fmi/data/v1`
 - **Database:** clarityCRM
+- **Note:** Teams functionality (devTeams, devTeamMembers, devStaff) has been migrated to Supabase
 
 ### Supabase Integration
 - **URL:** `https://supabase.claritybusinesssolutions.ca`
 - **Service:** `supabaseService.js` singleton
 - **Auth:** Anon key for web app, service role for backend operations
-- **Tables:** 69 tables including proposals, customers, projects, prospects, products
+- **Tables:** 69+ tables including proposals, customers, projects, prospects, products, teams, staff
+- **Storage:** `staff-images` bucket for staff profile images
 
 ### QuickBooks Integration
 - **Service:** `financialSyncService.js`
@@ -329,6 +332,34 @@ The application includes an extensive proposal system with two implementations:
 - `proposals`, `proposal_deliverables`, `proposal_packages`
 - `proposal_packages_deliverables`, `proposal_packages_requirements`
 - `proposal_requests`, `proposal_requirements`
+
+## Teams Architecture
+
+**Teams** (Supabase-backed):
+- Stored in Supabase `teams`, `staff`, `team_members` tables
+- Organization-scoped with RLS policies
+- Managed via `useTeam` hook and `teamService`
+- Components: `TeamDetails.jsx`, `TeamForm.jsx`
+- Full team management: staff assignments, project assignments, role management
+
+**Migration Status:**
+- Frontend code fully refactored for Supabase
+- Backend schema defined in `BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md`
+- Migration script ready: `scripts/migrate-teams-data.js`
+- **Waiting for backend deployment** - Tables not yet deployed to production
+
+**Key Tables:**
+- `teams`: Team records with organization scoping
+- `staff`: Staff member profiles with optional images
+- `team_members`: Join table for team-staff assignments with roles
+- `projects.team_id`: Foreign key linking projects to teams
+
+**Supabase Features:**
+- RLS policies enforce organization isolation
+- Staff profile images stored in `staff-images` bucket
+- Automatic timestamp tracking (`created_at`, `updated_at`)
+
+See `docs/TEAMS_MIGRATION_GUIDE.md` for migration details.
 
 ## Prospects vs Customers
 
@@ -433,9 +464,11 @@ Required variables in `.env`:
 3. **FileMaker Bridge**: Check `fmReady` status before FileMaker operations
 4. **Dual Environments**: Services must handle both FileMaker and web app contexts
 5. **Customer vs Prospect**: Different data sources and operations
-6. **Authentication**: Backend requests require HMAC, Supabase requests use JWT
-7. **Loading States**: Use `loadingStateManager` for global loading feedback
-8. **State Updates**: Complex state updates should use `setTimeout(..., 0)` to avoid React render issues
+6. **Teams Architecture**: Teams are Supabase-backed, NOT FileMaker-backed - do not attempt to use FileMaker bridge for teams
+7. **Organization Scoping**: All team operations must include organization_id for proper RLS enforcement
+8. **Authentication**: Backend requests require HMAC, Supabase requests use JWT
+9. **Loading States**: Use `loadingStateManager` for global loading feedback
+10. **State Updates**: Complex state updates should use `setTimeout(..., 0)` to avoid React render issues
 
 ## Documentation Resources
 
@@ -444,7 +477,10 @@ Required variables in `.env`:
 - `PROPOSAL_SYSTEM_SUMMARY.md`: Complete proposal system overview
 - `PROPOSAL_UI_IMPLEMENTATION_SUMMARY.md`: UI components guide
 - `DARK_MODE_IMPLEMENTATION.md`: Theme implementation details
+- `docs/TEAMS_MIGRATION_GUIDE.md`: Teams migration from FileMaker to Supabase
+- `BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md`: Teams backend schema specification
 - `.roo/rules/rules.md`: Development best practices
 - `.roo/rules/rules_general.md`: General project rules and SSH patterns
 - `.roo/rules/SUPABASE_DATABASE_VERIFICATION.md`: Database access patterns
+- `requirements/teams/`: Teams migration requirements and specifications
 - `docs/`: Additional technical documentation

@@ -1,15 +1,18 @@
 # ClarityFrontend CRM
 
-A React-based CRM system for managing customers, projects, and time tracking, integrated with FileMaker.
+A React-based CRM system for managing customers, projects, teams, proposals, and time tracking with dual environment support (FileMaker WebViewer and standalone web application).
 
 ## Features
 
 - 🌓 Dark/Light mode support
-- 👥 Customer management
-- 📋 Project tracking
+- 👥 Customer & Prospect management
+- 📋 Project tracking with team assignments
+- 👔 Team & Staff management (Supabase-backed)
 - ⏱️ Task timer with adjustments
-- 📝 Notes and descriptions
-- 🔄 FileMaker integration
+- 📝 Proposals with packages and deliverables
+- 📧 Marketing campaigns via Mailjet
+- 💰 QuickBooks integration for invoicing
+- 🔄 Dual environment support (FileMaker + Web App)
 - 🎯 Objective tracking
 - 📊 Resource management
 
@@ -18,13 +21,18 @@ A React-based CRM system for managing customers, projects, and time tracking, in
 - React 18
 - Tailwind CSS
 - Vite
-- FileMaker Integration (fm-gofer)
+- Supabase (PostgreSQL, Authentication, Storage)
+- FileMaker Integration (fm-gofer) - Legacy support
+- Backend API with HMAC authentication
+- Redux Toolkit (for complex state)
+- Context API (for global state)
 
 ## Prerequisites
 
 - Node.js (v16 or higher)
 - npm or yarn
-- FileMaker Server (for backend integration)
+- Supabase account (for web app)
+- FileMaker Server (for legacy WebViewer support)
 
 ## Installation
 
@@ -39,12 +47,34 @@ cd clarityCrmFrontend
 npm install
 ```
 
-3. Create a `.env` file with your FileMaker configuration:
+3. Create a `.env` file with required configuration:
 ```env
-VITE_FM_SERVER=your-filemaker-server
-VITE_FM_DATABASE=your-database
-VITE_FM_USERNAME=your-username
+# Application
+VITE_APP_NAME=Clarity CRM
+VITE_VERSION=2.0.0
+
+# Supabase (Primary)
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Backend API
+VITE_API_URL=https://api.claritybusinesssolutions.ca
+VITE_SECRET_KEY=your-hmac-secret
+
+# FileMaker (Legacy)
+VITE_FM_URL=your-filemaker-server
+VITE_FM_DATABASE=clarityCRM
+VITE_FM_USER=your-username
 VITE_FM_PASSWORD=your-password
+
+# QuickBooks (Optional)
+VITE_QB_CLIENT_ID=your-qb-client-id
+VITE_QB_CLIENT_SECRET=your-qb-secret
+
+# Mailjet (Optional)
+VITE_MAILJET_API_KEY=your-mailjet-key
+VITE_MAILJET_SECRET_KEY=your-mailjet-secret
 ```
 
 4. Start the development server:
@@ -129,19 +159,58 @@ src/
 - Quick save with CMD+stop
 - Add completion notes
 
-## FileMaker Integration
+## Integration & Architecture
 
-The application integrates with FileMaker through the following layouts:
-- devCustomers: Customer management
-- devProjects: Project tracking
-- devTasks: Task management
-- devRecords: Time tracking
+### Dual Environment Support
+
+The application automatically detects its runtime environment:
+
+**FileMaker WebViewer (Legacy):**
+- Embedded in FileMaker Pro/Go via `fm-gofer` bridge
+- Uses FileMaker layouts for data operations
+- Limited to FileMaker-authenticated users
+
+**Standalone Web App (Primary):**
+- Independent web application
+- Supabase authentication and database
+- Multi-tenant with organization scoping
+- Direct backend API integration
+
+### Data Sources
+
+**Supabase (Primary for new features):**
+- Teams, Staff, Team Members
+- Prospects and Marketing Campaigns
+- Proposals (basic and extended)
+- Products and Sales
+- Authentication and user management
+
+**FileMaker (Legacy support):**
+- Customers (synced to Supabase)
+- Projects (synced to Supabase)
+- Tasks (synced to Supabase)
+- Time Records
+
+**Backend API:**
+- QuickBooks integration
+- Financial synchronization
+- Email campaigns (Mailjet)
+- Advanced business logic
+
+### Teams Migration
+
+Teams functionality has been migrated from FileMaker to Supabase:
+- **Old:** `devTeams`, `devStaff`, `devTeamMembers` layouts
+- **New:** `teams`, `staff`, `team_members` Supabase tables
+- **Status:** Frontend ready, awaiting backend deployment
+- **Documentation:** See `docs/TEAMS_MIGRATION_GUIDE.md`
 
 ### Data Flow
-1. Initial load fetches user context and customers
-2. Customer selection loads related projects
-3. Project selection loads associated tasks
-4. Task operations sync with FileMaker
+1. Environment detection on app initialization
+2. Supabase authentication for web app users
+3. Organization-scoped data loading
+4. Real-time updates via Supabase subscriptions
+5. Dual-write for FileMaker compatibility (customers, projects, tasks)
 
 ## Development
 
@@ -180,10 +249,25 @@ npm run deploy-to-fm
 
 ## Documentation
 
-Additional documentation available in:
-- `src/reference/implementation.md`: Detailed implementation guide
-- `src/reference/architecture.md`: System architecture
-- `src/reference/files_guide.md`: File structure and purpose
+### Primary Documentation
+- `CLAUDE.md`: **START HERE** - Comprehensive project guide for developers
+- `README.md`: This file - Project overview and setup
+
+### Architecture & Integration
+- `BACKEND_INTEGRATION_GUIDE.md`: Backend API integration details
+- `PROPOSAL_SYSTEM_SUMMARY.md`: Proposal system overview
+- `DARK_MODE_IMPLEMENTATION.md`: Theme system documentation
+
+### Teams Migration
+- `docs/TEAMS_MIGRATION_GUIDE.md`: Step-by-step migration instructions
+- `TEAMS_SUPABASE_IMPLEMENTATION_SUMMARY.md`: Teams architecture overview
+- `BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md`: Backend schema specification
+- `requirements/teams/`: Detailed requirements and specifications
+
+### Additional Resources
+- `.roo/rules/`: Development patterns and best practices
+- `docs/`: Technical documentation
+- `src/reference/`: Legacy implementation guides
 
 ## Contributing
 
@@ -204,14 +288,23 @@ For support, please refer to:
 - FileMaker integration guides
 - Component documentation
 
-## Roadmap
+## Migration Status
 
-Future enhancements planned:
-- Task filtering and sorting
-- Batch operations
-- Enhanced reporting
-- Team collaboration features
-- Advanced timer capabilities
+### ✅ Completed Migrations
+- Proposals system (Supabase-backed)
+- Prospects and marketing campaigns (Supabase-backed)
+- Products and sales (Supabase-backed)
+- Teams frontend refactor (Supabase-ready)
+
+### ⏳ In Progress
+- Teams backend deployment (awaiting schema deployment)
+- Data migration from FileMaker to Supabase
+
+### 📋 Planned
+- Complete FileMaker phase-out for customers/projects
+- Enhanced real-time collaboration
+- Advanced analytics and reporting
+- Mobile app development
 
 ## Acknowledgments
 
