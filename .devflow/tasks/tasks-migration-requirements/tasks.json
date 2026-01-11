@@ -21,105 +21,105 @@
       "id": "TSK0001",
       "title": "Create requirements directory structure",
       "description": "Create requirements/tasks/ directory and README.md scaffold with sections for task CRUD, timer operations, and financial record generation",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0002",
       "title": "Document task CRUD operations",
       "description": "Document current task create, read, update, delete operations including FileMaker field mappings, validation rules from TASK_FIELDS in taskService.js:265-305, and API calls",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0003",
       "title": "Document timer lifecycle and state machine",
       "description": "Document timer start/stop/pause operations, state transitions, time adjustment logic (6-minute increments), and pause time tracking from TaskTimer.jsx and taskService.js",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0004",
       "title": "Document financial record generation",
       "description": "Document how timer stop triggers financial record creation, fixed-price project detection (taskService.js:108-112), customer_sales insertion, and dual-write orchestration",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0005",
       "title": "Map FileMaker devTasks layout to Supabase schema",
       "description": "Verify if Supabase tasks table exists, document FileMaker devTasks field structure, and create mapping to target Supabase schema including field types, constraints, and indexes",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0006",
       "title": "Map FileMaker devRecords layout to Supabase schema",
       "description": "Verify if Supabase time_entries table exists, document FileMaker devRecords field structure for timer data, and create mapping to target Supabase schema",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0007",
       "title": "Document current dual-write mechanism",
       "description": "Document dualWriteService.js logic, withDualWrite wrapper, timer_stop operation type, and how it coordinates FileMaker + Supabase writes",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0008",
       "title": "Document financial sync reconciliation",
       "description": "Document financialSyncService.js synchronization logic, how it compares devRecords with customer_sales, and reconciliation strategies",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0009",
       "title": "Define backend API endpoints for tasks",
       "description": "Specify REST API endpoints for task CRUD operations following backend API patterns (HMAC auth, error handling, validation)",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0010",
       "title": "Define backend API endpoints for timer operations",
       "description": "Specify REST API endpoints or RPCs for timer start/stop/pause with idempotency requirements, concurrency control, and state validation",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0011",
       "title": "Define backend business logic requirements",
       "description": "Specify server-side validation rules, timer state machine enforcement, financial record generation rules, and fixed-price project handling",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0012",
       "title": "Create migration strategy document",
       "description": "Document approach for migrating historical tasks and timer records from FileMaker, data transformation requirements, and reconciliation strategy",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0013",
       "title": "Define test cases for edge scenarios",
       "description": "Create test cases for timer race conditions (double start/stop), offline/refresh scenarios, partial failure recovery, and concurrent timer operations",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0014",
       "title": "Document QuickBooks integration points",
       "description": "Document how billable time from timers flows to QuickBooks invoice generation and what migration means for QB integration",
-      "status": "pending",
+      "status": "queued",
       "priority": "low"
     },
     {
       "id": "TSK0015",
       "title": "Create backend change request document",
       "description": "Compile all schema changes, API requirements, and backend logic into a formal backend change request document following CLAUDE.md protocol",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     }
   ]

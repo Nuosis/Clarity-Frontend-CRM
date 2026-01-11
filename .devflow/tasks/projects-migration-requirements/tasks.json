@@ -22,17 +22,23 @@
       "id": "TSK0001",
       "title": "Create README.md overview",
       "description": "Create requirements/projects/README.md documenting: project overview, current FileMaker behavior, user flows (create/update/delete project, manage objectives/steps/links/images/notes, status changes, team assignment), and key terminology",
-      "status": "completed",
+      "status": "done",
       "priority": "high",
       "completedAt": "2026-01-10T20:15:00.000Z",
-      "notes": "Enhanced existing README.md with: key terminology section, detailed FileMaker field definitions, comprehensive user flows with code references (line numbers), corrected technical debt section (business logic IS implemented), updated hook descriptions with accurate line numbers, clarified partial Supabase sync behavior"
+      "notes": "Enhanced existing README.md with: key terminology section, detailed FileMaker field definitions, comprehensive user flows with code references (line numbers), corrected technical debt section (business logic IS implemented), updated hook descriptions with accurate line numbers, clarified partial Supabase sync behavior",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Enhanced the Projects migration documentation by updating 'requirements/projects/README.md' to fully align with the 7-file template, adding key terminology, expanded FileMaker field and layout details, and end-to-end user flow coverage (create, update, status changes, delete, objectives and steps, and time records). Corrected prior inaccuracies by clarifying that core business logic is implemented, documenting the decision that Supabase sync is currently creation-only (no updates or deletes), and calling out the important ID mismatch risk between FileMaker 'recordId' and UUID '__ID'. Updated the hooks and internal services sections to reflect actual usage, added precise code references and line ranges (notably in 'useProject.js'), validated documentation against the codebase, confirmed the docs build succeeded, and marked the task complete in 'tasks.json'."
     },
     {
       "id": "TSK0002",
       "title": "Document current implementation",
       "description": "Create requirements/projects/current-implementation.md documenting: frontend call graph from UI → hooks → services → API, all relevant files (components, hooks, services, API), FileMaker layouts used, data flow diagrams, and current state management patterns",
-      "status": "queued",
-      "priority": "high"
+      "status": "in_progress",
+      "priority": "high",
+      "executionPid": 141,
+      "sessionId": "e4826467-ccfd-43df-b8a5-67603d5b3b21"
     },
     {
       "id": "TSK0003",

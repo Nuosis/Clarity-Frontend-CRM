@@ -21,7 +21,7 @@
       "id": "TSK0001",
       "title": "Create requirements/notes directory structure",
       "description": "Create the requirements/notes/ directory and placeholder files for all documentation templates: README.md, current-implementation.md, data-model-mapping.md, api-contracts.md, authorization.md, migration-plan.md, acceptance-criteria.md",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "dependencies": []
     },
@@ -29,73 +29,97 @@
       "id": "TSK0002",
       "title": "Document current notes implementation",
       "description": "Create current-implementation.md documenting: FileMaker devNotes layout usage, existing frontend code (api/notes.js, services/noteService.js, hooks/useNote.js), UI components (ProjectNotesTab, TaskList notes display), current CRUD operations and data flow",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0001"]
+      "dependencies": [
+        "TSK0001"
+      ]
     },
     {
       "id": "TSK0003",
       "title": "Analyze notes UI behavior and user flows",
       "description": "Document in current-implementation.md: how notes are created (ProjectNotesTab, TaskList), how notes are displayed (reverse chronological order), note data fields shown to users, creation/edit workflows, any validation or business rules",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0002"]
+      "dependencies": [
+        "TSK0002"
+      ]
     },
     {
       "id": "TSK0004",
       "title": "Map FileMaker devNotes schema to Supabase",
       "description": "Create data-model-mapping.md documenting: FileMaker field mapping (_fkID, note, type, __ID, timestamps), Supabase table design with polymorphic associations, recommended schema approach (nullable FKs vs junction tables), column types and constraints, indexes needed for performance",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0002"]
+      "dependencies": [
+        "TSK0002"
+      ]
     },
     {
       "id": "TSK0005",
       "title": "Define backend API contracts for notes",
       "description": "Create api-contracts.md with: REST endpoints or RPC functions for list/create/update/delete operations, request/response schemas, query parameters for filtering by parent entity, error responses, example requests/responses, pagination if needed",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0004"]
+      "dependencies": [
+        "TSK0004"
+      ]
     },
     {
       "id": "TSK0006",
       "title": "Design authorization and RLS policies",
       "description": "Create authorization.md documenting: row-level security policies needed, org-scoping requirements, who can create/read/update/delete notes, how permissions inherit from parent entities (project/task access), service role vs anon key usage",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0004"]
+      "dependencies": [
+        "TSK0004"
+      ]
     },
     {
       "id": "TSK0007",
       "title": "Create migration and backfill plan",
       "description": "Create migration-plan.md with: data export process from FileMaker, ID mapping strategy (_fkID to Supabase UUIDs), parent entity type detection, bulk insert approach, validation steps, rollback plan, cutover strategy",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0004"]
+      "dependencies": [
+        "TSK0004"
+      ]
     },
     {
       "id": "TSK0008",
       "title": "Define acceptance criteria and test cases",
       "description": "Create acceptance-criteria.md with: functional test cases for all CRUD operations, association validation tests, edge cases (orphaned notes, concurrent creation), data migration validation, performance requirements, user acceptance criteria",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0003", "TSK0005"]
+      "dependencies": [
+        "TSK0003",
+        "TSK0005"
+      ]
     },
     {
       "id": "TSK0009",
       "title": "Write requirements README overview",
       "description": "Create README.md as overview document with: feature summary, quick links to all other docs, key decisions and rationale, open questions for backend team, timeline and dependencies, contact/ownership info",
-      "status": "pending",
+      "status": "queued",
       "priority": "low",
-      "dependencies": ["TSK0002", "TSK0004", "TSK0005", "TSK0006", "TSK0007", "TSK0008"]
+      "dependencies": [
+        "TSK0002",
+        "TSK0004",
+        "TSK0005",
+        "TSK0006",
+        "TSK0007",
+        "TSK0008"
+      ]
     },
     {
       "id": "TSK0010",
       "title": "Review and validate requirements completeness",
       "description": "Review all documentation for: completeness (all current functionality captured), clarity (backend team can implement from docs alone), consistency across documents, no contradictions, all code references accurate, all FileMaker dependencies identified",
-      "status": "pending",
+      "status": "queued",
       "priority": "low",
-      "dependencies": ["TSK0009"]
+      "dependencies": [
+        "TSK0009"
+      ]
     }
   ]
 }

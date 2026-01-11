@@ -156,13 +156,18 @@
       "id": "INS0012",
       "title": "Standardize tasks timer migration docs",
       "description": "Update INS0003 (Tasks & Timer migration requirements) to include standardized documentation templates in requirements/tasks/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md (task CRUD + timer call flows + dualWriteService interactions)\n- data-model-mapping.md (tasks, time entries, financial/customer_sales mapping)\n- api-contracts.md (task endpoints + timer start/stop/pause, idempotency)\n- authorization.md\n- migration-plan.md\n- acceptance-criteria.md (race conditions, partial failures, reconciliation)\n\nExplicitly capture timer semantics currently implemented via FileMaker and dual-write.\n\n**Context:** Tasks/timer is hybrid (FileMaker + Supabase dual-write). Uniform docs are needed to implement backend Supabase equivalents.",
-      "status": "pending",
-      "complexity": "unknown",
+      "status": "done",
+      "complexity": "simple",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:28.075Z",
       "updatedAt": "2026-01-11T01:04:38.361Z",
-      "executionPid": 95242,
-      "sessionId": "080a2d12-4e4a-4f81-a4f9-a8418d84e288"
+      "review": {
+        "passed": true,
+        "findings": [],
+        "reviewed_at": "2026-01-11T01:09:09.767Z"
+      },
+      "implementation_notes": "Created comprehensive acceptance-criteria.md file (1,395 lines, 40KB) completing standardized documentation template for Tasks & Timer migration requirements. The file includes 7 acceptance criteria with verification steps, 7 test suites with 80+ test cases covering CRUD operations, RLS policies, timer semantics (idempotency, concurrency, pause/resume, adjustments), frontend UI workflows, edge cases (race conditions, partial failures, reconciliation), performance requirements, migration validation, success metrics, rollback plan, and test execution checklist. Explicitly captures timer semantics currently implemented via FileMaker and dual-write: idempotent timer start, one active timer per staff concurrency control, pause/resume accumulation, time adjustment calculations, atomic stop operation creating both time_entry and customer_sales records, duration calculation triggers, and actual_hours rollup. All 7 required documentation files now exist in requirements/tasks/: README.md, current-implementation.md, data-model-mapping.md, api-contracts.md, authorization.md, migration-plan.md, and acceptance-criteria.md. Documentation is complete and ready for Phase 2: Backend Implementation.",
+      "execution_summary": "**Summary:** **"
     },
     {
       "id": "INS0013",
