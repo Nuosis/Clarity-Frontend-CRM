@@ -233,39 +233,141 @@ CREATE INDEX idx_project_objectives_status ON project_objectives(status);
 
 ## FileMaker devProjectObjSteps Layout Fields
 
-### Step Fields
+**Layout**: `devProjectObjSteps`
+**Purpose**: Stores individual steps/tasks within project objectives
+**Relationship**: Many steps per objective (one-to-many with devProjectObjectives)
 
-| FileMaker Field | Type | Required | Description | Sample Value |
-|----------------|------|----------|-------------|--------------|
-| `__ID` | Text (UUID) | Auto | Step UUID | `"uuid-step-789"` |
-| `recordId` | Number | Auto | FM internal record ID | `"25"` |
-| `_objectiveID` | Text (UUID) | ✅ Yes | Objective ID (FK to devProjectObjectives) | `"uuid-obj-123"` |
-| `projectObjectiveStep` | Text | ✅ Yes | Step text/description | `"Create wireframes"` |
-| `order` | Number | No | Display order within objective | `1`, `2`, `3` |
-| `f_completed` | Text | No | Completion flag ("1" = yes, "0" = no) | `"0"` |
+### Core Fields
+
+| FileMaker Field | Type | Required | Description | Sample Value | Code Reference |
+|----------------|------|----------|-------------|--------------|----------------|
+| `__ID` | Text (UUID) | Auto | Step UUID | `"uuid-step-789"` | projectService.js:141 |
+| `recordId` | Number | Auto | FM internal record ID | `"25"` | projectService.js:142 |
+| `_objectiveID` | Text (UUID) | ✅ Yes | Objective ID (FK to devProjectObjectives.__ID) | `"uuid-obj-123"` | projectService.js:139, projects.js:102 |
+| `projectObjectiveStep` | Text | ✅ Yes | Step text/description | `"Create wireframes"` | projectService.js:143 |
+| `order` | Number | No | Display order within objective (sorted ascending) | `1`, `2`, `3` | projectService.js:144 |
+| `f_completed` | Text | No | Completion flag ("1" = yes, "0" = no) | `"0"` | projectService.js:145 |
+
+**Business Rules** (Code: projectService.js:133-148):
+1. Default f_completed is "0" (not completed) when created
+2. Steps sorted by `order` field ascending (projectService.js:147)
+3. Frontend filters steps by `_objectiveID` (projectService.js:139)
+4. Completion flag stored as string "1"/"0" in FileMaker, converted to boolean in frontend (projectService.js:145)
+5. Steps are ALWAYS nested within objectives - no standalone steps
+
+**API Operations** (Code: src/api/projects.js:61-84):
+- **Create**: No create function exists - must be implemented
+- **Read**: `fetchProjectRelatedData(projectId, 'devProjectObjSteps')` → Query by `_projectID` (fetches ALL steps for project, filtered client-side)
+- **Update**: Not implemented in current codebase (manual FileMaker update)
+- **Delete**: Not implemented in current codebase (manual FileMaker delete)
+
+**Frontend Processing** (Code: projectService.js:133-148):
+```javascript
+// processObjectiveSteps(steps, objectiveId)
+{
+  id: step.fieldData.__ID,
+  recordId: step.recordId,
+  step: step.fieldData.projectObjectiveStep,
+  order: step.fieldData.order || 0,
+  completed: step.fieldData.f_completed === "1"
+}
+```
+
+**Data Fetching Pattern** (Code: useProject.js:99-102, current-implementation.md:99):
+- Steps fetched in parallel with objectives
+- `fetchProjectRelatedData([projectId], 'devProjectObjSteps')` returns ALL steps for project
+- Client-side filtering by `_objectiveID` in `processObjectiveSteps()` (projectService.js:139)
+- Steps embedded in parent objective object as `steps` array (projectService.js:122-123)
+
+**Relationship to Objectives**:
+- One objective has many steps (one-to-many)
+- Steps filtered by `_objectiveID === objective.__ID`
+- Steps are always displayed within their parent objective
+- No orphaned steps allowed (CASCADE delete when objective is deleted)
 
 ## Supabase project_objective_steps Table Schema
 
 **Status**: ⚠️ **TABLE DOES NOT EXIST IN SUPABASE** (Verified 2025-01-10)
 
-**Proposed Schema** (Based on FileMaker structure):
+**Current State**:
+- Only `projects` table exists in Supabase
+- No project_objective_steps table - must be created for migration
+- FileMaker devProjectObjSteps data cannot be migrated without this table
+- **BLOCKING**: Depends on project_objectives table being created first
+
+**Proposed Schema** (Based on FileMaker structure and frontend usage):
 
 ```sql
 CREATE TABLE project_objective_steps (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   objective_id UUID REFERENCES project_objectives(id) ON DELETE CASCADE NOT NULL,
   step TEXT NOT NULL,                           -- Maps to projectObjectiveStep
-  order_num INTEGER DEFAULT 0,                  -- Maps to order
-  completed BOOLEAN DEFAULT false,              -- Maps to f_completed
+  order_num INTEGER DEFAULT 0,                  -- Maps to order (renamed to avoid SQL keyword)
+  completed BOOLEAN DEFAULT false,              -- Maps to f_completed (convert "1"/"0" → boolean)
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE INDEX idx_project_steps_objective ON project_objective_steps(objective_id);
 CREATE INDEX idx_project_steps_order ON project_objective_steps(objective_id, order_num);
+CREATE INDEX idx_project_steps_completed ON project_objective_steps(completed);
 ```
 
-**Migration Impact**: Requires project_objectives table to exist first. See BACKEND_CHANGE_REQUEST document.
+**Field Mapping**:
+
+| FileMaker Field | Supabase Column | Type Conversion | Notes |
+|----------------|-----------------|-----------------|-------|
+| `__ID` | `id` | UUID → UUID | Preserve UUID (no conversion) |
+| `recordId` | ❌ DISCARD | N/A | FileMaker internal ID, not needed |
+| `_objectiveID` | `objective_id` | UUID → UUID | Foreign key constraint to project_objectives(id) |
+| `projectObjectiveStep` | `step` | Text → TEXT | Direct mapping |
+| `order` | `order_num` | Number → INTEGER | Renamed to avoid SQL keyword conflict, default 0 |
+| `f_completed` | `completed` | String "1"/"0" → BOOLEAN | Convert: "1" → true, "0" → false, default false |
+| N/A | `created_at` | N/A | Auto-generated timestamp |
+| N/A | `updated_at` | N/A | Auto-generated timestamp |
+
+**Migration Impact**:
+1. ⚠️ **BLOCKING**: This table must be created AFTER project_objectives table
+2. Foreign key constraint requires project_objectives table to exist first
+3. Migration must preserve `__ID` as `id` to maintain UUID consistency
+4. Steps must be migrated AFTER objectives to ensure valid foreign keys
+5. Order preservation is critical for user experience (steps displayed in order)
+6. See BACKEND_CHANGE_REQUEST document for table creation SQL
+
+**Migration Order Dependencies**:
+1. ✅ Projects table (already exists)
+2. ⚠️ Create project_objectives table (REQUIRED - depends on projects)
+3. ⚠️ Create project_objective_steps table (REQUIRED - depends on project_objectives)
+4. Migrate data: projects → project_objectives → project_objective_steps (in order)
+
+**Nested Relationship Structure**:
+```
+Project
+  └─ Objective 1 (order: 1)
+      ├─ Step 1 (order: 1, completed: false)
+      ├─ Step 2 (order: 2, completed: true)
+      └─ Step 3 (order: 3, completed: false)
+  └─ Objective 2 (order: 2)
+      ├─ Step 1 (order: 1, completed: true)
+      └─ Step 2 (order: 2, completed: true)
+```
+
+**Query Pattern for Frontend**:
+```sql
+-- Fetch all steps for a specific objective
+SELECT * FROM project_objective_steps
+WHERE objective_id = 'uuid-obj-123'
+ORDER BY order_num ASC;
+
+-- Fetch all objectives with steps for a project (requires JOIN)
+SELECT
+  po.id, po.objective, po.order_num, po.completed AS objective_completed,
+  pos.id AS step_id, pos.step, pos.order_num AS step_order, pos.completed AS step_completed
+FROM project_objectives po
+LEFT JOIN project_objective_steps pos ON pos.objective_id = po.id
+WHERE po.project_id = 'uuid-project-456'
+ORDER BY po.order_num ASC, pos.order_num ASC;
+```
 
 ## FileMaker devProjectImages Layout Fields
 
