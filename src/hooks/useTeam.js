@@ -19,12 +19,16 @@ import {
     processTeamMemberData,
     calculateTeamStats
 } from '../services';
+import { useAppState } from '../context/AppStateContext';
 
 /**
  * Hook for managing team state and operations
  */
 export function useTeam() {
-    
+    // Get user from app state to access organization_id
+    const appState = useAppState();
+    const user = appState?.user;
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [teams, setTeams] = useState([]);
@@ -271,16 +275,28 @@ export function useTeam() {
      * Creates a new team
      */
     const handleTeamCreate = useCallback(async (teamData) => {
+        if (!user?.supabaseOrgID) {
+            const error = 'Cannot create team: Organization ID is missing';
+            setError(error);
+            throw new Error(error);
+        }
+
         try {
             setLoading(true);
             setError(null);
-            
-            const result = await createTeam(teamData);
+
+            // Ensure organization_id is included
+            const teamDataWithOrg = {
+                ...teamData,
+                organization_id: user.supabaseOrgID
+            };
+
+            const result = await createTeam(teamDataWithOrg);
             const processedTeam = processTeamData(result);
-            
+
             // Update local state
             setTeams(prevTeams => [...prevTeams, processedTeam]);
-            
+
             return processedTeam;
         } catch (err) {
             setError(err.message);
@@ -289,7 +305,7 @@ export function useTeam() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [user]);
 
     /**
      * Updates an existing team
@@ -367,38 +383,44 @@ export function useTeam() {
     const handleAssignStaffToTeam = useCallback(async (staffIds, role = '', teamOverride = null) => {
         // Use teamOverride if provided, otherwise use selectedTeam
         const effectiveTeam = teamOverride || selectedTeam;
-        
+
         if (!effectiveTeam) {
             console.error('No team selected when trying to assign staff member');
             throw new Error('No team selected');
         }
-        
+
+        if (!user?.supabaseOrgID) {
+            const error = 'Cannot assign staff to team: Organization ID is missing';
+            setError(error);
+            throw new Error(error);
+        }
+
         try {
             setLoading(true);
             setError(null);
-            
+
             // Handle both single ID and array of IDs
             const staffIdArray = Array.isArray(staffIds) ? staffIds : [staffIds];
-            
+
             // Get the team ID from the team object
             const teamId = effectiveTeam.id ||
                           (effectiveTeam.fieldData && effectiveTeam.fieldData.__ID) ||
                           effectiveTeam.recordId ||
                           (typeof effectiveTeam === 'string' ? effectiveTeam : null);
-            
+
             if (!teamId) {
                 console.error('Could not extract team ID from:', effectiveTeam);
                 throw new Error('Invalid team ID in team object');
             }
-            
+
             const results = [];
-            
+
             // Process each staff ID or staff object
             for (const staffItem of staffIdArray) {
                 // Handle both string IDs and staff objects
                 let staffId;
                 let staffName = '';
-                
+
                 if (typeof staffItem === 'object' && staffItem !== null) {
                     // If it's a staff object with id and name
                     staffId = staffItem.id;
@@ -407,32 +429,25 @@ export function useTeam() {
                     // If it's just a string ID
                     staffId = staffItem;
                 }
-                
-                // Create the team member record
-                const result = await assignStaffToTeam(teamId, staffId, role, staffName);
-                
+
+                // Create the team member record with organization_id
+                const result = await assignStaffToTeam(teamId, staffId, role, user.supabaseOrgID);
+
                 // Create a complete team member object with all necessary fields
                 const teamMemberData = {
                     ...result,
-                    id: result.recordId || result.id || (result.fieldData && result.fieldData.__ID),
-                    recordId: result.recordId, // Explicitly preserve recordId
-                    _teamID: teamId,
-                    _staffID: staffId,
-                    teamId: teamId,
-                    staffId: staffId,
-                    role: role,
-                    name: staffName,
-                    // Add staff details directly from the form data
-                    staffDetails: {
-                        id: staffId,
-                        name: staffName || 'Unknown Staff',
-                        role: role
-                    }
+                    id: result.id,
+                    teamId: result.teamId,
+                    staffId: result.staffId,
+                    role: result.role,
+                    staffDetails: result.staffDetails,
+                    created_at: result.created_at,
+                    updated_at: result.updated_at
                 };
-                
+
                 // Process the result
                 const processedTeamMember = processTeamMemberData(teamMemberData);
-                
+
                 // Update local state - add to existing staff list
                 setTeamStaff(prevStaff => {
                     // Check if this staff member already exists in the state
@@ -440,17 +455,17 @@ export function useTeam() {
                         s.id === processedTeamMember.id ||
                         s.staffId === staffId
                     );
-                    
+
                     // Only add if it doesn't exist
                     if (!exists) {
                         return [...prevStaff, processedTeamMember];
                     }
                     return prevStaff;
                 });
-                
+
                 results.push(processedTeamMember);
             }
-            
+
             return results.length === 1 ? results[0] : results;
         } catch (err) {
             setError(err.message);
@@ -459,7 +474,7 @@ export function useTeam() {
         } finally {
             setLoading(false);
         }
-    }, [selectedTeam, setLoading, setError]);
+    }, [selectedTeam, user]);
 
     /**
      * Removes a staff member from the selected team
