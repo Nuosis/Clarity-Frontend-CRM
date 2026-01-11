@@ -53,17 +53,23 @@
       "id": "TSK0004",
       "title": "Create data migration script",
       "description": "Build script to migrate teams, staff, and team_members data from FileMaker to Supabase, preserving all relationships",
-      "status": "in_progress",
+      "status": "done",
       "priority": "high",
-      "executionPid": 19254,
-      "sessionId": "d0b02171-eaa0-4892-8bcd-ede48221439e"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented a standalone Node-based migration workflow to move staff, teams, and team_members from FileMaker to Supabase, including optional profile image uploads, dry-run support, idempotent inserts, validation, and org-scoped execution. Key changes include adding the main script at 'scripts/migrate-teams-data.js', documenting the end-to-end process in 'docs/TEAMS_MIGRATION_GUIDE.md' and 'scripts/README.md', and adding convenient run targets to 'package.json' (including a dry-run command). An important decision was to fetch FileMaker data via the backend API with HMAC authentication instead of using the existing FileMaker bridge modules, due to Node ESM import and browser-oriented dependency issues."
     },
     {
       "id": "TSK0005",
       "title": "Refactor src/api/teams.js",
       "description": "Replace all FileMaker API calls with Backend API endpoints, update error handling to use HTTP patterns",
-      "status": "queued",
-      "priority": "high"
+      "status": "done",
+      "priority": "high",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Completely refactored src/api/teams.js to replace FileMaker API calls with direct Supabase client integration. Replaced all handleFileMakerOperation and fetchDataFromFileMaker calls with Supabase queries using createClient from @supabase/supabase-js. Implemented all CRUD operations for teams, staff, and team_members tables with proper error handling using HTTP-style Error throws. Key changes: (1) All functions now use Supabase .from() queries with RLS-based organization scoping, (2) Error handling uses throw new Error() with descriptive messages instead of FileMaker-specific error wrappers, (3) Added validation for required parameters at function entry, (4) Transformed Supabase responses to maintain API contract compatibility (e.g., camelCase field names like teamId, staffId), (5) Added new functions: createStaff, updateStaff, deleteStaff, updateTeamMemberRole to support complete staff management, (6) Updated fetchTeamStaff to use Supabase joins with staff:staff_id foreign key syntax for efficient data fetching. All operations assume backend schema (teams, staff, team_members tables, projects.team_id column) is deployed per BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md. Verified project builds successfully with no new compilation errors."
     },
     {
       "id": "TSK0006",

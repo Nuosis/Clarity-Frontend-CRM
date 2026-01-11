@@ -32,7 +32,11 @@ export {
     removeStaffFromTeam,
     assignProjectToTeam,
     removeProjectFromTeam,
-    fetchAllStaff
+    fetchAllStaff,
+    createStaff,
+    updateStaff,
+    deleteStaff,
+    updateTeamMemberRole
 } from './teams';
 
 // Project operations
