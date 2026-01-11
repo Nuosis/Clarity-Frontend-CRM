@@ -20,8 +20,10 @@
       "id": "TSK0001",
       "title": "Create requirements documentation",
       "description": "Document current Teams feature, FileMaker usage, data model, and migration requirements under requirements/teams/",
-      "status": "queued",
-      "priority": "high"
+      "status": "in_progress",
+      "priority": "high",
+      "executionPid": 13850,
+      "sessionId": "f521d2ad-0917-4807-9f1d-dee14f07df16"
     },
     {
       "id": "TSK0002",
