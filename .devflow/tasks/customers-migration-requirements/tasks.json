@@ -157,19 +157,22 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive edge cases documentation covering 17 critical scenarios across 6 categories: concurrent updates & race conditions (optimistic locking, duplicate email handling), partial failures & transaction rollback (atomic operations, dual-write retry queues), network issues & retry logic (idempotency keys, checkpoint-based migration), orphaned records & data cleanup (CASCADE constraints, reconciliation jobs), duplicate detection & uniqueness (email/name deduplication strategies), data validation (invalid emails, missing address fields), ID reconciliation (UUID validation, conflict resolution), organization scoping (default org assignment), performance degradation (chunked batch processing), and security & authorization (RLS policies, cross-org access prevention). Each edge case includes: detection methods, impact analysis (severity/frequency), recommended solutions with code examples, validation procedures, and code references. Added deliverable at '.devflow/tasks/customers-migration-requirements/edge-cases.md' with 17 documented edge cases, implementation strategies for backend and frontend, SQL queries for detection, Python/JavaScript code examples, and comprehensive validation checklists. Key decisions documented include optimistic locking via If-Unmodified-Since headers, idempotency keys for retry safety, checkpoint-based migration for resumability, CASCADE constraints for referential integrity, RLS policies for multi-tenant security, and pre-migration data validation/cleanup. Verified document completeness and marked task complete."
+      "implementation_notes": "Implemented comprehensive edge case documentation for the customers migration by adding the new doc file 'edge-cases.md', detailing 17 critical scenarios with detection methods, impact analysis, recommended mitigations, and validation checklists. Updated 'tasks.json' to mark TSK0010 as complete. Verified the project build still succeeds, confirming only pre-existing warnings and no regressions introduced by the documentation changes."
     },
     {
       "id": "TSK0011",
       "title": "Define acceptance criteria",
       "description": "Create acceptance-criteria.md with test cases, success metrics, performance requirements, and validation procedures",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0005",
         "TSK0009",
         "TSK0010"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Created comprehensive acceptance criteria document covering all phases of the customers migration from FileMaker to Supabase, including 10 major sections with detailed test cases, validation procedures, and success metrics. The document defines 50+ specific acceptance criteria organized by phase: pre-migration (4 criteria including backend change request, dual-write coverage, data quality validation, staging environment), backend implementation (4 criteria including schema changes, RLS policies, CRUD endpoints, migration script), frontend implementation (3 criteria including feature flag, API integration, UI components), data migration (3 criteria including data integrity, foreign key integrity, rollback procedures), performance (2 criteria including API response times and database query optimization), security (2 criteria including RLS enforcement and input validation), edge case handling (3 criteria including concurrent updates, idempotency, orphaned records), post-migration (3 criteria including user rollout, code cleanup, documentation updates), and UAT (2 criteria including end-to-end workflows and performance testing). Each criterion includes detailed validation steps, pass/fail criteria, failure actions, test procedures, and code references. Added comprehensive success metrics matrix tracking 11 quantitative KPIs (data completeness 100%, error rate < 0.5%, p95 latency targets, user satisfaction ≥ 4/5, zero critical bugs) plus qualitative metrics. Included sign-off checklist requiring 100% completion of all criteria categories with approval from backend, frontend, product, and QA team leads. Document provides clear, actionable acceptance criteria that backend team can use to validate migration success at each phase. Verified build still succeeds with only pre-existing warnings."
     },
     {
       "id": "TSK0012",
