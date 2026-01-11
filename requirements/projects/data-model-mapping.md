@@ -1176,72 +1176,352 @@ CREATE TABLE project_notes (
 
 ## FileMaker dapiRecords Layout Fields (Time Tracking)
 
-### Time Record Fields
+**Layout**: `dapiRecords` (also referenced as `devRecords` in some documentation)
+**Constant**: `Layouts.RECORDS` in fileMaker.js:415
+**Purpose**: Stores billable time tracking entries for projects and customers
+**Relationship**: Many time records per project (one-to-many with devProjects via `_projectID`)
 
-| FileMaker Field | Type | Required | Description | Sample Value |
-|----------------|------|----------|-------------|--------------|
-| `__ID` | Text (UUID) | Auto | Record UUID | `"uuid-rec-444"` |
-| `recordId` | Number | Auto | FM internal record ID | `"100"` |
-| `_projectID` | Text (UUID) | No | Project ID (FK to devProjects) | `"uuid-project-456"` |
-| `_custID` | Text (UUID) | ✅ Yes | Customer ID (FK to devCustomers) | `"uuid-customer-123"` |
-| `startTime` | Timestamp | ✅ Yes | Start time | `"2024-01-15T09:00:00"` |
-| `endTime` | Timestamp | ✅ Yes | End time | `"2024-01-15T11:30:00"` |
-| `description` | Text | No | Work description | `"Fixed header layout bug"` |
-| `f_billed` | Text | No | Billed flag ("1" = yes, "0" = no) | `"0"` |
-| `Billable_Time_Rounded` | Number (Calculated) | Auto | Billable hours (rounded) | `2.5` |
-| `DateStart` | Date | Auto | Date portion of startTime | `"01/15/2024"` |
+### Core Fields
 
-**Issues**:
-1. Unclear if dapiRecords maps to `time_entries` or `customer_sales` in Supabase
-2. Frontend calculates duration from startTime/endTime (src/services/projectService.js:201-210)
-3. `Billable_Time_Rounded` appears to be a FileMaker calculation field
-4. Relationship to projects is optional (`_projectID` can be null for non-project work)
+| FileMaker Field | Type | Required | Description | Sample Value | Code Reference |
+|----------------|------|----------|-------------|--------------|----------------|
+| `__ID` | Text (UUID) | Auto | Record UUID | `"uuid-rec-444"` | billableHoursService.js:77 |
+| `recordId` | Number | Auto | FM internal record ID | `"100"` | billableHoursService.js:78 |
+| `_projectID` | Text (UUID) | No | Project ID (FK to devProjects.__ID) | `"uuid-project-456"` | billableHoursService.js:81 |
+| `_custID` | Text (UUID) | ✅ Yes | Customer ID (FK to devCustomers.__ID) | `"uuid-customer-123"` | billableHoursService.js:79 |
+| `startTime` | Timestamp | ✅ Yes | Start time | `"2024-01-15T09:00:00"` | billableHoursService.js:86 |
+| `endTime` | Timestamp | ✅ Yes | End time | `"2024-01-15T11:30:00"` | billableHoursService.js:86 |
+| `Work Performed` | Text | No | Work description | `"Fixed header layout bug"` | billableHoursService.js:90 |
+| `f_billed` | Text | No | Billed flag ("1" = yes, "0" = no) | `"0"` | billableHoursService.js:89 |
+| `Billable_Time_Rounded` | Number (Calculated) | Auto | Billable hours (rounded to 2 decimals) | `2.5` | billableHoursService.js:84 |
+| `DateStart` | Date | Auto | Date portion of startTime (MM/DD/YYYY) | `"01/15/2024"` | billableHoursService.js:86 |
+| `month` | Number | Auto | Month number (1-12) | `1` | billableHoursService.js:87 |
+| `year` | Number | Auto | Year (YYYY) | `2024` | billableHoursService.js:88 |
+
+### Related Fields (From Customer/Project Lookups)
+
+These fields are NOT stored in dapiRecords but are fetched via relationships for display:
+
+| FileMaker Field | Type | Description | Code Reference |
+|----------------|------|-------------|----------------|
+| `Customers::Name` | Text | Customer name (lookup from _custID) | billableHoursService.js:80 |
+| `Customers::chargeRate` | Number | Customer hourly rate | billableHoursService.js:37 |
+| `customers_Projects::projectName` | Text | Project name (lookup from _projectID) | billableHoursService.js:38 |
+| `customers_Projects::f_fixedPrice` | Text | Fixed price flag from project | billableHoursService.js:93 |
+| `Tasks::task` | Text | Task name (if linked to task) | billableHoursService.js:56 |
+| `dapiTasks::task` | Text | Alternative task name field | billableHoursService.js:57 |
+
+**Business Rules** (Code: billableHoursService.js:12-97):
+1. **Project Association Optional**: `_projectID` can be null for non-project billable work
+2. **Customer Association Required**: `_custID` must always be populated
+3. **Billable Hours Calculation**: `Billable_Time_Rounded = (endTime - startTime) / 3600` (hours, rounded to 2 decimals)
+4. **Hourly Rate Lookup**: Rate comes from `Customers::chargeRate` (customer's default rate)
+5. **Amount Calculation**: `amount = Billable_Time_Rounded * Hourly_Rate` (billableHoursService.js:106-113)
+6. **Billing Status**: String "1"/"0" converted to boolean in frontend (line 89)
+7. **Date Filtering**: Records typically queried by `DateStart` range (last 12 months)
+
+**API Operations**:
+
+| Operation | Code Reference | Method | Layout | Query Field |
+|-----------|---------------|--------|--------|-------------|
+| **Read by Project** | N/A (not implemented) | `fetchProjectRelatedData([projectId], 'dapiRecords')` | `dapiRecords` | `_projectID` |
+| **Read by Customer** | N/A (not implemented) | N/A | `dapiRecords` | `_custID` |
+| **Read by Date Range** | N/A (not implemented) | N/A | `dapiRecords` | `DateStart` |
+| **Create** | ❌ Not implemented | N/A | N/A | N/A |
+| **Update** | fileMaker.js:447-500 | `initializeQuickBooks(params)` | `dapiRecords` | Sets `f_billed = "1"` |
+| **Delete** | ❌ Not implemented | N/A | N/A | N/A |
+
+**Frontend Processing** (Code: billableHoursService.js:34-97):
+```javascript
+// processFinancialData(data)
+{
+  id: fieldData.__ID,
+  recordId: record.recordId,
+  customerId: fieldData["_custID"],
+  customerName: fieldData["Customers::Name"] || "Unknown Customer",
+  projectId: fieldData._projectID,
+  projectName: fieldData["customers_Projects::projectName"] || "Unknown Project",
+  amount: calculateAmount(fieldData.Billable_Time_Rounded, hourlyRate),
+  hours: parseFloat(fieldData.Billable_Time_Rounded || 0),
+  rate: parseFloat(hourlyRate),
+  date: fieldData.DateStart,
+  month: parseInt(fieldData.month || 0),
+  year: parseInt(fieldData.year || 0),
+  billed: fieldData.f_billed === "1" || fieldData.f_billed === 1,
+  description: fieldData["Work Performed"] || "",
+  taskName: fieldData["Tasks::task"] || fieldData["dapiTasks::task"] || null,
+  workPerformed: fieldData["Work Performed"] || "",
+  fixedPrice: parseFloat(fieldData["customers_Projects::f_fixedPrice"] || 0),
+  createdAt: fieldData['~creationTimestamp'],
+  modifiedAt: fieldData['~ModificationTimestamp'] || fieldData['~modificationTimestamp']
+}
+```
+
+**Data Aggregation Functions** (Code: billableHoursService.js:288-309):
+- **Total Hours Calculation**: Sum of all `Billable_Time_Rounded` values
+- **Unbilled Hours Calculation**: Sum of `Billable_Time_Rounded` where `f_billed === "0"`
+- **Billed Hours Calculation**: Sum of `Billable_Time_Rounded` where `f_billed === "1"`
+- **Total Amount**: Sum of `amount` (hours × rate) for all records
+- **Unbilled Amount**: Sum of `amount` where `f_billed === "0"`
+- **Billed Amount**: Sum of `amount` where `f_billed === "1"`
+
+**Grouping and Analytics** (Code: billableHoursService.js:181-280):
+1. **Group by Customer**: `groupRecordsByCustomer(records)` - Returns object keyed by customerId with totals
+2. **Group by Project**: `groupRecordsByProject(records, customerId)` - Returns object keyed by projectId with totals
+3. **Monthly Totals**: `calculateMonthlyTotals(records)` - Returns array of monthly aggregates for charting
+4. **Chart Data**: `prepareChartData(records, chartType)` - Formats data for bar/line/stacked charts
+
+**Query Pattern Examples**:
+```javascript
+// Fetch all unbilled time records for a project
+{
+  layout: 'dapiRecords',
+  action: 'read',
+  query: [
+    { "_projectID": "project-uuid" },
+    { "f_billed": "0" }
+  ]
+}
+
+// Fetch time records for date range (last 12 months)
+{
+  layout: 'dapiRecords',
+  action: 'read',
+  query: [{ "DateStart": ">2023+01+*" }]
+}
+
+// Mark records as billed (via QuickBooks sync)
+// See fileMaker.js:447-500 initializeQuickBooks()
+```
+
+**Relationship to Projects**:
+- One project has many time records (one-to-many)
+- Time records filtered by `_projectID === project.__ID`
+- Records with `_projectID = null` are non-project billable work (customer-level)
+- Project billable hours stats: `SELECT SUM(Billable_Time_Rounded) WHERE _projectID = 'uuid'`
+- Project unbilled hours stats: `SELECT SUM(Billable_Time_Rounded) WHERE _projectID = 'uuid' AND f_billed = '0'`
+
+**Integration with QuickBooks** (Code: fileMaker.js:447-500):
+- `initializeQuickBooks(params)` marks records as billed (`f_billed = "1"`)
+- Sends unbilled records to QuickBooks for invoice generation
+- Updates billing status after successful QB sync
+- See financialSyncService.js for QB integration details
 
 ## Supabase Time Tracking Mapping
 
-**Status**: Time records from FileMaker `dapiRecords` layout have NO direct equivalent in Supabase.
+**Status**: ⚠️ **NO DIRECT SUPABASE EQUIVALENT** - Time records from FileMaker `dapiRecords` layout remain in FileMaker
 
 **Verified Schema** (2025-01-10):
-- ✅ **customer_sales** table exists - for sales/financial transactions, not time tracking
-- ❌ **time_entries** table does NOT exist
+- ✅ **customer_sales** table exists - for sales/financial transactions, NOT time tracking
+- ❌ **time_entries** table does NOT exist in Supabase
+- ❌ **project_time_records** table does NOT exist in Supabase
 
-**customer_sales Table** (Actual Schema):
+**Current State**: FileMaker `dapiRecords` layout is the **source of truth** for billable time tracking. There is no Supabase table for time entries.
+
+### customer_sales Table (NOT for Time Tracking)
+
+**Actual Schema** (Verified via SSH):
 
 ```sql
 CREATE TABLE customer_sales (
-  id UUID PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES customers(id),
   product_id UUID REFERENCES products(id),
   product_name TEXT NOT NULL,
   quantity NUMERIC NOT NULL,
   unit_price NUMERIC NOT NULL,
   total_price NUMERIC NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  organization_id UUID NOT NULL REFERENCES organizations(id),
   date DATE NOT NULL,
-  inv_id TEXT,
-  financial_id UUID UNIQUE,
-  configuration_data JSONB
+  inv_id TEXT,                                   -- QuickBooks invoice ID
+  financial_id UUID UNIQUE,                       -- QuickBooks financial ID
+  configuration_data JSONB,                       -- Product configuration (VAPI, etc.)
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_customer_sales_customer_id ON customer_sales(customer_id);
+CREATE INDEX idx_customer_sales_product_id ON customer_sales(product_id);
+CREATE INDEX idx_customer_sales_date ON customer_sales(date);
+CREATE INDEX idx_customer_sales_workflow_status ON customer_sales((configuration_data ->> 'workflow_status')) WHERE configuration_data IS NOT NULL;
+
+FOREIGN KEY constraints:
+- customer_id REFERENCES customers(id)
+- product_id REFERENCES products(id)
+- organization_id REFERENCES organizations(id)
 ```
 
-**Schema Notes**:
-1. **customer_sales is for financial transactions**, not time tracking
-2. **Used for fixed-price and subscription project billing** (see projectService.js:508-596)
-3. **Time records (dapiRecords) are NOT migrated to Supabase** - remain in FileMaker only
-4. **Project value processing**: Creates customer_sales entries for fixed-price (50/50 split) and subscription (monthly) projects
+**Schema Purpose**:
+1. **Sales Transactions**: Records product purchases by customers (NOT time tracking)
+2. **Fixed-Price Project Billing**: Creates sales entries for fixed-price projects (50/50 split)
+3. **Subscription Billing**: Creates recurring monthly sales entries for subscription projects
+4. **QuickBooks Integration**: Syncs with QB via `inv_id` and `financial_id`
+5. **Product Configuration**: Stores JSONB data for products requiring setup (VAPI agents, phone numbers)
 
-**Business Logic Reference** (src/services/projectService.js):
-- Line 508-596: `processProjectValue()` function
-- Line 520-560: Fixed price logic (50% on start, 50% on completion)
-- Line 563-593: Subscription logic (monthly recurring sales)
-- Line 631-643: `updateProjectRecordsBillableStatus()` placeholder
+**Difference from Time Records**:
 
-**Migration Decision**:
-- Time records remain in FileMaker `dapiRecords` layout
-- Financial transactions from projects → `customer_sales` table
-- If time tracking needed in Supabase, create separate `time_entries` table
+| Aspect | FileMaker dapiRecords (Time) | Supabase customer_sales (Sales) |
+|--------|------------------------------|--------------------------------|
+| **Purpose** | Track billable hours worked | Record product/service sales |
+| **Key Fields** | startTime, endTime, Billable_Time_Rounded | product_name, quantity, unit_price, total_price |
+| **Project Link** | _projectID (optional, nullable) | ❌ No project_id field |
+| **Granularity** | Individual time entries (per session) | Aggregate sales transactions |
+| **Billing Status** | f_billed ("1"/"0") - per record | ❌ No billing status - sales are inherently "sold" |
+| **Rate Source** | Customers::chargeRate (hourly rate) | unit_price (product price) |
+| **QB Sync** | Sends unbilled hours to QB for invoicing | Syncs sales as line items in QB invoices |
+| **Migration** | ❌ NOT migrated to Supabase | ✅ Already exists in Supabase |
+
+### How Projects Use customer_sales
+
+**Business Logic** (Code: src/services/projectService.js:508-596):
+
+#### Fixed-Price Projects (f_fixedPrice = "1")
+```javascript
+// processProjectValue() - Line 520-560
+// Creates TWO customer_sales entries:
+// 1. 50% on project start
+await insert('customer_sales', {
+  customer_id: project.customer_id,
+  product_name: `${project.name} - Initial Payment`,
+  quantity: 1,
+  unit_price: project.value / 2,
+  total_price: project.value / 2,
+  date: project.start_date,
+  organization_id: project.organization_id
+});
+
+// 2. 50% on project completion (when status → 'completed')
+await insert('customer_sales', {
+  customer_id: project.customer_id,
+  product_name: `${project.name} - Final Payment`,
+  quantity: 1,
+  unit_price: project.value / 2,
+  total_price: project.value / 2,
+  date: project.actual_end_date || new Date(),
+  organization_id: project.organization_id
+});
+```
+
+#### Subscription Projects (f_subscription = "1")
+```javascript
+// processProjectValue() - Line 563-593
+// Creates MONTHLY customer_sales entries:
+await insert('customer_sales', {
+  customer_id: project.customer_id,
+  product_name: `${project.name} - Monthly Subscription`,
+  quantity: 1,
+  unit_price: project.value,
+  total_price: project.value,
+  date: new Date(year, month, 1),
+  organization_id: project.organization_id
+});
+// Repeats monthly until project ends or is cancelled
+```
+
+**Important**: `customer_sales` records are created for **project value** (fixed-price/subscription), NOT for individual time tracking entries.
+
+### Time Records Integration with Projects
+
+**Current Implementation**:
+1. **Time Entry**: User logs billable hours in FileMaker `dapiRecords` with `_projectID` link
+2. **Aggregation**: Frontend calculates project stats (total hours, unbilled hours) from `dapiRecords`
+3. **Billing**: QuickBooks sync marks `dapiRecords.f_billed = "1"` after invoice generation
+4. **Project Value**: Fixed-price/subscription projects create `customer_sales` entries (NOT related to time)
+
+**No Direct Relationship**:
+- `dapiRecords` (time entries) do NOT map to `customer_sales` (sales transactions)
+- `dapiRecords._projectID` links to `devProjects.__ID` (FileMaker only)
+- `customer_sales` has NO `project_id` field - cannot link sales to projects
+
+**Project Billable Hours Calculation** (Code: billableHoursService.js:288-309):
+```javascript
+// Fetch from FileMaker dapiRecords
+const records = await fetchRecords('dapiRecords', [{ _projectID: projectId }]);
+
+// Calculate totals
+const totalHours = records.reduce((sum, r) => sum + r.Billable_Time_Rounded, 0);
+const unbilledHours = records
+  .filter(r => r.f_billed === "0")
+  .reduce((sum, r) => sum + r.Billable_Time_Rounded, 0);
+const billedHours = totalHours - unbilledHours;
+```
+
+### Migration Impact
+
+**Current Decision** (As documented):
+1. ✅ **Time records stay in FileMaker**: `dapiRecords` layout remains source of truth
+2. ✅ **customer_sales exists in Supabase**: Used for product sales, NOT time tracking
+3. ❌ **No time_entries table**: Must be created if time tracking needed in Supabase
+4. ❌ **No migration path**: FileMaker time records are NOT migrated to Supabase
+
+**If Time Tracking Needed in Supabase** (Future Requirement):
+
+Create `time_entries` table (proposed schema):
+
+```sql
+CREATE TABLE time_entries (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,  -- Nullable for non-project work
+  customer_id UUID NOT NULL REFERENCES customers(id),
+  start_time TIMESTAMPTZ NOT NULL,
+  end_time TIMESTAMPTZ NOT NULL,
+  billable_hours DECIMAL(5,2) NOT NULL,           -- Calculated: (end_time - start_time) / 3600
+  hourly_rate DECIMAL(10,2) NOT NULL,              -- From customer.charge_rate
+  amount DECIMAL(10,2) NOT NULL,                   -- billable_hours * hourly_rate
+  description TEXT,
+  is_billed BOOLEAN DEFAULT false,                 -- Replaces f_billed
+  billed_at TIMESTAMPTZ,                           -- When marked as billed
+  qb_invoice_id TEXT,                              -- QuickBooks invoice reference
+  task_name TEXT,                                  -- Optional task association
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_time_entries_project ON time_entries(project_id);
+CREATE INDEX idx_time_entries_customer ON time_entries(customer_id);
+CREATE INDEX idx_time_entries_billed ON time_entries(is_billed);
+CREATE INDEX idx_time_entries_date ON time_entries(start_time);
+```
+
+**Field Mapping** (If time_entries table is created):
+
+| FileMaker Field | Supabase Column | Type Conversion | Notes |
+|----------------|-----------------|-----------------|-------|
+| `__ID` | `id` | UUID → UUID | Preserve UUID |
+| `recordId` | ❌ DISCARD | N/A | FileMaker internal ID |
+| `_projectID` | `project_id` | UUID → UUID | Nullable (null for non-project work) |
+| `_custID` | `customer_id` | UUID → UUID | NOT NULL |
+| `startTime` | `start_time` | Timestamp → TIMESTAMPTZ | Direct mapping |
+| `endTime` | `end_time` | Timestamp → TIMESTAMPTZ | Direct mapping |
+| `Billable_Time_Rounded` | `billable_hours` | Number → DECIMAL(5,2) | Direct mapping |
+| `Customers::chargeRate` | `hourly_rate` | Number → DECIMAL(10,2) | Lookup from customer |
+| `amount` (calculated) | `amount` | N/A → DECIMAL(10,2) | billable_hours * hourly_rate |
+| `Work Performed` | `description` | Text → TEXT | Direct mapping |
+| `f_billed` | `is_billed` | "1"/"0" → BOOLEAN | Convert: "1" → true, "0" → false |
+| `DateStart` | ❌ DISCARD | N/A | Derived from start_time |
+| `month` | ❌ DISCARD | N/A | Derived from start_time |
+| `year` | ❌ DISCARD | N/A | Derived from start_time |
+| `Tasks::task` | `task_name` | Text → TEXT | Optional task name |
+| N/A | `billed_at` | N/A | New field - timestamp when marked billed |
+| N/A | `qb_invoice_id` | N/A | New field - QuickBooks invoice reference |
+| N/A | `organization_id` | N/A | **REQUIRED** - lookup from customer |
+
+### Recommended Action
+
+**Backend Change Request Required** (If time tracking needed in web app):
+1. Create `time_entries` table in Supabase (schema above)
+2. Migrate historical `dapiRecords` data to `time_entries` (optional)
+3. Update frontend to write to both FileMaker and Supabase during transition
+4. Eventually deprecate FileMaker `dapiRecords` layout
+
+**Current State** (No Backend Change):
+- Time tracking remains FileMaker-only
+- Web app continues using fm-gofer to read `dapiRecords`
+- Projects calculate billable hours from FileMaker data
+- No migration needed (FileMaker is source of truth)
+
+See `requirements/financial-records/BACKEND_CHANGE_REQUEST_001_FINANCIAL_RECORDS_MIGRATION.md` for related migration planning.
 
 ## Field-by-Field Conversion Rules
 

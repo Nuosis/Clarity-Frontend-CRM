@@ -116,14 +116,20 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Documented the complete FileMaker devNotes layout structure including all core fields (__ID, recordId, _fkID, note, type, ~CreationTimestamp, ~CreatedBy), business rules from noteService.js and notes.js, API operations (create and read patterns), frontend processing logic, and UI components (ProjectNotesTab.jsx). Verified via SSH that no notes table exists in Supabase and proposed a polymorphic notes schema with entity_type TEXT and entity_id UUID to handle the FileMaker polymorphic _fkID pattern. Documented entity type determination strategy requiring JOINs with projects, customers, and tasks tables during migration, plus complete migration code example and query patterns. Compared polymorphic notes table vs dedicated project_notes table approaches with pros/cons, recommending polymorphic approach to match FileMaker's pattern and reduce code duplication. Included frontend API changes required post-migration, field mappings, migration dependencies, and validation checklist."
+      "implementation_notes": "Documented the FileMaker devNotes layout and its polymorphic relationship to projects in 'requirements/projects/data-model-mapping.md', including field inventory, business rules, API usage, and current frontend behavior with concrete code references (notably 'noteService.js', 'notes.js', 'projects.js', 'useProject.js', and 'ProjectNotesTab.jsx'). Proposed a Supabase notes schema using an 'entity_type' plus 'entity_id' polymorphic pattern, capturing mappings, constraints, indexes, query patterns, and a migration strategy that derives entity type and organization via joins and handles orphaned records. Updated task status in 'tasks.json' and verified the build compiles successfully, with the key decision to recommend the polymorphic notes table over a dedicated project_notes table to match FileMaker and reduce duplication."
     },
     {
       "id": "TSK0009",
       "title": "Document Time Records relationship",
       "description": "In requirements/projects/data-model-mapping.md, document FileMaker devRecords layout relationship to projects (_projectID field). Include: billable hours calculation, unbilled hours tracking, and how this integrates with existing time_entries or customer_sales tables in Supabase",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completedAt": "2026-01-10T21:45:00.000Z",
+      "notes": "Completed comprehensive documentation of FileMaker dapiRecords (time tracking) layout relationship to projects, including detailed field mappings, billable hours calculations, unbilled hours tracking, integration with QuickBooks, and analysis of customer_sales table (NOT for time tracking). Documented that time_entries table does not exist in Supabase and time records remain in FileMaker only",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Documented the complete FileMaker dapiRecords (time tracking) data model and its relationship to projects in 'requirements/projects/data-model-mapping.md', including core fields (_projectID, _custID, startTime, endTime, Billable_Time_Rounded, f_billed, Work Performed), related lookup fields (customer name, hourly rate, project name), business rules for optional project association and required customer association, frontend processing via billableHoursService.js with aggregation functions (total/unbilled/billed hours and amounts), grouping by customer/project, monthly totals for charting, and QuickBooks integration via initializeQuickBooks(). Verified via SSH that time_entries table does NOT exist in Supabase and customer_sales table exists but is for sales transactions (fixed-price/subscription project billing) NOT time tracking. Documented the key distinction that dapiRecords (individual time entries) do NOT map to customer_sales (aggregate sales transactions), that time records remain FileMaker-only with no migration path, and proposed a future time_entries table schema if time tracking needed in Supabase web app. Updated tasks.json marking task complete and verified build succeeds."
     },
     {
       "id": "TSK0010",
