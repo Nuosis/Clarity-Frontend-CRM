@@ -245,17 +245,25 @@
       "id": "TSK0019",
       "title": "Create migration plan for related entities",
       "description": "In requirements/projects/migration-plan.md, add migration approach for objectives, steps, images, links, and notes. Include: foreign key reconciliation, order preservation for objectives/steps, and handling orphaned records",
-      "status": "in_progress",
+      "status": "done",
       "priority": "high",
-      "executionPid": 67157,
-      "sessionId": "4164766c-8131-4f42-9b59-e9e33cc52883"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented a comprehensive related-entities migration strategy in the projects migration documentation by updating 'migration-plan.md' with detailed objectives, sequencing, foreign key reconciliation, order preservation for objectives and steps, orphan-handling policies, and polymorphic note FK resolution, plus expanded checklist and validation queries. Enhanced the validation script to cover all related entity types with relationship integrity checks, duplicate order detection, orphan counting, URL length validation, and a warnings system, and added documentation for transformation logic including links and notes handling. Key decisions included preserving FileMaker UUIDs as Supabase primary keys, enforcing a strict migration order to avoid FK failures, and recommending a defined approach for orphaned records and notes FK resolution. Verified changes compile successfully via a clean build."
     },
     {
       "id": "TSK0020",
       "title": "Create acceptance criteria for core operations",
       "description": "Create requirements/projects/acceptance-criteria.md documenting test cases for: create/update/delete project, status transitions, team assignment, customer relationship integrity, and UUID consistency",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completedAt": "2026-01-10T23:30:00.000Z",
+      "notes": "Enhanced existing acceptance-criteria.md by adding 4 new comprehensive test suites (5-8) covering: status transitions (8 tests for all state changes including business logic triggers), team assignment (7 tests for assign/reassign/remove/access control), customer relationship integrity (7 tests for FK validation/scoping/sales entry linkage), and UUID consistency (8 tests for FileMaker UUID preservation, cross-entity consistency, recordId vs UUID distinction, validation, and case sensitivity). Renumbered subsequent test suites 9-12 (Objectives, Steps, Images, Completion) for consistency. All tests follow Given/When/Then format with explicit verification criteria",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive acceptance criteria for core project operations by significantly expanding the existing 'requirements/projects/acceptance-criteria.md' file with four new test suites covering all aspects specified in the task description. Added Test Suite 5 (Status Transitions) with 8 detailed test cases covering all valid status changes (Planning→Active, Active→On Hold, Active→Completed, On Hold→Active, Completed→Active reopen, Active→Cancelled, invalid transitions, and subscription sales generation impact on cancellation). Added Test Suite 6 (Team Assignment) with 7 test cases for assigning/reassigning/removing teams, handling non-existent teams, cross-organization validation, team member access control, and admin override permissions. Added Test Suite 7 (Customer Relationship Integrity) with 7 test cases for customer FK validation, organization scoping via customer relationship, customer deletion scenarios with different FK cascade behaviors, list scoping, and sales entry customer linkage. Added Test Suite 8 (UUID Consistency and Identity Preservation) with 8 test cases covering FileMaker __ID preservation, cross-entity UUID consistency, UUID vs recordId distinction, uniqueness constraints, format validation, sales entry UUID linkage, polymorphic association UUID handling, and PostgreSQL UUID case-sensitivity behavior. Renumbered all subsequent test suites from 5-8 to 9-12 to maintain sequential numbering (Objectives, Steps, Images, Completion Percentage). Verified the documentation-only changes by running 'npm run build' successfully with only pre-existing warnings. Updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark TSK0020 as done with detailed completion notes and implementation summary."
     },
     {
       "id": "TSK0021",

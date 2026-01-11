@@ -553,23 +553,292 @@ SELECT COUNT(*) FROM project_images WHERE project_id = 'test-cascade-id';
 
 ---
 
-### Test Suite 5: Objectives Operations
+### Test Suite 5: Status Transitions
 
-#### Test 5.1: Create Objective
+#### Test 5.1: Transition from Planning to Active
+**Given**: Project with status = "Planning"
+**When**: POST /rpc/update_project_status with status = "Active"
+**Then**:
+- Returns 200 OK
+- Project status updated to "Active"
+- updated_at timestamp updated
+- No other fields modified
+
+#### Test 5.2: Transition from Active to On Hold
+**Given**: Project with status = "Active"
+**When**: POST /rpc/update_project_status with status = "On Hold"
+**Then**:
+- Returns 200 OK
+- Project status updated to "On Hold"
+- Time tracking remains unchanged
+
+#### Test 5.3: Transition from Active to Completed
+**Given**: Fixed-price project with status = "Active", value = 10000, dateStart = "2024-01-01"
+**When**: POST /rpc/update_project_status with status = "Completed"
+**Then**:
+- Returns 200 OK
+- Project status updated to "Completed"
+- If fixed-price: Second 50% sales entry created (if not already created)
+- actual_end_date set to today (if not already set)
+
+#### Test 5.4: Transition from On Hold to Active
+**Given**: Project with status = "On Hold"
+**When**: POST /rpc/update_project_status with status = "Active"
+**Then**:
+- Returns 200 OK
+- Project status updated to "Active"
+- Project resume operations normally
+
+#### Test 5.5: Transition from Completed to Active (Reopen)
+**Given**: Project with status = "Completed"
+**When**: POST /rpc/update_project_status with status = "Active"
+**Then**:
+- Returns 200 OK
+- Project status updated to "Active"
+- actual_end_date cleared (set to null)
+- Audit log captures reopen action
+
+#### Test 5.6: Transition from Active to Cancelled
+**Given**: Project with status = "Active"
+**When**: POST /rpc/update_project_status with status = "Cancelled"
+**Then**:
+- Returns 200 OK
+- Project status updated to "Cancelled"
+- actual_end_date set to today
+- Sales entries remain unchanged (no automatic reversals)
+
+#### Test 5.7: Invalid Status Transition
+**Given**: Project with any valid status
+**When**: POST /rpc/update_project_status with status = "InvalidStatus"
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Invalid status value. Must be one of: Planning, Active, On Hold, Completed, Cancelled"
+- Project status unchanged
+
+#### Test 5.8: Status Transition Affects Subscription Sales Generation
+**Given**: Subscription project with status = "Active", monthly value = 1000, dateStart = "2024-01-01", dateEnd = "2024-12-31"
+**When**: POST /rpc/update_project_status with status = "Cancelled" on "2024-06-15"
+**Then**:
+- Returns 200 OK
+- Project status updated to "Cancelled"
+- Sales entries for Jan-Jun exist (6 months generated)
+- No future sales entries generated (Jul-Dec should not be created)
+
+---
+
+### Test Suite 6: Team Assignment
+
+#### Test 6.1: Assign Team to Project
+**Given**: Project with team_id = null
+**When**: POST /rpc/update_project_team with team_id = "team-uuid-123"
+**Then**:
+- Returns 200 OK
+- Project team_id updated to "team-uuid-123"
+- updated_at timestamp updated
+
+#### Test 6.2: Reassign Team
+**Given**: Project with team_id = "team-uuid-123"
+**When**: POST /rpc/update_project_team with team_id = "team-uuid-456"
+**Then**:
+- Returns 200 OK
+- Project team_id updated to "team-uuid-456"
+- Previous team members lose edit access (RLS)
+- New team members gain edit access
+
+#### Test 6.3: Remove Team Assignment
+**Given**: Project with team_id = "team-uuid-123"
+**When**: POST /rpc/update_project_team with team_id = null
+**Then**:
+- Returns 200 OK
+- Project team_id set to null
+- All organization users can edit (no team restriction)
+
+#### Test 6.4: Assign Non-Existent Team
+**Given**: Project with team_id = null
+**When**: POST /rpc/update_project_team with team_id = "non-existent-uuid"
+**Then**:
+- Returns 404 Not Found
+- Error message: "Team not found"
+- Project team_id unchanged
+
+#### Test 6.5: Assign Team from Different Organization
+**Given**: Project in Org A, Team in Org B
+**When**: POST /rpc/update_project_team with team_id = "org-b-team-uuid"
+**Then**:
+- Returns 403 Forbidden
+- Error message: "Team must belong to same organization as project"
+- Project team_id unchanged
+
+#### Test 6.6: Team Member Access Control
+**Given**: Project with team_id = "team-uuid-123", User A in Team 123, User B in Team 456 (same org)
+**When**:
+  - User A attempts to update project
+  - User B attempts to update project
+**Then**:
+- User A: Update succeeds (200 OK)
+- User B: Update blocked (403 Forbidden) or read-only access
+
+#### Test 6.7: Admin Override for Team Access
+**Given**: Project with team_id = "team-uuid-123", Admin user not in Team 123
+**When**: Admin attempts to update project
+**Then**:
+- Returns 200 OK
+- Update succeeds (admin has override permissions)
+
+---
+
+### Test Suite 7: Customer Relationship Integrity
+
+#### Test 7.1: Create Project with Valid Customer
+**Given**: Valid customer_id exists in customers table
+**When**: POST /rpc/create_project with customer_id
+**Then**:
+- Returns 201 Created
+- Project created and linked to customer
+- organization_id derived from customer's organization_id
+
+#### Test 7.2: Create Project with Non-Existent Customer
+**Given**: Random UUID for customer_id (does not exist)
+**When**: POST /rpc/create_project with customer_id
+**Then**:
+- Returns 404 Not Found
+- Error message: "Customer not found"
+- No project created
+
+#### Test 7.3: Update Project Customer (If Allowed)
+**Given**: Project linked to Customer A
+**When**: POST /rpc/update_project with customer_id = "customer-b-uuid"
+**Then**:
+- Either:
+  - Returns 200 OK, customer_id updated, sales entries updated to new customer
+  - OR Returns 400 Bad Request, "Cannot change customer after project creation" (business rule)
+
+#### Test 7.4: Delete Customer with Active Projects
+**Given**: Customer with 3 active projects
+**When**: DELETE customer
+**Then**:
+- Either:
+  - Deletion blocked (RESTRICT FK constraint): Returns 400 Bad Request, "Cannot delete customer with active projects"
+  - OR Projects cascade deleted (CASCADE FK constraint): Customer and all 3 projects deleted
+  - OR Projects orphaned with customer_id set to null (SET NULL FK constraint): Customer deleted, projects remain with customer_id = null
+
+#### Test 7.5: List Projects by Customer (Scoped Correctly)
+**Given**: Customer A with 5 projects, Customer B with 3 projects
+**When**: POST /rpc/get_projects_by_customer with customer_id = "customer-a-uuid"
+**Then**:
+- Returns 200 OK
+- Response contains exactly 5 projects
+- All projects have customer_id = "customer-a-uuid"
+- No projects from Customer B returned
+
+#### Test 7.6: Organization Scoping via Customer
+**Given**: Project for Customer in Org A, User in Org B
+**When**: User attempts to access project
+**Then**:
+- Returns 403 Forbidden (or 0 results from RLS)
+- Error message: "Unauthorized access - organization mismatch"
+
+#### Test 7.7: Verify Sales Entries Linked to Customer
+**Given**: Fixed-price project with value = 10000, customer_id = "customer-uuid-123"
+**When**: Project created
+**Then**:
+- 2 sales entries created
+- Both entries have customer_id = "customer-uuid-123"
+- Both entries have organization_id matching customer's organization
+
+---
+
+### Test Suite 8: UUID Consistency and Identity Preservation
+
+#### Test 8.1: Preserve FileMaker UUID on Migration
+**Given**: FileMaker project with __ID = "a1b2c3d4-e5f6-7890-abcd-1234567890ab"
+**When**: Project migrated to Supabase
+**Then**:
+- Supabase project.id = "a1b2c3d4-e5f6-7890-abcd-1234567890ab"
+- UUID format preserved exactly (no case changes, no regeneration)
+
+#### Test 8.2: UUID Consistency Across Related Entities
+**Given**:
+  - Project UUID = "proj-uuid-123"
+  - Objective with project_id (FileMaker _projectID) = "proj-uuid-123"
+**When**: Migration executed
+**Then**:
+- Supabase objective.project_id = "proj-uuid-123"
+- Foreign key relationship valid
+- No orphaned objectives
+
+#### Test 8.3: UUID vs RecordId Distinction
+**Given**: FileMaker project with:
+  - __ID = "uuid-123" (UUID)
+  - recordId = "42" (FileMaker internal ID)
+**When**: Project migrated and accessed via API
+**Then**:
+- Supabase uses id = "uuid-123" for all operations
+- recordId is NOT used in Supabase (FileMaker-specific)
+- All API endpoints accept/return id (UUID), not recordId
+
+#### Test 8.4: UUID Uniqueness Constraint
+**Given**: Attempt to create project with existing UUID
+**When**: POST /rpc/create_project with id = "existing-uuid-123"
+**Then**:
+- Returns 409 Conflict
+- Error message: "Project with this ID already exists"
+- No duplicate UUID created
+
+#### Test 8.5: UUID Validation
+**Given**: Attempt to create project with invalid UUID format
+**When**: POST /rpc/create_project with id = "not-a-valid-uuid"
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Invalid UUID format"
+- No project created
+
+#### Test 8.6: UUID Consistency in Sales Entries
+**Given**: Fixed-price project with id = "proj-uuid-123"
+**When**: Project created, sales entries generated
+**Then**:
+- Both sales entries have project_id = "proj-uuid-123"
+- Sales entries retrievable by project_id foreign key
+- UUID linkage preserved
+
+#### Test 8.7: UUID Preservation in Links and Notes
+**Given**:
+  - Project id = "proj-uuid-123"
+  - Link with _fkID = "proj-uuid-123" (FileMaker)
+  - Note with _fkID = "proj-uuid-123" (FileMaker)
+**When**: Migration executed
+**Then**:
+- Supabase link.project_id = "proj-uuid-123"
+- Supabase note.entity_id = "proj-uuid-123" AND note.entity_type = "project"
+- Polymorphic associations resolved correctly
+
+#### Test 8.8: UUID Case Sensitivity
+**Given**: UUID = "A1B2C3D4-E5F6-7890-ABCD-1234567890AB" (uppercase)
+**When**: Stored in PostgreSQL/Supabase
+**Then**:
+- UUID stored in lowercase: "a1b2c3d4-e5f6-7890-abcd-1234567890ab"
+- Queries are case-insensitive (PostgreSQL UUID type behavior)
+- Lookups by uppercase or lowercase UUID both work
+
+---
+
+### Test Suite 9: Objectives Operations
+
+#### Test 9.1: Create Objective
 **Given**: Valid project_id
 **When**: POST /rpc/create_objective with project_id, objective = "Complete design"
 **Then**:
 - Returns 201 Created
 - Objective created and linked to project
 
-#### Test 5.2: Update Objective
+#### Test 9.2: Update Objective
 **Given**: Valid objective_id
 **When**: POST /rpc/update_objective with objective = "Complete redesign"
 **Then**:
 - Returns 200 OK
 - Objective text updated
 
-#### Test 5.3: Mark Objective as Completed
+#### Test 9.3: Mark Objective as Completed
 **Given**: Valid objective_id, completed = false
 **When**: POST /rpc/update_objective with completed = true
 **Then**:
@@ -577,7 +846,7 @@ SELECT COUNT(*) FROM project_images WHERE project_id = 'test-cascade-id';
 - Objective marked as completed
 - Project completion percentage recalculated
 
-#### Test 5.4: Delete Objective (Cascade to Steps)
+#### Test 9.4: Delete Objective (Cascade to Steps)
 **Given**: Objective with 3 steps
 **When**: POST /rpc/delete_objective
 **Then**:
@@ -585,7 +854,7 @@ SELECT COUNT(*) FROM project_images WHERE project_id = 'test-cascade-id';
 - Objective deleted
 - All 3 steps deleted
 
-#### Test 5.5: Create Objective for Non-Existent Project
+#### Test 9.5: Create Objective for Non-Existent Project
 **Given**: Random UUID for project_id
 **When**: POST /rpc/create_objective
 **Then**:
@@ -594,23 +863,23 @@ SELECT COUNT(*) FROM project_images WHERE project_id = 'test-cascade-id';
 
 ---
 
-### Test Suite 6: Steps Operations
+### Test Suite 10: Steps Operations
 
-#### Test 6.1: Create Step
+#### Test 10.1: Create Step
 **Given**: Valid objective_id
 **When**: POST /rpc/create_step with objective_id, step_text = "Research competitors"
 **Then**:
 - Returns 201 Created
 - Step created and linked to objective
 
-#### Test 6.2: Update Step
+#### Test 10.2: Update Step
 **Given**: Valid step_id
 **When**: POST /rpc/update_step with step_text = "Research top 5 competitors"
 **Then**:
 - Returns 200 OK
 - Step text updated
 
-#### Test 6.3: Mark Step as Completed
+#### Test 10.3: Mark Step as Completed
 **Given**: Valid step_id, completed = false
 **When**: POST /rpc/update_step with completed = true
 **Then**:
@@ -619,14 +888,14 @@ SELECT COUNT(*) FROM project_images WHERE project_id = 'test-cascade-id';
 - Objective completion percentage recalculated
 - Project completion percentage recalculated
 
-#### Test 6.4: Delete Step
+#### Test 10.4: Delete Step
 **Given**: Valid step_id
 **When**: POST /rpc/delete_step
 **Then**:
 - Returns 200 OK
 - Step deleted
 
-#### Test 6.5: Create Step for Non-Existent Objective
+#### Test 10.5: Create Step for Non-Existent Objective
 **Given**: Random UUID for objective_id
 **When**: POST /rpc/create_step
 **Then**:
@@ -635,30 +904,30 @@ SELECT COUNT(*) FROM project_images WHERE project_id = 'test-cascade-id';
 
 ---
 
-### Test Suite 7: Images Operations
+### Test Suite 11: Images Operations
 
-#### Test 7.1: Add Image to Project
+#### Test 11.1: Add Image to Project
 **Given**: Valid project_id, image_url
 **When**: POST /rpc/create_project_image with project_id, image_url
 **Then**:
 - Returns 201 Created
 - Image added to project
 
-#### Test 7.2: Add Image with Caption
+#### Test 11.2: Add Image with Caption
 **Given**: Valid project_id, image_url, caption
 **When**: POST /rpc/create_project_image
 **Then**:
 - Returns 201 Created
 - Image added with caption
 
-#### Test 7.3: Delete Image
+#### Test 11.3: Delete Image
 **Given**: Valid image_id
 **When**: POST /rpc/delete_project_image
 **Then**:
 - Returns 200 OK
 - Image deleted
 
-#### Test 7.4: Add Image to Non-Existent Project
+#### Test 11.4: Add Image to Non-Existent Project
 **Given**: Random UUID for project_id
 **When**: POST /rpc/create_project_image
 **Then**:
@@ -667,27 +936,27 @@ SELECT COUNT(*) FROM project_images WHERE project_id = 'test-cascade-id';
 
 ---
 
-### Test Suite 8: Completion Percentage Calculation
+### Test Suite 12: Completion Percentage Calculation
 
-#### Test 8.1: Calculate Completion with No Objectives
+#### Test 12.1: Calculate Completion with No Objectives
 **Given**: Project with 0 objectives
 **When**: Calculate completion percentage
 **Then**:
 - Completion percentage = 0%
 
-#### Test 8.2: Calculate Completion with All Completed
+#### Test 12.2: Calculate Completion with All Completed
 **Given**: Project with 3 objectives, all completed = true
 **When**: Calculate completion percentage
 **Then**:
 - Completion percentage = 100%
 
-#### Test 8.3: Calculate Completion with Partial
+#### Test 12.3: Calculate Completion with Partial
 **Given**: Project with 4 objectives, 2 completed = true, 2 completed = false
 **When**: Calculate completion percentage
 **Then**:
 - Completion percentage = 50%
 
-#### Test 8.4: Calculate Completion with Nested Steps
+#### Test 12.4: Calculate Completion with Nested Steps
 **Given**: Project with 2 objectives:
   - Objective 1: 4 steps, 2 completed
   - Objective 2: 2 steps, 2 completed
