@@ -64,17 +64,23 @@
       "id": "TSK0005",
       "title": "Document authorization requirements",
       "description": "Create authorization.md covering OAuth flow, token lifecycle, organization scoping, RLS policies, and security considerations",
-      "status": "in_progress",
+      "status": "done",
       "priority": "medium",
-      "executionPid": 61565,
-      "sessionId": "98e792c1-8692-48fb-8b58-049eccb117d6"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented comprehensive QuickBooks authorization documentation by adding 'requirements/quickbooks/authorization.md', covering the 3-layer auth model (QuickBooks OAuth 2.0, backend HMAC-SHA256, and Supabase JWT with RLS), token lifecycle, org scoping, RLS policy expectations, error handling, and security considerations. Verified all referenced behaviors and line numbers against existing code in 'src/api/quickbooksApi.js', 'src/services/supabaseService.js', and 'src/services/dataService.js', and updated the doc to reflect the decision that 'disconnect' is backend-only and not exposed via the frontend client. No runtime code changes were made; the project build was run to confirm documentation-only updates did not break compilation."
     },
     {
       "id": "TSK0006",
       "title": "Create migration plan",
       "description": "Create migration-plan.md with step-by-step approach to migrate from FileMaker scripts to backend API, including rollback procedures and cutover strategy",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive migration plan document 'migration-plan.md' (650+ lines) with a 4-phase approach to migrate QuickBooks invoice generation from FileMaker scripts to backend API. The plan includes: (1) Preparation phase with code audit, backend API verification, data model validation, and test data creation; (2) Backend implementation phase (determined no changes needed - all APIs exist); (3) Frontend migration phase with detailed service layer refactoring (new qbInvoiceService.js), component updates, timer integration changes, and comprehensive testing strategy; (4) Cutover and validation phase with deployment steps, monitoring metrics, and validation tests. Included rollback procedures for immediate, partial, and emergency scenarios; performance benchmarks comparing FileMaker (fire-and-forget) vs backend API (5s target); risk mitigation strategies for 6 identified risks; and success metrics for technical, UX, and business outcomes. The plan strictly adheres to Backend Change Protocol (no backend modifications), includes no time estimates per CLAUDE.md guidelines, follows Teams Migration pattern from BACKEND_CHANGE_REQUEST_002, references existing code with line numbers, and includes code examples throughout. Verified project builds successfully with no errors."
     },
     {
       "id": "TSK0007",
