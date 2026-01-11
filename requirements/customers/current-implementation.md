@@ -332,10 +332,20 @@ setCustomers() → Filter out deleted customer by recordId
 - `fetchActiveCustomers()` - Query customers where `f_active = "1"`
 - `deleteCustomer(customerId)` - Delete customer by `recordId`
 
-**src/api/fileMaker.js**
-- `fetchDataFromFileMaker(params)` - Low-level FileMaker bridge call
-- Uses fm-gofer library to communicate with FileMaker WebViewer
-- Handles authentication, layout routing, query formatting
+**src/api/fileMaker.js** (501 lines)
+- `fetchDataFromFileMaker(params)` - **Environment-aware routing** (lines 263-282)
+  - Detects environment via `isFileMakerEnvironment()` or app context attribute
+  - **FileMaker Environment**: Uses fm-gofer library to communicate with FileMaker WebViewer
+  - **Web App Environment**: Routes to `callBackendAPI()` which converts FileMaker-style params to REST API calls
+- `callBackendAPI(params)` - Backend API adapter (lines 93-239)
+  - Converts FileMaker actions (read/create/update/delete) to HTTP requests
+  - Routes to `https://api.claritybusinesssolutions.ca/filemaker/{layout}/...`
+  - Generates HMAC-SHA256 authentication headers
+  - Transforms responses back to FileMaker-compatible format
+- `handleFileMakerNativeCall(params)` - FileMaker bridge implementation (lines 291-351)
+  - Uses fm-gofer for async operations or FileMaker.PerformScript for sync
+  - Handles retries (30 attempts, 100ms intervals)
+  - Error handling with categorized error codes
 
 ### Layer 5: Supabase Service
 
@@ -347,10 +357,64 @@ setCustomers() → Filter out deleted customer by recordId
   - HMAC signature validation on backend
 - No customer-specific logic (generic table operations)
 
+## Environment Architecture
+
+### Dual-Environment Support
+
+The application supports two runtime environments, automatically detected:
+
+**FileMaker WebViewer Environment:**
+- Detected via `window.FileMaker` object or `FMGofer.PerformScript`
+- Uses fm-gofer bridge for direct FileMaker communication
+- Data flows: Frontend → fm-gofer → FileMaker WebViewer → FileMaker Data API
+- Typical use: Embedded in FileMaker desktop application
+
+**Web App Environment:**
+- Detected when FileMaker bridge is unavailable
+- Routes all FileMaker-style API calls through backend API
+- Data flows: Frontend → Backend API (`/filemaker/*`) → FileMaker Server
+- Backend handles authentication and FileMaker Data API communication
+- Typical use: Standalone web browser access
+
+**Environment Detection** (src/api/fileMaker.js:263-282):
+```javascript
+// Check for explicit environment context
+const appElement = document.querySelector('[data-app-environment]');
+const appEnvironment = appElement?.getAttribute('data-app-environment');
+
+// Use context if available, otherwise auto-detect
+const useFileMakerBridge = appEnvironment === 'filemaker' ||
+    (appEnvironment === null && isFileMakerEnvironment());
+
+if (useFileMakerBridge) {
+    return await handleFileMakerNativeCall(params);
+} else {
+    return await callBackendAPI(params);
+}
+```
+
+**Backend API Mapping** (src/api/fileMaker.js:93-239):
+| FileMaker Action | HTTP Method | Endpoint |
+|-----------------|-------------|----------|
+| READ (all) | GET | `/filemaker/{layout}/records` |
+| READ (by ID) | GET | `/filemaker/{layout}/records/{recordId}` |
+| READ (query) | POST | `/filemaker/{layout}/_find` |
+| CREATE | POST | `/filemaker/{layout}/records` |
+| UPDATE | PATCH | `/filemaker/{layout}/records/{recordId}` |
+| DELETE | DELETE | `/filemaker/{layout}/records/{recordId}` |
+
+**Authentication:**
+- FileMaker Environment: No auth needed (trusted WebViewer context)
+- Web App Environment: HMAC-SHA256 signature required (Bearer token)
+  - Format: `Bearer {signature}.{timestamp}`
+  - Message: `{timestamp}.{JSON.stringify(requestData)}`
+  - Secret: `VITE_SECRET_KEY` from environment
+
 ## Data Flow Patterns
 
 ### FileMaker-Primary Pattern (Current State)
 
+**Path 1: FileMaker WebViewer Environment**
 ```
 UI Component
     ↓
@@ -358,20 +422,48 @@ useCustomer Hook (state management)
     ↓
 API Layer (src/api/customers.js)
     ↓
-FileMaker Bridge (fm-gofer)
+fileMaker.js → fetchDataFromFileMaker()
+    ↓
+Environment Detection: isFileMakerEnvironment() = true
+    ↓
+handleFileMakerNativeCall() → fm-gofer bridge
+    ↓
+FileMaker WebViewer (PerformScript)
     ↓
 FileMaker Data API
     ↓
 FileMaker Database (devCustomers layout)
+```
 
-[Optional Dual-Write on Update Only]
+**Path 2: Web App Environment**
+```
+UI Component
     ↓
+useCustomer Hook (state management)
+    ↓
+API Layer (src/api/customers.js)
+    ↓
+fileMaker.js → fetchDataFromFileMaker()
+    ↓
+Environment Detection: isFileMakerEnvironment() = false
+    ↓
+callBackendAPI() → Convert FM params to REST
+    ↓
+Backend API (https://api.claritybusinesssolutions.ca/filemaker/devCustomers/...)
+    ↓ (HMAC Auth)
+FileMaker Data API (server-side)
+    ↓
+FileMaker Database (devCustomers layout)
+```
+
+**[Optional Dual-Write on Update Only]**
+```
 useSupabaseCustomer Hook
     ↓
 supabaseService.js (generic CRUD)
     ↓
 Backend API (/api/supabase/update)
-    ↓
+    ↓ (HMAC Auth)
 Supabase Database (customers + related tables)
 ```
 
@@ -664,6 +756,96 @@ If customer is FileMaker-only (not in Supabase):
 
 **Total**: ~2,161 lines of customer-related code
 
+## Backend FileMaker Proxy
+
+The backend API provides FileMaker proxy endpoints that abstract the FileMaker Data API:
+
+**Base URL**: `https://api.claritybusinesssolutions.ca/filemaker/`
+
+**Available Endpoints** (inferred from src/api/fileMaker.js:104-148):
+```
+GET    /filemaker/{layout}/records              - List all records (limit: 100)
+GET    /filemaker/{layout}/records/{recordId}   - Get specific record
+POST   /filemaker/{layout}/_find                - Find records with query
+POST   /filemaker/{layout}/records              - Create record
+PATCH  /filemaker/{layout}/records/{recordId}   - Update record
+DELETE /filemaker/{layout}/records/{recordId}   - Delete record
+```
+
+**Request Format** (CREATE/UPDATE):
+```json
+{
+  "fields": {
+    "Name": "Acme Corp",
+    "Email": "contact@acme.com",
+    "f_active": "1"
+  }
+}
+```
+
+**Response Format** (FileMaker-compatible):
+```json
+{
+  "response": {
+    "recordId": "123",
+    "data": [
+      {
+        "fieldData": { ... },
+        "recordId": "123"
+      }
+    ],
+    "dataInfo": {}
+  },
+  "messages": [{ "code": "0", "message": "OK" }]
+}
+```
+
+**Authentication**: HMAC-SHA256 signature in Authorization header
+
+**Error Responses**:
+- 403: Authentication failure (invalid HMAC)
+- 404: Record not found
+- 500: FileMaker server error
+
+## Security Considerations
+
+### HMAC Authentication
+
+**Implementation** (src/api/fileMaker.js:43-86):
+- Algorithm: HMAC-SHA256
+- Message format: `{timestamp}.{JSON.stringify(requestData)}`
+- Secret: `VITE_SECRET_KEY` environment variable
+- Header format: `Bearer {hexSignature}.{timestamp}`
+
+**Security Issues**:
+1. **Client-Side Secret**: `VITE_SECRET_KEY` is bundled in frontend JavaScript
+   - Visible in browser dev tools and source code
+   - Anyone can generate valid HMAC signatures
+   - Not suitable for production security
+   - **Recommendation**: Use session-based JWT tokens instead
+
+2. **No Timestamp Validation**: Backend doesn't validate timestamp freshness
+   - Replay attacks possible
+   - No expiration window enforced
+
+3. **Fallback Modes**: Dev/fallback tokens used when crypto unavailable
+   - Lines 47-49: `Bearer dev-token.{timestamp}`
+   - Lines 54-56: `Bearer fallback-token.{timestamp}`
+   - May bypass security if backend accepts these
+
+### Environment Variable Exposure
+
+**Frontend Environment Variables** (from CLAUDE.md):
+- `VITE_SECRET_KEY` - HMAC secret (⚠️ client-exposed)
+- `VITE_SUPABASE_ANON_KEY` - Supabase public key (expected)
+- `VITE_SUPABASE_SERVICE_ROLE_KEY` - Supabase admin key (⚠️ should be server-only)
+- `VITE_FM_USER`, `VITE_FM_PASSWORD` - FileMaker credentials (⚠️ if used client-side)
+
+**Security Risks**:
+- Service role keys should NEVER be in frontend code
+- FileMaker credentials should be server-only
+- HMAC secrets are ineffective when client-exposed
+
 ## Next Steps
 
 1. **Complete Field Audit**: Verify all FileMaker `devCustomers` fields
@@ -671,3 +853,4 @@ If customer is FileMaker-only (not in Supabase):
 3. **Migration Strategy**: Plan data backfill from FileMaker to Supabase
 4. **Fix Dual-Write Gaps**: Implement dual-write for create/delete operations
 5. **Frontend Refactor**: Update hooks/components to use backend API
+6. **Security Audit**: Review HMAC implementation and environment variable usage

@@ -21,21 +21,27 @@
       "id": "TSK0001",
       "title": "Create requirements folder structure",
       "description": "Create requirements/customers/ directory and README.md overview file",
-      "status": "in_progress",
+      "status": "done",
       "priority": "high",
       "dependencies": [],
-      "executionPid": 32585,
-      "sessionId": "3e1e5314-30a4-4216-af42-3a324e37c042"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Verified the existing requirements structure by reviewing 'CLAUDE.md' and inspecting 'requirements/customers' alongside other requirement folders to confirm the standard pattern. Confirmed no implementation changes were needed because 'requirements/customers/README.md' already existed and was comprehensive (245 lines), with supporting docs including 'acceptance-criteria.md', 'api-contracts.md', 'authorization.md', 'current-implementation.md', 'data-model-mapping.md', and 'migration-plan.md'. Key decision: mark the task complete with no file edits since the directory and overview documentation were already in place and aligned with the established template."
     },
     {
       "id": "TSK0002",
       "title": "Document current FileMaker implementation",
       "description": "Analyze and document src/api/customers.js, customerService.js, useCustomer.js hook and create current-implementation.md showing call flows",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Enhanced existing current-implementation.md (857 lines) with critical missing details: 1) Documented dual-environment architecture (FileMaker WebViewer vs Web App) with environment detection logic (src/api/fileMaker.js:263-282), 2) Added comprehensive Backend FileMaker Proxy section documenting the /filemaker/* REST API endpoints that abstract FileMaker Data API calls, 3) Documented HMAC-SHA256 authentication implementation with security analysis identifying client-side secret exposure issues, 4) Enhanced data flow patterns to show both environment paths (fm-gofer bridge vs backend API proxy), 5) Added backend API mapping table (READ/CREATE/UPDATE/DELETE to HTTP methods), 6) Documented request/response format transformations between FileMaker-style and REST API. Build verified successful (npm run build). Key findings: callBackendAPI() converts FileMaker actions to REST calls when not in WebViewer, VITE_SECRET_KEY is client-exposed (security risk), environment detection via data-app-environment attribute or isFileMakerEnvironment()."
     },
     {
       "id": "TSK0003",
