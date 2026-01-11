@@ -21,9 +21,11 @@
       "id": "TSK0001",
       "title": "Create requirements/notes directory structure",
       "description": "Create the requirements/notes/ directory and placeholder files for all documentation templates: README.md, current-implementation.md, data-model-mapping.md, api-contracts.md, authorization.md, migration-plan.md, acceptance-criteria.md",
-      "status": "queued",
+      "status": "in_progress",
       "priority": "high",
-      "dependencies": []
+      "dependencies": [],
+      "executionPid": 35546,
+      "sessionId": "ff963b91-f8d8-447d-b50c-8bdea6528198"
     },
     {
       "id": "TSK0002",
