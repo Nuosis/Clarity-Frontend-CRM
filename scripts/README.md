@@ -62,6 +62,45 @@ node scripts/validate-teams-migration.js <organization_id> --verbose --report=va
 - Backend API must be accessible
 - Supabase tables must exist
 
+### test-teams-integration.js
+
+Automated integration tests for Teams feature workflows. Tests complete CRUD operations including create team, add staff, assign projects, update, and delete.
+
+**Usage:**
+```bash
+# Standard integration tests
+npm run test:teams:integration
+
+# Verbose mode (detailed output)
+npm run test:teams:integration:verbose
+
+# Generate test report
+npm run test:teams:integration:report
+```
+
+**What it tests:**
+- Workflow 1: Create Team
+- Workflow 2: Assign Staff to Team
+- Workflow 3: Multiple Staff Assignments
+- Workflow 4: Duplicate Assignment Prevention
+- Workflow 5: Update Team
+- Workflow 6: Remove Staff from Team
+- Workflow 7: Organization Scoping Verification
+- Workflow 8: Delete Team with Cascade
+- Data Integrity Checks
+
+**Exit codes:**
+- 0: All tests passed
+- 1: One or more tests failed
+
+**Prerequisites:**
+- Backend deployment complete (all tables exist)
+- Supabase accessible
+- Service role key configured in `.env`
+- Test organization ID configured (`TEST_ORG_ID` env var)
+
+**Documentation:** See `docs/TEAMS_INTEGRATION_TESTING.md` for complete manual testing guide.
+
 ## Other Scripts
 
 ### sync-missing-records.js

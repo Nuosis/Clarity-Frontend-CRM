@@ -22,7 +22,10 @@
     "migrate:teams": "node ./scripts/migrate-teams-data.js",
     "migrate:teams:dry-run": "node ./scripts/migrate-teams-data.js --dry-run",
     "validate:teams": "node ./scripts/validate-teams-migration.js",
-    "validate:teams:verbose": "node ./scripts/validate-teams-migration.js --verbose"
+    "validate:teams:verbose": "node ./scripts/validate-teams-migration.js --verbose",
+    "test:teams:integration": "node ./scripts/test-teams-integration.js",
+    "test:teams:integration:verbose": "node ./scripts/test-teams-integration.js --verbose",
+    "test:teams:integration:report": "node ./scripts/test-teams-integration.js --report"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
