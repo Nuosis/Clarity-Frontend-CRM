@@ -371,40 +371,199 @@ ORDER BY po.order_num ASC, pos.order_num ASC;
 
 ## FileMaker devProjectImages Layout Fields
 
-### Image Fields
+**Layout**: `devProjectImages`
+**Purpose**: Stores image attachments and screenshots for projects
+**Relationship**: Many images per project (one-to-many with devProjects)
 
-| FileMaker Field | Type | Required | Description | Sample Value |
-|----------------|------|----------|-------------|--------------|
-| `__ID` | Text (UUID) | Auto | Image UUID | `"uuid-img-111"` |
-| `recordId` | Number | Auto | FM internal record ID | `"5"` |
-| `_fkID` | Text (UUID) | ✅ Yes | Polymorphic FK (project ID in this context) | `"uuid-project-456"` |
-| `url` | Text (URL) | ✅ Yes | Image URL or path | `"https://example.com/image.png"` |
-| `title` | Text | No | Image title | `"Homepage Mockup"` |
-| `description` | Text | No | Image description | `"Initial design concept"` |
+### Core Fields
 
-**Note**: `_fkID` is a polymorphic foreign key - no type indicator to distinguish entity type.
+| FileMaker Field | Type | Required | Description | Sample Value | Code Reference |
+|----------------|------|----------|-------------|--------------|----------------|
+| `__ID` | Text (UUID) | Auto | Image UUID | `"uuid-img-111"` | projectService.js:72 |
+| `recordId` | Number | Auto | FM internal record ID | `"5"` | projectService.js:73 |
+| `_fkID` | Text (UUID) | ✅ Yes | Polymorphic FK (project ID in this context) | `"uuid-project-456"` | current-implementation.md:1500 |
+| `url` | Text (URL) | ✅ Yes | Image URL or path | `"https://example.com/image.png"` | projectService.js:74 |
+| `title` | Text | No | Image title | `"Homepage Mockup"` | projectService.js:75 |
+| `description` | Text | No | Image description | `"Initial design concept"` | projectService.js:76 |
+
+### Additional Fields (From FileMaker Schema)
+
+The following fields exist in the FileMaker `projectImages` table schema but are NOT currently used by the frontend application:
+
+| FileMaker Field | Type | Description | Status |
+|----------------|------|-------------|--------|
+| `file` | Binary (4096) | File data (possibly deprecated) | ❌ Not used in frontend |
+| `fileName` | Text | Original filename | ❌ Not used in frontend |
+| `image` | Binary (4096) | Image binary data | ❌ Not used in frontend |
+| `image_base64` | Text | Base64 encoded image | ❌ Not used in frontend |
+| `image_thm` | Binary (4096) | Thumbnail image | ❌ Not used in frontend |
+| `f_processed` | Text | Processing flag | ❌ Not used in frontend |
+| `~creationTimestamp` | Timestamp | Record creation timestamp | ✅ Available but not used |
+| `~modificationTimestamp` | Timestamp | Last modification timestamp | ✅ Available but not used |
+| `~createdBy` | Text | Account name who created record | ✅ Available but not used |
+| `~modifiedBy` | Text | Account name who modified record | ✅ Available but not used |
+
+**Important Notes**:
+1. **Storage Model Discrepancy**: FileMaker schema shows binary fields (file, image, image_base64, image_thm), but frontend code ONLY uses the `url` field. This suggests images are stored externally (cloud storage, CDN) with URLs in FileMaker, NOT as binary data.
+2. **Polymorphic Foreign Key**: `_fkID` has no entity type indicator - cannot distinguish if image belongs to project, customer, or other entity without context.
+3. **Field Name Bug**: Frontend filter uses `_projectID` but FileMaker field is `_fkID` (see projectService.js:70 vs current-implementation.md:1500).
+
+**Business Rules** (Code: projectService.js:64-78):
+1. Images fetched via `_fkID = projectId` query
+2. Client-side filtering by `_projectID === projectId` (NOTE: This appears to be checking wrong field name - should be `_fkID`)
+3. Empty title/description default to empty string ''
+4. No ordering specified - images displayed in FileMaker retrieval order
+
+**API Operations** (Code: src/api/projects.js:61-84, src/hooks/useProject.js:99):
+- **Create**: Not implemented in current codebase (manual FileMaker upload)
+- **Read**: `fetchProjectRelatedData([projectId], 'devProjectImages')` → Query by `_fkID`
+- **Update**: Not implemented in current codebase (manual FileMaker update)
+- **Delete**: Not implemented in current codebase (manual FileMaker delete)
+
+**Frontend Processing** (Code: projectService.js:64-78):
+```javascript
+// processProjectImages(images, projectId)
+{
+  id: img.fieldData.__ID,
+  recordId: img.recordId,
+  url: img.fieldData.url,
+  title: img.fieldData.title || '',
+  description: img.fieldData.description || ''
+}
+```
+
+**Query Pattern**:
+```javascript
+// Fetch images for a project
+{
+  layout: 'devProjectImages',
+  action: 'read',
+  query: [{ "_fkID": "project-uuid" }]
+}
+```
+
+**Storage Considerations for Migration**:
+1. **Image Location**: Images are referenced by URL, NOT stored in database as binary
+2. **Potential Storage Locations**:
+   - FileMaker container fields with external storage
+   - Third-party cloud storage (AWS S3, Cloudflare R2, etc.)
+   - CDN URLs
+3. **Migration Strategy**: URLs can be preserved as-is during migration to Supabase
+4. **Future Enhancement**: Consider Supabase Storage for new image uploads
 
 ## Supabase project_images Table Schema
 
 **Status**: ⚠️ **TABLE DOES NOT EXIST IN SUPABASE** (Verified 2025-01-10)
 
-**Proposed Schema** (Based on FileMaker structure):
+**Current State**:
+- Only `projects` table exists in Supabase
+- No project_images table - must be created for migration
+- FileMaker devProjectImages data cannot be migrated without this table
+- Images currently stored in FileMaker only with URL references
+
+**Proposed Schema** (Based on FileMaker structure and frontend usage):
 
 ```sql
 CREATE TABLE project_images (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,  -- Maps to _fkID
-  url TEXT NOT NULL,                            -- Maps to url
+  url TEXT NOT NULL,                            -- Maps to url (primary image reference)
   title TEXT,                                   -- Maps to title
   description TEXT,                             -- Maps to description
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  file_name TEXT,                               -- Maps to fileName (if migrated)
+  storage_provider TEXT,                        -- Future: 'filemaker', 'supabase', 's3', 'cloudflare', etc.
+  created_at TIMESTAMPTZ DEFAULT now(),         -- Maps to ~creationTimestamp
+  updated_at TIMESTAMPTZ DEFAULT now(),         -- Maps to ~modificationTimestamp
+  created_by TEXT,                              -- Maps to ~createdBy
+  modified_by TEXT                              -- Maps to ~modifiedBy
 );
 
 CREATE INDEX idx_project_images_project ON project_images(project_id);
+CREATE INDEX idx_project_images_created_at ON project_images(created_at);
 ```
 
-**Current Workaround**: Images may be stored in FileMaker only, or in a generic images table.
+**Field Mapping**:
+
+| FileMaker Field | Supabase Column | Type Conversion | Notes |
+|----------------|-----------------|-----------------|-------|
+| `__ID` | `id` | UUID → UUID | Preserve UUID (no conversion) |
+| `recordId` | ❌ DISCARD | N/A | FileMaker internal ID, not needed |
+| `_fkID` | `project_id` | UUID → UUID | Foreign key constraint to projects(id) |
+| `url` | `url` | Text → TEXT | Direct mapping (NOT NULL) |
+| `title` | `title` | Text → TEXT | Direct mapping, nullable |
+| `description` | `description` | Text → TEXT | Direct mapping, nullable |
+| `fileName` | `file_name` | Text → TEXT | Optional - not used in frontend |
+| `~creationTimestamp` | `created_at` | Timestamp → TIMESTAMPTZ | Auto-generated on migration |
+| `~modificationTimestamp` | `updated_at` | Timestamp → TIMESTAMPTZ | Auto-generated on migration |
+| `~createdBy` | `created_by` | Text → TEXT | Optional - FileMaker account name |
+| `~modifiedBy` | `modified_by` | Text → TEXT | Optional - FileMaker account name |
+| `file` | ❌ DISCARD | N/A | Binary data not used (images stored externally) |
+| `image` | ❌ DISCARD | N/A | Binary data not used |
+| `image_base64` | ❌ DISCARD | N/A | Not used in frontend |
+| `image_thm` | ❌ DISCARD | N/A | Thumbnail not used |
+| `f_processed` | ❌ DISCARD | N/A | Processing flag not needed |
+| N/A | `storage_provider` | N/A | New field for tracking image source |
+
+**Migration Impact**:
+1. ⚠️ **BLOCKING**: This table must be created before migrating images from FileMaker
+2. Foreign key constraint requires projects table to exist first (✅ already exists)
+3. Migration must preserve `__ID` as `id` to maintain UUID consistency
+4. Binary fields (file, image, image_thm) are DISCARDED - only URL preserved
+5. All image URLs must remain valid after migration (external storage must be accessible)
+6. See BACKEND_CHANGE_REQUEST document for table creation SQL
+
+**Migration Order Dependencies**:
+1. ✅ Projects table (already exists)
+2. ⚠️ Create project_images table (REQUIRED)
+3. Migrate data: projects → project_images
+4. Validate all URLs are accessible and valid
+
+**Storage Migration Considerations**:
+
+1. **URL Preservation Strategy**:
+   - Verify all URLs are accessible before migration
+   - Identify broken/dead links (404 errors)
+   - Document URL patterns to identify storage provider
+   - Example patterns:
+     - FileMaker: `https://server.claritybusinesssolutions.ca/Streaming_SSL/MainDB/...`
+     - AWS S3: `https://s3.amazonaws.com/bucket/...`
+     - Cloudflare R2: `https://cloudflare.com/...`
+
+2. **Binary Data Migration** (If FileMaker has embedded images):
+   - Check if `image` or `file` fields contain actual binary data
+   - If yes, extract binary data and upload to Supabase Storage
+   - Generate new Supabase Storage URLs
+   - Update `url` field with new Supabase Storage URL
+   - Populate `storage_provider = 'supabase'`
+
+3. **Thumbnail Generation** (Future Enhancement):
+   - Supabase Storage supports on-the-fly image transformations
+   - Can generate thumbnails via URL parameters (e.g., `?width=200&height=200`)
+   - No need to store separate thumbnail binaries
+
+4. **Access Control**:
+   - If images contain sensitive data, use Supabase Storage RLS policies
+   - Public images: No authentication required
+   - Private images: Require authenticated user + project access verification
+
+**Query Pattern for Frontend**:
+```sql
+-- Fetch all images for a specific project
+SELECT * FROM project_images
+WHERE project_id = 'uuid-project-456'
+ORDER BY created_at DESC;
+
+-- Fetch images with project info (JOIN)
+SELECT
+  pi.id, pi.url, pi.title, pi.description, pi.created_at,
+  p.name AS project_name, p.status AS project_status
+FROM project_images pi
+JOIN projects p ON p.id = pi.project_id
+WHERE pi.project_id = 'uuid-project-456'
+ORDER BY pi.created_at DESC;
+```
+
+**Current Workaround**: Images stored in FileMaker only, fetched via fm-gofer bridge using `_fkID` polymorphic foreign key.
 
 ## FileMaker devProjectLinks Layout Fields
 
@@ -883,7 +1042,10 @@ await insert('projects', supabaseProjectData);
 
 3. **project_images Table**: Does NOT exist in Supabase
    - Required for: Migrating images from devProjectImages
-   - Action: Decide if using generic images table or project-specific table
+   - FileMaker uses URL-based storage (not binary data in database)
+   - Migration preserves URLs as-is (no binary data migration needed)
+   - Action: Create BACKEND_CHANGE_REQUEST for table creation with URL, title, description fields
+   - Storage consideration: Determine if image URLs point to FileMaker container storage or external CDN
 
 4. **notes Table**: Does NOT exist in Supabase
    - Required for: Migrating notes from devNotes
