@@ -90,14 +90,20 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented a comprehensive Project Images data-model mapping by expanding 'requirements/projects/data-model-mapping.md' with detailed FileMaker devProjectImages layout field documentation (core fields: __ID, recordId, _fkID, url, title, description; additional unused fields: file, fileName, image, image_base64, image_thm, f_processed, plus system timestamps). Discovered and documented a critical finding: FileMaker schema includes binary image fields, but frontend code ONLY uses URL field, indicating external storage model (not database-embedded images). Documented business rules from projectService.js:64-78, API operations (read-only via fetchProjectRelatedData), frontend processing patterns, and identified a potential bug where filter checks _projectID instead of _fkID. Created proposed Supabase project_images table schema with UUID id, project_id FK (CASCADE delete), url (NOT NULL), title/description (nullable), file_name, storage_provider tracking, and timestamps. Documented comprehensive field mapping showing binary fields to be DISCARDED during migration, URL preservation strategy with validation steps, storage migration considerations (URL verification, broken link identification, potential binary-to-Supabase-Storage migration path), access control via RLS policies, and query patterns. Updated Known Schema Gaps section to clarify that project_images table doesn't exist, uses URL-based storage (not binary), and requires backend change request. Verified documentation builds successfully."
+      "implementation_notes": "Implemented comprehensive FileMaker to Supabase mapping for Project Images, documenting the full devProjectImages field set, frontend query patterns, and a proposed Supabase 'project_images' schema (UUID id preserved from '__ID', FK 'project_id' with CASCADE, required 'url', optional metadata, indexes, and audit fields) in 'requirements/projects/data-model-mapping.md'. Key decision was to treat 'url' as the primary storage reference (despite FileMaker binary container fields), and to call out migration considerations for URL preservation vs potential binary extraction into Supabase Storage. Updated the Known Schema Gaps entry to be more specific about the URL based discrepancy, and marked the task complete in 'tasks.json'; also noted a likely bug in 'projectService.js' where code filters on '_projectID' but the FileMaker field is '_fkID'."
     },
     {
       "id": "TSK0007",
       "title": "Document Links table integration",
       "description": "In requirements/projects/data-model-mapping.md, document how existing Supabase links table integrates with projects. Review current schema (has project_id FK), document any gaps (title field missing?), and link filtering requirements",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completedAt": "2026-01-10T21:15:00.000Z",
+      "notes": "Completed comprehensive documentation of FileMaker devProjectLinks layout integration with existing Supabase links table, including schema analysis, field mappings, migration strategy, and identified gaps (missing title field)",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive Links table integration documentation by analyzing the existing Supabase links schema via SSH, examining FileMaker devProjectLinks layout fields, reviewing frontend code (projectService.js:86-98, ProjectLinksTab.jsx, links.js), and documenting the complete integration in requirements/projects/data-model-mapping.md. Key findings include: (1) Supabase links table EXISTS with project_id FK, customer_id (NOT NULL), organization_id, but NO title column - titles derived from URL hostname; (2) FileMaker has optional title field which will be LOST during migration; (3) Links have VARCHAR(2048) length limit vs no limit in FileMaker; (4) Required customer_id means migration must JOIN with projects table; (5) GitHub integration special handling (repo existence check, creation modal). Added detailed migration strategy with 4-step process (query FileMaker, lookup foreign keys, transform/insert, validate), complete field mapping table, migration validation checklist, and recommendation for optional title column addition. Updated Known Schema Gaps section and main validation checklist to reflect links-specific requirements."
     },
     {
       "id": "TSK0008",

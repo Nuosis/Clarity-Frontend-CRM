@@ -567,17 +567,103 @@ ORDER BY pi.created_at DESC;
 
 ## FileMaker devProjectLinks Layout Fields
 
-### Link Fields
+**Layout**: `devProjectLinks`
+**Purpose**: Stores external URLs/resources associated with projects (GitHub repos, documentation, designs, etc.)
+**Relationship**: Many links per project (one-to-many with devProjects)
 
-| FileMaker Field | Type | Required | Description | Sample Value |
-|----------------|------|----------|-------------|--------------|
-| `__ID` | Text (UUID) | Auto | Link UUID | `"uuid-link-222"` |
-| `recordId` | Number | Auto | FM internal record ID | `"8"` |
-| `_fkID` | Text (UUID) | ✅ Yes | Polymorphic FK (project ID in this context) | `"uuid-project-456"` |
-| `link` | Text (URL) | ✅ Yes | URL | `"https://github.com/client/repo"` |
-| `title` | Text | No | Link title (derived from URL if empty) | `"GitHub Repository"` |
+### Core Fields
 
-**Note**: Frontend derives title from URL hostname if title is empty (src/services/projectService.js:97).
+| FileMaker Field | Type | Required | Description | Sample Value | Code Reference |
+|----------------|------|----------|-------------|--------------|----------------|
+| `__ID` | Text (UUID) | Auto | Link UUID | `"uuid-link-222"` | projectService.js:94 |
+| `recordId` | Number | Auto | FM internal record ID | `"8"` | projectService.js:95 |
+| `_fkID` | Text (UUID) | ✅ Yes | Polymorphic FK (project ID in this context) | `"uuid-project-456"` | projectService.js:92, links.js:18 |
+| `link` | Text (URL) | ✅ Yes | URL | `"https://github.com/client/repo"` | projectService.js:96, links.js:17 |
+| `title` | Text | No | Link title/description | `"GitHub Repository"` | projectService.js:97 |
+
+### Additional Fields (From FileMaker Schema - NOT USED)
+
+| FileMaker Field | Type | Description | Status |
+|----------------|------|-------------|--------|
+| `~creationTimestamp` | Timestamp | Record creation timestamp | ✅ Available but not used in frontend |
+| `~modificationTimestamp` | Timestamp | Last modification timestamp | ✅ Available but not used in frontend |
+| `~createdBy` | Text | Account name who created record | ✅ Available but not used in frontend |
+| `~modifiedBy` | Text | Account name who modified record | ✅ Available but not used in frontend |
+
+**Business Rules** (Code: projectService.js:86-98):
+1. Links filtered by `_fkID === projectId` (polymorphic foreign key)
+2. **Title derivation**: If `title` field is empty, derive from URL hostname (line 97)
+   - Example: `"https://github.com/user/repo"` → `"github.com"`
+3. Links displayed in FileMaker retrieval order (no explicit sorting)
+4. GitHub integration: Detects GitHub URLs, checks if repo exists, offers to create new repos (ProjectLinksTab.jsx:144-159)
+
+**API Operations**:
+
+| Operation | Code Reference | Method | Layout |
+|-----------|---------------|--------|--------|
+| **Create** | links.js:8-29 | `createLink({ fkId, link })` | `devLinks` |
+| **Read** | projects.js:61-84, useProject.js:100 | `fetchProjectRelatedData([projectId], 'devProjectLinks')` | `devProjectLinks` |
+| **Update** | ❌ Not implemented | N/A | N/A |
+| **Delete** | ❌ Not implemented | N/A | N/A |
+
+**Frontend Processing** (Code: projectService.js:86-98):
+```javascript
+// processProjectLinks(links, projectId)
+{
+  id: link.fieldData.__ID,
+  recordId: link.recordId,
+  url: link.fieldData.link,
+  title: link.fieldData.title || new URL(link.fieldData.link).hostname
+}
+```
+
+**Create Link API Call** (Code: links.js:8-29):
+```javascript
+// FileMaker request
+{
+  layout: 'devLinks',           // Note: Uses devLinks, not devProjectLinks
+  action: 'create',
+  fieldData: {
+    link: data.url || data.link,
+    _fkID: data.project_id || data.fkId
+    // Note: title field NOT supported by backend - cannot be set during creation
+  }
+}
+```
+
+**UI Components**:
+- **ProjectLinksTab.jsx**: Main links display and creation interface
+  - Lists all links for a project with title and URL
+  - "New Link" button triggers TextInput for URL entry
+  - GitHub URL detection with repo existence check
+  - Optimistic UI updates (shows link immediately, reverts on error)
+  - Opens GitHubRepositoryModal if repo doesn't exist (offers to create)
+
+**Special Feature: GitHub Integration** (Code: ProjectLinksTab.jsx:144-159):
+1. User enters GitHub URL: `https://github.com/owner/repo`
+2. Frontend parses URL to extract owner/repo (githubUtils.js)
+3. Checks if repository exists via GitHub API (github.js)
+4. If repo doesn't exist:
+   - Opens GitHubRepositoryModal with pre-filled owner/repo
+   - User can create repo with description and visibility settings
+   - After creation, link is added to project
+5. If repo exists, link is added directly
+
+**Query Pattern**:
+```javascript
+// Fetch links for a project
+{
+  layout: 'devProjectLinks',
+  action: 'read',
+  query: [{ "_fkID": "project-uuid" }]
+}
+```
+
+**Polymorphic Foreign Key Issue**:
+- `_fkID` has no entity type indicator
+- Cannot distinguish if link belongs to project, customer, task, or other entity without context
+- Frontend assumes `devProjectLinks` layout = project links
+- Different layouts for different entities: `devProjectLinks` (projects), `devLinks` (tasks), etc.
 
 ## Supabase links Table Schema (Existing)
 
@@ -591,7 +677,7 @@ CREATE TABLE links (
   customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   project_id UUID,                              -- Maps to _fkID (for project links)
-  link VARCHAR(2048) NOT NULL,                  -- Maps to link
+  link VARCHAR(2048) NOT NULL,                  -- Maps to link (URL field)
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -605,22 +691,147 @@ FOREIGN KEY constraints:
 - organization_id REFERENCES organizations(id) ON DELETE CASCADE
 ```
 
-**Schema Notes**:
-1. **No title field** - Title must be derived from URL (as done in projectService.js:97)
-2. **customer_id is NOT NULL** - All links must have a customer association
-3. **project_id is nullable** - Project association is optional
-4. **No polymorphic constraint** - Links can belong to customer, project, and organization simultaneously
-5. **link is VARCHAR(2048)** - Limited to 2048 characters
+**Schema Analysis**:
 
-**Migration Strategy for Links**:
-1. Query devProjectLinks by `_fkID = projectId`
-2. For each link:
-   - Preserve `__ID` as Supabase `id`
-   - Map FileMaker `link` field to Supabase `link` field (VARCHAR(2048))
-   - **Derive title from URL** (no title field in Supabase)
-   - Set `project_id = _fkID`
-   - **Lookup customer_id from project** (required field in Supabase)
-   - **Lookup organization_id from customer** (for multi-tenancy)
+### Key Differences from FileMaker
+
+1. **✅ Table Exists**: Links table is already created in Supabase (unlike objectives/steps/images)
+2. **❌ No title field**: Supabase has no `title` column - must derive from URL hostname
+3. **❌ No polymorphic _fkID**: Uses explicit foreign keys (customer_id, project_id, organization_id)
+4. **✅ project_id is nullable**: Allows customer-level links without project association
+5. **⚠️ customer_id is NOT NULL**: All links MUST have a customer association
+6. **⚠️ link field is VARCHAR(2048)**: Limited to 2048 characters (FileMaker has no limit)
+
+### Field Mapping
+
+| FileMaker Field | Supabase Column | Type Conversion | Notes |
+|----------------|-----------------|-----------------|-------|
+| `__ID` | `id` | UUID → UUID | Preserve UUID (no conversion) |
+| `recordId` | ❌ DISCARD | N/A | FileMaker internal ID, not needed |
+| `_fkID` | `project_id` | UUID → UUID | Nullable, NULL if link not project-specific |
+| `link` | `link` | Text → VARCHAR(2048) | Direct mapping, validate length ≤ 2048 |
+| `title` | ❌ NO COLUMN | N/A | **SCHEMA GAP**: Derive from URL hostname (see projectService.js:97) |
+| N/A | `customer_id` | N/A | **REQUIRED**: Lookup from project.customer_id |
+| N/A | `organization_id` | N/A | **REQUIRED**: Lookup from customer.organization_id |
+| `~creationTimestamp` | `created_at` | Timestamp → TIMESTAMPTZ | Auto-generated on migration |
+| `~modificationTimestamp` | `updated_at` | Timestamp → TIMESTAMPTZ | Auto-generated on migration |
+
+### Schema Gaps
+
+1. **Missing title field** (Code Impact: projectService.js:97)
+   - FileMaker stores optional `title` field for link descriptions
+   - Supabase has no `title` column - frontend derives from URL hostname
+   - **Migration Impact**: Link titles will be lost during migration
+   - **Workaround**: Frontend already handles missing titles by deriving from URL
+   - **Recommendation**: Add `title TEXT` column to Supabase links table OR accept derived titles
+
+2. **Required customer_id** (Migration Complexity)
+   - Every link must be associated with a customer
+   - For project links: `customer_id = project.customer_id`
+   - Requires JOIN with projects table during migration
+   - Orphaned links (projects with invalid customer_id) will fail insertion
+
+3. **Link length limit** (Data Validation)
+   - Supabase: VARCHAR(2048) max length
+   - FileMaker: No explicit length limit
+   - Migration must validate all URLs ≤ 2048 characters
+   - URLs > 2048 chars will be truncated or fail insertion
+
+### Migration Strategy for Links
+
+**Step 1: Query FileMaker Links**
+```javascript
+// Fetch all project links from FileMaker
+{
+  layout: 'devProjectLinks',
+  action: 'read',
+  query: [{ "_fkID": "project-uuid" }]
+}
+```
+
+**Step 2: Lookup Required Foreign Keys**
+```sql
+-- For each FileMaker link, get customer_id and organization_id
+SELECT p.id AS project_id, p.customer_id, c.organization_id
+FROM projects p
+JOIN customers c ON c.id = p.customer_id
+WHERE p.id = '<_fkID from FileMaker>';
+```
+
+**Step 3: Transform and Insert**
+```javascript
+// For each FileMaker link
+const supabaseLinkData = {
+  id: fmLink.fieldData.__ID,                     // Preserve UUID
+  project_id: fmLink.fieldData._fkID,            // Project association
+  customer_id: project.customer_id,              // Lookup from project (REQUIRED)
+  organization_id: customer.organization_id,     // Lookup from customer
+  link: fmLink.fieldData.link.slice(0, 2048),   // Truncate if needed
+  created_at: fmLink.fieldData['~creationTimestamp'] || new Date(),
+  updated_at: fmLink.fieldData['~modificationTimestamp'] || new Date()
+  // Note: title field is LOST - frontend will derive from URL
+};
+
+await insert('links', supabaseLinkData);
+```
+
+**Step 4: Validate Migration**
+```sql
+-- Count migrated links by project
+SELECT project_id, COUNT(*) AS link_count
+FROM links
+WHERE project_id IS NOT NULL
+GROUP BY project_id
+ORDER BY link_count DESC;
+
+-- Find orphaned links (missing customer/organization)
+SELECT id, link, project_id
+FROM links
+WHERE customer_id IS NULL OR organization_id IS NULL;
+
+-- Check for truncated URLs (unlikely but possible)
+SELECT id, LENGTH(link) AS url_length, link
+FROM links
+WHERE LENGTH(link) = 2048;
+```
+
+### Migration Validation Checklist
+
+- [ ] All link UUIDs preserved (`__ID` → `id`)
+- [ ] All project associations intact (`_fkID` → `project_id`)
+- [ ] All customer_id fields populated (REQUIRED, must not be NULL)
+- [ ] All organization_id fields populated from customer relationship
+- [ ] No URLs exceed 2048 character limit
+- [ ] Frontend still derives titles from URL hostnames (no title column)
+- [ ] Links with invalid project_id handled (orphaned links)
+- [ ] GitHub URLs still work with frontend GitHub integration
+- [ ] Created/updated timestamps preserved
+
+### Known Limitations After Migration
+
+1. **Title Loss**: Link titles from FileMaker will be lost - frontend derives from URL hostname
+2. **No Update/Delete**: Frontend doesn't implement link update/delete operations
+3. **Polymorphic Constraint**: Supabase allows links to belong to customer, project, and organization simultaneously (no mutual exclusivity)
+4. **URL Length**: URLs longer than 2048 characters will be truncated or rejected
+
+### Recommended Backend Changes (Optional)
+
+**Add title column** (preserves FileMaker data):
+```sql
+ALTER TABLE links
+ADD COLUMN title TEXT;
+
+CREATE INDEX idx_links_title ON links(title) WHERE title IS NOT NULL;
+```
+
+**Benefits**:
+- Preserves custom link descriptions from FileMaker
+- Reduces need for URL parsing to extract hostname
+- Allows users to set meaningful names for links (e.g., "Production Server", "Design Mockups")
+
+**Migration Impact**:
+- If added BEFORE migration: Can preserve FileMaker titles
+- If added AFTER migration: Titles permanently lost, must be re-entered manually
 
 ## FileMaker devNotes Layout Fields (Polymorphic)
 
@@ -881,6 +1092,11 @@ FileMaker status values → Supabase status values:
 - [ ] Objectives/steps order preserved
 - [ ] All images migrated with correct `project_id`
 - [ ] All links migrated with correct `project_id`
+- [ ] All links have required `customer_id` populated
+- [ ] All links have `organization_id` populated from customer
+- [ ] Link titles handled (lost during migration, derived from URL)
+- [ ] Link URLs validated (≤ 2048 characters)
+- [ ] GitHub URLs preserved for frontend GitHub integration
 - [ ] All notes migrated with `entity_type='project'` and `entity_id`
 - [ ] Time records project associations preserved
 - [ ] Boolean flags converted correctly (not stored as "1"/"0" strings)
@@ -1088,9 +1304,12 @@ await insert('projects', supabaseProjectData);
     - Action: Confirm business requirement for time tracking in web app
 
 12. **Links Title Field**: Supabase links table has no title field
-    - FileMaker has: `title` field
-    - Current workaround: Derive from URL (projectService.js:97)
-    - Action: Backend change request to add title field OR accept derived titles
+    - FileMaker has: `title` field (optional, can be empty)
+    - Current workaround: Derive from URL hostname (projectService.js:97)
+    - **Migration Impact**: Link titles will be LOST during migration
+    - **Frontend Impact**: None - frontend already derives titles from URL when missing
+    - **Recommendation**: Add `title TEXT` column to preserve FileMaker titles OR accept title loss
+    - Action: Backend change request to add title field (OPTIONAL - not blocking migration)
 
 ## Validation Checklist
 
@@ -1104,6 +1323,8 @@ Before migration can proceed, verify:
 - [ ] Boolean conversion tested ("1"/"0" → true/false)
 - [ ] Organization ID derivation strategy implemented
 - [ ] Links migration strategy handles required customer_id field
+- [ ] Links title field decision finalized (add column OR accept title loss)
+- [ ] Links URL length validation (VARCHAR(2048) limit)
 - [ ] Customer_sales table confirmed for financial transactions only
 - [ ] Time tracking strategy finalized (FileMaker-only vs Supabase time_entries)
 - [ ] All project UUIDs can be preserved during migration
