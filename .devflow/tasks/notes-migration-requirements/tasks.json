@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-11T07:15:00.000Z",
+  "updated_at": "2026-01-11T07:30:00.000Z",
   "feature": {
     "name": "Notes Migration Requirements",
     "slug": "notes-migration-requirements",
@@ -111,18 +111,22 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented comprehensive notes migration and backfill plan in 'requirements/notes/migration-plan.md' (847 lines), documenting the complete end-to-end migration strategy from FileMaker to Supabase. Key sections include: (1) Data Export Process with FileMaker Data API export scripts and validation checks, (2) ID Mapping Strategy covering _fkID to parent entity detection (projects/tasks/customers), user email to UUID mapping, and FileMaker __ID preservation vs generation, (3) Transformation Process with step-by-step data transformation logic handling orphaned notes and invalid records, (4) Bulk Insert Approach using 500-record batches with exponential backoff retry logic, (5) Validation Steps including record count, foreign key integrity, organization scoping, content verification, and RLS policy testing, (6) Rollback Plan covering four scenarios from migration script failures to production issues with feature flag fallback strategy, (7) Cutover Strategy recommending Big Bang migration with detailed Friday evening deployment timeline (6PM-10PM, 3-hour downtime window), (8) Performance Targets for both migration operations (<60 min total) and post-migration runtime (<500ms API responses), (9) Timeline Estimate of 4-6 weeks across 5 phases (Backend Implementation, Migration Script Development, Frontend Refactor, Testing, Deployment). Critical decisions documented include service role key usage for migration bypassing RLS, expected transformation success rate of ~95% with <5% orphaned notes acceptable, batch size of 500 records with 1-second pause between batches, and rollback decision point at 8:10 PM before frontend deployment. Appendix includes complete migration scripts for export, transform, and load operations. Build verified successfully. Task marked complete with updated timestamp in 'tasks.json'."
+      "implementation_notes": "Implemented a comprehensive Notes migration and backfill plan from FileMaker to Supabase, covering export, ID and user mapping, transformation pipeline, bulk load strategy, validation, rollback, and a recommended big bang cutover timeline. Key work landed in 'requirements/notes/migration-plan.md' (filling the prior placeholder with a full template-aligned plan and appendices including scripts and checks) and 'tasks.json' (marking TSK0007 as DONE and updating the session timestamp). Important decisions documented include using the service role key to bypass RLS during bulk operations, batching inserts at 500 records with rate limiting and retries, deriving organization strictly from the parent entity, and mapping unknown creators to a migration user with an orphaned-note tolerance under 5%. Build verification was run after updates to confirm everything still compiles successfully."
     },
     {
       "id": "TSK0008",
       "title": "Define acceptance criteria and test cases",
       "description": "Create acceptance-criteria.md with: functional test cases for all CRUD operations, association validation tests, edge cases (orphaned notes, concurrent creation), data migration validation, performance requirements, user acceptance criteria",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0003",
         "TSK0005"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented comprehensive acceptance criteria and test cases for the notes feature migration by fully replacing the placeholder content in 'requirements/notes/acceptance-criteria.md' with a complete 1,836-line specification. The document covers 17 major sections including: Core CRUD operations (53 test cases covering create, read, update, delete with happy paths and validation failures), association validation tests (cascade deletes, parent entity validation, organization derivation), edge cases (orphaned notes during migration, concurrent creation, max content length, special characters, timestamps), performance requirements (response time benchmarks, index validation, pagination efficiency, realtime subscriptions), data migration validation (8 comprehensive test cases for pre-migration checks, record count validation, parent entity type detection, user mapping, timestamp conversion, organization ID derivation, rollback procedures, and post-migration integrity checks), user acceptance scenarios (5 realistic user workflows), security and authorization (HMAC/JWT validation, SQL injection prevention, XSS prevention, RLS policy enforcement), error handling, performance benchmarks, accessibility requirements (keyboard nav, screen readers, WCAG AA color contrast), browser compatibility (desktop and mobile), deployment and rollback procedures, monitoring/alerting, and documentation validation. Key decisions documented include FileMaker feature parity preservation (all create/view functionality maintained), Supabase enhancements (update/delete APIs, organization scoping, RLS policies, audit trails), performance targets (< 500ms response times, 99.9% uptime, < 1% error rate, zero data loss during migration), security requirements (organization isolation via RLS, HMAC authentication for backend API, JWT for Supabase access), and known acceptable MVP limitations (no edit/delete UI initially, last-write-wins for concurrent edits, offset-based pagination). All test cases include code references with file paths and line numbers, SQL examples, API contract references, and expected results. Build verification confirmed the project compiles successfully. Updated 'tasks.json' to mark TSK0008 as complete with full implementation notes."
     },
     {
       "id": "TSK0009",
