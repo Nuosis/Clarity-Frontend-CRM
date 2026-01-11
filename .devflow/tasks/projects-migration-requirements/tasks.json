@@ -289,14 +289,20 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive business logic acceptance criteria by adding Test Suites 19-24 to 'requirements/projects/acceptance-criteria.md', covering fixed-price 50/50 split generation with edge cases (odd values, missing dates, zero/negative values, idempotency, updates, deletes, future dates), subscription monthly sales generation with detailed scenarios (1-month, 12-month, partial months, leap years, long durations, idempotency), billable status changes and their impact on sales entries and reports, date handling edge cases (same start/end, end before start, overlapping subscriptions, invalid formats, future/past dates), project type change constraints (fixed-price ↔ subscription ↔ non-priced), and sales entry idempotency and data integrity checks (duplicate prevention, FK linkages, timestamps, concurrent creation, amount precision, audit logs, delete behavior). All test cases explicitly document expected behavior, validation rules, and business decisions (e.g., rounding behavior, whether pricing model changes are allowed, delete cascade vs soft delete). Updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark TSK0022 as done with completion timestamp and summary notes."
+      "implementation_notes": "Expanded the projects migration acceptance criteria by adding Test Suites 19-24 (56 new Given-When-Then cases) to cover fixed-price 50/50 sales generation, monthly subscription sales creation, billable status changes, date and project-type edge cases, and sales entry idempotency/data integrity in 'requirements/projects/acceptance-criteria.md'. Documented key behavioral decisions including split timing (start_date and end_date), monthly anniversary rules, idempotency via unique (project_id, date), no auto-regeneration on value changes, and generally blocking pricing-model changes after creation. Marked the work item complete in '.devflow/tasks/projects-migration-requirements/tasks.json' (TSK0022) and confirmed the build still passes via 'npm run build' with only pre-existing warnings."
     },
     {
       "id": "TSK0023",
       "title": "Add workflow diagrams",
       "description": "Create requirements/projects/workflows.md with mermaid diagrams showing: project creation flow, objective/step management flow, fixed price project value processing flow, subscription sales generation flow, and status change flow",
-      "status": "queued",
-      "priority": "low"
+      "status": "done",
+      "priority": "low",
+      "completedAt": "2026-01-10T24:15:00.000Z",
+      "notes": "Created comprehensive workflows.md (678 lines) with 5 detailed mermaid diagrams covering: project creation flow (showing dual-write sync, validation, pricing logic triggers), objective & step management flow (hierarchical CRUD with completion tracking and reordering), fixed-price project value processing (50/50 sales split with idempotency checks and edge cases), subscription sales generation (monthly recurring with background job requirements), and status change flow (completion triggers and business logic). Added workflow integration summary, database schema ER diagram, performance considerations with query optimization, and FileMaker layout references. All diagrams include code references, decision points, error handling, and edge cases",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive workflow documentation for the Projects migration by creating 'requirements/projects/workflows.md' with 5 detailed mermaid flowcharts covering project creation (including FileMaker-to-Supabase dual-write sync, validation, UUID generation, and pricing logic triggers), hierarchical objective and step management (CRUD, completion toggle, reordering, and cascade deletes), fixed-price business logic (50/50 revenue split with idempotency and edge cases), subscription recurring sales generation (monthly loop with background job notes), and status change transitions (completion triggers and sales entry creation). Added workflow integration summary, ER diagram for schema relationships, performance optimization guidance, code references throughout (notably 'useProject.js', 'projectService.js', 'projects.js', 'fileMaker.js'), and migration pattern notes. Verified the documentation build still passes, updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark 'TSK0023' complete with timestamp and notes."
     },
     {
       "id": "TSK0024",
