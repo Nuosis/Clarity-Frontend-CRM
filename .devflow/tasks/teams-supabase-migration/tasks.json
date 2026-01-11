@@ -102,14 +102,19 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Successfully verified and updated TeamForm.jsx and TeamDetails.jsx to work with the new Supabase backend. Key changes: (1) TeamForm - removed FileMaker __ID generation, added organization_id handling from user context, and now properly creates teams via Supabase API; (2) TeamDetails - cleaned up all FileMaker fieldData references, simplified staff ID extraction logic, updated to use Supabase field names (id, name, title instead of __ID, fieldData patterns), and changed staff role display to use 'title' field. Both components now work exclusively with Supabase data format (snake_case from API, camelCase from service layer). Verified build compiles successfully with no new errors. Created TEAM_COMPONENTS_VERIFICATION.md documenting all changes, data flow, and integration points. Components are ready for integration testing (TSK0011)."
+      "implementation_notes": "Implemented Supabase-compatible updates to team UI components by modifying 'src/components/teams/TeamForm.jsx' to remove legacy '__ID' UUID generation, require and include 'organization_id' from 'user.supabaseOrgID', and add validation when the org ID is missing. Updated 'src/components/teams/TeamDetails.jsx' to fully drop FileMaker 'fieldData' fallbacks, standardize on 'team.id' and 'staffMember.id', and switch staff display to use 'title' instead of 'role' to match the new data model. Verified the dev server and build run cleanly (noting only pre-existing warnings), added 'TEAM_COMPONENTS_VERIFICATION.md', and marked the task complete in '.devflow/tasks/teams-supabase-migration/tasks.json'."
     },
     {
       "id": "TSK0009",
       "title": "Execute data migration",
       "description": "Run migration script to transfer all team data from FileMaker to Supabase, validate record counts and relationships",
-      "status": "queued",
-      "priority": "high"
+      "status": "blocked",
+      "priority": "high",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "blocked_by": "TSK0003 - Backend deployment not completed",
+      "implementation_notes": "Migration cannot execute because required Supabase tables (teams, staff, team_members) do not exist in the database. Verified via SSH that backend deployment from BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md has not occurred. Migration script (scripts/migrate-teams-data.js) is ready and tested with dry-run capability. The script includes: FileMaker data extraction via Backend API with HMAC auth, data transformation and timestamp conversion, profile image upload to Supabase Storage, idempotent inserts, foreign key validation, organization-scoped operations, detailed logging, and automatic validation. STATUS: Awaiting backend team deployment of database schema, RLS policies, triggers, RPC functions, and Supabase Storage bucket 'staff-images'. NEXT STEPS: User must forward BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md to backend team for deployment. Once backend confirms deployment, verify tables exist using commands in TEAMS_MIGRATION_STATUS.md, then execute migration with: npm run migrate:teams YOUR_ORGANIZATION_UUID. See TEAMS_MIGRATION_STATUS.md for complete verification commands, migration execution steps, and unblocking procedures."
     },
     {
       "id": "TSK0010",
