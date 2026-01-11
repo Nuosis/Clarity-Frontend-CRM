@@ -4,30 +4,50 @@
 
 This directory contains comprehensive documentation for migrating the Projects feature from FileMaker to Supabase. Projects are the core workflow entity in the CRM system, representing client engagements with associated objectives, tasks, time tracking, images, links, and notes. Projects support multiple pricing models including fixed-price and subscription-based billing.
 
+**Key Terminology:**
+- **Project**: A client engagement or work initiative with defined objectives, timeline, and value
+- **Objective**: A high-level goal or milestone within a project (can have multiple steps)
+- **Step**: A specific task within an objective (granular unit of work)
+- **Fixed-Price Project**: Project billed as fixed amount (50% on start, 50% on completion)
+- **Subscription Project**: Project billed monthly at recurring rate from start to end date
+- **Billable Status**: Whether time entries can be invoiced separately (false for fixed-price projects)
+- **Project Status**: Current state (Planning, Active, On Hold, Completed, Cancelled)
+
 ## Current Status
 
 - **Phase**: Phase 1 - Requirements Documentation
 - **FileMaker Layouts**: `devProjects` (main), `devProjectObjectives`, `devProjectObjSteps`, `devProjectImages`, `devProjectLinks`, `devNotes`, `dapiRecords`
 - **Supabase Tables**: `projects` (exists), `project_objectives`, `project_objective_steps`, `project_images`, `links` (shared), `notes` (planned), `time_entries`/`customer_sales` (financial)
 - **Backend Status**: No backend API - FileMaker-primary with no dual-write
-- **Frontend Status**: 100% FileMaker-dependent
+- **Frontend Status**: 100% FileMaker-dependent with partial Supabase sync (project creation only, see src/hooks/useProject.js:213-259)
 
 ## Quick Reference
 
 ### FileMaker Implementation
 - **Primary Layout**: `devProjects`
 - **Primary Key**: `__ID` (UUID)
-- **FileMaker Record ID**: `recordId` (internal FM record identifier)
-- **Customer Relationship**: `_custID` (UUID, foreign key to customers)
-- **Team Relationship**: `_teamID` (UUID, foreign key to teams)
-- **Core Fields**: Name, Description, Status, dateStart, dateEnd, value (decimal), f_fixedPrice (boolean), f_subscription (boolean)
+- **FileMaker Record ID**: `recordId` (internal FM record identifier - used for UPDATE/DELETE operations)
+- **Customer Relationship**: `_custID` (UUID, foreign key to devCustomers layout)
+- **Team Relationship**: `_teamID` (UUID, foreign key to devTeams layout)
+- **Core Fields**:
+  - `projectName` (text, required) - Project name/title
+  - `description` (text, optional) - Project description
+  - `status` (text, values: "Open", "Closed", default: "Open") - Project status
+  - `dateStart` (date, MM/DD/YYYY) - Project start date
+  - `dateEnd` (date, MM/DD/YYYY) - Project end date/target completion
+  - `value` (decimal) - Project value in dollars
+  - `f_fixedPrice` (text, "0" or "1") - Fixed price billing flag
+  - `f_subscription` (text, "0" or "1") - Subscription billing flag
+  - `estOfTime` (text, format: "2h 30m") - Estimated time to complete
+  - `~creationTimestamp` (timestamp) - Record creation time
+  - `~modificationTimestamp` (timestamp) - Record modification time
 - **Related Layouts**:
-  - `devProjectObjectives` - Project goals/milestones
-  - `devProjectObjSteps` - Steps within objectives
-  - `devProjectImages` - Project images/screenshots
-  - `devProjectLinks` - External URLs related to project
-  - `devNotes` - Notes associated with project (via `_fkID`)
-  - `dapiRecords` - Time tracking records (via `_projectID`)
+  - `devProjectObjectives` - Project goals/milestones (filtered by `_projectID`)
+  - `devProjectObjSteps` - Steps within objectives (filtered by `_objectiveID`)
+  - `devProjectImages` - Project images/screenshots (filtered by `_fkID`)
+  - `devProjectLinks` - External URLs related to project (filtered by `_fkID`)
+  - `devNotes` - Notes associated with project (filtered by `_fkID` polymorphic field)
+  - `dapiRecords` - Time tracking records (filtered by `_projectID`)
 
 ### Supabase Schema
 - **Main Table**: `projects`
@@ -74,37 +94,62 @@ This directory contains comprehensive documentation for migrating the Projects f
 3. **Create Project**
    - User clicks "Add Project" button in customer view
    - Fills out ProjectForm (Name*, Customer*, Description, Status, Dates, Value, Pricing Type)
-   - Frontend validates and calls `createProject(data)` → FileMaker `devProjects` CREATE
-   - **Business Logic Triggers** (currently NOT implemented in frontend):
-     - If `f_fixedPrice = true`: Should create 2 sales entries (50% at start, 50% at end)
-     - If `f_subscription = true`: Should create monthly sales entries from start to end date
+   - Frontend validates (see src/services/projectService.js:217-259) and calls `createProject(data)` → FileMaker `devProjects` CREATE
+   - **Supabase Sync** (src/hooks/useProject.js:213-259):
+     - Project creation DOES sync to Supabase `projects` table for proposal foreign key support
+     - Maps status values (Open → active, Closed → completed, etc.)
+     - Sets `created_by` field from user email/username
+   - **Business Logic Triggers** (src/hooks/useProject.js:262-289):
+     - If `f_fixedPrice = true` or `isFixedPrice = true`:
+       - Calls `processProjectValue()` to prepare sales entries (see src/services/projectService.js:508-596)
+       - Sets billable status to false for all time records
+       - If user has `supabaseOrgID`, calls `createSalesFromProjectValue()` (see src/services/salesService.js)
+     - If `f_subscription = true` or `isSubscription = true`:
+       - Processes monthly sales entries from dateStart to dateEnd or today
+       - Each month creates a sales entry equal to project value
    - Reloads project list
 
 4. **Update Project**
    - User edits project fields in ProjectDetails or ProjectForm
-   - Frontend validates and calls `updateProject(projectId, data)` → FileMaker `devProjects` UPDATE
-   - **No Supabase sync** - data only in FileMaker
+   - Frontend validates and calls `updateProject(projectId, data)` → FileMaker `devProjects` UPDATE (src/hooks/useProject.js:310-386)
+   - Uses `project.recordId` (FileMaker internal ID) for UPDATE operation, not UUID
+   - **Business Logic on Update** (src/hooks/useProject.js:330-362):
+     - Re-processes fixed price or subscription logic if those flags are set
+     - Creates any missing sales entries based on current dates
+     - Updates billable status if needed
+   - **No Supabase sync on update** - only FileMaker is updated
+   - Updates local state optimistically
 
 5. **Update Project Status**
-   - User changes status dropdown (Planning, Active, On Hold, Completed, Cancelled)
-   - Frontend calls `updateProjectStatus(projectId, status)` → FileMaker API
+   - User toggles status in ProjectDetails component (src/components/projects/ProjectDetails.jsx:72-100)
+   - Toggle switches between "Open" and "Closed" status
+   - Frontend calls `updateProjectStatus(projectId, status)` → FileMaker API (src/hooks/useProject.js:391-428)
+   - Uses `project.recordId` for status update operation
    - Status change may affect billable hours calculations
+   - Updates local state optimistically before API call completes
 
 6. **Delete Project**
    - User clicks delete button (confirmation required)
-   - Frontend calls `deleteProject(recordId)` → FileMaker `devProjects` DELETE
-   - **Orphaned Data Risk**: Related objectives, steps, images, links may remain in FileMaker
+   - Frontend calls `deleteProject(recordId)` → FileMaker `devProjects` DELETE (src/hooks/useProject.js:441-473)
+   - Uses `project.recordId` (FileMaker internal ID) for DELETE operation
+   - **Orphaned Data Risk**: Related objectives, steps, images, links, notes may remain in FileMaker
+   - **No Supabase deletion** - project remains in Supabase `projects` table
+   - Clears selected project if it was the deleted one
 
 7. **Manage Objectives & Steps**
-   - User adds/edits/deletes objectives in Objectives tab
-   - Frontend calls `createObjective(data)` → FileMaker `devProjectObjectives` CREATE
+   - User adds/edits/deletes objectives in Objectives tab (ProjectObjectivesTab component)
+   - Frontend calls `createObjective(data)` → FileMaker `devProjectObjectives` CREATE (src/hooks/useProject.js:520-552)
+   - Objective data includes: `_projectID`, `projectObjective` (text), `status` (default "Open"), `f_completed` (0 or 1)
    - Steps are created/updated within objectives (nested UI)
-   - Completion tracking updates project completion percentage
+   - Completion tracking calculates percentage based on completed steps vs total steps (src/services/projectService.js:312-335)
+   - 500ms delay after objective creation to avoid FileMaker race conditions
 
 8. **View Time Records**
    - User views Time Records tab in project details
    - Frontend fetches records from `dapiRecords` layout (filtered by `_projectID`)
-   - Displays billable hours, unbilled hours, total value
+   - Processes records with duration calculation (src/services/projectService.js:156-193)
+   - Displays billable hours, unbilled hours (filters by `f_billed` field), total value
+   - Shows records sorted by start time (newest first)
 
 ### Target User Flows (Supabase-Only)
 
@@ -211,16 +256,19 @@ All operations should route through backend API endpoints with:
   - `createSalesFromProjectValue(project, user)` - Generate sales entries for fixed-price/subscription
 
 ### Hooks Layer
-- `src/hooks/useProject.js` - Main project hook (location TBD, estimated 300+ lines)
+- `src/hooks/useProject.js` - Main project hook (582 lines)
   - State management for projects list and selected project
-  - `loadProjects(customerId)` - Load projects for customer
-  - `loadProjectDetails(projectId)` - Load all related data
-  - `handleProjectSelect(projectId)` - Select and load project
-  - `handleProjectCreate(data)` - Create project workflow
-  - `handleProjectUpdate(projectId, data)` - Update project workflow
-  - `handleProjectDelete(recordId)` - Delete project workflow
+  - `loadProjects(customerId)` - Load projects for customer (lines 57-91)
+  - `loadProjectDetails(projectId)` - Load all related data (lines 96-137)
+  - `handleProjectSelect(projectId)` - Select and load project (lines 142-180)
+  - `handleProjectCreate(data)` - Create project workflow with Supabase sync (lines 185-305)
+  - `handleProjectUpdate(projectId, data)` - Update project workflow (lines 310-386)
+  - `handleProjectDelete(recordId)` - Delete project workflow (lines 441-473)
+  - `handleProjectStatusChange(projectId, status)` - Update status (lines 391-428)
+  - `handleProjectTeamChange(projectId, teamId)` - Update team assignment (lines 478-515)
+  - `handleObjectiveCreate(projectId, objectiveText)` - Create objective (lines 520-552)
   - All CRUD operations with loading/error states
-  - **No Supabase integration currently**
+  - **Partial Supabase integration**: Syncs project creation only (lines 213-259)
 
 ### UI Components
 - `src/components/projects/ProjectDetails.jsx` - Project detail view with tabs
@@ -245,9 +293,10 @@ All operations should route through backend API endpoints with:
 - `date-fns` - Date manipulation (start/end dates, subscription calculations)
 
 ### Internal Services
-- `supabaseService.js` - Low-level Supabase operations (currently NOT used for projects)
-- `dataService.js` - Environment-aware data routing (FileMaker only currently)
-- `initializationService.js` - App startup (may preload projects)
+- `supabaseService.js` - Low-level Supabase operations (used for project creation sync via `insert()`)
+- `dataService.js` - Environment-aware data routing (FileMaker only, no Supabase routing for projects)
+- `initializationService.js` - App startup (may preload projects for customers)
+- `salesService.js` - Financial operations (creates sales entries for fixed-price and subscription projects)
 
 ### Context/State
 - `AppStateContext` - Global app state
@@ -256,32 +305,45 @@ All operations should route through backend API endpoints with:
 
 ## Known Issues & Technical Debt
 
-1. **No Supabase Integration**:
-   - Projects are 100% FileMaker-dependent
-   - No dual-write, no backup in Supabase
-   - Complete rewrite required for migration
+1. **Partial Supabase Integration**:
+   - Projects sync to Supabase ONLY on creation (src/hooks/useProject.js:213-259)
+   - Updates and deletes do NOT sync to Supabase
+   - Creates data inconsistency between FileMaker and Supabase
+   - Supabase sync is only for proposal foreign key support, not a full dual-write
 
-2. **Business Logic Not Implemented**:
-   - Fixed-price sales generation NOT triggered on project creation (src/services/salesService.js references but not called)
-   - Subscription monthly sales generation NOT implemented
-   - Billable status updates exist but not automated
+2. **Business Logic IS Implemented But May Have Gaps**:
+   - Fixed-price sales generation IS called on project creation (src/hooks/useProject.js:262-289)
+   - Subscription monthly sales generation IS implemented (src/services/projectService.js:563-593)
+   - However, requires user to have `supabaseOrgID` to create sales entries
+   - Users without `supabaseOrgID` will NOT get sales entries created
+   - Billable status updates exist (src/services/projectService.js:631-643) but implementation is placeholder
 
 3. **Incomplete Cascading Deletes**:
    - Deleting a project does NOT delete related objectives, steps, images, links, notes
    - Orphaned records accumulate in FileMaker
+   - No cleanup mechanism or soft-delete pattern
 
-4. **No Organization Scoping**:
+4. **No Organization Scoping in FileMaker**:
    - Projects don't have organization_id field in FileMaker
    - Filtering by organization will require migration strategy
+   - Current Supabase sync adds `organization_id` implicitly but not stored in FileMaker
 
 5. **Time Records Integration**:
    - Time records use `_projectID` field in `dapiRecords` layout
-   - Unclear how this maps to Supabase `time_entries` or `customer_sales` tables
-   - May require separate migration effort for time tracking
+   - Maps to FileMaker time tracking but unclear Supabase equivalent
+   - May need to map to `time_entries` or `customer_sales` tables
+   - Billable status updates are placeholder, not fully functional
 
 6. **Notes Polymorphic Association**:
    - Notes use `_fkID` to associate with projects/customers/tasks
    - Supabase needs explicit polymorphic association pattern (entity_type + entity_id)
+   - Current implementation fetches notes by `_fkID` matching project `__ID`
+
+7. **ID Confusion**:
+   - Code uses both `__ID` (UUID) and `recordId` (FileMaker internal) inconsistently
+   - CREATE uses `__ID`, UPDATE/DELETE use `recordId`
+   - Status change uses `recordId` (src/hooks/useProject.js:397)
+   - This dual-ID pattern causes confusion and potential bugs
 
 ## Success Metrics
 

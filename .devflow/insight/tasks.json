@@ -160,7 +160,9 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:28.075Z",
-      "updatedAt": "2026-01-11T00:29:35.969Z"
+      "updatedAt": "2026-01-11T01:04:38.361Z",
+      "executionPid": 95242,
+      "sessionId": "080a2d12-4e4a-4f81-a4f9-a8418d84e288"
     },
     {
       "id": "INS0013",
@@ -170,7 +172,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:28.688Z",
-      "updatedAt": "2026-01-10T23:54:36.172Z"
+      "updatedAt": "2026-01-11T01:04:38.431Z"
     },
     {
       "id": "INS0014",
@@ -180,7 +182,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:29.507Z",
-      "updatedAt": "2026-01-10T23:54:36.238Z"
+      "updatedAt": "2026-01-11T01:04:38.526Z"
     },
     {
       "id": "INS0015",
@@ -190,7 +192,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:30.342Z",
-      "updatedAt": "2026-01-10T23:54:36.302Z"
+      "updatedAt": "2026-01-11T01:04:38.570Z"
     },
     {
       "id": "INS0016",
@@ -200,7 +202,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:31.044Z",
-      "updatedAt": "2026-01-10T23:54:36.360Z"
+      "updatedAt": "2026-01-11T01:04:38.611Z"
     },
     {
       "id": "INS0017",
@@ -210,7 +212,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:31.760Z",
-      "updatedAt": "2026-01-10T23:54:36.441Z"
+      "updatedAt": "2026-01-11T01:04:38.654Z"
     },
     {
       "id": "INS0018",
@@ -220,7 +222,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:32.402Z",
-      "updatedAt": "2026-01-10T23:54:36.499Z"
+      "updatedAt": "2026-01-11T01:04:38.696Z"
     }
   ]
 }
