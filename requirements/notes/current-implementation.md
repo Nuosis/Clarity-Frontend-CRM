@@ -512,6 +512,553 @@ All note queries use the same FileMaker pattern:
 - Text inputs with placeholders
 - Error messages announced via snackbar
 
+## UI Behavior and User Flows
+
+### Note Creation Workflow
+
+#### Project Notes Creation
+**Location**: `src/components/projects/ProjectNotesTab.jsx`
+
+**Initial State**:
+- "New Note" button visible in top-right
+- Button disabled when `noteLoading` is true
+- No input form visible
+- Location: `src/components/projects/ProjectNotesTab.jsx:14-23`
+
+**User Interaction Flow**:
+1. **Trigger**: User clicks "New Note" button
+   - Button label: `{noteLoading ? 'Adding...' : 'New Note'}`
+   - Sets `showNewNoteInput` to true
+
+2. **Input Display**: TextInput modal appears
+   - Title: "Add Note"
+   - Placeholder: "Enter your note..."
+   - Submit button: "Create"
+   - Cancel button: "Cancel"
+   - 4-row textarea with autofocus
+   - Location: `src/components/projects/ProjectNotesTab.jsx:24-43`
+   - Component: `src/components/global/TextInput.jsx:24-71`
+
+3. **User Input**:
+   - User types note content in textarea
+   - Submit button disabled if text is empty (`!text.trim()`)
+   - Submit button shows: `{text.trim() ? 'hover:bg-primary-hover' : 'opacity-50 cursor-not-allowed'}`
+
+4. **Submission**:
+   - User clicks "Create" or presses Enter (form submission)
+   - Calls `handleNoteCreate(project.recordId, noteContent)`
+   - Async operation begins
+   - Location: `src/components/projects/ProjectNotesTab.jsx:30-42`
+
+5. **Success Path**:
+   - Note created successfully
+   - `loadProjectDetails(project.recordId)` called to refresh data
+   - `setShowNewNoteInput(false)` hides the input form
+   - New note appears at top of list (reverse chronological)
+
+6. **Error Path**:
+   - Error logged to console: `console.error('Error creating note:', error)`
+   - Input form remains visible
+   - User can retry or cancel
+   - Location: `src/components/projects/ProjectNotesTab.jsx:37-38`
+
+7. **Cancel Flow**:
+   - User clicks "Cancel" button
+   - `setShowNewNoteInput(false)` called
+   - Input form hidden, no data saved
+
+#### Task Notes Creation
+**Location**: `src/components/tasks/TaskList.jsx`
+
+**Initial State**:
+- Task in collapsed state
+- User must expand task to access notes
+- Location: `src/components/tasks/TaskList.jsx:43-93`
+
+**User Interaction Flow**:
+1. **Task Expansion**:
+   - User clicks arrow button to expand task
+   - Arrow rotates 90 degrees: `${isExpanded ? 'rotate-90' : ''}`
+   - Calls `toggleExpand()` which triggers `onExpand(task.id)`
+   - Loads task details including notes
+   - Location: `src/components/tasks/TaskList.jsx:34-41`
+
+2. **Expanded State Display**:
+   - Task details section expands with animation
+   - CSS: `${isExpanded ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'}`
+   - Shows loading state if data loading: "Loading task details..."
+   - Once loaded, displays notes section if notes exist
+   - Location: `src/components/tasks/TaskList.jsx:94-106`
+
+3. **Notes Section Display** (if notes exist):
+   - Header: "Notes" in gray text
+   - Scrollable container: `max-h-[105px] overflow-y-auto`
+   - Notes listed with left border styling
+   - Format: `note.content` displayed as text
+   - Location: `src/components/tasks/TaskList.jsx:108-131`
+
+4. **Action Buttons Row**:
+   - Three buttons in flex layout
+   - "New Note" button (flex-1, equal width)
+   - "New Link" button (flex-1)
+   - "Mark as Complete" or "Reopen Task" button (flex-1)
+   - Location: `src/components/tasks/TaskList.jsx:166-200`
+
+5. **Trigger Note Creation**:
+   - User clicks "New Note" button
+   - Sets `showNoteInput` to true
+   - TextInput component appears inline below buttons
+   - Location: `src/components/tasks/TaskList.jsx:167-177`
+
+6. **Input Display**:
+   - Same TextInput modal as projects
+   - Title: "Add Note"
+   - Placeholder: "Enter your note..."
+   - Submit: "Create", Cancel: "Cancel"
+   - Location: `src/components/tasks/TaskList.jsx:201-217`
+
+7. **Submission**:
+   - User enters note and clicks "Create"
+   - Calls `handleCreateNote(task.id, note)`
+   - On success: `await onExpand(task.id)` refreshes task
+   - `setShowNoteInput(false)` hides input
+   - Location: `src/components/tasks/TaskList.jsx:206-212`
+
+8. **Error Handling**:
+   - Error caught and displayed via snackbar: `showError('Error creating note')`
+   - Input remains visible for retry
+   - Location: `src/components/tasks/TaskList.jsx:211-212`
+
+### Note Display Patterns
+
+#### Project Notes Display
+**Location**: `src/components/projects/ProjectNotesTab.jsx:45-63`
+
+**Display Order**:
+- Notes displayed in **reverse chronological order** (newest first)
+- Order determined by FileMaker data, not explicitly sorted in component
+- Raw FileMaker data comes pre-sorted from backend
+
+**Visual Structure**:
+```javascript
+// Card layout for each note
+<div className={`
+    p-4 rounded-lg border
+    ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+`}>
+    <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+        {note.fieldData.note}
+    </p>
+</div>
+```
+
+**Data Fields Shown**:
+- **Note Content**: `note.fieldData.note` - the full text of the note
+- **Visual Styling**: Card with padding, rounded corners, border
+- **No Metadata Displayed**: Creation date, author, timestamps not shown in UI
+
+**Empty State**:
+- Displayed when `project.notes?.length === 0`
+- Message: "No notes added yet"
+- Centered text in gray
+- Location: `src/components/projects/ProjectNotesTab.jsx:60-62`
+
+**List Container**:
+- Uses `space-y-4` for vertical spacing between notes
+- Notes array mapped with key: `note.fieldData.__ID`
+- Location: `src/components/projects/ProjectNotesTab.jsx:46-58`
+
+#### Task Notes Display
+**Location**: `src/components/tasks/TaskList.jsx:108-131`
+
+**Display Order**:
+- Notes displayed in **reverse chronological order** (newest first)
+- Sorting done in service layer: `src/services/taskService.js:219-220`
+- Code: `.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))`
+
+**Visual Structure**:
+```javascript
+// Scrollable container with max height
+<div className="max-h-[105px] overflow-y-auto pr-2">
+    <div className="space-y-2">
+        {taskNotes.map(note => (
+            <p key={note.id} className={`
+                text-sm pl-2 border-l-2
+                ${darkMode
+                    ? 'text-gray-400 border-gray-700'
+                    : 'text-gray-600 border-gray-200'}
+            `}>
+                {note.content}
+            </p>
+        ))}
+    </div>
+</div>
+```
+
+**Data Fields Shown**:
+- **Note Content**: `note.content` - processed format from service layer
+- **Visual Styling**: Left border accent, small text, padding
+- **No Metadata Displayed**: Like projects, no dates or authors shown
+
+**Scrolling Behavior**:
+- Fixed max height: 105px
+- Vertical scrollbar appears if content exceeds height
+- Right padding (pr-2) for scrollbar spacing
+
+**Section Header**:
+- Label: "Notes" in small, medium font weight
+- Gray text color (different shade for dark mode)
+- Only shown if `taskNotes?.length > 0`
+- Location: `src/components/tasks/TaskList.jsx:110-115`
+
+**Conditional Display**:
+- Entire notes section hidden if `taskNotes` is empty or null
+- Only visible when task is expanded AND has notes
+- Location: `src/components/tasks/TaskList.jsx:108-131`
+
+### Data Fields Presented to Users
+
+#### Project Notes Fields
+**Visible to User**:
+- Note content text (full, untruncated)
+
+**Hidden from User**:
+- `__ID` (unique identifier) - used only as React key
+- `recordId` (FileMaker record ID)
+- `~CreationTimestamp` - not displayed
+- `~CreatedBy` - not displayed
+- `~ModificationTimestamp` - not displayed
+- `type` - stored but not shown
+
+**Data Access Pattern**:
+- Raw FileMaker format: `note.fieldData.note`
+- No transformation applied in component
+- Location: `src/components/projects/ProjectNotesTab.jsx:55`
+
+#### Task Notes Fields
+**Visible to User**:
+- Note content text (full, untruncated)
+
+**Hidden from User** (but processed):
+- `id` - transformed from `__ID`, used as React key
+- `recordId` - FileMaker record ID
+- `createdAt` - processed but not displayed
+- `modifiedAt` - processed but not displayed
+- `createdBy` - processed but not displayed
+- `type` - processed but not displayed
+
+**Data Access Pattern**:
+- Processed format: `note.content`
+- Transformed in service layer: `src/services/taskService.js:214-222`
+- Location: `src/components/tasks/TaskList.jsx:125`
+
+### Validation and Business Rules
+
+#### Input Validation
+
+**Required Fields**:
+- `fkId` (parent record ID) - validated in service layer
+- `note` (content) - validated in service layer
+- Both checked in: `src/services/noteService.js:11-13`
+- Error message: "Task ID and note content are required"
+
+**Content Validation**:
+- Empty/whitespace-only content rejected
+- Check: `!note?.trim()`
+- Content trimmed before saving: `note.trim()`
+- Location: `src/services/noteService.js:11, 17`
+
+**UI-Level Validation**:
+- Submit button disabled when textarea empty
+- Check: `disabled={!text.trim()}`
+- Location: `src/components/global/TextInput.jsx:59`
+- Visual indicator: opacity-50 cursor-not-allowed
+
+#### Type Handling
+
+**Default Type**:
+- All notes default to type: 'general'
+- Set in: `src/services/noteService.js:10, 18`
+- Also in: `src/api/notes.js:18`
+
+**Type Parameter**:
+- Optional third parameter in `createNewNote(fkId, note, type = 'general')`
+- Currently not used in UI - all notes created with default
+- Location: `src/services/noteService.js:10`
+
+#### Parent Entity Validation
+
+**Foreign Key Requirement**:
+- `_fkID` must be provided
+- Links note to parent (project or task)
+- Validated before API call
+- Location: `src/services/noteService.js:11`
+
+**Entity Type Inference**:
+- No explicit entity type stored
+- Parent type inferred from `fkId` value
+- Projects use `recordId`
+- Tasks use `__ID`
+
+### State Management During Creation
+
+#### Component-Level State
+
+**ProjectNotesTab State**:
+```javascript
+const [showNewNoteInput, setShowNewNoteInput] = useState(false);
+```
+- Controls input form visibility
+- Set to `true` when "New Note" clicked
+- Set to `false` after successful creation or cancel
+- Location: `src/components/projects/ProjectNotesTab.jsx:8`
+
+**TaskItem State**:
+```javascript
+const [showNoteInput, setShowNoteInput] = useState(false);
+const [isExpanded, setIsExpanded] = useState(false);
+```
+- `showNoteInput` controls note input visibility
+- `isExpanded` controls task detail expansion
+- Both independent states per task item
+- Location: `src/components/tasks/TaskList.jsx:29-30`
+
+**TextInput State**:
+```javascript
+const [text, setText] = useState('');
+```
+- Holds textarea content during editing
+- Reset to empty string on submit
+- Location: `src/components/global/TextInput.jsx:15`
+
+#### Hook-Level State
+
+**useNote Hook State**:
+```javascript
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState(null);
+```
+- `loading` set during async create operation
+- `error` stores error message if creation fails
+- Both reset on new operation
+- Location: `src/hooks/useNote.js:9-10`
+
+**useTask Hook State**:
+```javascript
+const [taskNotes, setTaskNotes] = useState([]);
+```
+- Stores notes array for currently selected task
+- Updated after successful note creation
+- Cleared when task deselected
+- Location: `src/hooks/useTask.js:25`
+
+#### Loading States
+
+**Button Loading Indicator**:
+```javascript
+<button disabled={noteLoading}>
+    {noteLoading ? 'Adding...' : 'New Note'}
+</button>
+```
+- Button text changes during creation
+- Button disabled to prevent duplicate submissions
+- Location: `src/components/projects/ProjectNotesTab.jsx:19-21`
+
+**Task Loading Indicator**:
+```javascript
+{isLoading ? (
+    <div>Loading task details...</div>
+) : (
+    // ... notes display
+)}
+```
+- Shows loading message while fetching task data
+- Prevents flickering of note list during refresh
+- Location: `src/components/tasks/TaskList.jsx:99-106`
+
+### Edit/Delete Workflows
+
+**Current Status**: Not Implemented
+
+**Edit Functionality**:
+- No edit button or UI exists
+- No API endpoint for updating notes
+- Notes are immutable after creation
+
+**Delete Functionality**:
+- No delete button or UI exists
+- No API endpoint for deleting notes
+- Notes are permanent once created
+
+**Workaround**:
+- Users must create new note with corrected content
+- No ability to remove incorrect or outdated notes
+- Acknowledged limitation in: `src/components/projects/ProjectNotesTab.jsx` (no edit/delete buttons present)
+
+### Refresh and Reload Behavior
+
+#### Project Notes Refresh
+
+**Automatic Refresh Triggers**:
+1. After successful note creation
+   - Calls: `loadProjectDetails(project.recordId)`
+   - Location: `src/components/projects/ProjectNotesTab.jsx:34`
+
+2. When project selected
+   - Triggered by project selection in app
+   - Loads all project data including notes
+   - Location: `src/hooks/useProject.js:96-136`
+
+**Manual Refresh**:
+- No explicit refresh button
+- Relies on project re-selection or navigation
+
+#### Task Notes Refresh
+
+**Automatic Refresh Triggers**:
+1. After successful note creation
+   - Calls: `onExpand(task.id)` which triggers `handleTaskSelect`
+   - Location: `src/components/tasks/TaskList.jsx:209`
+
+2. When task expanded
+   - First expansion loads notes
+   - Subsequent expansions may reload if task was deselected
+   - Location: `src/components/tasks/TaskList.jsx:34-41`
+
+**Manual Refresh**:
+- User can collapse and re-expand task
+- Forces fresh data fetch
+
+### Performance Characteristics
+
+#### Note Count Handling
+- **No Limits**: System loads all notes for an entity
+- **No Pagination**: All notes fetched at once
+- **Potential Issue**: Large note lists (100+) not optimized
+- **Current Max**: No documented limit tested
+
+#### Rendering Performance
+- **Project Notes**: Full re-render on project.notes change
+- **Task Notes**: Memoized TaskItem components
+- **ScrollPerformance**: Task notes limited to 105px height
+- **List Virtualization**: Not implemented
+
+#### Network Performance
+- **Parallel Loading**: Notes fetched with other related data (Promise.all)
+- **Batch Queries**: Project notes loaded once for all project data
+- **No Caching**: Notes refetched on every detail load
+- **No Debouncing**: Immediate submission on create click
+
+### Error User Experience
+
+#### Validation Errors
+
+**Empty Content**:
+- Prevented at UI level: submit button disabled
+- Double-checked at service level
+- User cannot submit empty note
+- No error message shown (preventative design)
+
+**Missing Parent ID**:
+- Should never occur in normal usage (ID from props)
+- If occurs: Error message via snackbar
+- Message: "Task ID and note content are required"
+- Location: `src/hooks/useNote.js:15`
+
+#### API Errors
+
+**Display Method**:
+- Snackbar notification via SnackBarContext
+- Calls: `showError(errorMessage)`
+- Location: `src/hooks/useNote.js:38`
+
+**Error Persistence**:
+- Input form remains visible
+- User can correct and retry
+- Error state cleared on new submission attempt
+- Location: `src/hooks/useNote.js:20`
+
+**Console Logging**:
+- All errors also logged to console
+- Includes full error object for debugging
+- Examples:
+  - `console.error('Error creating note:', error)` - ProjectNotesTab
+  - `showError('Error creating note')` - TaskList
+
+### Accessibility Considerations
+
+#### Keyboard Navigation
+
+**TextInput Component**:
+- Auto-focus on textarea when modal opens
+- `autoFocus` attribute: `src/components/global/TextInput.jsx:42`
+- Enter key submits form
+- Escape key support: Not implemented
+
+**Button Navigation**:
+- All buttons keyboard accessible
+- Standard tab order
+- No custom keyboard shortcuts
+
+#### Screen Reader Support
+
+**Semantic HTML**:
+- `<button>` elements for actions
+- `<textarea>` for input
+- `<form>` for submission grouping
+
+**ARIA Attributes**:
+- Expand button has `aria-label`:
+  - "Collapse task details" when expanded
+  - "Expand task details" when collapsed
+  - Location: `src/components/tasks/TaskList.jsx:58`
+
+**Missing ARIA**:
+- No `role` attributes on note containers
+- No `aria-live` regions for dynamic content
+- No announcement of note creation success
+
+#### Visual Accessibility
+
+**Color Contrast**:
+- Dark mode support throughout
+- Distinct colors for text and backgrounds
+- Border colors change with theme
+
+**Focus Indicators**:
+- Default browser focus styling
+- Hover states on buttons: `hover:bg-primary-hover`
+
+**Text Sizing**:
+- Task notes use `text-sm` class
+- Project notes use default paragraph sizing
+- No user control over text size
+
+### Modal and Dialog Behavior
+
+#### TextInput Modal
+
+**Overlay**:
+- Full-screen overlay: `fixed inset-0`
+- Semi-transparent background: `bg-black bg-opacity-50`
+- Centers modal content
+- Location: `src/components/global/TextInput.jsx:24`
+
+**Z-Index**:
+- Modal at `z-50` level
+- Ensures modal appears above all other content
+- Location: `src/components/global/TextInput.jsx:24`
+
+**Click-Outside Behavior**:
+- Not implemented
+- Clicking overlay does not close modal
+- Must use Cancel button to dismiss
+
+**Stacking**:
+- Only one modal shown at a time
+- Modal states controlled independently per component
+- No modal manager or queue system
+
 ## Known Issues & Limitations
 
 1. **No Edit Capability**: Notes cannot be modified after creation
