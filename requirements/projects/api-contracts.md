@@ -698,7 +698,63 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 13. Create Objective Step
+### 13. List Steps by Objective
+
+**Endpoint**: `POST /rpc/get_objective_steps`
+
+**Description**: Fetch all steps for a specific objective, ordered by order_num
+
+**Request**:
+```json
+{
+  "objective_id": "uuid-obj-123"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-step-789",
+      "objective_id": "uuid-obj-123",
+      "step": "Create wireframes",
+      "order_num": 1,
+      "completed": true,
+      "created_at": "2024-01-10T10:06:00Z",
+      "updated_at": "2024-01-12T09:00:00Z"
+    },
+    {
+      "id": "uuid-step-456",
+      "objective_id": "uuid-obj-123",
+      "step": "Get client approval on wireframes",
+      "order_num": 2,
+      "completed": false,
+      "created_at": "2024-01-10T10:07:00Z",
+      "updated_at": "2024-01-10T10:07:00Z"
+    }
+  ]
+}
+```
+
+**Validation**:
+- `objective_id` required (UUID format)
+- User must have access to project's organization (derived from objective → project → customer relationship)
+
+**Errors**:
+- 400: Invalid objective_id format
+- 403: User not authorized
+- 404: Objective not found
+
+**Notes**:
+- Results ordered by `order_num ASC` by default
+- Returns empty array if objective has no steps
+- Can also retrieve steps via endpoint 7 (get_project_objectives) with `include_steps: true`
+
+---
+
+### 14. Create Objective Step
 
 **Endpoint**: `POST /rpc/create_objective_step`
 
@@ -741,7 +797,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 14. Update Objective Step
+### 15. Update Objective Step
 
 **Endpoint**: `POST /rpc/update_objective_step`
 
@@ -779,7 +835,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 15. Delete Objective Step
+### 16. Delete Objective Step
 
 **Endpoint**: `POST /rpc/delete_objective_step`
 
@@ -809,7 +865,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 16. Toggle Step Completion
+### 17. Toggle Step Completion
 
 **Endpoint**: `POST /rpc/toggle_step_completion`
 
@@ -842,7 +898,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 17. Reorder Objective Steps
+### 18. Reorder Objective Steps
 
 **Endpoint**: `POST /rpc/reorder_objective_steps`
 
@@ -878,7 +934,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ## Images, Links, and Notes Operations
 
-### 18. Create Project Image
+### 19. Create Project Image
 
 **Endpoint**: `POST /rpc/create_project_image`
 
@@ -916,7 +972,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 19. Delete Project Image
+### 20. Delete Project Image
 
 **Endpoint**: `POST /rpc/delete_project_image`
 
@@ -941,7 +997,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 20. Create Project Link
+### 21. Create Project Link
 
 **Endpoint**: `POST /rpc/create_project_link`
 
@@ -978,7 +1034,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 21. Delete Project Link
+### 22. Delete Project Link
 
 **Endpoint**: `POST /rpc/delete_project_link`
 

@@ -155,14 +155,20 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Verified that requirements/projects/api-contracts.md sections 7-17 already comprehensively document all required objectives and steps API endpoints: (7) List Objectives with include_steps parameter showing nested steps array, (8) Create Objective with order_num defaulting to max+1, (9) Update Objective with validation, (10) Delete Objective with cascade step deletion count, (11) Toggle Objective Completion, (12) Reorder Objectives with batch update, plus step endpoints (13) Create Step, (14) Update Step, (15) Delete Step, (16) Toggle Step Completion, and (17) Reorder Steps. All endpoints align with proposed schema from data-model-mapping.md using order_num instead of order keyword, completed boolean instead of f_completed string flags, proper UUID foreign keys (project_id, objective_id), TEXT fields for objective/step content, and include_steps optional parameter for nested loading. Schema status section (lines 19-33) correctly warns project_objectives and project_objective_steps tables don't exist yet in Supabase (verified 2025-01-10), with implications documented. Updated task to done status in tasks.json."
+      "implementation_notes": "Verified that the objectives and steps API contracts were already fully defined in 'requirements/projects/api-contracts.md' (sections 7-17), including step handling via the 'include_steps' parameter and nested 'steps' responses, plus all CRUD, toggle completion, and reorder endpoints for objectives and steps. Cross-checked the contracts against 'data-model-mapping.md' to confirm schema alignment (notably using 'order_num' and boolean 'completed', and correct UUID FK relationships), and confirmed the schema status notes that 'project_objectives' and 'project_objective_steps' tables do not yet exist. Updated 'tasks.json' to mark TSK0011 as done with a completion timestamp, and verified the change set by running 'npm run build' with only pre-existing warnings."
     },
     {
       "id": "TSK0012",
       "title": "Define objective steps API contracts",
       "description": "In requirements/projects/api-contracts.md, add endpoints/RPCs for: list steps by objective, create step, update step, delete step, toggle step completion, reorder steps",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completedAt": "2026-01-10T22:30:00.000Z",
+      "notes": "Added dedicated endpoint 13 (get_objective_steps) for listing steps by objective. Previously endpoints 14-18 (now renumbered) covered create, update, delete, toggle completion, and reorder steps. All 6 required step endpoints are now fully documented with request/response examples, UUID handling, order_num fields, boolean completed flags, proper validation, and schema status warnings",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Enhanced the objective steps API contracts in 'requirements/projects/api-contracts.md' by adding a dedicated endpoint 13 'get_objective_steps' for listing all steps by objective ID (previously only available nested within endpoint 7's 'include_steps' parameter), then renumbered all subsequent endpoints (14-22) to maintain sequence integrity. Verified all 6 required step operations are fully documented: list steps by objective (new endpoint 13), create step (endpoint 14), update step (endpoint 15), delete step (endpoint 16), toggle step completion (endpoint 17), and reorder steps (endpoint 18). Each contract includes complete request/response examples with UUID handling, order_num field naming, boolean completed flags, proper validation rules, error codes, and notes about the missing project_objective_steps table requiring backend creation. Marked task complete in 'tasks.json' with timestamp and detailed notes."
     },
     {
       "id": "TSK0013",
