@@ -20,17 +20,21 @@
       "id": "TSK0001",
       "title": "Create README.md with QuickBooks overview",
       "description": "Create requirements/quickbooks/README.md documenting current QuickBooks integration, FileMaker dependencies, and migration objectives",
-      "status": "in_progress",
+      "status": "done",
       "priority": "high",
-      "executionPid": 52306,
-      "sessionId": "761f801d-c88e-4639-bf5a-1ae4ff5516fc"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented a comprehensive QuickBooks integration requirements document in 'requirements/quickbooks/README.md' (about 1,044 lines) capturing the current architecture (including 'quickbooksApi.js' HMAC-SHA256 auth and invoice business rules), FileMaker dependencies (via 'financialSyncService.js' and the 'devRecords' layout), and the full data flow through Supabase to QuickBooks. The README also specifies migration objectives to remove FileMaker reliance, including a new 'useCustomerSales' hook, files to deprecate, and a detailed acceptance criteria and test plan, while explicitly deciding on no backend code changes per the backend change protocol. Verified the file creation and confirmed the project builds successfully with no errors."
     },
     {
       "id": "TSK0002",
       "title": "Document current QuickBooks implementation",
       "description": "Create current-implementation.md analyzing initializeQuickBooks function, FileMaker script behavior, existing quickbooksApi.js client, and UI integration points",
-      "status": "queued",
-      "priority": "high"
+      "status": "in_progress",
+      "priority": "high",
+      "executionPid": 53812,
+      "sessionId": "a642ea2e-b955-4ad5-addd-0ec4151df110"
     },
     {
       "id": "TSK0003",
