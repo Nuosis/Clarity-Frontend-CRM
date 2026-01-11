@@ -87,39 +87,46 @@ These fields may exist but are not currently used in the frontend code:
 
 ## Supabase projects Table Schema
 
+**Actual Schema** (Verified 2025-01-10 via SSH):
+
 ```sql
 CREATE TABLE projects (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,                           -- Maps to projectName
-  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,  -- Maps to _custID
-  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,         -- Maps to _teamID
-  organization_id UUID REFERENCES organizations(id) NOT NULL,   -- NEW FIELD (not in FM)
-  status TEXT DEFAULT 'Open',                   -- Maps to status
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id VARCHAR(255) NOT NULL,            -- Maps to _custID
+  name VARCHAR(255) NOT NULL,                   -- Maps to projectName
   description TEXT,                             -- May not exist in FM
-  time_estimate TEXT,                           -- Maps to estOfTime
-  value DECIMAL(10,2),                          -- Maps to value (convert from text)
-  is_fixed_price BOOLEAN DEFAULT false,         -- Maps to f_fixedPrice
-  is_subscription BOOLEAN DEFAULT false,        -- Maps to f_subscription
+  status VARCHAR(20) NOT NULL DEFAULT 'active', -- Maps to status (enum constraint)
   start_date DATE,                              -- Maps to dateStart (convert format)
-  end_date DATE,                                -- Maps to dateEnd (convert format)
-  created_at TIMESTAMPTZ DEFAULT now(),         -- Maps to ~creationTimestamp
-  updated_at TIMESTAMPTZ DEFAULT now(),         -- Maps to ~modificationTimestamp
+  target_end_date DATE,                         -- Maps to dateEnd (convert format)
+  actual_end_date DATE,                         -- No FM equivalent
+  budget DECIMAL(10,2),                         -- Maps to value (convert from text)
+  github_repo_url TEXT,                         -- No FM equivalent
+  project_link TEXT,                            -- No FM equivalent
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),-- Maps to ~creationTimestamp
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),-- Maps to ~modificationTimestamp
+  created_by VARCHAR(255),                      -- No FM equivalent
 
-  CONSTRAINT projects_pricing_check CHECK (
-    NOT (is_fixed_price = true AND is_subscription = true)
-  ),
-  CONSTRAINT projects_value_check CHECK (
-    (is_fixed_price = false AND is_subscription = false) OR
-    (value IS NOT NULL AND value > 0)
+  CONSTRAINT projects_status_check CHECK (
+    status IN ('active', 'pending', 'on_hold', 'completed', 'cancelled')
   )
 );
 
-CREATE INDEX idx_projects_customer ON projects(customer_id);
-CREATE INDEX idx_projects_team ON projects(team_id);
-CREATE INDEX idx_projects_org ON projects(organization_id);
+CREATE INDEX idx_projects_customer_id ON projects(customer_id);
 CREATE INDEX idx_projects_status ON projects(status);
-CREATE INDEX idx_projects_dates ON projects(start_date, end_date);
+CREATE INDEX idx_projects_created_at ON projects(created_at);
+
+-- Referenced by:
+-- TABLE proposals FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+-- TABLE service_agreements FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
 ```
+
+**Schema Notes**:
+1. **customer_id** is VARCHAR(255), not UUID - accepts both UUIDs and text IDs
+2. **No organization_id** - must be derived from customer relationship
+3. **No team_id** - team assignment not in Supabase schema
+4. **No is_fixed_price/is_subscription** - pricing logic handled elsewhere (customer_sales table)
+5. **Status values differ**: FileMaker uses "Open", "Active", "On Hold", "Completed", "Cancelled"; Supabase uses lowercase with underscores
+6. **Additional fields**: github_repo_url, project_link, actual_end_date, created_by (not in FileMaker)
 
 ## FileMaker devProjectObjectives Layout Fields
 
@@ -137,6 +144,10 @@ CREATE INDEX idx_projects_dates ON projects(start_date, end_date);
 
 ## Supabase project_objectives Table Schema
 
+**Status**: ⚠️ **TABLE DOES NOT EXIST IN SUPABASE** (Verified 2025-01-10)
+
+**Proposed Schema** (Based on FileMaker structure):
+
 ```sql
 CREATE TABLE project_objectives (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -153,6 +164,8 @@ CREATE INDEX idx_project_objectives_project ON project_objectives(project_id);
 CREATE INDEX idx_project_objectives_order ON project_objectives(project_id, order_num);
 ```
 
+**Migration Impact**: This table must be created before migrating objectives from FileMaker. See BACKEND_CHANGE_REQUEST document.
+
 ## FileMaker devProjectObjSteps Layout Fields
 
 ### Step Fields
@@ -168,6 +181,10 @@ CREATE INDEX idx_project_objectives_order ON project_objectives(project_id, orde
 
 ## Supabase project_objective_steps Table Schema
 
+**Status**: ⚠️ **TABLE DOES NOT EXIST IN SUPABASE** (Verified 2025-01-10)
+
+**Proposed Schema** (Based on FileMaker structure):
+
 ```sql
 CREATE TABLE project_objective_steps (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -182,6 +199,8 @@ CREATE TABLE project_objective_steps (
 CREATE INDEX idx_project_steps_objective ON project_objective_steps(objective_id);
 CREATE INDEX idx_project_steps_order ON project_objective_steps(objective_id, order_num);
 ```
+
+**Migration Impact**: Requires project_objectives table to exist first. See BACKEND_CHANGE_REQUEST document.
 
 ## FileMaker devProjectImages Layout Fields
 
@@ -200,6 +219,10 @@ CREATE INDEX idx_project_steps_order ON project_objective_steps(objective_id, or
 
 ## Supabase project_images Table Schema
 
+**Status**: ⚠️ **TABLE DOES NOT EXIST IN SUPABASE** (Verified 2025-01-10)
+
+**Proposed Schema** (Based on FileMaker structure):
+
 ```sql
 CREATE TABLE project_images (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -213,6 +236,8 @@ CREATE TABLE project_images (
 
 CREATE INDEX idx_project_images_project ON project_images(project_id);
 ```
+
+**Current Workaround**: Images may be stored in FileMaker only, or in a generic images table.
 
 ## FileMaker devProjectLinks Layout Fields
 
@@ -230,43 +255,46 @@ CREATE INDEX idx_project_images_project ON project_images(project_id);
 
 ## Supabase links Table Schema (Existing)
 
-**Note**: Links table already exists in Supabase and is shared across entities (projects, customers, prospects, etc.).
+**Status**: ✅ **TABLE EXISTS IN SUPABASE** (Verified 2025-01-10 via SSH)
+
+**Actual Schema**:
 
 ```sql
--- Verify existing schema via SSH:
--- ssh marcus@backend.claritybusinesssolutions.ca "docker exec supabase-db psql -U postgres -d postgres -c \"\\d+ links\""
-
--- Expected schema (approximate):
 CREATE TABLE links (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  url TEXT NOT NULL,                            -- Maps to link
-  title TEXT,                                   -- Maps to title
-  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
-  prospect_id UUID REFERENCES prospects(id) ON DELETE CASCADE,
-  -- ... other entity FKs
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-
-  CONSTRAINT links_entity_check CHECK (
-    (project_id IS NOT NULL AND customer_id IS NULL AND prospect_id IS NULL) OR
-    (project_id IS NULL AND customer_id IS NOT NULL AND prospect_id IS NULL) OR
-    (project_id IS NULL AND customer_id IS NULL AND prospect_id IS NOT NULL)
-    -- ... other entity checks
-  )
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  project_id UUID,                              -- Maps to _fkID (for project links)
+  link VARCHAR(2048) NOT NULL,                  -- Maps to link
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_links_project ON links(project_id);
+CREATE INDEX idx_links_customer_id ON links(customer_id);
+CREATE INDEX idx_links_organization_id ON links(organization_id);
+CREATE INDEX idx_links_project_id ON links(project_id);
+
+FOREIGN KEY constraints:
+- customer_id REFERENCES customers(id) ON DELETE CASCADE
+- organization_id REFERENCES organizations(id) ON DELETE CASCADE
 ```
+
+**Schema Notes**:
+1. **No title field** - Title must be derived from URL (as done in projectService.js:97)
+2. **customer_id is NOT NULL** - All links must have a customer association
+3. **project_id is nullable** - Project association is optional
+4. **No polymorphic constraint** - Links can belong to customer, project, and organization simultaneously
+5. **link is VARCHAR(2048)** - Limited to 2048 characters
 
 **Migration Strategy for Links**:
 1. Query devProjectLinks by `_fkID = projectId`
 2. For each link:
    - Preserve `__ID` as Supabase `id`
-   - Map `link` to `url`
-   - Map `title` to `title`
+   - Map FileMaker `link` field to Supabase `link` field (VARCHAR(2048))
+   - **Derive title from URL** (no title field in Supabase)
    - Set `project_id = _fkID`
-   - Set all other entity FKs to NULL
+   - **Lookup customer_id from project** (required field in Supabase)
+   - **Lookup organization_id from customer** (for multi-tenancy)
 
 ## FileMaker devNotes Layout Fields (Polymorphic)
 
@@ -292,8 +320,11 @@ CREATE INDEX idx_links_project ON links(project_id);
 
 ## Supabase notes Table Schema (Planned)
 
+**Status**: ⚠️ **TABLE DOES NOT EXIST IN SUPABASE** (Verified 2025-01-10)
+
+**Proposed Schema** (Based on FileMaker polymorphic pattern):
+
 ```sql
--- PROPOSED schema (requires verification)
 CREATE TABLE notes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   entity_type TEXT NOT NULL,                    -- 'project', 'customer', 'task'
@@ -308,6 +339,11 @@ CREATE TABLE notes (
 CREATE INDEX idx_notes_entity ON notes(entity_type, entity_id);
 CREATE INDEX idx_notes_org ON notes(organization_id);
 ```
+
+**Action Required Before Migration**:
+1. Audit devNotes layout for complete field list (currently unknown - see useProject.js:114)
+2. Review notes UI components for actual data structure
+3. Create notes table in Supabase with proper schema
 
 **Migration Strategy for Notes**:
 1. Query devNotes by `_fkID = projectId`
@@ -341,41 +377,51 @@ CREATE INDEX idx_notes_org ON notes(organization_id);
 3. `Billable_Time_Rounded` appears to be a FileMaker calculation field
 4. Relationship to projects is optional (`_projectID` can be null for non-project work)
 
-## Supabase time_entries / customer_sales Mapping (TBD)
+## Supabase Time Tracking Mapping
 
-**Two Possible Approaches**:
+**Status**: Time records from FileMaker `dapiRecords` layout have NO direct equivalent in Supabase.
 
-### Option 1: Map to time_entries Table
+**Verified Schema** (2025-01-10):
+- ✅ **customer_sales** table exists - for sales/financial transactions, not time tracking
+- ❌ **time_entries** table does NOT exist
+
+**customer_sales Table** (Actual Schema):
 
 ```sql
-CREATE TABLE time_entries (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,  -- Maps to _projectID (nullable)
-  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE, -- Maps to _custID
-  user_id UUID REFERENCES users(id) NOT NULL,
-  start_time TIMESTAMPTZ NOT NULL,              -- Maps to startTime
-  end_time TIMESTAMPTZ NOT NULL,                -- Maps to endTime
-  description TEXT,                             -- Maps to description
-  is_billed BOOLEAN DEFAULT false,              -- Maps to f_billed
-  billable_hours DECIMAL(5,2),                  -- Calculated from start/end
-  organization_id UUID REFERENCES organizations(id) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+CREATE TABLE customer_sales (
+  id UUID PRIMARY KEY,
+  customer_id UUID NOT NULL REFERENCES customers(id),
+  product_id UUID REFERENCES products(id),
+  product_name TEXT NOT NULL,
+  quantity NUMERIC NOT NULL,
+  unit_price NUMERIC NOT NULL,
+  total_price NUMERIC NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  date DATE NOT NULL,
+  inv_id TEXT,
+  financial_id UUID UNIQUE,
+  configuration_data JSONB
 );
 ```
 
-### Option 2: Map to customer_sales Table (Existing)
+**Schema Notes**:
+1. **customer_sales is for financial transactions**, not time tracking
+2. **Used for fixed-price and subscription project billing** (see projectService.js:508-596)
+3. **Time records (dapiRecords) are NOT migrated to Supabase** - remain in FileMaker only
+4. **Project value processing**: Creates customer_sales entries for fixed-price (50/50 split) and subscription (monthly) projects
 
-```sql
--- Verify existing schema via SSH
--- Note: customer_sales may already exist with different structure for sales records
--- Time records might be a separate concern from sales
-```
+**Business Logic Reference** (src/services/projectService.js):
+- Line 508-596: `processProjectValue()` function
+- Line 520-560: Fixed price logic (50% on start, 50% on completion)
+- Line 563-593: Subscription logic (monthly recurring sales)
+- Line 631-643: `updateProjectRecordsBillableStatus()` placeholder
 
-**Action Required**:
-1. Clarify if time tracking should use `time_entries` or `customer_sales`
-2. Review existing Supabase schema for time tracking tables
-3. Define migration strategy for historical time records
+**Migration Decision**:
+- Time records remain in FileMaker `dapiRecords` layout
+- Financial transactions from projects → `customer_sales` table
+- If time tracking needed in Supabase, create separate `time_entries` table
 
 ## Field-by-Field Conversion Rules
 
@@ -431,12 +477,31 @@ All `__ID` fields should be preserved during migration:
 - FileMaker `__ID` → Supabase `id` (same UUID)
 - FileMaker `recordId` → DISCARD (internal FileMaker identifier, no Supabase equivalent)
 
+### Status Value Mapping
+
+FileMaker status values → Supabase status values:
+
+| FileMaker Status | Supabase Status | Mapping Logic (useProject.js:222-232) |
+|-----------------|-----------------|---------------------------------------|
+| `"Open"` | `"active"` | Default mapping |
+| `"Active"` | `"active"` | Direct mapping |
+| `"Pending"` | `"pending"` | Direct mapping |
+| `"On Hold"` | `"on_hold"` | Lowercase with underscore |
+| `"Completed"`, `"Complete"`, `"Closed"` | `"completed"` | Normalized to completed |
+| `"Cancelled"` | `"cancelled"` | Direct mapping |
+
+**Constraint**: Supabase enforces CHECK constraint - only allows: 'active', 'pending', 'on_hold', 'completed', 'cancelled'
+
 ### Organization ID Assignment
 
-FileMaker records have NO `organization_id`. Migration strategy:
+**Challenge**: FileMaker records have NO `organization_id` field.
+
+**Migration Strategy**:
 1. Determine organization from customer relationship
 2. Lookup `customer.organization_id` via `_custID`
 3. Assign same `organization_id` to project and all related records
+
+**Implementation Note**: Current Supabase schema has NO organization_id in projects table - may need backend change request.
 
 ## Relationship Integrity Rules
 
@@ -499,10 +564,219 @@ FileMaker records have NO `organization_id`. Migration strategy:
 - [ ] Constraint violations checked (fixed-price + subscription)
 - [ ] Orphaned records identified (missing parent relationships)
 
-## Known Schema Gaps
+## API Contracts
 
-1. **Notes Table**: Complete field list unknown, requires investigation
-2. **Time Tracking**: Unclear if time_entries or customer_sales, requires clarification
-3. **Organization Assignment**: No organization_id in FileMaker, derivation strategy TBD
-4. **Additional Project Fields**: May exist in FileMaker but not used in frontend
-5. **Calculation Fields**: FileMaker may have calculated fields not in API responses
+### FileMaker API (via fm-gofer)
+
+**Base Configuration** (src/api/fileMaker.js):
+- Database: `clarityCRM`
+- Layouts: See `Layouts` constant (line 411-423)
+- Actions: `read`, `create`, `update`, `delete`
+
+**Example: Create Project** (src/api/projects.js:112-124):
+
+```javascript
+// Request
+{
+  layout: 'devProjects',
+  action: 'create',
+  fieldData: {
+    __ID: 'uuid-generated',
+    projectName: 'Website Redesign',
+    _custID: 'customer-uuid',
+    status: 'Open',
+    f_fixedPrice: "1",
+    value: "5000.00",
+    dateStart: "01/15/2024",  // MM/DD/YYYY format
+    dateEnd: "03/31/2024"
+  }
+}
+
+// Response
+{
+  response: {
+    data: [{
+      fieldData: { /* created project */ },
+      recordId: "42"
+    }],
+    messages: [{ code: '0', message: 'OK' }]
+  }
+}
+```
+
+**Example: Fetch Projects for Customer** (src/api/projects.js:27-38):
+
+```javascript
+// Request
+{
+  layout: 'devProjects',
+  action: 'read',
+  query: [{ "_custID": "customer-uuid" }]
+}
+
+// Response
+{
+  response: {
+    data: [
+      {
+        fieldData: {
+          __ID: "project-uuid",
+          projectName: "Project Name",
+          _custID: "customer-uuid",
+          status: "Open",
+          // ... other fields
+        },
+        recordId: "42"
+      }
+    ]
+  }
+}
+```
+
+**Example: Fetch Related Data** (src/api/projects.js:61-84):
+
+```javascript
+// Objectives
+{
+  layout: 'devProjectObjectives',
+  action: 'read',
+  query: [{ "_projectID": "project-uuid" }]
+}
+
+// Steps
+{
+  layout: 'devProjectObjSteps',
+  action: 'read',
+  query: [{ "_objectiveID": "objective-uuid" }]
+}
+
+// Images (polymorphic)
+{
+  layout: 'devProjectImages',
+  action: 'read',
+  query: [{ "_fkID": "project-uuid" }]
+}
+
+// Links (polymorphic)
+{
+  layout: 'devProjectLinks',
+  action: 'read',
+  query: [{ "_fkID": "project-uuid" }]
+}
+
+// Time Records
+{
+  layout: 'dapiRecords',
+  action: 'read',
+  query: [{ "_projectID": "project-uuid" }]
+}
+```
+
+### Supabase API (Direct)
+
+**Current Implementation** (src/hooks/useProject.js:218-259):
+
+```javascript
+// Sync project to Supabase after FileMaker create
+import { insert } from '../services/supabaseService';
+
+const supabaseProjectData = {
+  id: projectId,                      // UUID from FileMaker
+  name: projectData.projectName,
+  customer_id: projectData._custID,
+  status: 'active',                   // Mapped from FileMaker status
+  description: projectData.description || null,
+  budget: parseFloat(projectData.value) || null,
+  start_date: projectData.dateStart || null,
+  target_end_date: projectData.dateEnd || null,
+  created_by: user?.email || null
+};
+
+await insert('projects', supabaseProjectData);
+```
+
+**Required for Migration**:
+- Batch insert for project_objectives (table doesn't exist yet)
+- Batch insert for project_objective_steps (table doesn't exist yet)
+- Batch insert for project_images (table doesn't exist yet)
+- Update existing links with project_id + customer_id
+- Handle notes migration (table doesn't exist yet)
+
+## Known Schema Gaps and Action Items
+
+### Critical Gaps (Blocking Migration)
+
+1. **project_objectives Table**: Does NOT exist in Supabase
+   - Required for: Migrating objectives from devProjectObjectives
+   - Action: Create BACKEND_CHANGE_REQUEST for table creation
+
+2. **project_objective_steps Table**: Does NOT exist in Supabase
+   - Required for: Migrating steps from devProjectObjSteps
+   - Action: Create BACKEND_CHANGE_REQUEST for table creation
+
+3. **project_images Table**: Does NOT exist in Supabase
+   - Required for: Migrating images from devProjectImages
+   - Action: Decide if using generic images table or project-specific table
+
+4. **notes Table**: Does NOT exist in Supabase
+   - Required for: Migrating notes from devNotes
+   - Action: First audit devNotes layout, then create table schema
+
+### Schema Mismatches (Require Backend Changes)
+
+5. **team_id Missing**: Supabase projects table has no team_id field
+   - FileMaker has: `_teamID` field
+   - Action: Backend change request to add team_id column OR accept loss of team assignments
+
+6. **is_fixed_price/is_subscription Missing**: Supabase has no pricing type flags
+   - FileMaker has: `f_fixedPrice`, `f_subscription`
+   - Current workaround: Pricing logic uses customer_sales table
+   - Action: Document that pricing model is handled via customer_sales, not project flags
+
+7. **organization_id Missing**: Supabase projects table has no organization_id
+   - Required for: Multi-tenancy
+   - Action: Backend change request to add organization_id with NOT NULL constraint
+
+### Data Investigation Needed
+
+8. **Notes Field Structure**: devNotes layout fields are unknown
+   - Frontend displays raw data (useProject.js:114)
+   - Action: Audit devNotes layout via FileMaker or API inspection
+
+9. **Additional FileMaker Fields**: May exist but not used in frontend
+   - Examples: description, priority, budget, actualCost
+   - Action: Complete field audit from FileMaker layout definition
+
+10. **Calculation Fields**: FileMaker may have calculated fields
+    - Example: Billable_Time_Rounded in dapiRecords
+    - Action: Identify all calculated fields and determine if needed in Supabase
+
+### Migration Strategy Decisions
+
+11. **Time Records**: dapiRecords has no Supabase equivalent
+    - Current decision: Keep in FileMaker only
+    - Alternative: Create time_entries table in Supabase
+    - Action: Confirm business requirement for time tracking in web app
+
+12. **Links Title Field**: Supabase links table has no title field
+    - FileMaker has: `title` field
+    - Current workaround: Derive from URL (projectService.js:97)
+    - Action: Backend change request to add title field OR accept derived titles
+
+## Validation Checklist
+
+Before migration can proceed, verify:
+
+- [ ] Backend change request created for missing tables (objectives, steps, images, notes)
+- [ ] Backend change request created for missing columns (team_id, organization_id, pricing flags)
+- [ ] Notes layout audited and field structure documented
+- [ ] Status value mapping tested and validated
+- [ ] Date format conversion tested (MM/DD/YYYY → YYYY-MM-DD)
+- [ ] Boolean conversion tested ("1"/"0" → true/false)
+- [ ] Organization ID derivation strategy implemented
+- [ ] Links migration strategy handles required customer_id field
+- [ ] Customer_sales table confirmed for financial transactions only
+- [ ] Time tracking strategy finalized (FileMaker-only vs Supabase time_entries)
+- [ ] All project UUIDs can be preserved during migration
+- [ ] Orphaned records strategy defined (projects without valid customer_id)
+- [ ] Rollback plan documented in case of migration failure

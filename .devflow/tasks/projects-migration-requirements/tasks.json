@@ -35,17 +35,21 @@
       "id": "TSK0002",
       "title": "Document current implementation",
       "description": "Create requirements/projects/current-implementation.md documenting: frontend call graph from UI → hooks → services → API, all relevant files (components, hooks, services, API), FileMaker layouts used, data flow diagrams, and current state management patterns",
-      "status": "in_progress",
+      "status": "done",
       "priority": "high",
-      "executionPid": 141,
-      "sessionId": "e4826467-ccfd-43df-b8a5-67603d5b3b21"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented comprehensive Projects feature documentation by analyzing the frontend call graph, components, hooks, services, API integrations, and FileMaker layouts, then consolidating findings into a new doc. Added a detailed 'current-implementation.md' documenting 10 end-to-end workflows, 13+ components, the 582-line 'useProject' hook, 'projectService.js' (19 functions), and the FileMaker API and layout mappings (10 API functions, 7 layouts). Key decisions included capturing parallel data-fetch behavior (5 concurrent calls for project details), mapping business logic differences for fixed-price vs subscription projects, and explicitly listing 10 major known gaps to guide migration planning."
     },
     {
       "id": "TSK0003",
       "title": "Map core Projects data model",
       "description": "In requirements/projects/data-model-mapping.md, document FileMaker devProjects layout fields → Supabase projects table mapping. Include: field types, constraints, status enum values, pricing fields (f_fixedPrice, f_subscription, value), date fields, team/customer relationships, and UUID vs recordId handling",
-      "status": "queued",
-      "priority": "high"
+      "status": "in_progress",
+      "priority": "high",
+      "executionPid": 9164,
+      "sessionId": "139cb455-4306-45f2-888c-66883408146f"
     },
     {
       "id": "TSK0004",
