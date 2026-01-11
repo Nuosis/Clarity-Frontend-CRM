@@ -20,8 +20,10 @@
       "id": "TSK0001",
       "title": "Create README.md with QuickBooks overview",
       "description": "Create requirements/quickbooks/README.md documenting current QuickBooks integration, FileMaker dependencies, and migration objectives",
-      "status": "queued",
-      "priority": "high"
+      "status": "in_progress",
+      "priority": "high",
+      "executionPid": 52306,
+      "sessionId": "761f801d-c88e-4639-bf5a-1ae4ff5516fc"
     },
     {
       "id": "TSK0002",
