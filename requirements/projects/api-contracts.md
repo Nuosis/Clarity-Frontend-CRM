@@ -1327,38 +1327,229 @@ const title = new URL(link).hostname; // "github.com" from "https://github.com/u
 
 ### Fixed-Price Project Sales Generation
 
+**Overview**: When a project is marked as fixed-price (`f_fixedPrice = "1"` in FileMaker / `is_fixed_price = true` in Supabase), the system automatically creates sales entries in the `customer_sales` table to track revenue recognition. The project value is split 50/50: half on project start, half on project completion.
+
 **Trigger**: Project creation or update with `is_fixed_price = true`
 
-**Logic**:
-1. Check if `start_date` exists and is <= today:
-   - Create sales entry:
-     - `customer_id`: from project
-     - `amount`: `value / 2`
-     - `date`: `start_date`
-     - `description`: "Fixed price project ({project.name}) - 50% on start"
-     - `type`: "sellable"
-     - `project_id`: project UUID
-   - **Idempotency**: Check if sales entry already exists for this project + date + type before creating
+**FileMaker Field Mapping**:
+- `f_fixedPrice`: String "1" (true) or "0" (false) → Supabase: `is_fixed_price` BOOLEAN
+- `value`: Project total value (TEXT in FileMaker, stored as string) → Supabase: `budget` DECIMAL(10,2)
+- `dateStart`: Project start date (MM/DD/YYYY format) → Supabase: `start_date` DATE (YYYY-MM-DD)
+- `dateEnd`: Project end date (MM/DD/YYYY format) → Supabase: `target_end_date` or `actual_end_date` DATE
 
-2. Check if `end_date` exists and is <= today:
-   - Create sales entry:
-     - `customer_id`: from project
-     - `amount`: `value / 2`
-     - `date`: `end_date`
-     - `description`: "Fixed price project ({project.name}) - 50% on completion"
-     - `type`: "sales"
-     - `project_id`: project UUID
-   - **Idempotency**: Check if sales entry already exists for this project + date + type before creating
+**Code References**:
+- Business Logic: `src/services/projectService.js:508-596` (processProjectValue function)
+- FileMaker API: `src/api/projects.js:112-144` (createProject, updateProject)
+- Hook Implementation: `src/hooks/useProject.js:186-264` (handleCreateProject)
 
-3. Update all time records for project:
-   - Set `is_billed = false` (fixed-price projects have non-billable hours)
-   - Note: This may be handled separately via time tracking system
+**Business Logic Steps**:
+
+#### 1. Project Start Sales Entry (50% Sellable)
+
+**Condition**: `start_date` exists AND `start_date <= today`
+
+**Action**: Create sales entry in `customer_sales` table:
+```javascript
+{
+  customer_id: project.customer_id,
+  product_name: `${project.name} - 50% on project start`,
+  product_id: null,                          // No specific product
+  quantity: 1,
+  unit_price: project.value / 2,             // 50% of total value
+  total_price: project.value / 2,
+  date: project.start_date,                  // Date of revenue recognition
+  type: "sellable",                          // Indicates this is a sellable entry
+  project_id: project.id,                    // Link back to project (if column exists)
+  organization_id: project.organization_id,  // Required for multi-tenancy
+  created_at: now(),
+  updated_at: now()
+}
+```
+
+**Idempotency Check**: Before creating, verify no existing sales entry exists:
+```sql
+SELECT id FROM customer_sales
+WHERE customer_id = :project.customer_id
+  AND date = :project.start_date
+  AND product_name LIKE '%50% on project start%'
+  AND total_price = :project.value / 2
+LIMIT 1;
+```
+
+**Example**:
+- Project: "Website Redesign", Value: $10,000, Start Date: 2024-01-15
+- Sales Entry: $5,000 on 2024-01-15 (type: "sellable")
+
+#### 2. Project Completion Sales Entry (50% Sales)
+
+**Condition**: Project status changes to "Completed" OR `end_date` exists AND `end_date <= today`
+
+**Action**: Create sales entry in `customer_sales` table:
+```javascript
+{
+  customer_id: project.customer_id,
+  product_name: `${project.name} - 50% on project completion`,
+  product_id: null,
+  quantity: 1,
+  unit_price: project.value / 2,             // Remaining 50% of total value
+  total_price: project.value / 2,
+  date: project.actual_end_date || today(),  // Actual completion date
+  type: "sales",                             // Indicates this is a sales entry
+  project_id: project.id,
+  organization_id: project.organization_id,
+  created_at: now(),
+  updated_at: now()
+}
+```
+
+**Idempotency Check**: Before creating, verify no existing sales entry exists:
+```sql
+SELECT id FROM customer_sales
+WHERE customer_id = :project.customer_id
+  AND product_name LIKE '%50% on project completion%'
+  AND total_price = :project.value / 2
+LIMIT 1;
+```
+
+**Trigger Points**:
+1. **Status Update**: When project status changes to "Completed" (via update_project_status endpoint)
+2. **End Date Reached**: When `actual_end_date` or `target_end_date` is set and <= today
+3. **Manual Trigger**: Administrator manually marks project as complete
+
+**Example**:
+- Project: "Website Redesign", Value: $10,000, Completion Date: 2024-03-31
+- Sales Entry: $5,000 on 2024-03-31 (type: "sales")
+
+#### 3. Time Records Non-Billable Flag
+
+**Condition**: Project has `is_fixed_price = true`
+
+**Action**: Set all time tracking records for this project as non-billable:
+```sql
+UPDATE time_entries
+SET is_billed = false
+WHERE project_id = :project.id;
+```
+
+**FileMaker Implementation** (if using dapiRecords):
+```javascript
+// Update all time records for project
+UPDATE dapiRecords
+SET f_billed = "0"
+WHERE _projectID = :project.__ID;
+```
+
+**Rationale**: Fixed-price projects are billed based on project milestones (start/completion), NOT on hourly time tracking. Time records are for internal tracking only and should not be invoiced separately.
+
+**Code Reference**: `src/services/billableHoursService.js:288-309` (time record processing)
+
+**Important**: This step ensures that time entries are NOT double-billed (once via time tracking, once via fixed-price milestones).
 
 **Edge Cases**:
-- If `start_date` is in the future: Do NOT create sales entry yet (requires background job or manual trigger)
-- If `end_date` is in the future: Do NOT create final sales entry yet
-- If project value changes: Re-calculate sales entries (may require manual adjustment or versioning)
-- If project changes from fixed-price to non-fixed-price: Handle existing sales entries (reverse? leave?)
+
+1. **Future Start Date**:
+   - Condition: `start_date > today`
+   - Action: Do NOT create sales entry yet
+   - Solution: Requires background job (cron) or manual trigger when date arrives
+   - Alternative: Create entry immediately but set `date` to future date (QB sync handles timing)
+
+2. **Future End Date**:
+   - Condition: `end_date > today`
+   - Action: Do NOT create completion sales entry yet
+   - Solution: Entry created when status changes to "Completed" OR when end date arrives
+
+3. **Project Value Changes**:
+   - Condition: Project value updated after sales entries created
+   - Issue: Existing sales entries show old value (50% of old total)
+   - Solutions:
+     - **Option A**: Re-calculate and UPDATE existing sales entries (complex, may break QB sync)
+     - **Option B**: Create adjustment entries (credit old, create new at correct amount)
+     - **Option C**: Prevent value changes after sales entries created (business rule)
+   - **Recommendation**: Option C - Lock value after first sales entry or require admin approval
+
+4. **Pricing Type Change**:
+   - Condition: Project changes from fixed-price to hourly (or vice versa)
+   - Issue: Existing sales entries no longer match pricing model
+   - Solution: Prevent pricing type changes after sales entries created
+   - Alternative: Reverse existing sales entries and regenerate based on new model
+
+5. **Project Cancellation**:
+   - Condition: Project status changes to "Cancelled" before completion
+   - Issue: 50% start sales entry already created, but project not completed
+   - Solutions:
+     - **Option A**: Leave start entry, do not create completion entry
+     - **Option B**: Create reversal/refund entry to cancel start entry
+     - **Option C**: Manual adjustment by finance team
+   - **Recommendation**: Option A - Start payment is non-refundable
+
+6. **Multiple Start/End Date Updates**:
+   - Condition: Project dates changed multiple times
+   - Issue: Duplicate sales entries if idempotency check fails
+   - Solution: Idempotency check should prevent duplicates
+   - Safeguard: Use UNIQUE constraint or composite index on customer_sales table
+
+**Validation Rules**:
+
+1. **Required Fields for Fixed-Price**:
+   ```javascript
+   if (project.is_fixed_price === true) {
+     assert(project.value > 0, "Fixed-price projects require value > 0");
+     assert(project.start_date !== null, "Fixed-price projects require start_date");
+     // end_date is optional but recommended
+   }
+   ```
+
+2. **Mutual Exclusivity**:
+   ```javascript
+   assert(
+     !(project.is_fixed_price && project.is_subscription),
+     "Project cannot be both fixed-price AND subscription"
+   );
+   ```
+
+3. **Value Consistency**:
+   ```javascript
+   // Both sales entries should equal total value
+   const totalSales = startSalesEntry.total_price + completionSalesEntry.total_price;
+   assert(totalSales === project.value, "Sales entries must sum to project value");
+   ```
+
+**Database Schema Requirements**:
+
+**Current Supabase Schema Gap**:
+- ⚠️ Projects table has NO `is_fixed_price` or `is_subscription` columns
+- ⚠️ Projects table has NO `project_id` foreign key in customer_sales (cannot link sales to projects)
+- ✅ customer_sales table exists with required fields
+
+**Proposed Schema Addition**:
+```sql
+-- Add pricing flags to projects table
+ALTER TABLE projects
+ADD COLUMN is_fixed_price BOOLEAN DEFAULT false,
+ADD COLUMN is_subscription BOOLEAN DEFAULT false,
+ADD CONSTRAINT projects_pricing_type_check
+  CHECK (NOT (is_fixed_price AND is_subscription));
+
+-- Add project_id to customer_sales (optional - for tracking)
+ALTER TABLE customer_sales
+ADD COLUMN project_id UUID REFERENCES projects(id) ON DELETE SET NULL;
+
+CREATE INDEX idx_customer_sales_project_id ON customer_sales(project_id);
+```
+
+**Testing Checklist**:
+
+- [ ] Fixed-price project created with start_date in past: Start sales entry created
+- [ ] Fixed-price project created with start_date in future: No sales entry created yet
+- [ ] Fixed-price project status changed to "Completed": Completion sales entry created
+- [ ] Fixed-price project with existing sales entries: Idempotency check prevents duplicates
+- [ ] Time records for fixed-price project: All marked as `is_billed = false`
+- [ ] Project value = $10,000: Two sales entries of $5,000 each created
+- [ ] Both sales entries sum to total project value
+- [ ] Sales entries have correct customer_id and organization_id
+- [ ] Sales entries have correct dates (start_date, completion_date)
+- [ ] Sales entry types correct: "sellable" for start, "sales" for completion
+- [ ] QuickBooks sync creates invoices from sales entries
 
 ---
 

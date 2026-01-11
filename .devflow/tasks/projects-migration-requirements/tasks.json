@@ -187,17 +187,25 @@
       "id": "TSK0014",
       "title": "Define team assignment API contract",
       "description": "In requirements/projects/api-contracts.md, add endpoint/RPC for updating project team assignment (_teamID field). Include request/response and how this relates to teams table",
-      "status": "in_progress",
+      "status": "done",
       "priority": "low",
-      "executionPid": 34340,
-      "sessionId": "74165e80-189f-4adb-ae41-4f990479e6cb"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented a complete Team Assignment API contract by expanding the existing section and adding Endpoint 24, 'POST /rpc/update_project_team', in 'requirements/projects/api-contracts.md', including request and response examples for assign and remove flows, validation rules, business logic, error codes, and references to related team endpoints. Updated the document header endpoint count from 23 to 24 and added detailed notes on the teams relationship (teams and team_members schemas), field mapping from FileMaker '_teamID' to Supabase 'team_id', and frontend and SQL integration references based on 'teamService.js', 'ProjectTeamTab.jsx', and 'TeamContext.jsx'. Documented a key decision and blocker: the Supabase schema currently lacks 'projects.team_id', recommending adding it as a UUID FK to teams with 'ON DELETE SET NULL' plus an index, and verified the build succeeded after the documentation changes."
     },
     {
       "id": "TSK0015",
       "title": "Document fixed price business logic",
       "description": "In requirements/projects/api-contracts.md or data-model-mapping.md, document fixed price project logic: when f_fixedPrice=true, create 50% sellable entry on project start (dateStart), create 50% sales entry on project completion (dateEnd), and set all time records as non-billable",
-      "status": "queued",
-      "priority": "high"
+      "status": "done",
+      "priority": "high",
+      "completedAt": "2026-01-10T23:00:00.000Z",
+      "notes": "Comprehensively documented fixed-price project business logic in both api-contracts.md and data-model-mapping.md. Detailed the 50/50 value split (50% sellable on project start, 50% sales on completion), time records non-billable flag, idempotency checks, edge cases (future dates, value changes, pricing type changes, cancellations), validation rules, database schema requirements, and testing checklist with code references",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive documentation of fixed-price project business logic by significantly expanding the 'Fixed-Price Project Sales Generation' section in 'requirements/projects/api-contracts.md' with detailed steps for creating the start sales entry (50% sellable when dateStart <= today), completion sales entry (50% sales when status = 'Completed' or dateEnd reached), and setting time records as non-billable (f_billed = '0' in FileMaker dapiRecords or is_billed = false in Supabase time_entries). Added FileMaker field mappings, code references (projectService.js:508-596, projects.js, useProject.js, billableHoursService.js), idempotency checks with SQL examples, 6 edge cases with solutions, 3 validation rules, database schema requirements (proposed columns for is_fixed_price and project_id in customer_sales), and a 12-point testing checklist. Also updated 'requirements/projects/data-model-mapping.md' with a business logic summary and cross-references to the detailed api-contracts.md section. Verified the build compiles successfully and updated 'tasks.json' to mark TSK0015 as done with completion timestamp and notes."
     },
     {
       "id": "TSK0016",

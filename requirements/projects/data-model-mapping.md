@@ -57,6 +57,29 @@ This document provides comprehensive field-by-field mapping between FileMaker's 
 - Cannot be both fixed-price AND subscription simultaneously
 - If either flag is "1", `value` field is required and must be > 0
 
+**Fixed-Price Project Business Logic** (See api-contracts.md for full details):
+1. **Project Start (dateStart)**: When `f_fixedPrice = "1"` and `dateStart <= today`:
+   - Create `customer_sales` entry: 50% of project value (`value / 2`)
+   - Entry type: "sellable"
+   - Date: `dateStart`
+   - Description: "{project.name} - 50% on project start"
+
+2. **Project Completion (dateEnd or status → "Completed")**:
+   - Create `customer_sales` entry: 50% of project value (`value / 2`)
+   - Entry type: "sales"
+   - Date: `dateEnd` or actual completion date
+   - Description: "{project.name} - 50% on project completion"
+
+3. **Time Records Non-Billable**: Set all time records for project as `f_billed = "0"`
+   - FileMaker: `UPDATE dapiRecords SET f_billed = "0" WHERE _projectID = project.__ID`
+   - Supabase: `UPDATE time_entries SET is_billed = false WHERE project_id = project.id`
+   - Rationale: Fixed-price projects billed via milestones, NOT hourly time tracking
+
+**Code References**:
+- `src/services/projectService.js:508-596` - processProjectValue() function
+- `src/hooks/useProject.js:186-264` - handleCreateProject() with pricing logic
+- `src/services/billableHoursService.js:288-309` - time record calculations
+
 ### Date Fields
 
 | FileMaker Field | Type | Format | Description | Sample Value |
