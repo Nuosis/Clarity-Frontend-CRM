@@ -218,14 +218,16 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive subscription project business logic documentation by adding an 11-section detailed breakdown to data-model-mapping.md (lines 83-220), covering validation requirements, monthly sales entry generation logic, billing calculation algorithms, concrete example scenario with timeline, idempotency SQL checks, time records non-billable handling, edge cases (future start dates, perpetual subscriptions, date range updates), background job requirement with sample cron code, FileMaker to Supabase field conversion details, and complete testing checklist. Cross-referenced with existing api-contracts.md section 1556-1593 for full specification alignment. Key decisions documented: monthly billing on same day as start date, entries generated up to min(today, dateEnd), value represents full monthly amount (not split like fixed-price), background job required for perpetual subscriptions, and Supabase schema gap noting missing is_subscription column. Verified build succeeds and updated tasks.json to mark TSK0016 as done."
+      "implementation_notes": "Implemented comprehensive subscription project business logic documentation in 'requirements/projects/data-model-mapping.md' by expanding the previously brief mention into a detailed section aligned with the existing fixed-price documentation (covering validation rules, monthly sales entry generation and structure, idempotency, edge cases, background job needs, and testing guidance). Confirmed the subscription rules were already specified in 'requirements/projects/api-contracts.md' and cross-referenced related implementation locations for clarity. Updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark TSK0016 complete and verified the build succeeds before finalizing the task status."
     },
     {
       "id": "TSK0017",
       "title": "Document authorization requirements",
       "description": "Create requirements/projects/authorization.md documenting: RLS policies needed for projects and all related tables, organization scoping, user role permissions (create/update/delete), team-based access control, and customer relationship authorization",
-      "status": "queued",
-      "priority": "medium"
+      "status": "in_progress",
+      "priority": "medium",
+      "executionPid": 38216,
+      "sessionId": "7dea7e13-0b6e-4f4b-822d-f0669a9e7e79"
     },
     {
       "id": "TSK0018",
