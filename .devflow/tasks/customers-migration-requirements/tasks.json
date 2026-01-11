@@ -41,17 +41,21 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Enhanced existing current-implementation.md (857 lines) with critical missing details: 1) Documented dual-environment architecture (FileMaker WebViewer vs Web App) with environment detection logic (src/api/fileMaker.js:263-282), 2) Added comprehensive Backend FileMaker Proxy section documenting the /filemaker/* REST API endpoints that abstract FileMaker Data API calls, 3) Documented HMAC-SHA256 authentication implementation with security analysis identifying client-side secret exposure issues, 4) Enhanced data flow patterns to show both environment paths (fm-gofer bridge vs backend API proxy), 5) Added backend API mapping table (READ/CREATE/UPDATE/DELETE to HTTP methods), 6) Documented request/response format transformations between FileMaker-style and REST API. Build verified successful (npm run build). Key findings: callBackendAPI() converts FileMaker actions to REST calls when not in WebViewer, VITE_SECRET_KEY is client-exposed (security risk), environment detection via data-app-environment attribute or isFileMakerEnvironment()."
+      "implementation_notes": "Enhanced the existing 'requirements/customers/current-implementation.md' by incorporating newly discovered dual-environment behavior where 'src/api/fileMaker.js' detects FileMaker WebViewer vs web app mode and routes calls either through the fm-gofer bridge or a backend API proxy via 'callBackendAPI()'. Added documentation for the backend FileMaker proxy '/filemaker/*' endpoints, updated data flow diagrams to show both execution paths, and expanded code references across 'src/api/customers.js', 'src/services/customerService.js', 'src/hooks/useCustomer.js', and 'src/hooks/useSupabaseCustomer.js'. Documented key security decisions and risks around the HMAC-SHA256 auth flow, including the issue of 'VITE_SECRET_KEY' exposure in client-side code, then verified the build succeeds with only pre-existing warnings and updated task status accordingly."
     },
     {
       "id": "TSK0003",
       "title": "Investigate Supabase schema",
       "description": "Query Supabase for customers and related tables (customer_contacts, customer_email, customer_phone, customer_address, customer_sales) and document structure",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive 'supabase-schema.md' (500+ lines) documenting all customer-related tables via SSH queries to the 'supabase-db' container. Documented 6 tables: 'customers' (104 records, customertype enum, organization_id for multi-tenancy), 'customer_email' (unique email constraint), 'customer_phone' (unique phone constraint), 'customer_address' (city/state required), 'customer_contacts' (empty table, links to 'contacts' with JSONB 'contact_data'), and 'customer_sales' (product transactions with JSONB 'configuration_data' and QuickBooks 'financial_id'). Identified data quality issues: enum case inconsistency ('prospect' vs 'PROSPECT'), 'customer_contacts.is_primary' stored as varchar instead of boolean, global uniqueness constraints on email/phone may prevent shared contact info, missing indexes on foreign keys, and 'customer_address' lacks 'is_primary' flag. Documented all foreign keys, indexes, sample data, multi-tenancy implications, and provided verification commands and backend recommendations for schema improvements and RLS policies."
     },
     {
       "id": "TSK0004",
