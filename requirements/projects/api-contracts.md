@@ -28,9 +28,12 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 **Implications**:
 - Endpoints 7-17 (objectives/steps) require `project_objectives` and `project_objective_steps` tables to be created first
-- Endpoints 18-19 (images) require `project_images` table to be created first
+- Endpoints 18-20 (images) require `project_images` table to be created first
+- Endpoints 21-23 (links) are ready to implement (links table exists)
 - Notes functionality requires `notes` table to be created first
 - Core project operations (endpoints 1-6) can be implemented with current schema BUT have limited fields
+
+**Total Endpoints Documented**: 23 (6 core + 11 objectives/steps + 6 images/links)
 
 ## Core Project Operations
 
@@ -865,7 +868,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 17. Toggle Step Completion
+### 16. Toggle Step Completion
 
 **Endpoint**: `POST /rpc/toggle_step_completion`
 
@@ -898,7 +901,7 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ---
 
-### 18. Reorder Objective Steps
+### 17. Reorder Objective Steps
 
 **Endpoint**: `POST /rpc/reorder_objective_steps`
 
@@ -934,9 +937,69 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 
 ## Images, Links, and Notes Operations
 
+### 18. List Project Images
+
+**Endpoint**: `POST /rpc/get_project_images`
+
+**Description**: Fetch all images for a specific project
+
+**⚠️ Implementation Status**:
+- ❌ Requires `project_images` table to be created first (see data-model-mapping.md)
+- ✅ Projects table exists (for foreign key relationship)
+
+**Request**:
+```json
+{
+  "project_id": "uuid-project-456"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-img-123",
+      "project_id": "uuid-project-456",
+      "url": "https://example.com/mockup.png",
+      "title": "Homepage Mockup",
+      "description": "Initial design concept",
+      "file_name": "homepage-mockup.png",
+      "storage_provider": "filemaker",
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z",
+      "created_by": "user@example.com"
+    }
+  ]
+}
+```
+
+**Validation**:
+- `project_id` required (UUID format)
+- User must have access to project's organization (derived from project → customer → organization relationship)
+
+**Errors**:
+- 400: Invalid project_id format
+- 403: User not authorized for project's organization
+- 404: Project not found
+
+**Notes**:
+- Images stored by URL reference (NOT binary data in database)
+- FileMaker images may point to FileMaker container storage, external CDN, or cloud storage
+- Empty array returned if project has no images
+- Images displayed in creation order (ordered by created_at DESC)
+
+---
+
 ### 19. Create Project Image
 
 **Endpoint**: `POST /rpc/create_project_image`
+
+**Description**: Add a new image reference to a project
+
+**⚠️ Implementation Status**:
+- ❌ Requires `project_images` table to be created first (see data-model-mapping.md)
 
 **Request**:
 ```json
@@ -944,7 +1007,8 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
   "project_id": "uuid-project-456",
   "url": "https://example.com/mockup.png",
   "title": "Homepage Mockup",
-  "description": "Initial design concept"
+  "description": "Initial design concept",
+  "file_name": "homepage-mockup.png"
 }
 ```
 
@@ -958,23 +1022,52 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
     "url": "https://example.com/mockup.png",
     "title": "Homepage Mockup",
     "description": "Initial design concept",
+    "file_name": "homepage-mockup.png",
+    "storage_provider": null,
     "created_at": "2024-01-22T19:00:00Z",
-    "updated_at": "2024-01-22T19:00:00Z"
+    "updated_at": "2024-01-22T19:00:00Z",
+    "created_by": "user@example.com"
   }
 }
 ```
 
 **Validation**:
-- `project_id` required
-- `url` required, must be valid URL format
+- `project_id` required (UUID format), must exist
+- `url` required, must be valid URL format, TEXT type (no length limit in Supabase)
+- `title` optional, TEXT type
+- `description` optional, TEXT type
+- `file_name` optional, TEXT type
+- User must have edit permission for project's organization
 
-**Errors**: 400, 403, 404
+**Business Logic**:
+- Auto-generate UUID for image id
+- Set created_by to current user's email
+- Set storage_provider based on URL pattern (optional):
+  - FileMaker: URLs containing "server.claritybusinesssolutions.ca"
+  - Supabase: URLs containing "supabase.claritybusinesssolutions.ca/storage"
+  - AWS S3: URLs containing "s3.amazonaws.com"
+  - Other: null or 'external'
+
+**Errors**:
+- 400: Validation failure (invalid URL format, missing required fields)
+- 403: User not authorized to add images to project
+- 404: Project not found
+
+**Notes**:
+- This endpoint creates a URL reference, NOT an image upload endpoint
+- For image uploads, use separate file upload endpoint (Supabase Storage) then pass URL to this endpoint
+- URLs should be publicly accessible or use signed URLs for private images
 
 ---
 
 ### 20. Delete Project Image
 
 **Endpoint**: `POST /rpc/delete_project_image`
+
+**Description**: Remove an image reference from a project
+
+**⚠️ Implementation Status**:
+- ❌ Requires `project_images` table to be created first (see data-model-mapping.md)
 
 **Request**:
 ```json
@@ -993,20 +1086,99 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 }
 ```
 
-**Errors**: 400, 403, 404
+**Validation**:
+- `image_id` required (UUID format)
+- User must have delete permission for project's organization
+
+**Business Logic**:
+- Only deletes database reference to image, NOT the actual image file
+- Actual image file remains in storage (FileMaker container, Supabase Storage, etc.)
+- To delete actual file, use separate storage cleanup process
+
+**Errors**:
+- 400: Invalid image_id format
+- 403: User not authorized to delete image
+- 404: Image not found
 
 ---
 
-### 21. Create Project Link
+### 21. List Project Links
+
+**Endpoint**: `POST /rpc/get_project_links`
+
+**Description**: Fetch all links for a specific project
+
+**⚠️ Implementation Status**:
+- ✅ Links table already exists in Supabase (verified 2025-01-10)
+- ⚠️ Links table is missing `title` column (frontend derives from URL hostname)
+
+**Request**:
+```json
+{
+  "project_id": "uuid-project-456"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-link-123",
+      "project_id": "uuid-project-456",
+      "customer_id": "uuid-customer-123",
+      "organization_id": "uuid-org-001",
+      "link": "https://github.com/client/website",
+      "created_at": "2024-01-10T11:00:00Z",
+      "updated_at": "2024-01-10T11:00:00Z"
+    }
+  ]
+}
+```
+
+**Validation**:
+- `project_id` required (UUID format)
+- User must have access to project's organization
+
+**Errors**:
+- 400: Invalid project_id format
+- 403: User not authorized for project's organization
+- 404: Project not found
+
+**Notes**:
+- Links table schema confirmed via SSH to Supabase database
+- `title` field does NOT exist in Supabase - frontend derives title from URL hostname
+- FileMaker migration: Link titles will be LOST (frontend workaround: derive from URL)
+- Links filtered by `project_id` (nullable field, allows customer-level links)
+- Empty array returned if project has no links
+
+**Frontend Title Derivation** (Code: projectService.js:97):
+```javascript
+// If title doesn't exist in database, derive from URL
+const title = new URL(link).hostname; // "github.com" from "https://github.com/user/repo"
+```
+
+---
+
+### 22. Create Project Link
 
 **Endpoint**: `POST /rpc/create_project_link`
+
+**Description**: Add a new link to a project
+
+**⚠️ Implementation Status**:
+- ✅ Links table already exists in Supabase (verified 2025-01-10)
+- ⚠️ Links table is missing `title` column (frontend derives from URL hostname)
+- ⚠️ Requires `customer_id` and `organization_id` (NOT NULL constraints)
 
 **Request**:
 ```json
 {
   "project_id": "uuid-project-456",
-  "url": "https://github.com/client/repo",
-  "title": "GitHub Repository"
+  "customer_id": "uuid-customer-123",
+  "organization_id": "uuid-org-001",
+  "link": "https://github.com/client/repo"
 }
 ```
 
@@ -1017,8 +1189,9 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
   "data": {
     "id": "uuid-link-new",
     "project_id": "uuid-project-456",
-    "url": "https://github.com/client/repo",
-    "title": "GitHub Repository",
+    "customer_id": "uuid-customer-123",
+    "organization_id": "uuid-org-001",
+    "link": "https://github.com/client/repo",
     "created_at": "2024-01-22T20:00:00Z",
     "updated_at": "2024-01-22T20:00:00Z"
   }
@@ -1026,17 +1199,47 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 ```
 
 **Validation**:
-- `project_id` required
-- `url` required, must be valid URL format
-- `title` optional, derived from URL if not provided
+- `project_id` required (UUID format), must exist
+- `customer_id` required (UUID format), must exist - NOT NULL constraint
+- `organization_id` required (UUID format), must exist - NOT NULL constraint
+- `link` required, must be valid URL format, max 2048 characters (VARCHAR(2048))
+- User must have edit permission for project's organization
+- URL length must be ≤ 2048 characters (will be truncated or rejected if longer)
 
-**Errors**: 400, 403, 404
+**Business Logic**:
+- Auto-generate UUID for link id
+- Lookup `customer_id` from project relationship: `SELECT customer_id FROM projects WHERE id = project_id`
+- Lookup `organization_id` from customer relationship: `SELECT organization_id FROM customers WHERE id = customer_id`
+- Frontend can derive title from URL hostname for display purposes (not stored in DB)
+
+**GitHub Integration** (Frontend Feature - Code: ProjectLinksTab.jsx:144-159):
+- If URL is GitHub repository: Parse owner/repo from URL
+- Check if repository exists via GitHub API
+- If repo doesn't exist: Offer to create new GitHub repo with description and visibility settings
+- After repo creation, add link to project
+
+**Errors**:
+- 400: Validation failure (invalid URL, URL too long, missing required fields)
+- 403: User not authorized to add links to project
+- 404: Project, customer, or organization not found
+- 422: URL exceeds 2048 character limit
+
+**Notes**:
+- Links table uses explicit foreign keys (not polymorphic `_fkID` like FileMaker)
+- `customer_id` and `organization_id` are required (NOT NULL) - must be populated
+- No `title` column exists - frontend derives from URL hostname
+- Recommendation: Add `title TEXT` column to links table to preserve custom link descriptions
 
 ---
 
-### 22. Delete Project Link
+### 23. Delete Project Link
 
 **Endpoint**: `POST /rpc/delete_project_link`
+
+**Description**: Remove a link from a project
+
+**⚠️ Implementation Status**:
+- ✅ Links table already exists in Supabase (verified 2025-01-10)
 
 **Request**:
 ```json
@@ -1055,7 +1258,68 @@ All endpoints should be implemented as Supabase RPC functions or backend API end
 }
 ```
 
-**Errors**: 400, 403, 404
+**Validation**:
+- `link_id` required (UUID format)
+- User must have delete permission for project's organization
+
+**Errors**:
+- 400: Invalid link_id format
+- 403: User not authorized to delete link
+- 404: Link not found
+
+---
+
+### Summary: Images and Links Implementation Status
+
+**Project Images** (Endpoints 18-20):
+- ⚠️ **BLOCKED**: Requires `project_images` table creation
+- **Table Schema** (Proposed in data-model-mapping.md):
+  ```sql
+  CREATE TABLE project_images (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
+    url TEXT NOT NULL,
+    title TEXT,
+    description TEXT,
+    file_name TEXT,
+    storage_provider TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    created_by TEXT,
+    modified_by TEXT
+  );
+  ```
+- **Migration Impact**: FileMaker `devProjectImages` uses URL references (not binary storage)
+- **Storage Strategy**: URLs point to FileMaker container storage or external CDN
+- **Code References**:
+  - Frontend: projectService.js:64-78 (processProjectImages)
+  - FileMaker API: projects.js:61-84 (fetchProjectRelatedData)
+
+**Project Links** (Endpoints 21-23):
+- ✅ **READY**: Links table already exists in Supabase
+- ⚠️ **Schema Gap**: Missing `title` column (frontend derives from URL hostname)
+- **Current Workaround**: Frontend extracts hostname from URL (projectService.js:97)
+- **Migration Impact**: FileMaker link titles will be LOST unless `title` column is added
+- **Required Fields**: `customer_id` and `organization_id` must be populated (NOT NULL constraints)
+- **URL Length Limit**: VARCHAR(2048) - URLs longer than 2048 characters will fail
+- **Code References**:
+  - Frontend: projectService.js:86-98 (processProjectLinks)
+  - FileMaker API: links.js:8-29 (createLink)
+  - UI: ProjectLinksTab.jsx:144-159 (GitHub integration)
+
+**Recommendations for Backend Team**:
+1. **Create project_images table** (see schema above) - REQUIRED for images functionality
+2. **Add title column to links table** (OPTIONAL but recommended):
+   ```sql
+   ALTER TABLE links ADD COLUMN title TEXT;
+   ```
+3. **Verify links foreign key constraints** work with nullable project_id
+4. **Implement RPC functions** for images/links CRUD operations
+5. **Add organization-based RLS policies** for both tables
+
+**FileMaker Layout References**:
+- Images: `devProjectImages` (fileMaker.js:416)
+- Links: `devProjectLinks` (fileMaker.js:417), `devLinks` (links.js:13)
 
 ---
 

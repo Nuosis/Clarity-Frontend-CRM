@@ -168,14 +168,20 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Enhanced the objective steps API contracts in 'requirements/projects/api-contracts.md' by adding a dedicated endpoint 13 'get_objective_steps' for listing all steps by objective ID (previously only available nested within endpoint 7's 'include_steps' parameter), then renumbered all subsequent endpoints (14-22) to maintain sequence integrity. Verified all 6 required step operations are fully documented: list steps by objective (new endpoint 13), create step (endpoint 14), update step (endpoint 15), delete step (endpoint 16), toggle step completion (endpoint 17), and reorder steps (endpoint 18). Each contract includes complete request/response examples with UUID handling, order_num field naming, boolean completed flags, proper validation rules, error codes, and notes about the missing project_objective_steps table requiring backend creation. Marked task complete in 'tasks.json' with timestamp and detailed notes."
+      "implementation_notes": "Implemented a dedicated objective steps listing contract by adding new Endpoint 13, 'POST /rpc/get_objective_steps', to the API requirements document, including ordered results, validation, error cases, auth rules, and request response examples. Renumbered subsequent endpoints and updated all related links and image references to keep numbering consistent, shifting step endpoints to 13-18 and adjusting later sections accordingly. Updated 'tasks.json' to mark TSK0012 as done and verified the documentation-only changes by running 'npm run build', noting any warnings were pre-existing."
     },
     {
       "id": "TSK0013",
       "title": "Define images and links API contracts",
       "description": "In requirements/projects/api-contracts.md, add endpoints/RPCs for project images (list, create, delete) and confirm links API contracts work with existing links table (list by project_id, create, delete)",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completedAt": "2026-01-10T22:45:00.000Z",
+      "notes": "Added comprehensive API contracts for project images (endpoints 18-20: list, create, delete) and project links (endpoints 21-23: list, create, delete). Verified links table exists in Supabase with complete schema analysis. Documented schema gaps (missing project_images table, missing title column in links table), implementation status, validation rules, business logic, and migration considerations",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive API contracts for project images and links by expanding requirements/projects/api-contracts.md with 6 new endpoints (18-20 for images, 21-23 for links), including complete request/response examples, validation rules, error cases, and implementation status warnings. Verified via SSH that the Supabase links table exists (with customer_id, organization_id, project_id FKs) while project_images table does not exist, and documented schema gaps including the missing title column in links (frontend workaround: derive from URL hostname per projectService.js:97) and required NOT NULL constraints (customer_id, organization_id). Added summary section documenting implementation blockers (project_images table creation required), recommendations for backend team (create project_images table, optionally add title to links), code references (projectService.js:64-78, 86-98; links.js:8-29; ProjectLinksTab.jsx:144-159), FileMaker layout references (devProjectImages, devProjectLinks, devLinks), storage considerations (URL-based not binary), GitHub integration behavior, and URL length validation (VARCHAR 2048 limit). Renumbered step endpoints 16-17 to maintain consistent numbering, updated overview section to reflect 23 total endpoints, verified build compiles successfully, and marked task complete in tasks.json."
     },
     {
       "id": "TSK0014",
