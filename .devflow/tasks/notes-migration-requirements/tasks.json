@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-11T07:30:00.000Z",
+  "updated_at": "2026-01-10T00:00:00.000Z",
   "feature": {
     "name": "Notes Migration Requirements",
     "slug": "notes-migration-requirements",
@@ -126,13 +126,13 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented comprehensive acceptance criteria and test cases for the notes feature migration by fully replacing the placeholder content in 'requirements/notes/acceptance-criteria.md' with a complete 1,836-line specification. The document covers 17 major sections including: Core CRUD operations (53 test cases covering create, read, update, delete with happy paths and validation failures), association validation tests (cascade deletes, parent entity validation, organization derivation), edge cases (orphaned notes during migration, concurrent creation, max content length, special characters, timestamps), performance requirements (response time benchmarks, index validation, pagination efficiency, realtime subscriptions), data migration validation (8 comprehensive test cases for pre-migration checks, record count validation, parent entity type detection, user mapping, timestamp conversion, organization ID derivation, rollback procedures, and post-migration integrity checks), user acceptance scenarios (5 realistic user workflows), security and authorization (HMAC/JWT validation, SQL injection prevention, XSS prevention, RLS policy enforcement), error handling, performance benchmarks, accessibility requirements (keyboard nav, screen readers, WCAG AA color contrast), browser compatibility (desktop and mobile), deployment and rollback procedures, monitoring/alerting, and documentation validation. Key decisions documented include FileMaker feature parity preservation (all create/view functionality maintained), Supabase enhancements (update/delete APIs, organization scoping, RLS policies, audit trails), performance targets (< 500ms response times, 99.9% uptime, < 1% error rate, zero data loss during migration), security requirements (organization isolation via RLS, HMAC authentication for backend API, JWT for Supabase access), and known acceptable MVP limitations (no edit/delete UI initially, last-write-wins for concurrent edits, offset-based pagination). All test cases include code references with file paths and line numbers, SQL examples, API contract references, and expected results. Build verification confirmed the project compiles successfully. Updated 'tasks.json' to mark TSK0008 as complete with full implementation notes."
+      "implementation_notes": "Implemented comprehensive acceptance criteria and test cases for the notes migration, covering CRUD parity with FileMaker, migration validation, security/authorization, performance, accessibility, and deployment/rollback scenarios. Added a new requirements document at 'requirements/notes/acceptance-criteria.md' (~1,836 lines) with detailed checkpoints, categorized test cases, SQL validation queries, and explicit MVP limitations (eg no edit/delete UI, offset pagination, no initial full-text search). Updated 'tasks.json' to mark TSK0008 as done with implementation notes, and verified the project build succeeds after the documentation-only changes."
     },
     {
       "id": "TSK0009",
       "title": "Write requirements README overview",
       "description": "Create README.md as overview document with: feature summary, quick links to all other docs, key decisions and rationale, open questions for backend team, timeline and dependencies, contact/ownership info",
-      "status": "queued",
+      "status": "done",
       "priority": "low",
       "dependencies": [
         "TSK0002",
@@ -141,7 +141,11 @@
         "TSK0006",
         "TSK0007",
         "TSK0008"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive 915-line README.md serving as the central overview document for the Notes migration requirements. Includes: executive summary with current/target state, quick navigation table linking all 6 core documentation files, detailed feature summary comparing FileMaker vs Supabase capabilities, 6 key architectural decisions with rationale and references (single table design, dual auth, org scoping, simple permissions, big bang cutover, offset pagination), critical dependencies section listing required backend prerequisites, frontend code impact analysis, 5 open questions for backend team review (user mapping, search implementation, permissions, soft/hard delete, orphaned notes), 3-phase implementation timeline (requirements complete, backend pending, frontend queued), comprehensive risk assessment with 5 categorized risks and mitigations, testing strategy across pre-migration/migration/post-migration phases, performance requirements and database optimization guidance, contact/ownership info for frontend and backend teams, actionable next steps with week-by-week breakdown, appendix with related migrations and code references index. All sections include direct references to specific line numbers in detailed documentation files (e.g., 'requirements/notes/data-model-mapping.md:56-128'). Verified build succeeds after documentation-only changes."
     },
     {
       "id": "TSK0010",
