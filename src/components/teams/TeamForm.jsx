@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { v4 as uuidv4 } from 'uuid';
 import { createTeam } from '../../api/teams';
 import { useSnackBar } from '../../context/SnackBarContext';
-import { useAppStateOperations } from '../../context/AppStateContext';
+import { useAppStateOperations, useAppState } from '../../context/AppStateContext';
 
 /**
  * Team form component for creating a new team
@@ -15,6 +14,8 @@ import { useAppStateOperations } from '../../context/AppStateContext';
 function TeamForm({ onClose, darkMode = false }) {
   const { showError } = useSnackBar();
   const { setLoading } = useAppStateOperations();
+  const appState = useAppState();
+  const user = appState?.user;
   
   // Form state
   const [formData, setFormData] = useState({
@@ -57,23 +58,29 @@ function TeamForm({ onClose, darkMode = false }) {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
+    // Check if user has organization_id
+    if (!user?.supabaseOrgID) {
+      showError('Cannot create team: Organization ID is missing');
+      return;
+    }
+
     try {
       setLoading(true);
-      
-      // Prepare data for submission
+
+      // Prepare data for submission - Supabase API generates UUIDs automatically
       const teamData = {
-        ...formData,
-        __ID: uuidv4(), // Generate a unique ID
+        name: formData.name.trim(),
+        organization_id: user.supabaseOrgID
       };
-      
+
       // Create team
       await createTeam(teamData);
-      
+
       showError('Team created successfully');
       onClose();
     } catch (error) {

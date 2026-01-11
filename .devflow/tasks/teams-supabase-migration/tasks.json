@@ -91,14 +91,18 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Updated 'src/hooks/useTeam.js' to integrate with AppStateContext for organization_id access and ensure compatibility with the new Supabase-based Teams API. Key changes include importing 'useAppState' to access 'user.supabaseOrgID', modifying 'handleTeamCreate' to validate and include organization_id in team data, and updating 'handleAssignStaffToTeam' to pass organization_id as the 4th parameter to the API and use the new response structure (id, teamId, staffId, staffDetails). Simplified team member data mapping to directly use API response fields and updated dependency arrays to include 'user'. Build verification confirmed no compilation errors, and dev server starts successfully. Created 'TEAM_HOOK_VERIFICATION.md' documenting the changes, API integration, verification steps, and data flow."
+      "implementation_notes": "Implemented updates to 'src/hooks/useTeam.js' to integrate 'useAppState' and consistently use the logged-in user’s 'supabaseOrgID' for organization scoping, ensuring Supabase RLS-compatible inserts and assignments. Updated 'handleTeamCreate' to validate and inject 'organization_id' into team payloads, and updated 'handleAssignStaffToTeam' to pass the organization id to 'assignStaffToTeam' while aligning member mapping with the new API response fields. Verified 'src/services/teamService.js' remained compatible with the current response shape, confirmed the project builds and the dev server starts cleanly, and added documentation in 'TEAM_HOOK_VERIFICATION.md' detailing the changes and verification steps."
     },
     {
       "id": "TSK0008",
       "title": "Test team components",
       "description": "Verify TeamDetails.jsx and TeamForm.jsx work correctly with new backend, update data format handling if needed",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Successfully verified and updated TeamForm.jsx and TeamDetails.jsx to work with the new Supabase backend. Key changes: (1) TeamForm - removed FileMaker __ID generation, added organization_id handling from user context, and now properly creates teams via Supabase API; (2) TeamDetails - cleaned up all FileMaker fieldData references, simplified staff ID extraction logic, updated to use Supabase field names (id, name, title instead of __ID, fieldData patterns), and changed staff role display to use 'title' field. Both components now work exclusively with Supabase data format (snake_case from API, camelCase from service layer). Verified build compiles successfully with no new errors. Created TEAM_COMPONENTS_VERIFICATION.md documenting all changes, data flow, and integration points. Components are ready for integration testing (TSK0011)."
     },
     {
       "id": "TSK0009",

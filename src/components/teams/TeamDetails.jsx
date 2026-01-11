@@ -154,17 +154,11 @@ function TeamDetails({
             .then(() => {
                 // Pre-select staff members who are already part of the team
                 if (staff && staff.length > 0 && allStaff && allStaff.length > 0) {
-                    // Extract staff IDs from current team staff
-                    const currentStaffIds = staff.map(teamMember => {
-                        // Staff ID could be in different places depending on the data structure
-                        const staffId = teamMember.staffId ||
-                            (teamMember.staffDetails && teamMember.staffDetails.id) ||
-                            (teamMember.staffDetails && teamMember.staffDetails.__ID) ||
-                            teamMember.id;
-                        
-                        return staffId;
-                    }).filter(id => id); // Filter out any undefined IDs
-                    
+                    // Extract staff IDs from current team staff (Supabase format)
+                    const currentStaffIds = staff.map(teamMember =>
+                        teamMember.staffId || teamMember.id
+                    ).filter(id => id); // Filter out any undefined IDs
+
                     // Set both selected and existing staff IDs
                     setSelectedStaffIds(currentStaffIds);
                     setExistingStaffIds(currentStaffIds);
@@ -203,13 +197,10 @@ function TeamDetails({
         }
         
         try {
-            // Extract staff IDs from current team staff
-            const currentStaffIds = localStaff.map(teamMember => {
-                if (teamMember.staffId) return teamMember.staffId;
-                if (teamMember.staffDetails && teamMember.staffDetails.id) return teamMember.staffDetails.id;
-                if (teamMember.staffDetails && teamMember.staffDetails.__ID) return teamMember.staffDetails.__ID;
-                return teamMember.id;
-            }).filter(id => id);
+            // Extract staff IDs from current team staff (Supabase format)
+            const currentStaffIds = localStaff.map(teamMember =>
+                teamMember.staffId || teamMember.id
+            ).filter(id => id);
             
             // Filter out staff members who are already part of the team
             const newStaffIds = selectedStaffIds.filter(id => !currentStaffIds.includes(id));
@@ -219,33 +210,25 @@ function TeamDetails({
                 return;
             }
             
-            // Get the team ID
-            const teamId = team.id || team.recordId || (team.fieldData && team.fieldData.__ID);
+            // Get the team ID (Supabase format)
+            const teamId = team.id;
             if (!teamId) {
                 throw new Error('Invalid team ID in team prop');
             }
-            
+
             // Create an array of staff objects with their details
             const staffToAdd = newStaffIds.map(staffId => {
-                // Find the staff member in allStaff
-                const staffMember = allStaff.find(s => {
-                    const fieldData = s.fieldData || s;
-                    return (
-                        s.id === staffId ||
-                        fieldData.__ID === staffId ||
-                        fieldData.id === staffId
-                    );
-                });
-                
+                // Find the staff member in allStaff (Supabase format)
+                const staffMember = allStaff.find(s => s.id === staffId);
+
                 if (!staffMember) {
                     return { id: staffId, role: '' };
                 }
-                
-                const fieldData = staffMember.fieldData || staffMember;
+
                 return {
                     id: staffId,
-                    name: fieldData.name || staffMember.name || 'Unknown Staff',
-                    role: fieldData.role || staffMember.role || ''
+                    name: staffMember.name || 'Unknown Staff',
+                    role: staffMember.role || ''
                 };
             });
             
@@ -459,12 +442,11 @@ function TeamDetails({
                             `}>
                                 {allStaff.length > 0 ? (
                                     allStaff.map(staffMember => {
-                                        // Extract data from fieldData if present
-                                        const fieldData = staffMember.fieldData || staffMember;
-                                        const staffId = fieldData.__ID || staffMember.id || staffMember.recordId;
-                                        const staffName = fieldData.name || staffMember.name || 'Unnamed Staff';
-                                        const staffRole = fieldData.role || staffMember.role || '';
-                                        
+                                        // Use Supabase data format
+                                        const staffId = staffMember.id;
+                                        const staffName = staffMember.name || 'Unnamed Staff';
+                                        const staffTitle = staffMember.title || '';
+
                                         return (
                                             <div key={staffId} className={`
                                                 flex items-center mb-2 last:mb-0 p-1 rounded
@@ -483,8 +465,8 @@ function TeamDetails({
                                                     className="text-sm flex-1"
                                                 >
                                                     {staffName}
-                                                    {staffRole && ` (${staffRole})`}
-                                                    
+                                                    {staffTitle && ` (${staffTitle})`}
+
                                                     {existingStaffIds.includes(staffId) && (
                                                         <span className={`ml-2 text-xs ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>
                                                             Already in team
