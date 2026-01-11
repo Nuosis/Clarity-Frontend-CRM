@@ -835,61 +835,344 @@ CREATE INDEX idx_links_title ON links(title) WHERE title IS NOT NULL;
 
 ## FileMaker devNotes Layout Fields (Polymorphic)
 
-### Notes Fields
+**Layout**: `devNotes`
+**Purpose**: Stores text notes associated with projects, customers, tasks, or other entities (polymorphic association)
+**Relationship**: Many notes per entity (one-to-many with devProjects, devCustomers, devTasks, etc.)
 
-| FileMaker Field | Type | Required | Description | Sample Value |
-|----------------|------|----------|-------------|--------------|
-| `__ID` | Text (UUID) | Auto | Note UUID | `"uuid-note-333"` |
-| `recordId` | Number | Auto | FM internal record ID | `"15"` |
-| `_fkID` | Text (UUID) | ✅ Yes | Polymorphic FK (project/customer/task ID) | `"uuid-project-456"` |
-| Additional fields | ??? | ??? | **UNKNOWN** - Not documented in projectService | ??? |
+### Core Fields
 
-**Issues**:
-1. Frontend fetches notes via `fetchProjectNotes(projectId)` (src/api/projects.js:47-59)
-2. Frontend displays raw `notes.response.data` without processing (src/hooks/useProject.js:114)
-3. Notes data structure is UNKNOWN - requires investigation
-4. No entity type indicator - cannot distinguish if note is for project, customer, or task
+| FileMaker Field | Type | Required | Description | Sample Value | Code Reference |
+|----------------|------|----------|-------------|--------------|----------------|
+| `__ID` | Text (UUID) | Auto | Note UUID | `"uuid-note-333"` | noteService.js:34, ProjectNotesTab.jsx:49 |
+| `recordId` | Number | Auto | FM internal record ID | `"15"` | noteService.js:35 |
+| `_fkID` | Text (UUID) | ✅ Yes | Polymorphic FK (project/customer/task ID) | `"uuid-project-456"` | projects.js:54, notes.js:17 |
+| `note` | Text (Long) | ✅ Yes | Note content/text | `"Discussed requirements with client"` | noteService.js:36, notes.js:16 |
+| `type` | Text | No | Note type/category | `"general"`, `"meeting"`, `"follow-up"` | notes.js:18 |
+| `~CreationTimestamp` | Timestamp | Auto | Record creation timestamp | `"2024-01-15T14:30:00"` | noteService.js:37 |
+| `~CreatedBy` | Text | Auto | Account name who created record | `"admin"` | noteService.js:38 |
 
-**Action Required**:
-1. Audit devNotes layout for complete field list
-2. Review notes UI components for data structure
-3. Define Supabase notes schema with entity_type + entity_id pattern
+**Business Rules** (Code: noteService.js:27-41):
+1. Notes filtered by `_fkID === entityId` (polymorphic foreign key)
+2. No entity type indicator - context determined by which layout/query fetches the note
+3. Notes sorted by creation timestamp descending (newest first) - line 40
+4. Default note type is "general" if not specified - notes.js:18
+5. Note content cannot be empty - must trim whitespace (noteService.js:11)
+
+**API Operations**:
+
+| Operation | Code Reference | Method | Layout | Query Field |
+|-----------|---------------|--------|--------|-------------|
+| **Create** | notes.js:8-24 | `createNote({ fkId, note, type })` | `devNotes` | N/A |
+| **Read** | projects.js:47-59 | `fetchProjectNotes(projectId)` | `devNotes` | `_fkID` |
+| **Update** | ❌ Not implemented | N/A | N/A | N/A |
+| **Delete** | ❌ Not implemented | N/A | N/A | N/A |
+
+**Frontend Processing** (Code: noteService.js:27-41):
+```javascript
+// processNotes(data)
+{
+  id: note.fieldData.__ID,
+  recordId: note.recordID,
+  content: note.fieldData.note,
+  createdAt: note.fieldData['~CreationTimestamp'],
+  createdBy: note.fieldData['~CreatedBy']
+}
+// Sorted by createdAt descending (newest first)
+```
+
+**Create Note API Call** (Code: notes.js:8-24):
+```javascript
+// FileMaker request
+{
+  layout: 'devNotes',
+  action: 'create',
+  fieldData: {
+    note: "Note content text",
+    _fkID: "entity-uuid",           // Project, customer, or task ID
+    type: "general"                 // Optional: 'general', 'meeting', 'follow-up', etc.
+  }
+}
+```
+
+**Fetch Notes API Call** (Code: projects.js:47-59):
+```javascript
+// Fetch notes for a project
+{
+  layout: 'devNotes',
+  action: 'read',
+  query: [{ "_fkID": "project-uuid" }]
+}
+```
+
+**UI Components**:
+- **ProjectNotesTab.jsx**: Main notes display and creation interface
+  - Lists all notes for a project with content, sorted newest first
+  - "New Note" button triggers TextInput for note entry
+  - Displays raw notes data without processing (useProject.js:114)
+  - Note structure: `{ fieldData: { __ID, note } }` (ProjectNotesTab.jsx:49-55)
+  - After creating note, reloads project details to fetch updated notes list
+
+**Polymorphic Foreign Key Pattern**:
+- `_fkID` has NO entity type indicator
+- Entity type determined by context (which layout/component fetches the notes)
+- Same devNotes layout used for ALL entities (projects, customers, tasks)
+- Different API calls for different entities:
+  - Projects: `fetchProjectNotes(projectId)` with `_fkID = projectId`
+  - Tasks: Similar pattern (not shown in code)
+  - Customers: Similar pattern (not shown in code)
+
+**Data Structure in Frontend** (Code: useProject.js:114, ProjectNotesTab.jsx:47-56):
+```javascript
+// Raw notes data (not processed by noteService)
+project.notes = [
+  {
+    fieldData: {
+      __ID: "uuid-note-123",
+      note: "Note content text",
+      ~CreationTimestamp: "2024-01-15T14:30:00",
+      ~CreatedBy: "admin"
+    },
+    recordId: "15"
+  }
+]
+```
+
+**Important Note**: The frontend displays raw `notes.response.data` without using `processNotes()` function (useProject.js:114). The `noteService.processNotes()` function exists but is NOT currently used for project notes.
 
 ## Supabase notes Table Schema (Planned)
 
 **Status**: ⚠️ **TABLE DOES NOT EXIST IN SUPABASE** (Verified 2025-01-10)
 
-**Proposed Schema** (Based on FileMaker polymorphic pattern):
+**Current State**:
+- No notes table exists in Supabase
+- All notes currently stored in FileMaker devNotes layout only
+- FileMaker uses polymorphic `_fkID` without entity type indicator
+- Must create notes table in Supabase with explicit entity type tracking
+
+**Proposed Schema** (Based on FileMaker structure and frontend usage):
 
 ```sql
 CREATE TABLE notes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  entity_type TEXT NOT NULL,                    -- 'project', 'customer', 'task'
+  entity_type TEXT NOT NULL,                    -- 'project', 'customer', 'task', etc.
   entity_id UUID NOT NULL,                      -- Maps to _fkID (polymorphic)
-  note_text TEXT NOT NULL,
-  created_by UUID REFERENCES users(id),
+  note TEXT NOT NULL,                           -- Maps to note field
+  type TEXT DEFAULT 'general',                  -- Maps to type field
+  created_by TEXT,                              -- Maps to ~CreatedBy (FileMaker account name)
   organization_id UUID REFERENCES organizations(id) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now(),         -- Maps to ~CreationTimestamp
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE INDEX idx_notes_entity ON notes(entity_type, entity_id);
 CREATE INDEX idx_notes_org ON notes(organization_id);
+CREATE INDEX idx_notes_created_at ON notes(created_at DESC);
+CREATE INDEX idx_notes_type ON notes(type) WHERE type IS NOT NULL;
+
+-- Add constraint for valid entity types
+ALTER TABLE notes
+ADD CONSTRAINT notes_entity_type_check
+CHECK (entity_type IN ('project', 'customer', 'task', 'prospect', 'team'));
 ```
 
-**Action Required Before Migration**:
-1. Audit devNotes layout for complete field list (currently unknown - see useProject.js:114)
-2. Review notes UI components for actual data structure
-3. Create notes table in Supabase with proper schema
+**Field Mapping**:
 
-**Migration Strategy for Notes**:
-1. Query devNotes by `_fkID = projectId`
-2. For each note:
-   - Preserve `__ID` as Supabase `id`
-   - Set `entity_type = 'project'`
-   - Set `entity_id = _fkID`
-   - Map note fields (TBD based on FM schema)
-   - Derive `organization_id` from project's organization
+| FileMaker Field | Supabase Column | Type Conversion | Notes |
+|----------------|-----------------|-----------------|-------|
+| `__ID` | `id` | UUID → UUID | Preserve UUID (no conversion) |
+| `recordId` | ❌ DISCARD | N/A | FileMaker internal ID, not needed |
+| `_fkID` | `entity_id` | UUID → UUID | Polymorphic FK - entity determined by context |
+| `note` | `note` | Text → TEXT | Direct mapping, NOT NULL |
+| `type` | `type` | Text → TEXT | Direct mapping, default "general" |
+| `~CreationTimestamp` | `created_at` | Timestamp → TIMESTAMPTZ | Auto-generated on migration |
+| `~CreatedBy` | `created_by` | Text → TEXT | FileMaker account name |
+| N/A | `entity_type` | N/A | **NEW FIELD**: Must be determined during migration |
+| N/A | `organization_id` | N/A | **REQUIRED**: Lookup from entity's organization |
+| N/A | `updated_at` | N/A | Auto-generated timestamp |
+
+**Entity Type Determination Strategy**:
+
+Since FileMaker's `_fkID` has NO entity type indicator, migration must determine entity type by:
+
+1. **Join with projects table**:
+   ```sql
+   SELECT 'project' AS entity_type
+   FROM notes n
+   JOIN projects p ON p.id = n._fkID
+   ```
+
+2. **Join with customers table**:
+   ```sql
+   SELECT 'customer' AS entity_type
+   FROM notes n
+   JOIN customers c ON c.id = n._fkID
+   ```
+
+3. **Join with tasks table** (if exists):
+   ```sql
+   SELECT 'task' AS entity_type
+   FROM notes n
+   JOIN tasks t ON t.id = n._fkID
+   ```
+
+4. **Fallback**: If `_fkID` doesn't match any entity, note is orphaned (skip or log error)
+
+**Migration Impact**:
+1. ⚠️ **BLOCKING**: This table must be created before migrating notes from FileMaker
+2. Foreign key constraints require related tables to exist first (projects, customers, tasks)
+3. Migration must preserve `__ID` as `id` to maintain UUID consistency
+4. **Entity type determination is complex** - requires JOINs with multiple tables to identify entity type
+5. Orphaned notes (invalid `_fkID`) must be handled (skip or log)
+6. Organization ID must be derived from parent entity's organization
+7. See BACKEND_CHANGE_REQUEST document for table creation SQL
+
+**Migration Order Dependencies**:
+1. ✅ Projects table (already exists)
+2. ✅ Customers table (assumed to exist)
+3. ❓ Tasks table (verify existence)
+4. ⚠️ Create notes table (REQUIRED)
+5. Migrate data: Determine entity type → insert with entity_type + entity_id
+
+**Migration Strategy for Project Notes**:
+
+```javascript
+// Step 1: Fetch all notes from FileMaker devNotes
+const allNotes = await fetchAllNotes(); // Fetch from devNotes layout
+
+// Step 2: For each note, determine entity type by checking _fkID against entity tables
+for (const note of allNotes) {
+  const fkId = note.fieldData._fkID;
+
+  // Check if _fkID is a project ID
+  const project = await supabase
+    .from('projects')
+    .select('id, customer_id')
+    .eq('id', fkId)
+    .single();
+
+  if (project.data) {
+    // Note belongs to a project
+    const customer = await supabase
+      .from('customers')
+      .select('organization_id')
+      .eq('id', project.data.customer_id)
+      .single();
+
+    await supabase.from('notes').insert({
+      id: note.fieldData.__ID,
+      entity_type: 'project',
+      entity_id: fkId,
+      note: note.fieldData.note,
+      type: note.fieldData.type || 'general',
+      created_by: note.fieldData['~CreatedBy'],
+      organization_id: customer.data.organization_id,
+      created_at: note.fieldData['~CreationTimestamp'],
+      updated_at: note.fieldData['~CreationTimestamp']
+    });
+    continue;
+  }
+
+  // Check if _fkID is a customer ID
+  const customer = await supabase
+    .from('customers')
+    .select('id, organization_id')
+    .eq('id', fkId)
+    .single();
+
+  if (customer.data) {
+    // Note belongs to a customer
+    await supabase.from('notes').insert({
+      id: note.fieldData.__ID,
+      entity_type: 'customer',
+      entity_id: fkId,
+      note: note.fieldData.note,
+      type: note.fieldData.type || 'general',
+      created_by: note.fieldData['~CreatedBy'],
+      organization_id: customer.data.organization_id,
+      created_at: note.fieldData['~CreationTimestamp'],
+      updated_at: note.fieldData['~CreationTimestamp']
+    });
+    continue;
+  }
+
+  // Add similar checks for tasks, prospects, etc.
+
+  // If no match found, log orphaned note
+  console.warn(`Orphaned note: ${note.fieldData.__ID}, _fkID: ${fkId}`);
+}
+```
+
+**Query Pattern for Frontend**:
+
+```sql
+-- Fetch all notes for a specific project
+SELECT *
+FROM notes
+WHERE entity_type = 'project'
+  AND entity_id = 'uuid-project-456'
+ORDER BY created_at DESC;
+
+-- Fetch notes with creator info (if users table exists)
+SELECT
+  n.id, n.note, n.type, n.created_at, n.created_by,
+  p.name AS project_name
+FROM notes n
+JOIN projects p ON p.id = n.entity_id
+WHERE n.entity_type = 'project'
+  AND n.entity_id = 'uuid-project-456'
+ORDER BY n.created_at DESC;
+
+-- Count notes by entity type
+SELECT entity_type, COUNT(*) AS note_count
+FROM notes
+GROUP BY entity_type
+ORDER BY note_count DESC;
+```
+
+**Frontend API Changes Required**:
+
+After migration, frontend must be updated to:
+1. Query Supabase notes table with `entity_type` and `entity_id` filters
+2. Use `processNotes()` function for consistent data formatting (currently not used - useProject.js:114)
+3. Update ProjectNotesTab.jsx to handle Supabase note structure:
+   ```javascript
+   // Current FileMaker structure
+   note.fieldData.__ID
+   note.fieldData.note
+
+   // New Supabase structure
+   note.id
+   note.note
+   ```
+
+**Alternative Schema: Dedicated project_notes Table**
+
+Instead of polymorphic notes table, could use dedicated `project_notes` table:
+
+```sql
+CREATE TABLE project_notes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
+  note TEXT NOT NULL,
+  type TEXT DEFAULT 'general',
+  created_by TEXT,
+  organization_id UUID REFERENCES organizations(id) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**Pros**:
+- Simpler queries (no entity_type filter needed)
+- Stronger foreign key constraint (direct reference to projects)
+- Better performance (fewer rows in table, no entity_type checks)
+
+**Cons**:
+- Requires separate tables for customer_notes, task_notes, etc.
+- More tables to maintain
+- Code duplication for each entity type
+
+**Recommendation**: Use **polymorphic notes table** with entity_type + entity_id pattern to match FileMaker's polymorphic `_fkID` approach and reduce code duplication
 
 ## FileMaker dapiRecords Layout Fields (Time Tracking)
 

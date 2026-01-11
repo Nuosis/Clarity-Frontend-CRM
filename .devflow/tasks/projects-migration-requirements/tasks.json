@@ -103,14 +103,20 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive Links table integration documentation by analyzing the existing Supabase links schema via SSH, examining FileMaker devProjectLinks layout fields, reviewing frontend code (projectService.js:86-98, ProjectLinksTab.jsx, links.js), and documenting the complete integration in requirements/projects/data-model-mapping.md. Key findings include: (1) Supabase links table EXISTS with project_id FK, customer_id (NOT NULL), organization_id, but NO title column - titles derived from URL hostname; (2) FileMaker has optional title field which will be LOST during migration; (3) Links have VARCHAR(2048) length limit vs no limit in FileMaker; (4) Required customer_id means migration must JOIN with projects table; (5) GitHub integration special handling (repo existence check, creation modal). Added detailed migration strategy with 4-step process (query FileMaker, lookup foreign keys, transform/insert, validate), complete field mapping table, migration validation checklist, and recommendation for optional title column addition. Updated Known Schema Gaps section and main validation checklist to reflect links-specific requirements."
+      "implementation_notes": "Documented how FileMaker's 'devProjectLinks' maps into Supabase's existing 'links' table, including FK requirements (required 'customer_id', optional 'project_id' and 'organization_id'), the missing 'title' column decision (derive from URL hostname), and migration constraints like the 2048 URL limit, in 'requirements/projects/data-model-mapping.md'. Added schema gaps and action items plus a links-specific validation section to the main migration checklist, and captured frontend behavior and code references such as 'processProjectLinks', 'projectService.js', and 'ProjectLinksTab.jsx' (including GitHub URL handling and optimistic updates). Marked the task complete in 'tasks.json' and verified the build succeeds."
     },
     {
       "id": "TSK0008",
       "title": "Document Notes relationship to projects",
       "description": "In requirements/projects/data-model-mapping.md, document FileMaker devNotes layout usage with projects (via _fkID field). Define how notes should be stored in Supabase (polymorphic association vs project_notes table) and querying patterns",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completedAt": "2026-01-10T21:30:00.000Z",
+      "notes": "Completed comprehensive documentation of FileMaker devNotes layout with polymorphic _fkID relationship to projects, customers, and tasks. Proposed Supabase notes table schema with entity_type + entity_id pattern, documented migration strategy for entity type determination, and compared polymorphic vs dedicated project_notes table approaches",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Documented the complete FileMaker devNotes layout structure including all core fields (__ID, recordId, _fkID, note, type, ~CreationTimestamp, ~CreatedBy), business rules from noteService.js and notes.js, API operations (create and read patterns), frontend processing logic, and UI components (ProjectNotesTab.jsx). Verified via SSH that no notes table exists in Supabase and proposed a polymorphic notes schema with entity_type TEXT and entity_id UUID to handle the FileMaker polymorphic _fkID pattern. Documented entity type determination strategy requiring JOINs with projects, customers, and tasks tables during migration, plus complete migration code example and query patterns. Compared polymorphic notes table vs dedicated project_notes table approaches with pros/cons, recommending polymorphic approach to match FileMaker's pattern and reduce code duplication. Included frontend API changes required post-migration, field mappings, migration dependencies, and validation checklist."
     },
     {
       "id": "TSK0009",
