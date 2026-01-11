@@ -2023,6 +2023,500 @@ SELECT COUNT(*) FROM project_images WHERE project_id = 'test-cascade-id';
 
 ---
 
+### Test Suite 19: Fixed-Price Sales Generation Business Logic
+
+#### Test 19.1: Basic Fixed-Price 50/50 Split
+**Given**: Fixed-price project with value = 10000, start_date = '2024-01-01', end_date = '2024-06-30'
+**When**: POST /rpc/create_project with is_fixed_price = true
+**Then**:
+- Returns 201 Created
+- Exactly 2 sales entries created in customer_sales table
+- First entry: amount = 5000, date = '2024-01-01' (start_date)
+- Second entry: amount = 5000, date = '2024-06-30' (end_date)
+- Both entries: project_id = project.id, customer_id = project.customer_id, organization_id = project.organization_id
+- Sales entries have description = "Fixed-price project: {project_name} - Initial payment" and "Final payment"
+- Sales entries have is_billable = true (default)
+
+#### Test 19.2: Fixed-Price with Odd Value (Decimal Precision)
+**Given**: Fixed-price project with value = 10001.00 (odd number)
+**When**: Project created
+**Then**:
+- First entry: amount = 5000.50
+- Second entry: amount = 5000.50
+- Total = 10001.00 (no rounding errors)
+- Amounts stored with 2 decimal precision
+
+#### Test 19.3: Fixed-Price with No End Date
+**Given**: Fixed-price project with value = 8000, start_date = '2024-01-01', end_date = null
+**When**: Project created
+**Then**:
+- Returns 400 Bad Request OR 201 with default behavior
+- Option A: Error message: "Fixed-price projects require end_date for second payment"
+- Option B: Second payment defaults to start_date + 90 days or start_date (business rule)
+- Verify business rule for handling missing end_date
+
+#### Test 19.4: Fixed-Price with No Start Date
+**Given**: Fixed-price project with value = 8000, start_date = null, end_date = '2024-06-30'
+**When**: Project created
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Fixed-price projects require start_date for initial payment"
+- No project or sales entries created
+
+#### Test 19.5: Fixed-Price with Zero Value
+**Given**: Fixed-price project with value = 0, is_fixed_price = true
+**When**: Project created
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Fixed-price projects require value > 0"
+- No project created
+
+#### Test 19.6: Fixed-Price with Negative Value
+**Given**: Fixed-price project with value = -5000
+**When**: Project created
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Project value must be >= 0"
+- No project created
+
+#### Test 19.7: Fixed-Price Sales Entries Idempotency
+**Given**: Fixed-price project already created with 2 sales entries
+**When**: Trigger sales generation again (due to bug or duplicate request)
+**Then**:
+- No duplicate sales entries created
+- Still exactly 2 sales entries for project
+- Idempotency check prevents duplicates (e.g., unique constraint or check before insert)
+
+#### Test 19.8: Fixed-Price Update Does Not Regenerate Sales
+**Given**: Fixed-price project with 2 sales entries already created
+**When**: Update project value from 10000 to 12000
+**Then**:
+- Project value updated to 12000
+- Sales entries NOT automatically updated (manual adjustment required)
+- Warning message: "Sales entries already exist. Update them manually if needed."
+- OR Sales entries auto-updated if business rule allows (document which)
+
+#### Test 19.9: Fixed-Price Delete Cascades to Sales Entries
+**Given**: Fixed-price project with 2 sales entries
+**When**: Delete project
+**Then**:
+- Project deleted
+- 2 sales entries deleted (CASCADE) OR set project_id = null (SET NULL)
+- Verify FK constraint behavior
+
+#### Test 19.10: Fixed-Price with Future Start Date
+**Given**: Fixed-price project with start_date = '2025-01-01' (future date)
+**When**: Project created on 2024-06-15
+**Then**:
+- Returns 201 Created
+- Sales entries created with future dates
+- No constraint on future dates (allowed)
+
+---
+
+### Test Suite 20: Subscription Sales Generation Business Logic
+
+#### Test 20.1: Basic Monthly Subscription Sales
+**Given**: Subscription project with value = 1000 (monthly), start_date = '2024-01-01', end_date = '2024-06-30'
+**When**: POST /rpc/create_project with is_subscription = true
+**Then**:
+- Returns 201 Created
+- Exactly 6 sales entries created (Jan, Feb, Mar, Apr, May, Jun)
+- Each entry: amount = 1000
+- Entry dates: ['2024-01-01', '2024-02-01', '2024-03-01', '2024-04-01', '2024-05-01', '2024-06-01']
+- All entries: project_id, customer_id, organization_id set correctly
+- Description: "Subscription: {project_name} - {Month Year}"
+
+#### Test 20.2: Subscription with 12-Month Duration
+**Given**: Subscription project with value = 500, start_date = '2024-01-15', end_date = '2025-01-15'
+**When**: Project created
+**Then**:
+- 13 sales entries created (Jan 2024 - Jan 2025, inclusive)
+- Entry dates: 15th of each month
+- First entry: '2024-01-15', Last entry: '2025-01-15'
+- Each entry: amount = 500
+
+#### Test 20.3: Subscription with Partial Month at End
+**Given**: Subscription project with start_date = '2024-01-01', end_date = '2024-06-15' (mid-month)
+**When**: Project created
+**Then**:
+- 6 sales entries created (Jan, Feb, Mar, Apr, May, Jun)
+- Last entry dated: '2024-06-01' (monthly anniversary, not end_date)
+- OR Last entry dated: '2024-06-15' (pro-rated to end_date)
+- Document business rule for partial month handling
+
+#### Test 20.4: Subscription with Less Than 1 Month Duration
+**Given**: Subscription project with start_date = '2024-01-01', end_date = '2024-01-15' (15 days)
+**When**: Project created
+**Then**:
+- 1 sales entry created (partial month)
+- Entry date: '2024-01-01'
+- Amount: 1000 (full monthly amount) OR pro-rated amount
+- Document business rule for sub-month subscriptions
+
+#### Test 20.5: Subscription with Exactly 1 Month Duration
+**Given**: Subscription project with start_date = '2024-01-01', end_date = '2024-02-01'
+**When**: Project created
+**Then**:
+- 2 sales entries created: '2024-01-01' and '2024-02-01'
+- Both entries: amount = 1000 each
+- Total value: 2000
+
+#### Test 20.6: Subscription with No End Date
+**Given**: Subscription project with value = 1000, start_date = '2024-01-01', end_date = null
+**When**: Project created
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Subscription projects require end_date to calculate monthly entries"
+- No project created
+- OR: Creates ongoing subscription with no pre-generated entries (manual billing)
+
+#### Test 20.7: Subscription with No Start Date
+**Given**: Subscription project with value = 1000, start_date = null, end_date = '2024-06-30'
+**When**: Project created
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Subscription projects require start_date"
+- No project created
+
+#### Test 20.8: Subscription with Zero Value
+**Given**: Subscription project with value = 0, is_subscription = true
+**When**: Project created
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Subscription projects require value > 0"
+- No project created
+
+#### Test 20.9: Subscription Sales Entries Idempotency
+**Given**: Subscription project already created with 12 sales entries
+**When**: Trigger sales generation again (duplicate request)
+**Then**:
+- No duplicate sales entries created
+- Still exactly 12 sales entries for project
+- Idempotency enforced (unique constraint on project_id + date)
+
+#### Test 20.10: Subscription with Very Long Duration (7 Years)
+**Given**: Subscription project with start_date = '2024-01-01', end_date = '2030-12-31'
+**When**: Project created
+**Then**:
+- 84 sales entries created (7 years × 12 months)
+- Entries span from '2024-01-01' to '2030-12-01'
+- All entries: amount = monthly value
+- Performance: creation completes within 5s
+
+#### Test 20.11: Subscription Update Does Not Regenerate Sales
+**Given**: Subscription project with 12 sales entries already created
+**When**: Update project value from 1000 to 1200
+**Then**:
+- Project value updated to 1200
+- Sales entries NOT automatically updated
+- Warning: "Sales entries already exist. Adjust manually if needed."
+- OR: Future entries updated, past entries unchanged (business rule)
+
+#### Test 20.12: Subscription Delete Cascades to Sales Entries
+**Given**: Subscription project with 12 sales entries
+**When**: Delete project
+**Then**:
+- Project deleted
+- All 12 sales entries deleted (CASCADE) OR nullified
+- Verify FK constraint behavior
+
+#### Test 20.13: Subscription with Leap Year Handling
+**Given**: Subscription project with start_date = '2024-01-29', end_date = '2025-03-29' (spans leap year)
+**When**: Project created
+**Then**:
+- Sales entries created for each month
+- Feb 2024 entry: '2024-02-29' (leap year) OR '2024-02-28' (business rule)
+- Feb 2025 entry: '2025-02-28' (not leap year)
+- Verify date handling for months with different day counts
+
+#### Test 20.14: Subscription Starting Mid-Month
+**Given**: Subscription project with start_date = '2024-01-15', end_date = '2024-12-15'
+**When**: Project created
+**Then**:
+- 12 sales entries created
+- All entries on 15th of month: ['2024-01-15', '2024-02-15', ..., '2024-12-15']
+- Monthly anniversary respected
+
+---
+
+### Test Suite 21: Billable Status Changes and Impact
+
+#### Test 21.1: Create Project with Billable Flag
+**Given**: Project with is_billable = true (default)
+**When**: Project created (fixed-price or subscription)
+**Then**:
+- All generated sales entries have is_billable = true
+- Sales entries count toward billable revenue reports
+
+#### Test 21.2: Create Project with Non-Billable Flag
+**Given**: Project with is_billable = false
+**When**: Project created with sales entries
+**Then**:
+- All generated sales entries have is_billable = false
+- Sales entries excluded from billable revenue reports
+
+#### Test 21.3: Change Project to Non-Billable After Creation
+**Given**: Billable project with 2 sales entries (is_billable = true)
+**When**: Update project with is_billable = false
+**Then**:
+- Project is_billable updated to false
+- Sales entries is_billable NOT automatically updated (manual adjustment)
+- OR: Sales entries auto-updated to is_billable = false (document behavior)
+
+#### Test 21.4: Change Project to Billable After Creation
+**Given**: Non-billable project with 6 sales entries (is_billable = false)
+**When**: Update project with is_billable = true
+**Then**:
+- Project is_billable updated to true
+- Sales entries remain is_billable = false (manual adjustment required)
+- OR: Sales entries auto-updated to is_billable = true
+
+#### Test 21.5: Delete Project Updates Billable Totals
+**Given**: Billable project with 10 sales entries, total value = 10000
+**When**: Delete project (cascades to sales entries)
+**Then**:
+- Billable revenue total decreases by 10000
+- Sales entries deleted
+- Financial reports reflect updated totals
+
+#### Test 21.6: Mark Individual Sales Entry as Non-Billable
+**Given**: Project with 2 sales entries (both billable)
+**When**: Update first sales entry with is_billable = false
+**Then**:
+- First entry: is_billable = false
+- Second entry: is_billable = true (unchanged)
+- Project billable_amount recalculated (if tracked)
+
+#### Test 21.7: Billable Filter in Financial Reports
+**Given**: 5 projects (3 billable, 2 non-billable) with sales entries
+**When**: GET /rpc/get_financial_summary with billable_only = true
+**Then**:
+- Only billable sales entries included in totals
+- Non-billable entries excluded
+- Correct revenue calculated
+
+---
+
+### Test Suite 22: Edge Cases - Date Handling
+
+#### Test 22.1: Project with Same Start and End Date
+**Given**: Fixed-price project with start_date = end_date = '2024-01-01'
+**When**: Project created
+**Then**:
+- 2 sales entries created
+- Both entries dated: '2024-01-01'
+- Both entries: amount = 5000 (50% each)
+
+#### Test 22.2: Project with End Date Before Start Date
+**Given**: Project with start_date = '2024-06-30', end_date = '2024-01-01'
+**When**: Project created
+**Then**:
+- Returns 400 Bad Request
+- Error message: "end_date must be >= start_date"
+- No project created
+
+#### Test 22.3: Subscription with Overlapping Date Range
+**Given**: Customer has subscription project A (Jan-Jun 2024, value = 1000)
+**When**: Create subscription project B (Apr-Sep 2024, value = 1000) for same customer
+**Then**:
+- Both projects created successfully
+- Project A sales: Jan, Feb, Mar, Apr, May, Jun
+- Project B sales: Apr, May, Jun, Jul, Aug, Sep
+- Apr-Jun have 2 sales entries per month (2000/month total)
+- No constraint on overlapping subscriptions
+
+#### Test 22.4: Project with Invalid Date Format
+**Given**: Project with start_date = '01/15/2024' (MM/DD/YYYY instead of YYYY-MM-DD)
+**When**: Project created
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Invalid date format. Use YYYY-MM-DD."
+- No project created
+
+#### Test 22.5: Project with Future Dates Only
+**Given**: Project with start_date = '2026-01-01', end_date = '2026-12-31'
+**When**: Project created on 2024-06-15
+**Then**:
+- Returns 201 Created
+- Sales entries created with future dates
+- No constraint on future dates
+
+#### Test 22.6: Project with Past Dates Only
+**Given**: Project with start_date = '2020-01-01', end_date = '2020-12-31'
+**When**: Project created on 2024-06-15
+**Then**:
+- Returns 201 Created
+- Sales entries created with past dates
+- Allowed for retroactive project recording
+
+---
+
+### Test Suite 23: Edge Cases - Project Type Changes
+
+#### Test 23.1: Change Fixed-Price to Subscription
+**Given**: Existing fixed-price project with 2 sales entries
+**When**: Update project with is_fixed_price = false, is_subscription = true
+**Then**:
+- Returns 400 Bad Request (not allowed - would require regenerating sales)
+- Error message: "Cannot change pricing model after project creation"
+- Project type unchanged
+- OR: Allowed with warning, existing sales deleted, new sales generated
+
+#### Test 23.2: Change Subscription to Fixed-Price
+**Given**: Existing subscription project with 12 sales entries
+**When**: Update project with is_subscription = false, is_fixed_price = true
+**Then**:
+- Returns 400 Bad Request (not allowed)
+- Error message: "Cannot change pricing model after project creation"
+- Project type unchanged
+- OR: Allowed with warning
+
+#### Test 23.3: Change Fixed-Price to Non-Priced
+**Given**: Existing fixed-price project with 2 sales entries
+**When**: Update project with is_fixed_price = false (no subscription flag)
+**Then**:
+- Project updated to non-priced
+- Sales entries remain (not deleted)
+- OR: Returns 400 Bad Request, "Cannot remove pricing model. Delete sales entries first."
+
+#### Test 23.4: Change Subscription to Non-Priced
+**Given**: Existing subscription project with 12 sales entries
+**When**: Update project with is_subscription = false
+**Then**:
+- Project updated to non-priced
+- Sales entries remain
+- OR: Returns 400 Bad Request
+
+#### Test 23.5: Change Non-Priced to Fixed-Price
+**Given**: Existing project with no pricing model, no sales entries
+**When**: Update project with is_fixed_price = true, value = 10000, dates set
+**Then**:
+- Project updated to fixed-price
+- 2 sales entries generated
+- Allowed for retroactive pricing
+
+#### Test 23.6: Change Non-Priced to Subscription
+**Given**: Existing project with no pricing model, no sales entries
+**When**: Update project with is_subscription = true, value = 1000, dates set
+**Then**:
+- Project updated to subscription
+- Monthly sales entries generated
+- Allowed for retroactive pricing
+
+#### Test 23.7: Attempt to Set Both Pricing Models on Update
+**Given**: Existing project (any type)
+**When**: Update project with is_fixed_price = true AND is_subscription = true
+**Then**:
+- Returns 400 Bad Request
+- Error message: "Cannot be both fixed-price and subscription"
+- Project unchanged
+
+---
+
+### Test Suite 24: Sales Entry Idempotency and Data Integrity
+
+#### Test 24.1: Prevent Duplicate Sales Entries on Retry
+**Given**: Fixed-price project creation request sent twice (network retry)
+**When**: Both requests processed
+**Then**:
+- Only 1 project created (unique constraint on project)
+- Only 2 sales entries created (not 4)
+- Idempotency key or unique constraint prevents duplicates
+
+#### Test 24.2: Prevent Duplicate Subscription Entries
+**Given**: Subscription project with monthly sales entries
+**When**: Trigger sales generation twice (bug or manual trigger)
+**Then**:
+- No duplicate entries for same project + date combination
+- Unique constraint: (project_id, date) OR (project_id, billing_period)
+- Error on duplicate attempt: "Sales entry already exists for this period"
+
+#### Test 24.3: Verify Sales Entry Linkage to Project
+**Given**: Project with 10 sales entries
+**When**: Query sales entries by project_id
+**Then**:
+- All 10 entries returned
+- All entries have correct project_id foreign key
+- No orphaned sales entries (project_id not null)
+
+#### Test 24.4: Verify Sales Entry Linkage to Customer
+**Given**: Project for Customer A with 5 sales entries
+**When**: Query sales entries by customer_id
+**Then**:
+- All 5 entries returned
+- All entries have customer_id = Customer A's ID
+- Customer deletion (if allowed) handles sales entries correctly
+
+#### Test 24.5: Verify Sales Entry Linkage to Organization
+**Given**: Project in Org A with 8 sales entries
+**When**: Query sales entries by organization_id
+**Then**:
+- All 8 entries returned
+- All entries have organization_id = Org A's ID
+- RLS filters entries by organization
+
+#### Test 24.6: Sales Entry Creation Timestamp
+**Given**: Fixed-price project created on 2024-06-15 at 10:30 AM
+**When**: Sales entries generated
+**Then**:
+- Both sales entries have created_at = '2024-06-15 10:30:00' (or close timestamp)
+- created_at reflects when entry was created, not the billing date
+- Billing date stored in separate 'date' field
+
+#### Test 24.7: Sales Entry Cannot Be Created Without Project
+**Given**: Attempt to create sales entry with non-existent project_id
+**When**: INSERT INTO customer_sales with random project_id
+**Then**:
+- FK constraint violation
+- Error: "Project not found" or FK constraint error
+- No sales entry created
+
+#### Test 24.8: Sales Entry Cannot Be Created Without Customer
+**Given**: Attempt to create sales entry with non-existent customer_id
+**When**: INSERT INTO customer_sales with random customer_id
+**Then**:
+- FK constraint violation
+- Error: "Customer not found"
+- No sales entry created
+
+#### Test 24.9: Sales Entry Amount Precision
+**Given**: Fixed-price project with value = 10001.99 (odd cents)
+**When**: Sales entries generated
+**Then**:
+- First entry: amount = 5000.995 → stored as 5001.00 (rounded)
+- Second entry: amount = 5000.995 → stored as 5001.00
+- OR: First = 5001.00, Second = 5000.99 (adjusted to match total)
+- Total: 10001.99 (matches project value exactly)
+- Document rounding behavior
+
+#### Test 24.10: Concurrent Sales Entry Generation
+**Given**: 2 API requests to create same project simultaneously
+**When**: Both requests attempt to generate sales entries
+**Then**:
+- Exactly 1 project created (unique constraint)
+- Exactly 2 (or N) sales entries created (not duplicated)
+- Transaction isolation prevents race condition
+- Second request: 409 Conflict OR returns existing project
+
+#### Test 24.11: Sales Entry Update Triggers Audit Log
+**Given**: Sales entry exists for project
+**When**: Update sales entry amount from 5000 to 6000
+**Then**:
+- Sales entry updated
+- Audit log created with: old_value, new_value, updated_by, updated_at
+- Change tracked for compliance
+
+#### Test 24.12: Sales Entry Soft Delete vs Hard Delete
+**Given**: Project deleted with 6 sales entries
+**When**: Delete project
+**Then**:
+- Option A (Hard Delete): Sales entries deleted from database (CASCADE)
+- Option B (Soft Delete): Sales entries marked as deleted (deleted_at set), project_id nullified
+- Verify delete behavior matches business requirements
+
+---
+
 ## Edge Cases and Error Scenarios
 
 ### Edge Case 1: Project with Very Long Subscription Period

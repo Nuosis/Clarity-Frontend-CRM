@@ -276,14 +276,20 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive acceptance criteria for all related entities by adding seven new test suites (Test Suites 12-18) to 'requirements/projects/acceptance-criteria.md', covering Objectives CRUD (create, read, update, delete, reorder, bulk reorder, cascading deletes), Steps CRUD (all operations plus step-level completion tracking), Images CRUD (URL-based storage, Supabase Storage integration), Links CRUD (existing links table integration, title derivation, GitHub integration), Notes filtering and display (polymorphic associations, type/date/user filtering, content search, pagination), Completion percentage calculation (nested step-based weighting, real-time updates, edge cases), and Ordering/reordering operations (default order, explicit order, drag-and-drop, concurrent updates, validation). All 125 test cases follow Given-When-Then format with expected API responses, error codes, business logic validation, and organization-scoped RLS enforcement. Updated task status in 'tasks.json' to mark TSK0021 complete with comprehensive notes and verified documentation builds successfully"
+      "implementation_notes": "Implemented comprehensive acceptance criteria for related entities in the projects migration requirements by adding Test Suites 12-18 covering objectives, steps, images, links, notes filtering/display, completion percentage calculation, and ordering/reordering behaviors. The primary change was expanding 'requirements/projects/acceptance-criteria.md' from 1371 to 2425 lines with 125 Given-When-Then test cases including CRUD, edge/error cases, RLS/authorization expectations, and key decisions like step-based weighting for completion and clarifying storage vs database deletion for images. Updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark 'TSK0021' as done. Verified the documentation build still succeeds via 'npm run build' with only pre-existing warnings."
     },
     {
       "id": "TSK0022",
       "title": "Create acceptance criteria for business logic",
       "description": "In requirements/projects/acceptance-criteria.md, add test cases for: fixed price sales generation (50/50 split), subscription monthly sales creation, billable status changes, edge cases (no dates, overlapping dates, project type changes), and sales entry idempotency",
-      "status": "queued",
-      "priority": "high"
+      "status": "done",
+      "priority": "high",
+      "completedAt": "2026-01-10T24:00:00.000Z",
+      "notes": "Added comprehensive business logic acceptance criteria with 6 new test suites (19-24) covering: Fixed-Price Sales Generation (10 tests), Subscription Sales Generation (14 tests), Billable Status Changes (7 tests), Edge Cases - Date Handling (6 tests), Edge Cases - Project Type Changes (7 tests), and Sales Entry Idempotency (12 tests). All tests follow Given/When/Then format with explicit verification criteria. Total: 56 new test cases added covering all required business logic scenarios",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive business logic acceptance criteria by adding Test Suites 19-24 to 'requirements/projects/acceptance-criteria.md', covering fixed-price 50/50 split generation with edge cases (odd values, missing dates, zero/negative values, idempotency, updates, deletes, future dates), subscription monthly sales generation with detailed scenarios (1-month, 12-month, partial months, leap years, long durations, idempotency), billable status changes and their impact on sales entries and reports, date handling edge cases (same start/end, end before start, overlapping subscriptions, invalid formats, future/past dates), project type change constraints (fixed-price ↔ subscription ↔ non-priced), and sales entry idempotency and data integrity checks (duplicate prevention, FK linkages, timestamps, concurrent creation, amount precision, audit logs, delete behavior). All test cases explicitly document expected behavior, validation rules, and business decisions (e.g., rounding behavior, whether pricing model changes are allowed, delete cascade vs soft delete). Updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark TSK0022 as done with completion timestamp and summary notes."
     },
     {
       "id": "TSK0023",
