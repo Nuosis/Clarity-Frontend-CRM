@@ -142,18 +142,22 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive migration plan document at '.devflow/tasks/customers-migration-requirements/migration-plan.md' (45,000+ words, 1,200+ lines) covering all aspects of the FileMaker to Supabase customer migration. Document includes: (1) Executive summary with key strategy decisions (direct UUID mapping, feature flag rollout, backend-first architecture), (2) Migration prerequisites with detailed backend change requirements (schema changes, RLS policies, API endpoints, migration scripts), (3) Six migration phases with task breakdowns and acceptance criteria (Backend Preparation, Dual-Write Completion, Data Backfill, Frontend Refactor, Gradual Rollout, Cleanup), (4) Detailed data backfill strategy with step-by-step export/transform/validate/import procedures and Python code examples, (5) ID reconciliation implementation referencing id-reconciliation-strategy.md, (6) Feature flag-based cutover approach with gradual rollout phases (internal → 10% → 50% → 100%), (7) Comprehensive validation and reconciliation procedures with SQL queries and automated scripts, (8) Three rollback scenarios with procedures (feature flag rollback, partial rollback, full rollback), (9) Performance benchmarks and optimization strategies, (10) Risk assessment matrix with 12 identified risks and mitigation strategies, (11) Post-migration monitoring plan with metrics, dashboards, and alerting rules, (12) Success criteria checklist and quantitative metrics, and (13) Team responsibilities breakdown. Key decisions documented: Direct UUID mapping (no lookup table), feature flag for safe rollback, backend-managed dual-write for transactional consistency, gradual rollout to limit blast radius, comprehensive monitoring and alerting. References all prior analysis documents (id-reconciliation-strategy.md, dual-write-analysis.md, data-model-mapping.md, api-contracts.md, authorization.md). Follows Backend Change Protocol by documenting all required backend changes without attempting direct modifications. Verified build succeeds with only pre-existing warnings."
+      "implementation_notes": "Implemented a comprehensive customers migration plan documenting the end-to-end approach for moving customers from FileMaker to Supabase, including phased execution, schema and RLS prerequisites, required API endpoints, data backfill and reconciliation steps, rollout and rollback procedures, and monitoring and success criteria. Added the plan at '.devflow/tasks/customers-migration-requirements/migration-plan.md' and updated '.devflow/tasks/tasks.json' to mark 'TSK0009' complete. Key decisions captured include direct UUID mapping from FileMaker '__ID' to Supabase 'customers.id', a feature-flagged gradual rollout using 'VITE_USE_SUPABASE_CUSTOMERS', and a backend-first architecture where all operations go through the API. Verified the build still succeeds with only pre-existing warnings."
     },
     {
       "id": "TSK0010",
       "title": "Document edge cases",
       "description": "Identify and document edge cases: concurrent updates, partial failures, network issues, orphaned records, duplicate detection",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0002",
         "TSK0005"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive edge cases documentation covering 17 critical scenarios across 6 categories: concurrent updates & race conditions (optimistic locking, duplicate email handling), partial failures & transaction rollback (atomic operations, dual-write retry queues), network issues & retry logic (idempotency keys, checkpoint-based migration), orphaned records & data cleanup (CASCADE constraints, reconciliation jobs), duplicate detection & uniqueness (email/name deduplication strategies), data validation (invalid emails, missing address fields), ID reconciliation (UUID validation, conflict resolution), organization scoping (default org assignment), performance degradation (chunked batch processing), and security & authorization (RLS policies, cross-org access prevention). Each edge case includes: detection methods, impact analysis (severity/frequency), recommended solutions with code examples, validation procedures, and code references. Added deliverable at '.devflow/tasks/customers-migration-requirements/edge-cases.md' with 17 documented edge cases, implementation strategies for backend and frontend, SQL queries for detection, Python/JavaScript code examples, and comprehensive validation checklists. Key decisions documented include optimistic locking via If-Unmodified-Since headers, idempotency keys for retry safety, checkpoint-based migration for resumability, CASCADE constraints for referential integrity, RLS policies for multi-tenant security, and pre-migration data validation/cleanup. Verified document completeness and marked task complete."
     },
     {
       "id": "TSK0011",
