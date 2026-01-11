@@ -85,17 +85,21 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive API contracts document at '.devflow/tasks/customers-migration-requirements/api-contracts.md' specifying 11 backend endpoints for the Customers migration with complete request/response examples, validation rules, error handling, and edge case documentation. The 1000+ line specification covers: (1) Core CRUD operations (List, Get by ID, Create, Update, Toggle Status, Delete) with full request/response examples and error scenarios; (2) Specialized endpoints (Search, Batch Create, Statistics, Validate) for migration support; (3) Authentication/authorization with HMAC-SHA256 and organization scoping via RLS; (4) Detailed edge case handling (duplicate emails/phones, concurrent updates, partial failures, address validation, organization assignment, FileMaker ID reconciliation); (5) Frontend integration examples showing refactoring from FileMaker to backend API; (6) Performance considerations, rate limiting, pagination, and idempotency patterns. Key design decisions documented include atomic transactions for related table updates, soft delete with restore capability, optimistic locking for concurrent updates, and migration-specific batch operations. Verified build succeeds (only pre-existing warnings) and marked task complete in tasks.json. Document status: Requirements Complete - Ready for Backend Team Review."
+      "implementation_notes": "Created a comprehensive customers migration API contracts document in '.devflow/tasks/customers-migration-requirements/api-contracts.md', based on the existing reference at 'requirements/customers/api-contracts.md' but expanded for the devflow task deliverable. The new spec documents 11 endpoints (CRUD plus search, batch, stats, validate, and migration status) with request and response examples, validation and error codes, auth and RLS expectations, and key decisions like atomic multi-table transactions, default soft delete, organization scoping, optimistic locking, and idempotency keys. Updated '.devflow/tasks/customers-migration-requirements/tasks.json' to mark TSK0005 complete and verified the build still succeeds with only pre-existing warnings."
     },
     {
       "id": "TSK0006",
       "title": "Document authorization requirements",
       "description": "Create authorization.md covering RLS policies, organization scoping, user roles, and permission requirements",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0003"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive authorization.md documentation (52,000+ characters) covering RLS policies, organization scoping, role-based access control, and security considerations. The document includes 16 RLS policies across 7 customer tables (customers, customer_email, customer_phone, customer_address, customer_contacts, customer_sales, customer_organization), JWT claims structure, role definitions (admin, staff, read_only, external), permission matrix, backend service role access patterns, frontend authorization logic recommendations (usePermissions hook), 8 detailed edge cases with security considerations, RLS policy testing scripts, and audit logging implementation. Key sections reference existing code (src/context/AppStateContext.jsx:45-67, src/components/auth/SignIn.jsx:82-117, src/services/dataService.js, src/services/supabaseService.js) and provide concrete SQL examples for database-level security enforcement. Document follows standardized template structure with file:line code references, concrete examples, and comprehensive coverage of multi-tenancy isolation, preventing cross-organization data access, and defense-in-depth security architecture."
     },
     {
       "id": "TSK0007",
