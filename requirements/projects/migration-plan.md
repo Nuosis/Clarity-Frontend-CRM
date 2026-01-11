@@ -1,6 +1,101 @@
-# Migration Plan
+# Projects Migration Plan - FileMaker to Supabase
 
-This document outlines the strategy for migrating the Projects feature from FileMaker to Supabase, including data backfill for projects and all related entities (objectives, steps, images, links, notes), ID reconciliation, cutover approach, validation, and rollback procedures.
+## Document Purpose
+
+This document provides a comprehensive, actionable migration plan for transitioning the Projects feature from FileMaker-primary to Supabase-only architecture. It includes data backfill strategy for projects and 5 related entities (objectives, steps, images, links, notes), cutover procedures, rollback plans, validation steps, and monitoring requirements.
+
+**Document Version**: 1.0
+**Last Updated**: 2026-01-10
+**Task Reference**: TSK0018 - Create migration plan for projects
+**Dependencies**: TSK0001-TSK0017 (data model mapping, API contracts, authorization)
+
+---
+
+## Table of Contents
+
+1. [Executive Summary](#executive-summary)
+2. [Migration Prerequisites](#migration-prerequisites)
+3. [Migration Phases](#migration-phases)
+4. [Data Backfill Strategy](#data-backfill-strategy)
+5. [ID Reconciliation Implementation](#id-reconciliation-implementation)
+6. [Related Entities Migration Strategy](#related-entities-migration-strategy)
+7. [Cutover Approach](#cutover-approach)
+8. [Validation & Reconciliation](#validation--reconciliation)
+9. [Rollback Procedures](#rollback-procedures)
+10. [Performance Benchmarks](#performance-benchmarks)
+11. [Risk Assessment & Mitigation](#risk-assessment--mitigation)
+12. [Post-Migration Monitoring](#post-migration-monitoring)
+13. [Success Criteria](#success-criteria)
+14. [Team Responsibilities](#team-responsibilities)
+
+---
+
+## Executive Summary
+
+### Migration Scope
+
+**Feature**: Projects (core CRM workflow entity with 5 related sub-entities)
+**Current State**: FileMaker-only (NO Supabase integration or dual-write)
+**Target State**: Supabase-only (FileMaker deprecated)
+**Estimated Project Count**: ~50-150 active projects (needs audit)
+**Related Tables**: 6 tables (projects, project_objectives, project_objective_steps, project_images, links, notes)
+**Dependent Features**: Customers, Teams, Time Tracking, Proposals, Financial Records (Sales Entries)
+
+### Key Strategy Decisions
+
+1. **ID Mapping**: Direct UUID mapping (FileMaker `__ID` → Supabase `projects.id`)
+   - **Rationale**: No lookup table needed, preserves foreign key references across 5 related tables
+   - **Reference**: [id-reconciliation-implementation](#id-reconciliation-implementation)
+
+2. **Cutover Method**: Feature flag with gradual rollout
+   - **Rationale**: Safe rollback, phased testing, reduced risk for complex business logic
+   - **Implementation**: Environment variable `VITE_USE_SUPABASE_PROJECTS`
+
+3. **No Dual-Write Period**: Direct migration (skip dual-write implementation)
+   - **Current Gap**: Projects have ZERO Supabase integration (100% FileMaker-only)
+   - **Decision**: Implement Supabase-only backend, migrate data, cut over via feature flag
+   - **Rationale**: Dual-write would require implementing full CRUD + business logic twice
+
+4. **Backend-First Architecture**: All operations through backend API
+   - **Rationale**: Complex business logic (fixed-price/subscription sales), transactional consistency, security
+   - **Reference**: [api-contracts.md](./api-contracts.md)
+
+5. **Related Entities Migration Order**: Sequential migration in dependency order
+   - **Order**: Projects → Objectives → Steps → Images/Links/Notes (parallel)
+   - **Rationale**: Foreign key constraints prevent parallel migration
+   - **Reference**: [related-entities-migration-strategy](#related-entities-migration-strategy)
+
+### Critical Path Timeline
+
+**Total Duration**: 6-8 weeks (includes backend implementation)
+
+| Phase | Duration | Start | End | Dependencies |
+|-------|----------|-------|-----|--------------|
+| **Phase 1**: Backend Preparation | 2-3 weeks | Week 1 | Week 3 | Backend team availability, schema design approval |
+| **Phase 2**: Data Audit & Export | 3-5 days | Week 3 | Week 3 | Access to FileMaker Data API |
+| **Phase 3**: Data Transformation | 3-5 days | Week 3 | Week 4 | Customers & Teams migration complete |
+| **Phase 4**: Data Import (Staging) | 2-3 days | Week 4 | Week 4 | Backend schema deployed to staging |
+| **Phase 4**: Data Import (Production) | 1 day | Week 5 | Week 5 | Staging validation passed |
+| **Phase 5**: Frontend Refactor | 1-2 weeks | Week 4 | Week 6 | Backend API stable in staging |
+| **Phase 6**: Testing & Validation | 1 week | Week 6 | Week 7 | Frontend refactor complete |
+| **Phase 7**: Gradual Rollout | 1-2 weeks | Week 7 | Week 8 | All phases complete |
+| **Phase 8**: Cleanup | 1 week | Week 8+ | Week 9+ | 100% cutover validated |
+
+### Risk Level Assessment
+
+**Overall Risk**: High
+
+**Risk Factors**:
+- ❌ **Critical Risk**: NO existing Supabase integration (100% rewrite vs incremental migration)
+- ❌ **High Risk**: Complex business logic (fixed-price 50/50 split, subscription monthly sales)
+- ❌ **High Risk**: 5 related entities with nested relationships (objectives → steps hierarchy)
+- ⚠️ **Medium Risk**: 10+ dependent features rely on project data (proposals, time tracking, sales)
+- ⚠️ **Medium Risk**: Missing Supabase schema columns (no `team_id`, `is_fixed_price`, `is_subscription` yet)
+- ✅ **Low Risk**: UUID-based ID reconciliation is straightforward (same as customers migration)
+
+**Mitigation**: Feature flag enables instant rollback, gradual rollout limits blast radius, comprehensive testing of business logic before production
+
+---
 
 ## Migration Overview
 
@@ -1496,3 +1591,1019 @@ See Phase 5 and Phase 7 above.
    - Mark migration as complete
    - Update architecture diagrams
    - Update developer onboarding docs
+
+---
+
+## Data Backfill Strategy
+
+### Overview
+
+**Goal**: Migrate all FileMaker projects and 5 related entity types to Supabase while preserving IDs, relationships, and data integrity
+
+**Approach**: One-time batch import using backend migration script with sequential entity processing
+
+**Key Principle**: Direct UUID mapping (FileMaker `__ID` → Supabase `id`) across all 6 tables
+
+### Step-by-Step Process
+
+#### Step 1: Export FileMaker Data
+
+**Method**: FileMaker Data API via backend migration script
+
+**Export Order** (Must follow this sequence):
+1. Projects (devProjects layout)
+2. Objectives (devProjectObjectives layout)
+3. Steps (devProjectObjSteps layout)
+4. Images (devProjectImages layout)
+5. Links (devProjectLinks layout)
+6. Notes (devNotes layout, filtered by project entity_type)
+
+**Backend Export Script**:
+```python
+import requests
+import json
+import os
+
+FM_SERVER = "https://server.claritybusinesssolutions.ca"
+FM_DATABASE = "clarityCRM"
+FM_USER = os.getenv("FM_USER")
+FM_PASSWORD = os.getenv("FM_PASSWORD")
+
+async def export_filemaker_projects():
+    """Export all project-related data from FileMaker"""
+
+    # Authenticate with FileMaker
+    auth_response = requests.post(
+        f"{FM_SERVER}/fmi/data/v1/databases/{FM_DATABASE}/sessions",
+        auth=(FM_USER, FM_PASSWORD)
+    )
+    fm_token = auth_response.json()["response"]["token"]
+
+    headers = {"Authorization": f"Bearer {fm_token}"}
+
+    exports = {}
+
+    # Export projects
+    print("Exporting projects...")
+    projects_response = requests.post(
+        f"{FM_SERVER}/fmi/data/v1/databases/{FM_DATABASE}/layouts/devProjects/_find",
+        headers=headers,
+        json={"query": [{"__ID": "*"}]}
+    )
+    exports['projects'] = projects_response.json()["response"]["data"]
+    print(f"  ✓ Exported {len(exports['projects'])} projects")
+
+    # Export objectives
+    print("Exporting objectives...")
+    objectives_response = requests.post(
+        f"{FM_SERVER}/fmi/data/v1/databases/{FM_DATABASE}/layouts/devProjectObjectives/_find",
+        headers=headers,
+        json={"query": [{"_projectID": "*"}]}
+    )
+    exports['objectives'] = objectives_response.json()["response"]["data"]
+    print(f"  ✓ Exported {len(exports['objectives'])} objectives")
+
+    # Export steps
+    print("Exporting steps...")
+    steps_response = requests.post(
+        f"{FM_SERVER}/fmi/data/v1/databases/{FM_DATABASE}/layouts/devProjectObjSteps/_find",
+        headers=headers,
+        json={"query": [{"_objectiveID": "*"}]}
+    )
+    exports['steps'] = steps_response.json()["response"]["data"]
+    print(f"  ✓ Exported {len(exports['steps'])} steps")
+
+    # Export images
+    print("Exporting images...")
+    images_response = requests.post(
+        f"{FM_SERVER}/fmi/data/v1/databases/{FM_DATABASE}/layouts/devProjectImages/_find",
+        headers=headers,
+        json={"query": [{"_fkID": "*"}]}
+    )
+    exports['images'] = images_response.json()["response"]["data"]
+    print(f"  ✓ Exported {len(exports['images'])} images")
+
+    # Export links (for projects)
+    print("Exporting project links...")
+    links_response = requests.post(
+        f"{FM_SERVER}/fmi/data/v1/databases/{FM_DATABASE}/layouts/devProjectLinks/_find",
+        headers=headers,
+        json={"query": [{"_fkID": "*"}]}
+    )
+    exports['links'] = links_response.json()["response"]["data"]
+    print(f"  ✓ Exported {len(exports['links'])} links")
+
+    # Export notes (for projects)
+    print("Exporting project notes...")
+    notes_response = requests.post(
+        f"{FM_SERVER}/fmi/data/v1/databases/{FM_DATABASE}/layouts/devNotes/_find",
+        headers=headers,
+        json={"query": [{"_fkID": "*"}]}
+    )
+    exports['notes'] = notes_response.json()["response"]["data"]
+    print(f"  ✓ Exported {len(exports['notes'])} notes")
+
+    # Save exports
+    for entity_type, data in exports.items():
+        filename = f"filemaker_{entity_type}_export.json"
+        with open(filename, "w") as f:
+            json.dump(data, f, indent=2)
+        print(f"Saved {filename}")
+
+    # Logout
+    requests.delete(
+        f"{FM_SERVER}/fmi/data/v1/databases/{FM_DATABASE}/sessions/{fm_token}"
+    )
+
+    return exports
+
+# Run export
+if __name__ == "__main__":
+    exports = export_filemaker_projects()
+    print(f"\n✅ Export complete!")
+    print(f"   Projects: {len(exports['projects'])}")
+    print(f"   Objectives: {len(exports['objectives'])}")
+    print(f"   Steps: {len(exports['steps'])}")
+    print(f"   Images: {len(exports['images'])}")
+    print(f"   Links: {len(exports['links'])}")
+    print(f"   Notes: {len(exports['notes'])}")
+```
+
+#### Step 2: Transform Data
+
+See Phase 3 in [Migration Phases](#migration-phases) for complete transformation scripts.
+
+**Key Transformations**:
+1. **UUID Preservation**: FileMaker `__ID` → Supabase `id` (no changes)
+2. **Date Format**: MM/DD/YYYY → YYYY-MM-DD
+3. **Boolean Conversion**: "1"/"0" strings → true/false
+4. **Status Mapping**: FileMaker statuses → Supabase enum values
+5. **Organization ID Derivation**: Look up from customer relationship
+6. **Foreign Key Validation**: Verify all FKs reference existing records
+
+#### Step 3: Validate Transformed Data
+
+See Phase 3 validation script in [Migration Phases](#migration-phases).
+
+**Validation Checks**:
+- UUID validity and uniqueness
+- Required fields populated
+- Foreign key references valid
+- Business logic constraints (no fixed_price AND subscription)
+- Date range validity (end >= start)
+- Orphaned record detection
+- Order number preservation
+
+#### Step 4: Import to Supabase
+
+**Import Order** (Sequential, NOT parallel):
+1. Projects
+2. Objectives (depends on projects)
+3. Steps (depends on objectives)
+4. Images, Links, Notes (can be parallel, all depend on projects)
+
+**Backend Import Script**:
+```python
+from supabase import create_client
+import json
+
+supabase = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+)
+
+async def import_projects_to_supabase():
+    """Import transformed data to Supabase in dependency order"""
+
+    # Load transformed data
+    projects = json.load(open('supabase_projects_import.json'))
+    objectives = json.load(open('supabase_objectives_import.json'))
+    steps = json.load(open('supabase_steps_import.json'))
+    images = json.load(open('supabase_images_import.json'))
+    links = json.load(open('supabase_links_import.json'))
+    notes = json.load(open('supabase_notes_import.json'))
+
+    results = {}
+
+    # Import projects
+    print(f"Importing {len(projects)} projects...")
+    response = supabase.table('projects').insert(projects).execute()
+    if response.error:
+        raise Exception(f"Projects import failed: {response.error}")
+    results['projects'] = len(projects)
+    print(f"  ✓ Imported {len(projects)} projects")
+
+    # Import objectives
+    print(f"Importing {len(objectives)} objectives...")
+    response = supabase.table('project_objectives').insert(objectives).execute()
+    if response.error:
+        raise Exception(f"Objectives import failed: {response.error}")
+    results['objectives'] = len(objectives)
+    print(f"  ✓ Imported {len(objectives)} objectives")
+
+    # Import steps
+    print(f"Importing {len(steps)} steps...")
+    response = supabase.table('project_objective_steps').insert(steps).execute()
+    if response.error:
+        raise Exception(f"Steps import failed: {response.error}")
+    results['steps'] = len(steps)
+    print(f"  ✓ Imported {len(steps)} steps")
+
+    # Import images, links, notes in parallel
+    print(f"Importing {len(images)} images...")
+    response = supabase.table('project_images').insert(images).execute()
+    if response.error:
+        raise Exception(f"Images import failed: {response.error}")
+    results['images'] = len(images)
+    print(f"  ✓ Imported {len(images)} images")
+
+    print(f"Importing {len(links)} links...")
+    response = supabase.table('links').insert(links).execute()
+    if response.error:
+        raise Exception(f"Links import failed: {response.error}")
+    results['links'] = len(links)
+    print(f"  ✓ Imported {len(links)} links")
+
+    print(f"Importing {len(notes)} notes...")
+    response = supabase.table('notes').insert(notes).execute()
+    if response.error:
+        raise Exception(f"Notes import failed: {response.error}")
+    results['notes'] = len(notes)
+    print(f"  ✓ Imported {len(notes)} notes")
+
+    return results
+
+# Run import
+if __name__ == "__main__":
+    results = import_projects_to_supabase()
+    print(f"\n✅ Import complete!")
+    for entity, count in results.items():
+        print(f"   {entity}: {count}")
+```
+
+#### Step 5: Verify Import
+
+**Verification Queries**:
+
+```sql
+-- Count validation
+SELECT
+  (SELECT COUNT(*) FROM projects) AS projects,
+  (SELECT COUNT(*) FROM project_objectives) AS objectives,
+  (SELECT COUNT(*) FROM project_objective_steps) AS steps,
+  (SELECT COUNT(*) FROM project_images) AS images,
+  (SELECT COUNT(*) FROM links WHERE project_id IS NOT NULL) AS links,
+  (SELECT COUNT(*) FROM notes WHERE entity_type = 'project') AS notes;
+
+-- Orphaned records check
+SELECT 'Orphaned Objectives' AS issue, COUNT(*) AS count
+FROM project_objectives o
+LEFT JOIN projects p ON o.project_id = p.id
+WHERE p.id IS NULL
+UNION ALL
+SELECT 'Orphaned Steps', COUNT(*)
+FROM project_objective_steps s
+LEFT JOIN project_objectives o ON s.objective_id = o.id
+WHERE o.id IS NULL
+UNION ALL
+SELECT 'Orphaned Images', COUNT(*)
+FROM project_images i
+LEFT JOIN projects p ON i.project_id = p.id
+WHERE p.id IS NULL
+UNION ALL
+SELECT 'Orphaned Links', COUNT(*)
+FROM links l
+LEFT JOIN projects p ON l.project_id = p.id
+WHERE p.id IS NULL AND l.project_id IS NOT NULL
+UNION ALL
+SELECT 'Orphaned Notes', COUNT(*)
+FROM notes n
+LEFT JOIN projects p ON n.entity_id = p.id
+WHERE p.id IS NULL AND n.entity_type = 'project';
+-- All counts should return 0
+
+-- Business logic validation
+SELECT COUNT(*) AS invalid_fixed_price_subscriptions
+FROM projects
+WHERE is_fixed_price = true AND is_subscription = true;
+-- Should return 0
+
+SELECT COUNT(*) AS missing_subscription_start_dates
+FROM projects
+WHERE is_subscription = true AND start_date IS NULL;
+-- Should return 0
+
+SELECT COUNT(*) AS invalid_date_ranges
+FROM projects
+WHERE start_date IS NOT NULL
+  AND target_end_date IS NOT NULL
+  AND target_end_date < start_date;
+-- Should return 0
+```
+
+**Reconciliation Report**:
+
+```python
+async def generate_reconciliation_report():
+    """Compare FileMaker export vs Supabase import"""
+
+    # Load FileMaker exports
+    fm_projects = json.load(open('filemaker_projects_export.json'))
+    fm_objectives = json.load(open('filemaker_objectives_export.json'))
+    fm_steps = json.load(open('filemaker_steps_export.json'))
+    fm_images = json.load(open('filemaker_images_export.json'))
+    fm_links = json.load(open('filemaker_links_export.json'))
+    fm_notes = json.load(open('filemaker_notes_export.json'))
+
+    # Query Supabase counts
+    sb_counts = supabase.rpc('get_migration_counts').execute()
+
+    report = {
+        "projects": {
+            "filemaker": len(fm_projects),
+            "supabase": sb_counts['projects'],
+            "match": len(fm_projects) == sb_counts['projects']
+        },
+        "objectives": {
+            "filemaker": len(fm_objectives),
+            "supabase": sb_counts['objectives'],
+            "match": len(fm_objectives) == sb_counts['objectives']
+        },
+        "steps": {
+            "filemaker": len(fm_steps),
+            "supabase": sb_counts['steps'],
+            "match": len(fm_steps) == sb_counts['steps']
+        },
+        "images": {
+            "filemaker": len(fm_images),
+            "supabase": sb_counts['images'],
+            "match": len(fm_images) == sb_counts['images']
+        },
+        "links": {
+            "filemaker": len(fm_links),
+            "supabase": sb_counts['links'],
+            "match": len(fm_links) == sb_counts['links']
+        },
+        "notes": {
+            "filemaker": len(fm_notes),
+            "supabase": sb_counts['notes'],
+            "match": len(fm_notes) == sb_counts['notes']
+        }
+    }
+
+    print("\n=== Migration Reconciliation Report ===\n")
+    for entity, counts in report.items():
+        status = "✓" if counts['match'] else "✗"
+        print(f"{status} {entity.capitalize()}:")
+        print(f"   FileMaker: {counts['filemaker']}")
+        print(f"   Supabase:  {counts['supabase']}")
+        if not counts['match']:
+            diff = counts['supabase'] - counts['filemaker']
+            print(f"   Difference: {'+' if diff > 0 else ''}{diff}")
+
+    return report
+```
+
+#### Step 6: Generate Business Logic Entries
+
+**For Fixed-Price Projects**:
+```sql
+-- Generate 50/50 sales entries for fixed-price projects
+-- This should be done via backend API endpoint, not direct SQL
+SELECT generate_fixed_price_sales(id) FROM projects
+WHERE is_fixed_price = true;
+```
+
+**For Subscription Projects**:
+```sql
+-- Generate monthly sales entries for subscriptions
+-- This should be done via backend API endpoint, not direct SQL
+SELECT generate_subscription_sales(id) FROM projects
+WHERE is_subscription = true;
+```
+
+**Verification**:
+```sql
+-- Verify sales entries created
+SELECT
+  p.id,
+  p.name,
+  p.is_fixed_price,
+  p.is_subscription,
+  COUNT(cs.id) AS sales_entries
+FROM projects p
+LEFT JOIN customer_sales cs ON cs.project_id = p.id
+WHERE p.is_fixed_price = true OR p.is_subscription = true
+GROUP BY p.id, p.name, p.is_fixed_price, p.is_subscription
+HAVING COUNT(cs.id) = 0;
+-- Should return 0 rows (all fixed-price/subscription projects have sales entries)
+```
+
+---
+
+## ID Reconciliation Implementation
+
+### recordId vs UUID Handling
+
+**FileMaker Dual ID System**:
+- `__ID`: UUID (text field, globally unique, persistent)
+- `recordId`: Integer (internal FileMaker ID, changes on import/export)
+
+**Key Distinction**:
+- `__ID` is the **TRUE** persistent identifier
+- `recordId` is FileMaker's **internal** record number (NOT portable)
+
+**Migration Strategy**: Use ONLY `__ID`, ignore `recordId`
+
+**Example**:
+```json
+{
+  "fieldData": {
+    "__ID": "a1b2c3d4-e5f6-7890-abcd-1234567890ab",  // ← Use this
+    "projectName": "Website Redesign",
+    // ... other fields
+  },
+  "recordId": "42"  // ← Ignore this (not portable across FM databases)
+}
+```
+
+**Code Implementation**:
+```javascript
+// CORRECT: Use __ID as Supabase primary key
+const project = {
+  id: fmRecord.fieldData.__ID,  // UUID → id
+  name: fmRecord.fieldData.projectName,
+  // ...
+};
+
+// INCORRECT: Do NOT use recordId
+const project = {
+  id: fmRecord.recordId,  // ✗ WRONG - not portable
+  // ...
+};
+```
+
+**Frontend Refactoring Required**:
+
+FileMaker operations in `src/api/projects.js` use `recordId` for updates/deletes:
+```javascript
+// FileMaker mode (OLD - to be removed)
+export async function updateProject(recordId, data) {
+  return handleFileMakerOperation(async () => {
+    return await updateRecordInFileMaker({
+      layout: Layouts.PROJECTS,
+      recordId: recordId,  // Uses FileMaker internal ID
+      fieldData: data
+    });
+  });
+}
+
+// Supabase mode (NEW - uses UUID only)
+export async function updateProject(projectId, data) {
+  return backendAPI.patch(`/api/projects/${projectId}`, data);  // Uses UUID
+}
+```
+
+**Migration Impact**: All frontend code using `recordId` must be updated to use UUID-only approach.
+
+**Code Locations**:
+- `src/api/projects.js` - Update/delete operations use recordId
+- `src/hooks/useProject.js` - State management includes recordId
+- `src/services/projectService.js` - Data transformations may reference recordId
+
+**Cleanup Checklist**:
+- [ ] Remove `recordId` from project state
+- [ ] Update all API calls to use UUID only
+- [ ] Remove FileMaker-specific ID handling
+- [ ] Verify no hardcoded recordId references
+
+### UUID Consistency Across Tables
+
+**Primary Tables**:
+- `projects.id` (UUID from FileMaker `__ID`)
+- `project_objectives.id` (UUID from FileMaker `__ID`)
+- `project_objective_steps.id` (UUID from FileMaker `__ID`)
+- `project_images.id` (UUID from FileMaker `__ID`)
+- `links.id` (UUID from FileMaker `__ID`)
+- `notes.id` (UUID from FileMaker `__ID`)
+
+**Foreign Key Preservation**:
+- `project_objectives.project_id` → `projects.id` (preserved UUID)
+- `project_objective_steps.objective_id` → `project_objectives.id` (preserved UUID)
+- `project_images.project_id` → `projects.id` (preserved UUID)
+- `links.project_id` → `projects.id` (preserved UUID)
+- `notes.entity_id` → `projects.id` (preserved UUID, when `entity_type = 'project'`)
+
+**Validation Query**:
+```sql
+-- Verify all objectives reference valid projects
+SELECT COUNT(*) FROM project_objectives o
+WHERE NOT EXISTS (SELECT 1 FROM projects p WHERE p.id = o.project_id);
+-- Should return 0
+
+-- Verify all steps reference valid objectives
+SELECT COUNT(*) FROM project_objective_steps s
+WHERE NOT EXISTS (SELECT 1 FROM project_objectives o WHERE o.id = s.objective_id);
+-- Should return 0
+
+-- Verify all images reference valid projects
+SELECT COUNT(*) FROM project_images i
+WHERE NOT EXISTS (SELECT 1 FROM projects p WHERE p.id = i.project_id);
+-- Should return 0
+```
+
+---
+
+## Performance Benchmarks
+
+### Target Performance Metrics
+
+| Operation | FileMaker (Current) | Supabase (Target) | Improvement |
+|-----------|-------------------|------------------|-------------|
+| List projects (50) | 300-600ms | < 250ms | 2x faster |
+| Get project detail (with objectives/steps) | 500-1200ms | < 400ms | 2-3x faster |
+| Create project | 200-400ms | < 200ms | Same or faster |
+| Update project | 300-700ms | < 250ms | 2x faster |
+| Delete project (cascade) | 400-900ms | < 300ms | 2-3x faster |
+| Add objective | 150-300ms | < 150ms | 2x faster |
+| Reorder objectives | 200-500ms | < 200ms | 2x faster |
+| Toggle step completion | 100-250ms | < 100ms | 2x faster |
+
+**Rationale for Targets**:
+- Supabase queries use indexed UUIDs (fast primary key lookups)
+- Backend API reduces network round-trips (batch operations)
+- Proper indexing on foreign keys and frequently queried fields
+- No FileMaker Data API overhead
+
+### Database Indexes Required
+
+**Primary Indexes** (verify in backend schema):
+
+```sql
+-- Projects table
+CREATE INDEX idx_projects_customer_id ON projects(customer_id);
+CREATE INDEX idx_projects_team_id ON projects(team_id);
+CREATE INDEX idx_projects_status ON projects(status);
+CREATE INDEX idx_projects_organization_id ON projects(organization_id);
+CREATE INDEX idx_projects_created_at ON projects(created_at DESC);
+CREATE INDEX idx_projects_is_fixed_price ON projects(is_fixed_price) WHERE is_fixed_price = true;
+CREATE INDEX idx_projects_is_subscription ON projects(is_subscription) WHERE is_subscription = true;
+
+-- Project Objectives
+CREATE INDEX idx_objectives_project_id ON project_objectives(project_id);
+CREATE INDEX idx_objectives_order ON project_objectives(project_id, order_num);
+CREATE INDEX idx_objectives_completed ON project_objectives(completed);
+
+-- Objective Steps
+CREATE INDEX idx_steps_objective_id ON project_objective_steps(objective_id);
+CREATE INDEX idx_steps_order ON project_objective_steps(objective_id, order_num);
+CREATE INDEX idx_steps_completed ON project_objective_steps(completed);
+
+-- Project Images
+CREATE INDEX idx_images_project_id ON project_images(project_id);
+
+-- Links (existing table)
+CREATE INDEX idx_links_project_id ON links(project_id) WHERE project_id IS NOT NULL;
+
+-- Notes (polymorphic)
+CREATE INDEX idx_notes_entity ON notes(entity_type, entity_id);
+CREATE INDEX idx_notes_project ON notes(entity_id) WHERE entity_type = 'project';
+```
+
+### Performance Testing Plan
+
+**Load Testing Script** (`scripts/load-test-projects.js`):
+
+```javascript
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export let options = {
+  stages: [
+    { duration: '2m', target: 10 },  // Ramp up
+    { duration: '5m', target: 10 },  // Stay at 10 users
+    { duration: '2m', target: 20 },  // Ramp up
+    { duration: '5m', target: 20 },  // Stay at 20 users
+    { duration: '2m', target: 0 },   // Ramp down
+  ],
+  thresholds: {
+    'http_req_duration{operation:list}': ['p95<250'],
+    'http_req_duration{operation:detail}': ['p95<400'],
+    'http_req_duration{operation:create}': ['p95<200'],
+  },
+};
+
+export default function () {
+  const baseUrl = 'https://api.claritybusinesssolutions.ca';
+  const headers = {
+    'Authorization': generateAuthHeader(),
+    'Content-Type': 'application/json',
+  };
+
+  // List projects
+  let listResponse = http.get(`${baseUrl}/api/projects?limit=50`, {
+    headers,
+    tags: { operation: 'list' },
+  });
+  check(listResponse, {
+    'list status 200': (r) => r.status === 200,
+    'list response < 250ms': (r) => r.timings.duration < 250,
+  });
+
+  // Get project detail (with objectives and steps)
+  if (listResponse.json().data.length > 0) {
+    const projectId = listResponse.json().data[0].id;
+    let detailResponse = http.get(
+      `${baseUrl}/api/projects/${projectId}?include_objectives=true&include_steps=true`,
+      {
+        headers,
+        tags: { operation: 'detail' },
+      }
+    );
+    check(detailResponse, {
+      'detail status 200': (r) => r.status === 200,
+      'detail response < 400ms': (r) => r.timings.duration < 400,
+    });
+  }
+
+  sleep(1);
+}
+```
+
+**Run Load Test**:
+```bash
+k6 run scripts/load-test-projects.js
+```
+
+---
+
+## Risk Assessment & Mitigation
+
+### Risk Matrix
+
+| Risk ID | Risk Description | Likelihood | Impact | Severity | Mitigation Strategy | Owner |
+|---------|-----------------|------------|--------|----------|-------------------|-------|
+| R001 | Data loss during migration | Low | Critical | **High** | Test on staging first, validate counts, keep FM backup for 90 days | Backend |
+| R002 | Business logic bugs (fixed-price/subscription) | Medium | Critical | **High** | Comprehensive testing, compare FM vs SB sales entries, unit tests | Backend |
+| R003 | UUID conflicts/collisions | Very Low | High | Low | Pre-migration validation, check for duplicates | Backend |
+| R004 | Performance degradation | Medium | High | **High** | Load testing, query optimization, proper indexes | Backend |
+| R005 | Missing Supabase schema columns | High | High | **High** | Backend change request MUST include all missing columns | Backend |
+| R006 | User disruption during cutover | Low | High | **Medium** | Gradual rollout, feature flag for instant rollback | Product |
+| R007 | Foreign key integrity violations | Low | Critical | **High** | Validate foreign keys pre-migration, test cascade deletes | Backend |
+| R008 | Orphaned records | Medium | Medium | **Medium** | Detection scripts, skip or create placeholders | Backend |
+| R009 | RLS policy bypass | Very Low | Critical | **High** | Test RLS with multiple orgs, verify cross-org isolation | Backend |
+| R010 | Related entities out of sync | Medium | High | **High** | Sequential import order, validate FK chains | Backend |
+| R011 | Order number loss (objectives/steps) | Low | Medium | Low | Validate order preservation, test frontend sorting | Frontend |
+| R012 | Notes entity_type resolution failure | Medium | Medium | **Medium** | Cross-reference with entities, context-based detection | Backend |
+
+### High-Priority Risk Mitigation
+
+#### R001: Data Loss During Migration
+
+**Mitigation Steps**:
+1. ✅ Test migration script on staging with full dataset clone
+2. ✅ Validate record counts pre/post migration (must match exactly)
+3. ✅ Keep FileMaker backup for 90 days (daily snapshots)
+4. ✅ Run reconciliation report and spot-checks before declaring success
+5. ✅ Implement rollback procedure (tested in staging)
+
+**Validation**:
+- Run migration on staging 3 times successfully
+- Verify 100% data integrity in staging
+- Document rollback procedure with step-by-step commands
+
+#### R002: Business Logic Bugs (Fixed-Price/Subscription)
+
+**Mitigation Steps**:
+1. ✅ Thoroughly test fixed-price 50/50 split sales generation
+2. ✅ Thoroughly test subscription monthly sales generation
+3. ✅ Compare FileMaker and Supabase sales entries for accuracy
+4. ✅ Unit test all business logic functions
+5. ✅ Test edge cases (no dates, future dates, value changes)
+6. ✅ Verify idempotency (no duplicate sales entries)
+
+**Validation**:
+- Create test projects with known value/date combinations
+- Manually verify sales entries match expected calculations
+- Test historical subscriptions (past end dates)
+- Test perpetual subscriptions (no end date)
+- Verify time records marked as non-billable
+
+#### R005: Missing Supabase Schema Columns
+
+**Mitigation Steps**:
+1. ✅ Create backend change request with ALL missing columns
+2. ✅ Document required columns: `team_id`, `is_fixed_price`, `is_subscription`, `time_estimate`, `organization_id`
+3. ✅ Document required tables: `project_objectives`, `project_objective_steps`, `project_images`, `notes`
+4. ✅ Get backend team approval BEFORE starting migration
+5. ✅ Verify schema deployed to staging before data import
+
+**Backend Change Request Required**: Yes (see Migration Prerequisites)
+
+#### R010: Related Entities Out of Sync
+
+**Mitigation Steps**:
+1. ✅ Import in strict dependency order (projects → objectives → steps)
+2. ✅ Validate foreign keys before each import batch
+3. ✅ Test cascade deletes thoroughly
+4. ✅ Run orphaned record detection after import
+5. ✅ Verify frontend displays nested data correctly
+
+**Validation**:
+- Delete test project → verify objectives/steps also deleted
+- Query for orphaned records (should be 0)
+- Test frontend project detail page with 10+ objectives
+
+---
+
+## Post-Migration Monitoring
+
+### Metrics to Track
+
+**Application Metrics**:
+
+| Metric | Target | Alert Threshold | Tool |
+|--------|--------|----------------|------|
+| Project list latency (p95) | < 250ms | > 500ms | Backend monitoring |
+| Project detail latency (p95) | < 400ms | > 800ms | Backend monitoring |
+| Create project latency (p95) | < 200ms | > 500ms | Backend monitoring |
+| Update project latency (p95) | < 250ms | > 600ms | Backend monitoring |
+| Delete project latency (p95) | < 300ms | > 700ms | Backend monitoring |
+| Error rate (all operations) | < 0.5% | > 1% | Backend monitoring |
+| Throughput (req/s) | > 50 | < 20 | Backend monitoring |
+
+**Data Metrics**:
+
+| Metric | Target | Alert Threshold | Tool |
+|--------|--------|----------------|------|
+| Project count (daily) | Stable ± 5% | > 10% change | Automated script |
+| Orphaned objectives | 0 | > 0 | Daily reconciliation |
+| Orphaned steps | 0 | > 0 | Daily reconciliation |
+| Orphaned images | 0 | > 0 | Daily reconciliation |
+| Missing sales entries (fixed-price) | 0 | > 0 | Daily reconciliation |
+| Missing sales entries (subscription) | 0 | > 0 | Daily reconciliation |
+
+**User Metrics**:
+
+| Metric | Target | Alert Threshold | Tool |
+|--------|--------|----------------|------|
+| User-reported bugs | < 2/week | > 5/week | Support tickets |
+| User satisfaction | > 4/5 | < 3/5 | User survey |
+| Project operation success rate | > 99% | < 95% | Backend logs |
+
+### Monitoring Dashboard
+
+**Create Grafana/Supabase Dashboard with Panels**:
+
+**Panel 1: Project Operations Latency**
+- Line chart: p50, p95, p99 latency over time
+- Breakdown by operation type (list, detail, create, update, delete)
+
+**Panel 2: Error Rate**
+- Line chart: error rate over time
+- Breakdown by error type (4xx, 5xx, validation, business logic)
+
+**Panel 3: Throughput**
+- Line chart: requests per second
+- Breakdown by operation type
+
+**Panel 4: Data Integrity**
+- Gauge: Count of orphaned records (should be 0)
+- Table: Recent orphaned record detections
+
+**Panel 5: Business Logic Health**
+- Gauge: Fixed-price projects with missing sales entries (should be 0)
+- Gauge: Subscription projects with missing sales entries (should be 0)
+
+### Alerting Rules
+
+**Critical Alerts** (immediate action required):
+
+```yaml
+- name: project_api_error_rate_high
+  condition: error_rate > 5%
+  window: 5 minutes
+  action: Slack @engineering, PagerDuty
+
+- name: project_api_latency_critical
+  condition: p95_latency > 2000ms
+  window: 5 minutes
+  action: Slack @engineering
+
+- name: orphaned_records_detected
+  condition: orphaned_count > 0
+  window: 1 hour
+  action: Slack @engineering, Email @product
+
+- name: business_logic_failure
+  condition: missing_sales_entries > 0
+  window: 1 day
+  action: Slack @engineering, Email @product
+```
+
+**Warning Alerts** (investigate within 24 hours):
+
+```yaml
+- name: project_api_latency_degraded
+  condition: p95_latency > 500ms
+  window: 15 minutes
+  action: Slack @engineering
+
+- name: project_count_unusual_change
+  condition: abs(daily_change) > 10%
+  window: 1 day
+  action: Slack @engineering
+```
+
+---
+
+## Success Criteria
+
+### Migration Success Checklist
+
+**Pre-Migration**:
+- [ ] Backend schema changes deployed and verified
+- [ ] RLS policies implemented and tested
+- [ ] All backend API endpoints implemented and passing tests
+- [ ] Business logic triggers implemented and tested
+- [ ] Migration script tested successfully on staging
+- [ ] Pre-migration validation passed (no errors)
+- [ ] Customers and teams migrations completed
+
+**Migration Execution**:
+- [ ] FileMaker data exported successfully (6 entity types)
+- [ ] Data transformation completed without errors
+- [ ] Validation passed (UUIDs, FKs, business rules)
+- [ ] Data imported to Supabase (staging and production)
+- [ ] Post-migration reconciliation shows 100% data integrity
+- [ ] All foreign key constraints satisfied
+- [ ] No orphaned records detected (objectives, steps, images, links, notes)
+- [ ] Business logic executed: fixed-price sales entries generated
+- [ ] Business logic executed: subscription sales entries generated
+
+**Post-Migration**:
+- [ ] Feature flag enabled for 100% of users
+- [ ] Error rate < 0.5% for all project operations
+- [ ] Performance targets met (p95 latency < 400ms for detail)
+- [ ] No orphaned records detected (verified daily)
+- [ ] Business logic functioning correctly (sales entries accurate)
+- [ ] No critical user-reported bugs
+- [ ] RLS policies enforced (verified with cross-org tests)
+- [ ] Rollback procedure tested and documented
+
+**Cleanup**:
+- [ ] FileMaker code removed from codebase
+- [ ] Documentation updated
+- [ ] FileMaker data archived (90-day retention)
+- [ ] Build succeeds with no errors or warnings
+- [ ] Post-migration review completed
+
+### Quantitative Success Metrics
+
+| Metric | Target | Actual | Status |
+|--------|--------|--------|--------|
+| Data migration completeness | 100% | ___ | ⏳ |
+| Data accuracy (spot-check) | 100% | ___ | ⏳ |
+| Project operations success rate | > 99% | ___ | ⏳ |
+| Error rate | < 0.5% | ___ | ⏳ |
+| p95 latency (list) | < 250ms | ___ | ⏳ |
+| p95 latency (detail) | < 400ms | ___ | ⏳ |
+| Orphaned records | 0 | ___ | ⏳ |
+| Business logic accuracy | 100% | ___ | ⏳ |
+| User satisfaction | > 4/5 | ___ | ⏳ |
+| Rollback time (if needed) | < 15 minutes | ___ | ⏳ |
+
+**Sign-off Criteria**:
+- All targets met for 1 week consecutively
+- No critical bugs or data loss
+- Team consensus on migration success
+
+---
+
+## Team Responsibilities
+
+### Backend Team
+
+**Responsibilities**:
+- Implement database schema changes (missing columns and tables)
+- Implement RLS policies for all 7 project-related tables
+- Implement backend API endpoints (24 endpoints per api-contracts.md)
+- Implement business logic triggers (fixed-price/subscription sales generation)
+- Write and test migration scripts (export, transform, import)
+- Test on staging environment
+- Monitor backend performance and errors
+- Respond to backend alerts
+
+**Key Contacts**:
+- Backend Lead: [Name]
+- Database Admin: [Name]
+
+**Communication**:
+- Daily standups during migration period (Weeks 1-8)
+- Slack channel: #projects-migration
+
+### Frontend Team
+
+**Responsibilities**:
+- Implement feature flag routing (VITE_USE_SUPABASE_PROJECTS)
+- Update API layer to call backend endpoints
+- Remove FileMaker-specific code (recordId handling)
+- Update state management for Supabase data structures
+- Test all user workflows (projects, objectives, steps, images, links, notes)
+- Monitor frontend errors
+- Respond to frontend alerts
+
+**Key Contacts**:
+- Frontend Lead: [Name]
+
+**Communication**:
+- Daily standups during migration period (Weeks 4-8)
+- Slack channel: #projects-migration
+
+### Product Team
+
+**Responsibilities**:
+- Define success criteria
+- Coordinate rollout schedule
+- Collect user feedback
+- Triage user-reported issues
+- Make go/no-go decisions for gradual rollout phases
+- Sign off on migration completion
+
+**Key Contacts**:
+- Product Manager: [Name]
+
+**Communication**:
+- Weekly sync meetings
+- Slack channel: #projects-migration
+
+### DevOps Team
+
+**Responsibilities**:
+- Set up monitoring dashboards (Grafana/Supabase)
+- Configure alerting rules (critical and warning)
+- Manage environment variables (VITE_USE_SUPABASE_PROJECTS)
+- Coordinate deployments (backend, frontend)
+- Provide rollback support (if needed)
+
+**Key Contacts**:
+- DevOps Lead: [Name]
+
+**Communication**:
+- On-demand support during migration
+- Slack channel: #devops
+
+---
+
+## Appendix: Related Documentation
+
+### Migration Analysis Documents
+
+- [README.md](./README.md) - Projects feature overview and user flows
+- [Current Implementation](./current-implementation.md) - Frontend call graph and FileMaker integration
+- [Data Model Mapping](./data-model-mapping.md) - Field-by-field FileMaker to Supabase mapping (7 layouts)
+- [API Contracts](./api-contracts.md) - Backend API specifications (24 endpoints)
+- [Authorization](./authorization.md) - RLS policies and permissions (7 tables)
+- [Acceptance Criteria](./acceptance-criteria.md) - Test cases (180+ tests)
+- [Workflows](./workflows.md) - Mermaid diagrams (5 workflows)
+
+### Project Documentation
+
+- [CLAUDE.md](../../CLAUDE.md) - Project overview and Backend Change Protocol
+- [README.md](../../README.md) - General project information
+- [BACKEND_INTEGRATION_GUIDE.md](../../BACKEND_INTEGRATION_GUIDE.md) - Backend API integration patterns
+
+### Code References
+
+**Frontend Implementation**:
+- `src/hooks/useProject.js` (582 lines) - Project CRUD operations hook
+- `src/services/projectService.js` (596 lines) - Business logic and data processing
+- `src/api/projects.js` - FileMaker API layer (to be replaced)
+- `src/components/projects/ProjectDetails.jsx` - Main project UI
+- `src/components/projects/ProjectObjectivesTab.jsx` - Objectives management
+- `src/components/projects/ProjectLinksTab.jsx` - Links management
+- `src/components/projects/ProjectImagesTab.jsx` - Images management
+- `src/components/projects/ProjectNotesTab.jsx` - Notes management
+
+**Business Logic**:
+- `src/services/projectService.js:508-596` - processProjectValue (fixed-price and subscription)
+- `src/hooks/useProject.js:186-264` - handleCreateProject with pricing logic
+- `src/services/billableHoursService.js:288-309` - Time record calculations
+
+---
+
+## Document Change Log
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2026-01-10 | Claude Agent | Initial comprehensive migration plan document with Executive Summary, Data Backfill Strategy, Performance Benchmarks, Risk Assessment, Post-Migration Monitoring, and Team Responsibilities |
+
+---
+
+**Document Status**: ✅ Complete and ready for review
+
+**Next Steps**:
+1. Review migration plan with backend team
+2. Create backend change request document (BACKEND_CHANGE_REQUEST_003_PROJECTS_MIGRATION.md)
+3. Get backend team approval for schema changes and API endpoints
+4. Begin Phase 1: Backend Preparation
