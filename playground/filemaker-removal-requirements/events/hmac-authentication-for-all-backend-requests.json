@@ -1,0 +1,76 @@
+{
+  "scenarioId": "SCN-1768140949526-i5gi",
+  "name": "HMAC authentication for all backend requests",
+  "description": "Verify all backend API requests include valid HMAC authorization",
+  "inputs": [
+    {
+      "name": "window.FileMaker",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "window.FMGofer",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "environmentType",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "authMethod",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "fetchDataFromFileMaker parameters",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "axios request config",
+      "type": "object",
+      "value": null
+    }
+  ],
+  "expectedOutputs": [
+    {
+      "name": "environment detection result",
+      "type": "object",
+      "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+    },
+    {
+      "name": "backend API response",
+      "type": "object",
+      "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+    },
+    {
+      "name": "authentication state",
+      "type": "object",
+      "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+    },
+    {
+      "name": "HMAC authorization header",
+      "type": "string",
+      "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+    },
+    {
+      "name": "data service routing decision",
+      "type": "string",
+      "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+    },
+    {
+      "name": "FileMaker integration removal status",
+      "type": "boolean",
+      "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+    }
+  ],
+  "steps": [
+    "Intercept axios requests to backend API",
+    "Verify Authorization header format matches 'Bearer {signature}.{timestamp}'",
+    "Confirm signature is valid HMAC-SHA256",
+    "Test that requests without HMAC are rejected"
+  ],
+  "expectedOutcome": "All backend requests include valid HMAC auth and unauthorized requests fail"
+}

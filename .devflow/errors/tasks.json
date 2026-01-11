@@ -1,0 +1,49 @@
+{
+  "errors": [
+    {
+      "id": "error-1768140977259",
+      "title": "Backend preflight failed: filemaker-removal-requirements",
+      "description": "Backend preflight failed for feature \"filemaker-removal-requirements\".\n\nnode:internal/modules/cjs/loader:1423\n  throw err;\n  ^\n\nError: Cannot find module './typescript.ts'\nRequire stack:\n- /Users/marcusswift/Applications/devFlow/dist-electron/scripts/preflight/runtimes/imaginaryUncacheableRequireResolveScript\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)\u001b[39m\n\u001b[90m    at require.resolve (node:internal/modules/helpers:163:19)\u001b[39m\n    at requireResolveNonCached (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:549:16)\n    at getProjectSearchDir (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:519:40)\n    at phase3 (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:267:27)\n    at bootstrap (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:47:30)\n    at main (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:33:12)\n    at Object.<anonymous> (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:579:5)\n\u001b[90m    at Module._compile (node:internal/modules/cjs/loader:1760:14)\u001b[39m\n\u001b[90m    at Module._extensions..js (node:internal/modules/cjs/loader:1892:10)\u001b[39m {\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\n  requireStack: [\n    \u001b[32m'/Users/marcusswift/Applications/devFlow/dist-electron/scripts/preflight/runtimes/imaginaryUncacheableRequireResolveScript'\u001b[39m\n  ]\n}\n\nNode.js v25.2.1\n\n**To reproduce:** Run the following command from the project root:\n```bash\ncd playground/filemaker-removal-requirements && node playground.js __preflight__\n```",
+      "errorType": "test",
+      "status": "resolved",
+      "priority": "high",
+      "error_message": "Backend preflight failed",
+      "reproduction_steps": [
+        "Run: cd playground/filemaker-removal-requirements && node playground.js __preflight__",
+        "Review failed checks and remediation attempts above",
+        "Fix the underlying issues (server not running, code not deployed, etc.)"
+      ],
+      "affected_files": [
+        "playground/filemaker-removal-requirements/playground.js"
+      ],
+      "createdAt": "2026-01-11T14:16:17.259Z",
+      "updatedAt": "2026-01-11T14:28:30.000Z",
+      "executionPid": 56312,
+      "sessionId": "4f6ac539-554d-4d95-b721-79ab20e2c5bb"
+    },
+    {
+      "id": "error-1768141377866",
+      "title": "Backend preflight failed: filemaker-removal-requirements",
+      "description": "Backend preflight failed for feature \"filemaker-removal-requirements\".\n\nnode:internal/modules/cjs/loader:1423\n  throw err;\n  ^\n\nError: Cannot find module './typescript.ts'\nRequire stack:\n- /Users/marcusswift/Applications/devFlow/dist-electron/scripts/preflight/runtimes/imaginaryUncacheableRequireResolveScript\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)\u001b[39m\n\u001b[90m    at require.resolve (node:internal/modules/helpers:163:19)\u001b[39m\n    at requireResolveNonCached (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:549:16)\n    at getProjectSearchDir (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:519:40)\n    at phase3 (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:267:27)\n    at bootstrap (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:47:30)\n    at main (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:33:12)\n    at Object.<anonymous> (/Users/marcusswift/.npm/_npx/1bf7c3c15bf47d04/node_modules/\u001b[4mts-node\u001b[24m/dist/bin.js:579:5)\n\u001b[90m    at Module._compile (node:internal/modules/cjs/loader:1760:14)\u001b[39m\n\u001b[90m    at Module._extensions..js (node:internal/modules/cjs/loader:1892:10)\u001b[39m {\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\n  requireStack: [\n    \u001b[32m'/Users/marcusswift/Applications/devFlow/dist-electron/scripts/preflight/runtimes/imaginaryUncacheableRequireResolveScript'\u001b[39m\n  ]\n}\n\nNode.js v25.2.1\n\n**To reproduce:** Run the following command from the project root:\n```bash\ncd playground/filemaker-removal-requirements && node playground.js __preflight__\n```",
+      "errorType": "test",
+      "status": "resolved",
+      "priority": "high",
+      "error_message": "Backend preflight failed",
+      "reproduction_steps": [
+        "Run: cd playground/filemaker-removal-requirements && node playground.js __preflight__",
+        "Review failed checks and remediation attempts above",
+        "Fix the underlying issues (server not running, code not deployed, etc.)"
+      ],
+      "affected_files": [
+        "playground/filemaker-removal-requirements/playground.js"
+      ],
+      "createdAt": "2026-01-11T14:22:57.866Z",
+      "updatedAt": "2026-01-11T14:29:45.000Z"
+    }
+  ],
+  "settings": {
+    "auto_start_on_create": false,
+    "max_second_pass_solutions": 10,
+    "auto_capture_screenshots": true
+  }
+}

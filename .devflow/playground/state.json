@@ -1,0 +1,1144 @@
+{
+  "featureStates": {
+    "filemaker-removal-requirements": {
+      "featureSlug": "filemaker-removal-requirements",
+      "featureName": "FileMaker Removal Requirements",
+      "setupStatus": "ready",
+      "hasTestSpec": true,
+      "hasHarness": true,
+      "scenarios": [
+        {
+          "id": "SCN-1768140949525-ffp3",
+          "name": "Environment detection without FileMaker",
+          "slug": "environment-detection-without-filemaker",
+          "description": "Verify app correctly detects web app environment when FileMaker objects are absent",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/environment-detection-without-filemaker.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/environment-detection-without-filemaker/",
+          "createdAt": "2026-01-11T14:15:49.525Z",
+          "updatedAt": "2026-01-11T14:15:49.525Z"
+        },
+        {
+          "id": "SCN-1768140949525-n2v6",
+          "name": "Backend API routing for customer operations",
+          "slug": "backend-api-routing-for-customer-operations",
+          "description": "Verify customer CRUD operations route through backend API instead of FileMaker",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/backend-api-routing-for-customer-operations.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/backend-api-routing-for-customer-operations/",
+          "createdAt": "2026-01-11T14:15:49.525Z",
+          "updatedAt": "2026-01-11T14:15:49.525Z"
+        },
+        {
+          "id": "SCN-1768140949525-62h8",
+          "name": "Supabase-only authentication flow",
+          "slug": "supabase-only-authentication-flow",
+          "description": "Verify authentication uses only Supabase without FileMaker auto-detection",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/supabase-only-authentication-flow.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/supabase-only-authentication-flow/",
+          "createdAt": "2026-01-11T14:15:49.525Z",
+          "updatedAt": "2026-01-11T14:15:49.525Z"
+        },
+        {
+          "id": "SCN-1768140949525-nw5z",
+          "name": "Remove FileMaker bridge files",
+          "slug": "remove-filemaker-bridge-files",
+          "description": "Verify all FileMaker bridge files are removed from codebase",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/remove-filemaker-bridge-files.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/remove-filemaker-bridge-files/",
+          "createdAt": "2026-01-11T14:15:49.525Z",
+          "updatedAt": "2026-01-11T14:15:49.525Z"
+        },
+        {
+          "id": "SCN-1768140949525-1pgz",
+          "name": "Remove environment detection logic",
+          "slug": "remove-environment-detection-logic",
+          "description": "Verify environment detection and routing logic is simplified to single path",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/remove-environment-detection-logic.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/remove-environment-detection-logic/",
+          "createdAt": "2026-01-11T14:15:49.525Z",
+          "updatedAt": "2026-01-11T14:15:49.525Z"
+        },
+        {
+          "id": "SCN-1768140949525-6usi",
+          "name": "Backend API compatibility",
+          "slug": "backend-api-compatibility",
+          "description": "Verify backend API supports all operations previously done via FileMaker",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/backend-api-compatibility.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/backend-api-compatibility/",
+          "createdAt": "2026-01-11T14:15:49.526Z",
+          "updatedAt": "2026-01-11T14:15:49.526Z"
+        },
+        {
+          "id": "SCN-1768140949526-b67b",
+          "name": "Project builds without FileMaker dependencies",
+          "slug": "project-builds-without-filemaker-dependencies",
+          "description": "Verify project builds successfully after removing FileMaker code",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/project-builds-without-filemaker-dependencies.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/project-builds-without-filemaker-dependencies/",
+          "createdAt": "2026-01-11T14:15:49.526Z",
+          "updatedAt": "2026-01-11T14:15:49.526Z"
+        },
+        {
+          "id": "SCN-1768140949526-do70",
+          "name": "Acceptance criteria verification script",
+          "slug": "acceptance-criteria-verification-script",
+          "description": "Run automated verification script to check all acceptance criteria",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/acceptance-criteria-verification-script.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/acceptance-criteria-verification-script/",
+          "createdAt": "2026-01-11T14:15:49.526Z",
+          "updatedAt": "2026-01-11T14:15:49.526Z"
+        },
+        {
+          "id": "SCN-1768140949526-i5gi",
+          "name": "HMAC authentication for all backend requests",
+          "slug": "hmac-authentication-for-all-backend-requests",
+          "description": "Verify all backend API requests include valid HMAC authorization",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/hmac-authentication-for-all-backend-requests.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/hmac-authentication-for-all-backend-requests/",
+          "createdAt": "2026-01-11T14:15:49.526Z",
+          "updatedAt": "2026-01-11T14:15:49.526Z"
+        },
+        {
+          "id": "SCN-1768140949526-yto3",
+          "name": "Remove FileMaker config and constants",
+          "slug": "remove-filemaker-config-and-constants",
+          "description": "Verify FileMaker configuration and constants are removed",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/remove-filemaker-config-and-constants.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/remove-filemaker-config-and-constants/",
+          "createdAt": "2026-01-11T14:15:49.526Z",
+          "updatedAt": "2026-01-11T14:15:49.526Z"
+        },
+        {
+          "id": "SCN-1768140949526-e21s",
+          "name": "UI components work without FileMaker context",
+          "slug": "ui-components-work-without-filemaker-context",
+          "description": "Verify UI components render and function correctly without FileMaker environment",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/ui-components-work-without-filemaker-context.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/ui-components-work-without-filemaker-context/",
+          "createdAt": "2026-01-11T14:15:49.526Z",
+          "updatedAt": "2026-01-11T14:15:49.526Z"
+        },
+        {
+          "id": "SCN-1768140949526-t4ax",
+          "name": "Rollback procedure validation",
+          "slug": "rollback-procedure-validation",
+          "description": "Verify rollback procedure can restore FileMaker functionality if needed",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/rollback-procedure-validation.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/rollback-procedure-validation/",
+          "createdAt": "2026-01-11T14:15:49.527Z",
+          "updatedAt": "2026-01-11T14:15:49.527Z"
+        },
+        {
+          "id": "SCN-1768140949527-y59m",
+          "name": "Zero FileMaker references in codebase",
+          "slug": "zero-filemaker-references-in-codebase",
+          "description": "Verify comprehensive removal of all FileMaker references from source code",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/zero-filemaker-references-in-codebase.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/zero-filemaker-references-in-codebase/",
+          "createdAt": "2026-01-11T14:15:49.527Z",
+          "updatedAt": "2026-01-11T14:15:49.527Z"
+        },
+        {
+          "id": "SCN-1768140949527-c3jm",
+          "name": "Backend change requests implemented",
+          "slug": "backend-change-requests-implemented",
+          "description": "Verify all backend change requests (BCR-001 through BCR-005) are implemented",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/backend-change-requests-implemented.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/backend-change-requests-implemented/",
+          "createdAt": "2026-01-11T14:15:49.527Z",
+          "updatedAt": "2026-01-11T14:15:49.527Z"
+        },
+        {
+          "id": "SCN-1768140949527-n3g4",
+          "name": "Monitoring and alerting active",
+          "slug": "monitoring-and-alerting-active",
+          "description": "Verify monitoring captures metrics and alerts fire correctly post-deployment",
+          "inputs": [
+            {
+              "name": "window.FileMaker",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "window.FMGofer",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "environmentType",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "authMethod",
+              "type": "string",
+              "value": null
+            },
+            {
+              "name": "fetchDataFromFileMaker parameters",
+              "type": "object",
+              "value": null
+            },
+            {
+              "name": "axios request config",
+              "type": "object",
+              "value": null
+            }
+          ],
+          "expectedOutputs": [
+            {
+              "name": "environment detection result",
+              "type": "object",
+              "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+            },
+            {
+              "name": "backend API response",
+              "type": "object",
+              "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+            },
+            {
+              "name": "authentication state",
+              "type": "object",
+              "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+            },
+            {
+              "name": "HMAC authorization header",
+              "type": "string",
+              "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+            },
+            {
+              "name": "data service routing decision",
+              "type": "string",
+              "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+            },
+            {
+              "name": "FileMaker integration removal status",
+              "type": "boolean",
+              "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+            }
+          ],
+          "eventFile": "playground/filemaker-removal-requirements/events/monitoring-and-alerting-active.json",
+          "status": "pending",
+          "resultPath": "playground/filemaker-removal-requirements/results/monitoring-and-alerting-active/",
+          "createdAt": "2026-01-11T14:15:49.527Z",
+          "updatedAt": "2026-01-11T14:15:49.527Z"
+        }
+      ],
+      "createdAt": "2026-01-11T12:16:12.862Z",
+      "updatedAt": "2026-01-11T14:22:57.131Z",
+      "currentSetupStep": "Ready for testing",
+      "scriptPath": "playground/filemaker-removal-requirements/playground.js",
+      "scriptLanguage": "js"
+    }
+  },
+  "updatedAt": "2026-01-11T14:22:57.131Z"
+}

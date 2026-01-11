@@ -1,0 +1,5 @@
+{"type":"start","timestamp":"2026-01-11T14:22:59.524Z","message":"Scenario execution started","data":{}}
+{"type":"info","timestamp":"2026-01-11T14:22:59.526Z","message":"Checking requirements...","data":{}}
+{"type":"output","timestamp":"2026-01-11T14:22:59.526Z","message":"Output: requirements_check","data":{"name":"requirements_check","value":{"projectRoot":true,"packageJson":true,"srcDirectory":true,"envFile":true,"nodeModules":true,"buildScript":true}}}
+{"type":"info","timestamp":"2026-01-11T14:22:59.526Z","message":"All requirements satisfied","data":{}}
+{"type":"end","timestamp":"2026-01-11T14:22:59.526Z","message":"Scenario passed","data":{"error":null},"success":true}

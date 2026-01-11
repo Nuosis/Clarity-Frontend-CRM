@@ -1,0 +1,76 @@
+{
+  "scenarioId": "SCN-1768140949526-yto3",
+  "name": "Remove FileMaker config and constants",
+  "description": "Verify FileMaker configuration and constants are removed",
+  "inputs": [
+    {
+      "name": "window.FileMaker",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "window.FMGofer",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "environmentType",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "authMethod",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "fetchDataFromFileMaker parameters",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "axios request config",
+      "type": "object",
+      "value": null
+    }
+  ],
+  "expectedOutputs": [
+    {
+      "name": "environment detection result",
+      "type": "object",
+      "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+    },
+    {
+      "name": "backend API response",
+      "type": "object",
+      "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+    },
+    {
+      "name": "authentication state",
+      "type": "object",
+      "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+    },
+    {
+      "name": "HMAC authorization header",
+      "type": "string",
+      "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+    },
+    {
+      "name": "data service routing decision",
+      "type": "string",
+      "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+    },
+    {
+      "name": "FileMaker integration removal status",
+      "type": "boolean",
+      "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+    }
+  ],
+  "steps": [
+    "Check src/config.js for FileMaker URL/database config removal",
+    "Verify VITE_FM_* environment variables are not referenced",
+    "Confirm FM_LAYOUTS constants are removed",
+    "Check that FM_ACTIONS constants are removed"
+  ],
+  "expectedOutcome": "All FileMaker configuration, environment variables, and constants are removed"
+}

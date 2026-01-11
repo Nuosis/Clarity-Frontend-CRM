@@ -1,0 +1,76 @@
+{
+  "scenarioId": "SCN-1768140949525-1pgz",
+  "name": "Remove environment detection logic",
+  "description": "Verify environment detection and routing logic is simplified to single path",
+  "inputs": [
+    {
+      "name": "window.FileMaker",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "window.FMGofer",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "environmentType",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "authMethod",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "fetchDataFromFileMaker parameters",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "axios request config",
+      "type": "object",
+      "value": null
+    }
+  ],
+  "expectedOutputs": [
+    {
+      "name": "environment detection result",
+      "type": "object",
+      "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+    },
+    {
+      "name": "backend API response",
+      "type": "object",
+      "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+    },
+    {
+      "name": "authentication state",
+      "type": "object",
+      "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+    },
+    {
+      "name": "HMAC authorization header",
+      "type": "string",
+      "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+    },
+    {
+      "name": "data service routing decision",
+      "type": "string",
+      "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+    },
+    {
+      "name": "FileMaker integration removal status",
+      "type": "boolean",
+      "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+    }
+  ],
+  "steps": [
+    "Check that ENVIRONMENT_TYPES.FILEMAKER constant is removed",
+    "Verify axios interceptors no longer check useFileMaker flag",
+    "Confirm dataService.js uses only backend API routing",
+    "Verify initializationService.js removes FileMaker detection"
+  ],
+  "expectedOutcome": "All dual-environment routing logic is removed and app assumes web app context"
+}

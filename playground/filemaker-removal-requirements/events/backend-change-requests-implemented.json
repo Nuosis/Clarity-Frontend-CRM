@@ -1,0 +1,77 @@
+{
+  "scenarioId": "SCN-1768140949527-c3jm",
+  "name": "Backend change requests implemented",
+  "description": "Verify all backend change requests (BCR-001 through BCR-005) are implemented",
+  "inputs": [
+    {
+      "name": "window.FileMaker",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "window.FMGofer",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "environmentType",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "authMethod",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "fetchDataFromFileMaker parameters",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "axios request config",
+      "type": "object",
+      "value": null
+    }
+  ],
+  "expectedOutputs": [
+    {
+      "name": "environment detection result",
+      "type": "object",
+      "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+    },
+    {
+      "name": "backend API response",
+      "type": "object",
+      "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+    },
+    {
+      "name": "authentication state",
+      "type": "object",
+      "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+    },
+    {
+      "name": "HMAC authorization header",
+      "type": "string",
+      "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+    },
+    {
+      "name": "data service routing decision",
+      "type": "string",
+      "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+    },
+    {
+      "name": "FileMaker integration removal status",
+      "type": "boolean",
+      "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+    }
+  ],
+  "steps": [
+    "Test BCR-001: Convert /filemaker/* endpoints to query Supabase",
+    "Test BCR-002: Products and subscriptions endpoints",
+    "Test BCR-003: Financial records with QuickBooks sync",
+    "Test BCR-004: Notes, links, relationships",
+    "Test BCR-005: dapiRecords table operations"
+  ],
+  "expectedOutcome": "All backend change requests are implemented and tested"
+}

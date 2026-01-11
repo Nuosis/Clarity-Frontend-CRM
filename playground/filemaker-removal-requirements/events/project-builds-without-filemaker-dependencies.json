@@ -1,0 +1,76 @@
+{
+  "scenarioId": "SCN-1768140949526-b67b",
+  "name": "Project builds without FileMaker dependencies",
+  "description": "Verify project builds successfully after removing FileMaker code",
+  "inputs": [
+    {
+      "name": "window.FileMaker",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "window.FMGofer",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "environmentType",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "authMethod",
+      "type": "string",
+      "value": null
+    },
+    {
+      "name": "fetchDataFromFileMaker parameters",
+      "type": "object",
+      "value": null
+    },
+    {
+      "name": "axios request config",
+      "type": "object",
+      "value": null
+    }
+  ],
+  "expectedOutputs": [
+    {
+      "name": "environment detection result",
+      "type": "object",
+      "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+    },
+    {
+      "name": "backend API response",
+      "type": "object",
+      "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+    },
+    {
+      "name": "authentication state",
+      "type": "object",
+      "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+    },
+    {
+      "name": "HMAC authorization header",
+      "type": "string",
+      "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+    },
+    {
+      "name": "data service routing decision",
+      "type": "string",
+      "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+    },
+    {
+      "name": "FileMaker integration removal status",
+      "type": "boolean",
+      "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+    }
+  ],
+  "steps": [
+    "Run 'npm run build' command",
+    "Check for FileMaker-related build errors",
+    "Verify no missing FileMaker module imports",
+    "Confirm build output is valid"
+  ],
+  "expectedOutcome": "Build completes successfully with no FileMaker-related errors or warnings"
+}
