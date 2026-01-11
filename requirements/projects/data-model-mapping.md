@@ -80,6 +80,145 @@ This document provides comprehensive field-by-field mapping between FileMaker's 
 - `src/hooks/useProject.js:186-264` - handleCreateProject() with pricing logic
 - `src/services/billableHoursService.js:288-309` - time record calculations
 
+**Subscription Project Business Logic** (See api-contracts.md for full details):
+
+When `f_subscription = "1"`, the system creates monthly recurring sales entries from project start date to end date (or today if no end date).
+
+1. **Validation Requirements**:
+   - `dateStart` is required (cannot create subscription without start date)
+   - `value` must be > 0 (monthly subscription amount)
+   - `f_fixedPrice` must be "0" (cannot be both fixed-price AND subscription)
+
+2. **Monthly Sales Entry Generation**:
+   - **Trigger**: Project creation or update with `f_subscription = "1"`
+   - **Period**: From `dateStart` to `min(today, dateEnd)`
+   - **Frequency**: Monthly (on the same day of month as `dateStart`)
+
+3. **Sales Entry Details**:
+   ```javascript
+   {
+     customer_id: project._custID,
+     product_name: `${project.projectName} - Monthly Subscription`,
+     product_id: null,
+     quantity: 1,
+     unit_price: project.value,          // Full monthly value
+     total_price: project.value,
+     date: monthDate,                     // Start date + N months
+     type: "sales",
+     project_id: project.__ID,
+     organization_id: project.organization_id,
+     created_at: now(),
+     updated_at: now()
+   }
+   ```
+
+4. **Monthly Billing Calculation**:
+   - Start from `dateStart`
+   - For each month where `monthDate <= min(today, dateEnd)`:
+     - Create sales entry for that month
+     - Use same day of month as start date (e.g., if started on 15th, bill on 15th of each month)
+   - Stop when reaching `dateEnd` OR today (whichever is earlier)
+
+5. **Example Scenario**:
+   - Project: "Monthly Hosting Service"
+   - Value: $500.00 (per month)
+   - Start Date: 01/15/2024 (January 15, 2024)
+   - End Date: No end date (perpetual subscription)
+   - Today: 04/10/2024 (April 10, 2024)
+
+   **Generated Sales Entries**:
+   - Entry 1: $500 on 01/15/2024 (Month 1)
+   - Entry 2: $500 on 02/15/2024 (Month 2)
+   - Entry 3: $500 on 03/15/2024 (Month 3)
+   - Entry 4: NOT created yet (04/15/2024 is in future)
+   - Total billed to date: $1,500.00
+
+6. **Idempotency Check**:
+   Before creating each sales entry, verify it doesn't already exist:
+   ```sql
+   -- FileMaker Find
+   WHERE _custID = project._custID
+     AND date = monthDate
+     AND productName LIKE '%Monthly Subscription%'
+     AND total = project.value
+
+   -- Supabase Query
+   SELECT id FROM customer_sales
+   WHERE customer_id = :project.customer_id
+     AND date = :monthDate
+     AND product_name LIKE '%Monthly Subscription%'
+     AND total_price = :project.value
+   LIMIT 1;
+   ```
+
+7. **Time Records Non-Billable**:
+   Similar to fixed-price projects, subscription projects are billed via recurring entries, NOT hourly tracking:
+   - FileMaker: `UPDATE dapiRecords SET f_billed = "0" WHERE _projectID = project.__ID`
+   - Supabase: `UPDATE time_entries SET is_billed = false WHERE project_id = project.id`
+   - Rationale: Subscription billing is independent of time tracking
+
+8. **Edge Cases**:
+   - **Future Start Date**: If `dateStart > today`, do NOT create any sales entries yet
+   - **No End Date**: Perpetual subscription, generate entries up to today only
+     - Requires monthly background job to continue generating entries
+     - Cron job checks active subscriptions and creates next month's entry
+   - **End Date in Future**: Generate entries from start to today, stop at `dateEnd`
+   - **End Date in Past**: Generate all entries from start to end (historical subscription)
+   - **Value Changes**: Future entries use new value, past entries remain unchanged
+   - **Date Range Updates**:
+     - If `dateEnd` extended: Generate new entries for extended period
+     - If `dateEnd` shortened: Stop generating, do not retroactively delete entries
+
+9. **Background Job Requirement**:
+   For perpetual subscriptions (no `dateEnd`) or subscriptions with future end dates, a monthly cron job is required:
+   ```javascript
+   // Monthly cron job (runs on 1st of each month)
+   const activeSubscriptions = await query(`
+     SELECT * FROM projects
+     WHERE f_subscription = "1"
+       AND (dateEnd IS NULL OR dateEnd >= today)
+       AND dateStart <= today
+   `);
+
+   for (const project of activeSubscriptions) {
+     const currentMonthDate = calculateNextBillingDate(project.dateStart, today);
+     const existingEntry = await findSalesEntry(project._custID, currentMonthDate);
+
+     if (!existingEntry) {
+       await createSalesEntry({
+         customer_id: project._custID,
+         amount: project.value,
+         date: currentMonthDate,
+         description: `${project.projectName} - Monthly Subscription`,
+         type: "sales"
+       });
+     }
+   }
+   ```
+
+10. **FileMaker vs Supabase Implementation**:
+    - **FileMaker Field**: `f_subscription` (TEXT "1" or "0")
+    - **Supabase Field**: `is_subscription` (BOOLEAN true/false)
+    - **Conversion**: `value === "1" || value === 1` → `true`, otherwise `false`
+    - **Storage**: Supabase has NO `is_subscription` column yet (requires backend schema change)
+
+11. **Testing Checklist**:
+    - [ ] Subscription project with past start date creates sales entries for all past months
+    - [ ] Subscription project with future start date creates NO sales entries yet
+    - [ ] Monthly entries stop at end date if provided
+    - [ ] Monthly entries continue up to today if no end date
+    - [ ] Idempotency check prevents duplicate sales entries
+    - [ ] Sales entries use correct date (same day of month as start date)
+    - [ ] Sales entry amount equals project value (NOT split like fixed-price)
+    - [ ] Time records for subscription project marked as non-billable
+    - [ ] Cannot create project with both f_fixedPrice="1" AND f_subscription="1"
+    - [ ] Value changes only affect future entries, not past entries
+
+**Code References**:
+- Business Logic: `src/services/projectService.js:508-596` (processProjectValue function)
+- API Contracts: `requirements/projects/api-contracts.md:1556-1593` (Subscription Sales Generation)
+- FileMaker API: `src/api/projects.js:112-144` (createProject, updateProject)
+
 ### Date Fields
 
 | FileMaker Field | Type | Format | Description | Sample Value |

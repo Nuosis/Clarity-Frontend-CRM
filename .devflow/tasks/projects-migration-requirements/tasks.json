@@ -205,14 +205,20 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive documentation of fixed-price project business logic by significantly expanding the 'Fixed-Price Project Sales Generation' section in 'requirements/projects/api-contracts.md' with detailed steps for creating the start sales entry (50% sellable when dateStart <= today), completion sales entry (50% sales when status = 'Completed' or dateEnd reached), and setting time records as non-billable (f_billed = '0' in FileMaker dapiRecords or is_billed = false in Supabase time_entries). Added FileMaker field mappings, code references (projectService.js:508-596, projects.js, useProject.js, billableHoursService.js), idempotency checks with SQL examples, 6 edge cases with solutions, 3 validation rules, database schema requirements (proposed columns for is_fixed_price and project_id in customer_sales), and a 12-point testing checklist. Also updated 'requirements/projects/data-model-mapping.md' with a business logic summary and cross-references to the detailed api-contracts.md section. Verified the build compiles successfully and updated 'tasks.json' to mark TSK0015 as done with completion timestamp and notes."
+      "implementation_notes": "Implemented comprehensive documentation for fixed-price project business logic by expanding the 'Business Logic Requirements' section in 'api-contracts.md' with the 50-50 revenue recognition flow, field mappings from FileMaker to Supabase, idempotency SQL guidance, edge cases, validation rules, proposed schema notes, and a testing checklist. Added a cross-referenced summary in 'data-model-mapping.md' to capture the split timing and the non-billable time record requirement and link back to the detailed rules. Verified the docs build succeeds and updated 'tasks.json' to mark task 'TSK0015' as DONE with completion notes and timestamp.'"
     },
     {
       "id": "TSK0016",
       "title": "Document subscription business logic",
       "description": "In requirements/projects/api-contracts.md or data-model-mapping.md, document subscription project logic: when f_subscription=true, create monthly sales entries from dateStart to dateEnd (or today if no end date), each entry equal to project value",
-      "status": "queued",
-      "priority": "high"
+      "status": "done",
+      "priority": "high",
+      "completedAt": "2026-01-10T23:15:00.000Z",
+      "notes": "Comprehensively documented subscription project business logic in data-model-mapping.md with 11-point detailed breakdown. Documented monthly recurring sales entry generation from dateStart to min(today, dateEnd), validation requirements, sales entry structure, monthly billing calculation algorithm, detailed example scenario, idempotency checks, time records non-billable flag, edge cases (future start date, no end date, perpetual subscriptions), background job requirement for ongoing subscriptions, FileMaker vs Supabase implementation details, and testing checklist. Cross-referenced with api-contracts.md:1556-1593 for full specification",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive subscription project business logic documentation by adding an 11-section detailed breakdown to data-model-mapping.md (lines 83-220), covering validation requirements, monthly sales entry generation logic, billing calculation algorithms, concrete example scenario with timeline, idempotency SQL checks, time records non-billable handling, edge cases (future start dates, perpetual subscriptions, date range updates), background job requirement with sample cron code, FileMaker to Supabase field conversion details, and complete testing checklist. Cross-referenced with existing api-contracts.md section 1556-1593 for full specification alignment. Key decisions documented: monthly billing on same day as start date, entries generated up to min(today, dateEnd), value represents full monthly amount (not split like fixed-price), background job required for perpetual subscriptions, and Supabase schema gap noting missing is_subscription column. Verified build succeeds and updated tasks.json to mark TSK0016 as done."
     },
     {
       "id": "TSK0017",
