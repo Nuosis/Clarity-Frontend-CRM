@@ -55,18 +55,22 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive 'supabase-schema.md' (500+ lines) documenting all customer-related tables via SSH queries to the 'supabase-db' container. Documented 6 tables: 'customers' (104 records, customertype enum, organization_id for multi-tenancy), 'customer_email' (unique email constraint), 'customer_phone' (unique phone constraint), 'customer_address' (city/state required), 'customer_contacts' (empty table, links to 'contacts' with JSONB 'contact_data'), and 'customer_sales' (product transactions with JSONB 'configuration_data' and QuickBooks 'financial_id'). Identified data quality issues: enum case inconsistency ('prospect' vs 'PROSPECT'), 'customer_contacts.is_primary' stored as varchar instead of boolean, global uniqueness constraints on email/phone may prevent shared contact info, missing indexes on foreign keys, and 'customer_address' lacks 'is_primary' flag. Documented all foreign keys, indexes, sample data, multi-tenancy implications, and provided verification commands and backend recommendations for schema improvements and RLS policies."
+      "implementation_notes": "Implemented comprehensive Supabase schema documentation for customers and related tables, including foreign keys, constraints, indexes, enum usage, and data quality/multi-tenancy findings, based on direct SSH queries against the 'supabase-db' Postgres container. Added a 500+ line deliverable at '.devflow/tasks/customers-migration-requirements/supabase-schema.md' and updated '.devflow/tasks/customers-migration-requirements/tasks.json' to mark TSK0003 as done with summary notes. Key decisions highlighted include calling out missing indexes and RLS needs, identifying schema inconsistencies (enum case mismatch, 'customer_contacts.is_primary' varchar), and documenting implications of global uniqueness constraints on email/phone and nullable 'customers.organization_id'. Verified the build still succeeds after documentation changes."
     },
     {
       "id": "TSK0004",
       "title": "Map FileMaker fields to Supabase schema",
       "description": "Create data-model-mapping.md documenting field-by-field mapping from devCustomers layout to Supabase tables with data types and constraints",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0002",
         "TSK0003"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive 1,100+ line data-model-mapping.md documenting complete field-by-field mapping from FileMaker devCustomers layout to Supabase tables (customers, customer_email, customer_phone, customer_address). Discovered 21 FileMaker fields through code inspection (src/components/customers/CustomerForm.jsx:25-48, src/services/customerService.js). Documented mappings include: core customer fields (Name→business_name, __ID→id), email/phone/address normalization to separate tables, boolean conversions (f_active), timestamp mappings, and UNMAPPED fields requiring backend schema changes (f_active, chargeRate, f_USD, f_EUR, f_prePay, fundsAvailable, dbPath, dbUserName, dbPasword, OBSI_ClientNo, ContactPerson). Identified critical data quality issues: duplicate email/phone constraints, missing required fields (city/state), invalid UUIDs, organization scoping decisions. Provided detailed transformation logic, migration pseudocode, validation queries, edge case handling, and backend change request for schema completion. Documented ID reconciliation strategy (FileMaker __ID vs recordId), performance considerations (104 customers × 4 tables = ~416 inserts), batch migration strategy (50 per transaction), and comprehensive pre/post-migration validation checks. Build verified successful with only pre-existing warnings."
     },
     {
       "id": "TSK0005",
