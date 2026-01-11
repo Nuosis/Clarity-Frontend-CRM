@@ -1,0 +1,264 @@
+{
+  "generatedAt": "2026-01-10T23:58:27.656Z",
+  "inputs": [
+    {
+      "name": "window.FileMaker",
+      "type": "object",
+      "description": "FileMaker WebViewer global object used to detect FileMaker environment",
+      "source": "SignIn.jsx:detectFileMakerEnvironment()"
+    },
+    {
+      "name": "window.FMGofer",
+      "type": "object",
+      "description": "FileMaker bridge library for script execution",
+      "source": "dataService.js:initialization"
+    },
+    {
+      "name": "environmentType",
+      "type": "string",
+      "description": "Environment type constant (FILEMAKER or WEBAPP)",
+      "source": "AppStateContext.jsx:setEnvironmentContext()"
+    },
+    {
+      "name": "authMethod",
+      "type": "string",
+      "description": "Authentication method constant (FILEMAKER or SUPABASE)",
+      "source": "AppStateContext.jsx:setEnvironmentContext()"
+    },
+    {
+      "name": "fetchDataFromFileMaker parameters",
+      "type": "object",
+      "description": "Layout, action, findCriteria, and other FileMaker operation parameters",
+      "source": "dataService.js:fetchDataFromFileMaker()"
+    },
+    {
+      "name": "axios request config",
+      "type": "object",
+      "description": "Request configuration with useFileMaker flag for routing decisions",
+      "source": "dataService.js:axios interceptors"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "environment detection result",
+      "type": "object",
+      "description": "Contains environmentType and authMethod after detection",
+      "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+    },
+    {
+      "name": "backend API response",
+      "type": "object",
+      "description": "Response from backend API with data and metadata",
+      "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+    },
+    {
+      "name": "authentication state",
+      "type": "object",
+      "description": "User session state after authentication",
+      "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+    },
+    {
+      "name": "HMAC authorization header",
+      "type": "string",
+      "description": "Bearer token with HMAC-SHA256 signature and timestamp",
+      "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+    },
+    {
+      "name": "data service routing decision",
+      "type": "string",
+      "description": "Routing path chosen by axios interceptor",
+      "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+    },
+    {
+      "name": "FileMaker integration removal status",
+      "type": "boolean",
+      "description": "Verification that FileMaker code has been removed",
+      "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "Environment detection without FileMaker",
+      "description": "Verify app correctly detects web app environment when FileMaker objects are absent",
+      "steps": [
+        "Load SignIn component without window.FileMaker object",
+        "Trigger environment detection in detectFileMakerEnvironment()",
+        "Check AppStateContext for environmentType and authMethod"
+      ],
+      "expectedOutcome": "App sets environmentType to WEBAPP and authMethod to SUPABASE without attempting FileMaker authentication",
+      "priority": "critical"
+    },
+    {
+      "name": "Backend API routing for customer operations",
+      "description": "Verify customer CRUD operations route through backend API instead of FileMaker",
+      "steps": [
+        "Call fetchCustomers() from customers.js API module",
+        "Verify axios interceptor routes request to backend",
+        "Check that HMAC authorization header is present",
+        "Verify response matches expected customer data structure"
+      ],
+      "expectedOutcome": "Request goes to /filemaker/devCustomers/records with HMAC auth and returns customer array",
+      "priority": "critical"
+    },
+    {
+      "name": "Supabase-only authentication flow",
+      "description": "Verify authentication uses only Supabase without FileMaker auto-detection",
+      "steps": [
+        "Load SignIn component",
+        "Verify no 3-second FileMaker detection delay",
+        "Submit email/password credentials",
+        "Check Supabase session creation"
+      ],
+      "expectedOutcome": "User authenticates via Supabase immediately without FileMaker detection wait",
+      "priority": "critical"
+    },
+    {
+      "name": "Remove FileMaker bridge files",
+      "description": "Verify all FileMaker bridge files are removed from codebase",
+      "steps": [
+        "Check that src/api/fileMaker.js is deleted",
+        "Verify useFileMakerBridge hook is removed from src/hooks/index.js",
+        "Confirm FMGofer references are removed from dataService.js",
+        "Run grep for 'fetchDataFromFileMaker' and verify no matches"
+      ],
+      "expectedOutcome": "FileMaker bridge implementation files and hooks are completely removed",
+      "priority": "critical"
+    },
+    {
+      "name": "Remove environment detection logic",
+      "description": "Verify environment detection and routing logic is simplified to single path",
+      "steps": [
+        "Check that ENVIRONMENT_TYPES.FILEMAKER constant is removed",
+        "Verify axios interceptors no longer check useFileMaker flag",
+        "Confirm dataService.js uses only backend API routing",
+        "Verify initializationService.js removes FileMaker detection"
+      ],
+      "expectedOutcome": "All dual-environment routing logic is removed and app assumes web app context",
+      "priority": "critical"
+    },
+    {
+      "name": "Backend API compatibility",
+      "description": "Verify backend API supports all operations previously done via FileMaker",
+      "steps": [
+        "Test CRUD operations for customers, projects, tasks, teams",
+        "Verify financial records sync operations work",
+        "Test notes and links operations",
+        "Confirm all operations return expected data structures"
+      ],
+      "expectedOutcome": "All 60+ operations documented in BACKEND_API_REQUIREMENTS.md work correctly",
+      "priority": "critical"
+    },
+    {
+      "name": "Project builds without FileMaker dependencies",
+      "description": "Verify project builds successfully after removing FileMaker code",
+      "steps": [
+        "Run 'npm run build' command",
+        "Check for FileMaker-related build errors",
+        "Verify no missing FileMaker module imports",
+        "Confirm build output is valid"
+      ],
+      "expectedOutcome": "Build completes successfully with no FileMaker-related errors or warnings",
+      "priority": "critical"
+    },
+    {
+      "name": "Acceptance criteria verification script",
+      "description": "Run automated verification script to check all acceptance criteria",
+      "steps": [
+        "Execute verify-filemaker-removal.sh script",
+        "Review output for each of 40 acceptance criteria",
+        "Check that score meets 38/40 minimum threshold",
+        "Verify zero failures on critical criteria"
+      ],
+      "expectedOutcome": "Script passes with 38+ criteria met and all critical requirements satisfied",
+      "priority": "critical"
+    },
+    {
+      "name": "HMAC authentication for all backend requests",
+      "description": "Verify all backend API requests include valid HMAC authorization",
+      "steps": [
+        "Intercept axios requests to backend API",
+        "Verify Authorization header format matches 'Bearer {signature}.{timestamp}'",
+        "Confirm signature is valid HMAC-SHA256",
+        "Test that requests without HMAC are rejected"
+      ],
+      "expectedOutcome": "All backend requests include valid HMAC auth and unauthorized requests fail",
+      "priority": "high"
+    },
+    {
+      "name": "Remove FileMaker config and constants",
+      "description": "Verify FileMaker configuration and constants are removed",
+      "steps": [
+        "Check src/config.js for FileMaker URL/database config removal",
+        "Verify VITE_FM_* environment variables are not referenced",
+        "Confirm FM_LAYOUTS constants are removed",
+        "Check that FM_ACTIONS constants are removed"
+      ],
+      "expectedOutcome": "All FileMaker configuration, environment variables, and constants are removed",
+      "priority": "high"
+    },
+    {
+      "name": "UI components work without FileMaker context",
+      "description": "Verify UI components render and function correctly without FileMaker environment",
+      "steps": [
+        "Load CustomerDetails component",
+        "Load ProjectDetails component",
+        "Test ProposalCreationForm",
+        "Verify all components fetch data via backend API"
+      ],
+      "expectedOutcome": "All UI components function correctly using only backend API data sources",
+      "priority": "high"
+    },
+    {
+      "name": "Rollback procedure validation",
+      "description": "Verify rollback procedure can restore FileMaker functionality if needed",
+      "steps": [
+        "Document current git commit SHA",
+        "Test git revert to previous FileMaker-enabled commit",
+        "Verify npm install restores dependencies",
+        "Confirm rollback completes within 5-minute window"
+      ],
+      "expectedOutcome": "Rollback procedure successfully restores previous FileMaker-enabled version",
+      "priority": "high"
+    },
+    {
+      "name": "Zero FileMaker references in codebase",
+      "description": "Verify comprehensive removal of all FileMaker references from source code",
+      "steps": [
+        "Run grep -r 'FileMaker' src/ and verify zero matches",
+        "Run grep -r 'FMGofer' src/ and verify zero matches",
+        "Run grep -r 'fetchDataFromFileMaker' src/ and verify zero matches",
+        "Run grep -r 'ENVIRONMENT_TYPES.FILEMAKER' src/ and verify zero matches"
+      ],
+      "expectedOutcome": "Codebase contains zero references to FileMaker objects, functions, or constants",
+      "priority": "medium"
+    },
+    {
+      "name": "Backend change requests implemented",
+      "description": "Verify all backend change requests (BCR-001 through BCR-005) are implemented",
+      "steps": [
+        "Test BCR-001: Convert /filemaker/* endpoints to query Supabase",
+        "Test BCR-002: Products and subscriptions endpoints",
+        "Test BCR-003: Financial records with QuickBooks sync",
+        "Test BCR-004: Notes, links, relationships",
+        "Test BCR-005: dapiRecords table operations"
+      ],
+      "expectedOutcome": "All backend change requests are implemented and tested",
+      "priority": "medium"
+    },
+    {
+      "name": "Monitoring and alerting active",
+      "description": "Verify monitoring captures metrics and alerts fire correctly post-deployment",
+      "steps": [
+        "Check that error rate monitoring is active",
+        "Verify authentication failure alerts work",
+        "Confirm API latency monitoring is capturing metrics",
+        "Test that alert thresholds trigger notifications"
+      ],
+      "expectedOutcome": "All monitoring metrics are captured and alerts fire within defined thresholds",
+      "priority": "medium"
+    }
+  ],
+  "entryPoints": [],
+  "stateVariables": [],
+  "asyncBoundaries": []
+}

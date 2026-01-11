@@ -64,11 +64,18 @@
       "id": "INS0006",
       "title": "Migrate Links from FileMaker to Supabase",
       "description": "Phase 1 requirements: Migrate Links feature from FileMaker to Supabase. Create documentation under requirements/links/ describing links CRUD and associations (customer/project/task) and any validation.\n\nDeliverables:\n- requirements/links/README.md documenting current links behavior\n- Data model mapping: FileMaker devLinks -> Supabase links table(s)\n- Backend endpoints/RPCs: list by parent entity, create, update, delete\n- Migration/backfill plan\n- Acceptance criteria and test plan\n- Code references: src/api/links.js and UI usage\n\n\n**Context:** Links CRUD is implemented via FileMaker layout devLinks using src/api/links.js. Migrating requires a Supabase schema and endpoints to support existing UI flows.",
-      "status": "pending",
-      "complexity": "unknown",
+      "status": "done",
+      "complexity": "simple",
       "priority": "medium",
       "createdAt": "2026-01-10T19:21:54.990Z",
-      "updatedAt": "2026-01-10T20:16:39.154Z"
+      "updatedAt": "2026-01-10T23:40:43.327Z",
+      "review": {
+        "passed": true,
+        "findings": [],
+        "reviewed_at": "2026-01-10T23:44:23.988Z"
+      },
+      "implementation_notes": "Created comprehensive acceptance-criteria.md file (23K) completing Phase 1 requirements documentation for Links migration. The file includes 7 acceptance criteria with verification steps, 7 test suites with 40+ test cases covering CRUD operations, RLS policies, frontend UI workflows, edge cases, performance requirements, success metrics, rollback plan, and test execution checklist. All 7 required documentation files now exist in requirements/links/: README.md, current-implementation.md, data-model-mapping.md, api-contracts.md, authorization.md, migration-plan.md, and acceptance-criteria.md. Code references verified in src/api/links.js and UI components. Phase 1 documentation is complete and ready for Phase 2: Backend Implementation.",
+      "execution_summary": "**Summary:** Created comprehensive acceptance-criteria.md file (23K) completing Phase 1 requirements documentation for Links migration. The file includes 7 acceptance criteria with verification steps, 7 test suites with 40+ test cases covering CRUD operations, RLS policies, frontend UI workflows, edge cases, performance requirements, success metrics, rollback plan, and test execution checklist. All 7 required documentation files now exist in requirements/links/: README.md, current-implementation.md, data-model-mapping.md, api-contracts.md, authorization.md, migration-plan.md, and acceptance-criteria.md. Code references verified in src/api/links.js and UI components. Phase 1 documentation is complete and ready for Phase 2: Backend Implementation."
     },
     {
       "id": "INS0007",
@@ -115,21 +122,35 @@
       "id": "INS0010",
       "title": "Add Customers requirements doc template",
       "description": "Update INS0001 (Customers migration requirements) to include a standardized documentation template set in requirements/customers/.\n\nAdd/ensure deliverables:\n- requirements/customers/README.md (overview, current FM behavior, user flows)\n- requirements/customers/current-implementation.md (frontend call graph, relevant files)\n- requirements/customers/data-model-mapping.md (FM -> Supabase schema mapping, IDs)\n- requirements/customers/api-contracts.md (endpoints/RPCs, request/response examples)\n- requirements/customers/authorization.md (RLS, org scoping, roles)\n- requirements/customers/migration-plan.md (backfill, ID reconciliation, cutover)\n- requirements/customers/acceptance-criteria.md (test cases, edge cases)\n\nInclude links/references to code locations and known FM layouts/fields used.\n\n**Context:** User confirmed adding a consistent documentation template per requirements folder is desired. This task ensures Customers documentation includes the full template set for backend implementation guidance.",
-      "status": "pending",
-      "complexity": "unknown",
+      "status": "done",
+      "complexity": "simple",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:26.231Z",
-      "updatedAt": "2026-01-10T20:16:39.195Z"
+      "updatedAt": "2026-01-10T23:40:43.472Z",
+      "review": {
+        "passed": true,
+        "findings": [],
+        "reviewed_at": "2026-01-10T23:48:23.234Z"
+      },
+      "implementation_notes": "Created comprehensive acceptance-criteria.md file (1,295 lines, 40KB) completing the standardized documentation template for Customers migration requirements. The file includes 7 acceptance criteria with verification steps, 10 test suites with 60+ test cases covering CRUD operations, RLS policies, frontend UI workflows, edge cases, performance requirements, success metrics, rollback plan, test execution checklist, and code references. All 7 required documentation files now exist in requirements/customers/: README.md, current-implementation.md, data-model-mapping.md, api-contracts.md, authorization.md, migration-plan.md, and acceptance-criteria.md. The acceptance criteria document follows the same comprehensive structure as the Links migration template, adapted specifically for Customers feature with multi-table relationships (customers, customer_email, customer_phone, customer_address, customer_contacts), ID reconciliation strategy, dual-write removal requirements, and customer-specific user workflows. Documentation is complete and ready for Phase 2: Backend Implementation.",
+      "execution_summary": "**Summary:** Created comprehensive acceptance-criteria.md file (1,295 lines, 40KB) completing the standardized documentation template for Customers migration requirements. The file includes 7 acceptance criteria with verification steps, 10 test suites with 60+ test cases covering CRUD operations, RLS policies, frontend UI workflows, edge cases, performance requirements, success metrics, rollback plan, test execution checklist, and code references. All 7 required documentation files now exist in requirements/customers/: README.md, current-implementation.md, data-model-mapping.md, api-contracts.md, authorization.md, migration-plan.md, and acceptance-criteria.md. The acceptance criteria document follows the same comprehensive structure as the Links migration template, adapted specifically for Customers feature with multi-table relationships (customers, customer_email, customer_phone, customer_address, customer_contacts), ID reconciliation strategy, dual-write removal requirements, and customer-specific user workflows. Documentation is complete and ready for Phase 2: Backend Implementation."
     },
     {
       "id": "INS0011",
       "title": "Standardize Projects Migration Requirements Docs",
       "description": "Update INS0002 (Projects migration requirements) to include standardized documentation templates in requirements/projects/.\n\nAdd/ensure deliverables:\n- README.md\n- current-implementation.md\n- data-model-mapping.md\n- api-contracts.md\n- authorization.md\n- migration-plan.md\n- acceptance-criteria.md\n\nEnsure project-related entities are covered (notes/links/objectives/images if applicable) and document required backend contracts for related-data fetches.\n\n**Context:** Projects is FileMaker-primary. User wants uniform requirements documentation structure across features for backend dev consumption.",
-      "status": "pending",
-      "complexity": "unknown",
+      "status": "done",
+      "complexity": "simple",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:27.254Z",
-      "updatedAt": "2026-01-10T20:48:46.920Z"
+      "updatedAt": "2026-01-10T23:40:43.534Z",
+      "review": {
+        "passed": true,
+        "findings": [],
+        "reviewed_at": "2026-01-10T23:54:10.442Z"
+      },
+      "implementation_notes": "Created comprehensive migration-plan.md (897 lines, 28KB) and acceptance-criteria.md (1,101 lines, 36KB) completing the standardized documentation template for Projects migration requirements. All 7 required documentation files now exist in requirements/projects/: README.md, current-implementation.md, data-model-mapping.md, api-contracts.md, authorization.md, migration-plan.md, and acceptance-criteria.md. Migration plan includes 8 phases (Backend Preparation, Data Audit/Export, Data Transformation, Data Import, Frontend Refactor, Testing, Gradual Rollout, Cleanup) with detailed scripts for migrating 7 FileMaker layouts (devProjects, devProjectObjectives, devProjectObjSteps, devProjectImages, devProjectLinks, devNotes, dapiRecords) to Supabase. Acceptance criteria document includes 7 acceptance criteria, 8 test suites with 60+ test cases covering CRUD operations, business logic validation (fixed-price/subscription), RLS policies, frontend UI workflows, cascading deletes, edge cases, performance requirements, success metrics, rollback plan, and test execution checklist. Documentation covers project-related entities (objectives, steps, images, links, notes) and documents required backend contracts for related-data fetches. Phase 1 documentation is complete and ready for Phase 2: Backend Implementation.",
+      "execution_summary": "**Summary:** Created comprehensive migration-plan.md (897 lines, 28KB) and acceptance-criteria.md (1,101 lines, 36KB) completing the standardized documentation template for Projects migration requirements. All 7 required documentation files now exist in requirements/projects/: README.md, current-implementation.md, data-model-mapping.md, api-contracts.md, authorization.md, migration-plan.md, and acceptance-criteria.md. Migration plan includes 8 phases (Backend Preparation, Data Audit/Export, Data Transformation, Data Import, Frontend Refactor, Testing, Gradual Rollout, Cleanup) with detailed scripts for migrating 7 FileMaker layouts (devProjects, devProjectObjectives, devProjectObjSteps, devProjectImages, devProjectLinks, devNotes, dapiRecords) to Supabase. Acceptance criteria document includes 7 acceptance criteria, 8 test suites with 60+ test cases covering CRUD operations, business logic validation (fixed-price/subscription), RLS policies, frontend UI workflows, cascading deletes, edge cases, performance requirements, success metrics, rollback plan, and test execution checklist. Documentation covers project-related entities (objectives, steps, images, links, notes) and documents required backend contracts for related-data fetches. Phase 1 documentation is complete and ready for Phase 2: Backend Implementation."
     },
     {
       "id": "INS0012",
@@ -139,7 +160,9 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:28.075Z",
-      "updatedAt": "2026-01-10T20:16:38.896Z"
+      "updatedAt": "2026-01-10T23:54:36.036Z",
+      "executionPid": 26728,
+      "sessionId": "f6f60fa3-55e7-4d9c-9cc9-622b122e3602"
     },
     {
       "id": "INS0013",
@@ -149,7 +172,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:28.688Z",
-      "updatedAt": "2026-01-10T20:16:38.966Z"
+      "updatedAt": "2026-01-10T23:54:36.172Z"
     },
     {
       "id": "INS0014",
@@ -159,7 +182,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:29.507Z",
-      "updatedAt": "2026-01-10T20:16:38.989Z"
+      "updatedAt": "2026-01-10T23:54:36.238Z"
     },
     {
       "id": "INS0015",
@@ -169,7 +192,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:30.342Z",
-      "updatedAt": "2026-01-10T20:16:39.013Z"
+      "updatedAt": "2026-01-10T23:54:36.302Z"
     },
     {
       "id": "INS0016",
@@ -179,7 +202,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:31.044Z",
-      "updatedAt": "2026-01-10T20:16:39.035Z"
+      "updatedAt": "2026-01-10T23:54:36.360Z"
     },
     {
       "id": "INS0017",
@@ -189,7 +212,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:31.760Z",
-      "updatedAt": "2026-01-10T20:16:39.059Z"
+      "updatedAt": "2026-01-10T23:54:36.441Z"
     },
     {
       "id": "INS0018",
@@ -199,7 +222,7 @@
       "complexity": "unknown",
       "priority": "medium",
       "createdAt": "2026-01-10T19:23:32.402Z",
-      "updatedAt": "2026-01-10T20:16:39.082Z"
+      "updatedAt": "2026-01-10T23:54:36.499Z"
     }
   ]
 }
