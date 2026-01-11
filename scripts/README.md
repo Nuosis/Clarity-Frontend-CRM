@@ -27,6 +27,41 @@ node scripts/migrate-teams-data.js <organization_id> --dry-run --skip-images
 - Environment variables configured (`.env` file)
 - Organization ID from Supabase
 
+### validate-teams-migration.js
+
+Validates teams migration by comparing FileMaker and Supabase data to ensure accuracy.
+
+**Usage:**
+```bash
+# Standard validation
+npm run validate:teams <organization_id>
+
+# Verbose mode (show detailed mismatches)
+npm run validate:teams:verbose <organization_id>
+
+# Save report to file
+node scripts/validate-teams-migration.js <organization_id> --report=validation-report.txt
+
+# Verbose with report
+node scripts/validate-teams-migration.js <organization_id> --verbose --report=validation-report.txt
+```
+
+**What it checks:**
+- All FileMaker records exist in Supabase
+- All data fields match between systems
+- No orphaned records (invalid foreign key references)
+- No duplicate records
+- Data integrity across all three tables (teams, staff, team_members)
+
+**Exit codes:**
+- 0: All validation checks passed
+- 1: Issues found (see output for details)
+
+**Prerequisites:**
+- Migration must have been executed first
+- Backend API must be accessible
+- Supabase tables must exist
+
 ## Other Scripts
 
 ### sync-missing-records.js

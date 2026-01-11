@@ -20,7 +20,9 @@
     "test:edge-function": "node ./scripts/test-edge-function.js",
     "test:supabase": "node ./scripts/test-supabase-service.js",
     "migrate:teams": "node ./scripts/migrate-teams-data.js",
-    "migrate:teams:dry-run": "node ./scripts/migrate-teams-data.js --dry-run"
+    "migrate:teams:dry-run": "node ./scripts/migrate-teams-data.js --dry-run",
+    "validate:teams": "node ./scripts/validate-teams-migration.js",
+    "validate:teams:verbose": "node ./scripts/validate-teams-migration.js --verbose"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
