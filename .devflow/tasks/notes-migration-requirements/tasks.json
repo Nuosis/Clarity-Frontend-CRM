@@ -69,17 +69,21 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive data model mapping documentation in requirements/notes/data-model-mapping.md (827 lines). Documented FileMaker devNotes layout schema with fields (__ID, note, _fkID, type, timestamps) and polymorphic relationships. Designed Supabase schema with single notes table using nullable foreign keys (customer_id, project_id, task_id) with check constraint ensuring exactly one parent FK is set. Included complete field mappings, transformation details for migration (ID preservation, FK type detection, user email->UUID mapping, organization inference from parent), relationship mappings for projects/tasks/customers, data type considerations, migration validation logic, RLS policies for organization scoping, and performance indexes. Provided code examples for migration scripts, query patterns, and RLS testing. Referenced all relevant source files with line numbers. Build verified successfully."
+      "implementation_notes": "Implemented comprehensive FileMaker devNotes to Supabase data model mapping documentation by fully replacing the placeholder template in 'requirements/notes/data-model-mapping.md' with detailed schema, field mappings, migration transformations, constraints, indexes, triggers, and RLS guidance, including references to existing code such as 'src/api/fileMaker.js', 'src/api/notes.js', 'src/api/projects.js', and 'src/api/tasks.js'. Updated 'tasks.json' to mark 'TSK0004' as completed after confirming the build succeeded. Key decisions documented include using a single 'notes' table with nullable parent foreign keys plus a check constraint to enforce exactly one parent, deriving 'organization_id' from the parent entity for multi-tenancy, and applying cascade deletes and partial indexes for performance."
     },
     {
       "id": "TSK0005",
       "title": "Define backend API contracts for notes",
       "description": "Create api-contracts.md with: REST endpoints or RPC functions for list/create/update/delete operations, request/response schemas, query parameters for filtering by parent entity, error responses, example requests/responses, pagination if needed",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0004"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive backend API contracts documentation in 'requirements/notes/api-contracts.md' (722 lines), defining 5 REST API endpoints (GET /api/notes, GET /api/notes/:id, POST /api/notes, PATCH /api/notes/:id, DELETE /api/notes/:id) with complete request/response schemas, query parameters, validation rules, error handling, and example requests. Documented HMAC-SHA256 authentication requirements, Supabase direct access patterns with RLS policies, realtime subscription patterns, pagination strategy (default 50, max 200), performance targets (< 500ms for list queries), and comprehensive error code catalog (EMPTY_NOTE_CONTENT, NO_PARENT_ENTITY, MULTIPLE_PARENT_ENTITIES, etc.). Included frontend integration patterns referencing 'src/services/dataService.js', 'src/api/notes.js', and 'src/services/supabaseService.js'. Followed Teams migration API contract pattern from 'BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md'. Key decisions: polymorphic parent entity validation (exactly one of customer_id/project_id/task_id required), organization_id auto-inferred from JWT, offset-based pagination, no application-level caching, hard delete operations."
     },
     {
       "id": "TSK0006",
