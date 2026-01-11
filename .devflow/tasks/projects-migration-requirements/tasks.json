@@ -224,24 +224,31 @@
       "id": "TSK0017",
       "title": "Document authorization requirements",
       "description": "Create requirements/projects/authorization.md documenting: RLS policies needed for projects and all related tables, organization scoping, user role permissions (create/update/delete), team-based access control, and customer relationship authorization",
-      "status": "in_progress",
+      "status": "done",
       "priority": "medium",
-      "executionPid": 38216,
-      "sessionId": "7dea7e13-0b6e-4f4b-822d-f0669a9e7e79"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Enhanced the projects authorization requirements documentation by expanding the existing 'requirements/projects/authorization.md' to match the customers doc level of detail, adding/expanding sections for JWT claims, organization scoping, role definitions, backend service-role access patterns, frontend authorization logic (including new hook specs like 'useProjectPermissions' and 'useTeamProjectPermissions'), edge cases, RLS testing scripts, and comprehensive audit logging guidance. Updated task tracking in 'tasks.json' and validated the changes by running a successful build. Key decision: keep the existing RLS policy structure but significantly deepen the spec with concrete SQL and frontend/backend usage patterns so it is implementation-ready for the Supabase migration.'''"
     },
     {
       "id": "TSK0018",
       "title": "Create migration plan for projects",
       "description": "Create requirements/projects/migration-plan.md documenting: data backfill approach for devProjects → projects table, UUID preservation strategy, recordId handling, relationship integrity checks, and cutover plan",
-      "status": "queued",
-      "priority": "high"
+      "status": "pending",
+      "priority": "high",
+      "executionPid": null,
+      "sessionId": "1110d7f6-7d21-42d7-8a81-edd86fe13ef3",
+      "executionError": "Process exited unexpectedly"
     },
     {
       "id": "TSK0019",
       "title": "Create migration plan for related entities",
       "description": "In requirements/projects/migration-plan.md, add migration approach for objectives, steps, images, links, and notes. Include: foreign key reconciliation, order preservation for objectives/steps, and handling orphaned records",
-      "status": "queued",
-      "priority": "high"
+      "status": "in_progress",
+      "priority": "high",
+      "executionPid": 67157,
+      "sessionId": "4164766c-8131-4f42-9b59-e9e33cc52883"
     },
     {
       "id": "TSK0020",
