@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-10T19:30:00.000Z",
+  "updated_at": "2026-01-10T22:00:00.000Z",
   "feature": {
     "name": "Customers Migration Requirements",
     "slug": "customers-migration-requirements",
@@ -70,18 +70,22 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive 1,100+ line data-model-mapping.md documenting complete field-by-field mapping from FileMaker devCustomers layout to Supabase tables (customers, customer_email, customer_phone, customer_address). Discovered 21 FileMaker fields through code inspection (src/components/customers/CustomerForm.jsx:25-48, src/services/customerService.js). Documented mappings include: core customer fields (Name→business_name, __ID→id), email/phone/address normalization to separate tables, boolean conversions (f_active), timestamp mappings, and UNMAPPED fields requiring backend schema changes (f_active, chargeRate, f_USD, f_EUR, f_prePay, fundsAvailable, dbPath, dbUserName, dbPasword, OBSI_ClientNo, ContactPerson). Identified critical data quality issues: duplicate email/phone constraints, missing required fields (city/state), invalid UUIDs, organization scoping decisions. Provided detailed transformation logic, migration pseudocode, validation queries, edge case handling, and backend change request for schema completion. Documented ID reconciliation strategy (FileMaker __ID vs recordId), performance considerations (104 customers × 4 tables = ~416 inserts), batch migration strategy (50 per transaction), and comprehensive pre/post-migration validation checks. Build verified successful with only pre-existing warnings."
+      "implementation_notes": "Implemented a comprehensive FileMaker to Supabase field mapping spec by creating 'requirements/data-model-mapping.md', built from schema discovery via code inspection of 'src/components/customers/CustomerForm.jsx' and 'src/services/customerService.js' (with additional references in 'src/hooks/useSupabaseCustomer.js' and 'src/api/customers.js'). The mapping documents 21 FileMaker fields from the 'devCustomers' layout to Supabase tables, including transformation rules (boolean, timestamps, UUID preservation, normalization) and highlights key migration risks like duplicate unique constraints, required address fields, unmapped fields, and the '__ID' vs 'recordId' inconsistency. Important decisions were deferred but captured as change requests, notably how to set 'organization_id' and proposed backend schema additions such as 'customers.is_active', JSONB buckets for financial data and encrypted credentials, and a few missing columns and indexes. Verified the build still compiles (only pre-existing warnings) and updated 'tasks.json' to mark the work complete."
     },
     {
       "id": "TSK0005",
       "title": "Define API endpoint contracts",
       "description": "Create api-contracts.md specifying all required backend endpoints (list, get, create, update, delete, toggle status) with request/response examples",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0002",
         "TSK0004"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive API contracts document at '.devflow/tasks/customers-migration-requirements/api-contracts.md' specifying 11 backend endpoints for the Customers migration with complete request/response examples, validation rules, error handling, and edge case documentation. The 1000+ line specification covers: (1) Core CRUD operations (List, Get by ID, Create, Update, Toggle Status, Delete) with full request/response examples and error scenarios; (2) Specialized endpoints (Search, Batch Create, Statistics, Validate) for migration support; (3) Authentication/authorization with HMAC-SHA256 and organization scoping via RLS; (4) Detailed edge case handling (duplicate emails/phones, concurrent updates, partial failures, address validation, organization assignment, FileMaker ID reconciliation); (5) Frontend integration examples showing refactoring from FileMaker to backend API; (6) Performance considerations, rate limiting, pagination, and idempotency patterns. Key design decisions documented include atomic transactions for related table updates, soft delete with restore capability, optimistic locking for concurrent updates, and migration-specific batch operations. Verified build succeeds (only pre-existing warnings) and marked task complete in tasks.json. Document status: Requirements Complete - Ready for Backend Team Review."
     },
     {
       "id": "TSK0006",
