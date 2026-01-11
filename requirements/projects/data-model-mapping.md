@@ -130,23 +130,63 @@ CREATE INDEX idx_projects_created_at ON projects(created_at);
 
 ## FileMaker devProjectObjectives Layout Fields
 
-### Objective Fields
+**Layout**: `devProjectObjectives`
+**Purpose**: Stores project objectives/goals/milestones
+**Relationship**: Many objectives per project (one-to-many with devProjects)
 
-| FileMaker Field | Type | Required | Description | Sample Value |
-|----------------|------|----------|-------------|--------------|
-| `__ID` | Text (UUID) | Auto | Objective UUID | `"uuid-obj-123"` |
-| `recordId` | Number | Auto | FM internal record ID | `"10"` |
-| `_projectID` | Text (UUID) | ✅ Yes | Project ID (FK to devProjects) | `"uuid-project-456"` |
-| `projectObjective` | Text | ✅ Yes | Objective text/description | `"Complete homepage design"` |
-| `status` | Text | No | Objective status | `"Open"`, `"In Progress"`, `"Completed"` |
-| `order` | Number | No | Display order | `1`, `2`, `3` |
-| `f_completed` | Text | No | Completion flag ("1" = yes, "0" = no) | `"1"` |
+### Core Fields
+
+| FileMaker Field | Type | Required | Description | Sample Value | Code Reference |
+|----------------|------|----------|-------------|--------------|----------------|
+| `__ID` | Text (UUID) | Auto | Objective UUID | `"uuid-obj-123"` | projectService.js:116 |
+| `recordId` | Number | Auto | FM internal record ID | `"10"` | projectService.js:117 |
+| `_projectID` | Text (UUID) | ✅ Yes | Project ID (FK to devProjects.__ID) | `"uuid-project-456"` | projectService.js:114, useProject.js:527 |
+| `projectObjective` | Text | ✅ Yes | Objective text/description | `"Complete homepage design"` | projectService.js:118, useProject.js:528 |
+| `status` | Text | No | Objective status | `"Open"`, `"In Progress"`, `"Completed"` | projectService.js:119, useProject.js:529 |
+| `order` | Number | No | Display order (sorted ascending) | `1`, `2`, `3` | projectService.js:120 |
+| `f_completed` | Text | No | Completion flag ("1" = yes, "0" = no) | `"1"` | projectService.js:121, useProject.js:530 |
+
+**Business Rules** (Code: useProject.js:520-552):
+1. Default status is "Open" when created
+2. Default f_completed is "0" (not completed) when created
+3. Objectives sorted by `order` field ascending (projectService.js:124)
+4. Frontend filters objectives by `_projectID` (projectService.js:114)
+5. Completion flag stored as string "1"/"0" in FileMaker, converted to boolean in frontend
+
+**API Operations** (Code: src/api/projects.js:201-213):
+- **Create**: `createObjective(objectiveData)` → FileMaker CREATE on devProjectObjectives layout
+- **Read**: `fetchProjectRelatedData(projectId, 'devProjectObjectives')` → Query by `_projectID`
+- **Update**: Not implemented in current codebase (manual FileMaker update)
+- **Delete**: Not implemented in current codebase (manual FileMaker delete)
+
+**Frontend Processing** (Code: projectService.js:108-125):
+```javascript
+{
+  id: obj.fieldData.__ID,
+  recordId: obj.recordId,
+  objective: obj.fieldData.projectObjective,
+  status: obj.fieldData.status || 'Open',
+  order: obj.fieldData.order || 0,
+  completed: obj.fieldData.f_completed === 1 || obj.fieldData.f_completed === "1",
+  steps: processObjectiveSteps(steps, obj.fieldData.__ID)
+}
+```
+
+**Relationship to Steps**:
+- One objective has many steps (one-to-many with devProjectObjSteps)
+- Steps filtered by `_objectiveID === objective.__ID` (projectService.js:139)
+- Steps embedded in objective object as `steps` array (projectService.js:122)
 
 ## Supabase project_objectives Table Schema
 
 **Status**: ⚠️ **TABLE DOES NOT EXIST IN SUPABASE** (Verified 2025-01-10)
 
-**Proposed Schema** (Based on FileMaker structure):
+**Current State**:
+- Only `projects` table exists in Supabase
+- No project_objectives table - must be created for migration
+- FileMaker devProjectObjectives data cannot be migrated without this table
+
+**Proposed Schema** (Based on FileMaker structure and frontend usage):
 
 ```sql
 CREATE TABLE project_objectives (
@@ -154,17 +194,42 @@ CREATE TABLE project_objectives (
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
   objective TEXT NOT NULL,                      -- Maps to projectObjective
   status TEXT DEFAULT 'Open',                   -- Maps to status
-  order_num INTEGER DEFAULT 0,                  -- Maps to order
-  completed BOOLEAN DEFAULT false,              -- Maps to f_completed
+  order_num INTEGER DEFAULT 0,                  -- Maps to order (renamed to avoid SQL keyword)
+  completed BOOLEAN DEFAULT false,              -- Maps to f_completed (convert "1"/"0" → boolean)
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE INDEX idx_project_objectives_project ON project_objectives(project_id);
 CREATE INDEX idx_project_objectives_order ON project_objectives(project_id, order_num);
+CREATE INDEX idx_project_objectives_status ON project_objectives(status);
 ```
 
-**Migration Impact**: This table must be created before migrating objectives from FileMaker. See BACKEND_CHANGE_REQUEST document.
+**Field Mapping**:
+
+| FileMaker Field | Supabase Column | Type Conversion | Notes |
+|----------------|-----------------|-----------------|-------|
+| `__ID` | `id` | UUID → UUID | Preserve UUID (no conversion) |
+| `recordId` | ❌ DISCARD | N/A | FileMaker internal ID, not needed |
+| `_projectID` | `project_id` | UUID → UUID | Foreign key constraint to projects(id) |
+| `projectObjective` | `objective` | Text → TEXT | Direct mapping |
+| `status` | `status` | Text → TEXT | Direct mapping, default "Open" |
+| `order` | `order_num` | Number → INTEGER | Renamed to avoid SQL keyword conflict |
+| `f_completed` | `completed` | String "1"/"0" → BOOLEAN | Convert: "1" → true, "0" → false |
+| N/A | `created_at` | N/A | Auto-generated timestamp |
+| N/A | `updated_at` | N/A | Auto-generated timestamp |
+
+**Migration Impact**:
+1. ⚠️ **BLOCKING**: This table must be created before migrating objectives from FileMaker
+2. Foreign key constraint requires projects table to exist first (✅ already exists)
+3. Migration must preserve `__ID` as `id` to maintain relationship with objective steps
+4. See BACKEND_CHANGE_REQUEST document for table creation SQL
+
+**Migration Order Dependencies**:
+1. ✅ Projects table (already exists)
+2. ⚠️ Create project_objectives table (REQUIRED)
+3. ⚠️ Create project_objective_steps table (depends on project_objectives)
+4. Migrate data: projects → project_objectives → project_objective_steps
 
 ## FileMaker devProjectObjSteps Layout Fields
 

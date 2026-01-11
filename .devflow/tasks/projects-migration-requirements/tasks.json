@@ -46,17 +46,25 @@
       "id": "TSK0003",
       "title": "Map core Projects data model",
       "description": "In requirements/projects/data-model-mapping.md, document FileMaker devProjects layout fields → Supabase projects table mapping. Include: field types, constraints, status enum values, pricing fields (f_fixedPrice, f_subscription, value), date fields, team/customer relationships, and UUID vs recordId handling",
-      "status": "in_progress",
+      "status": "done",
       "priority": "high",
-      "executionPid": 9164,
-      "sessionId": "139cb455-4306-45f2-888c-66883408146f"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Updated the FileMaker to Supabase Projects data model documentation by verifying the live Supabase schema and aligning mappings, constraints, and enum conversions accordingly in 'requirements/projects/data-model-mapping.md'. Documented confirmed tables ('projects', 'links', 'customer_sales') and explicitly called out missing tables ('project_objectives', 'project_objective_steps', 'project_images', 'notes'), plus key schema gaps like missing 'organization_id', 'team_id', and pricing flags with decisions to derive link titles from URLs and keep time tracking in FileMaker. Added concrete API contract examples and business logic references (notably fixed price and subscription handling in 'src/services/projectService.js' and related usage in 'src/api/projects.js' and 'src/hooks/useProject.js'), then validated the docs build cleanly and produced a completion summary and action items list for migration planning."
     },
     {
       "id": "TSK0004",
       "title": "Map Project Objectives data model",
       "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjectives layout → Supabase project_objectives table mapping. Include: objective text, status, order, completed flag, project_id foreign key, and relationship to objective steps",
-      "status": "queued",
-      "priority": "high"
+      "status": "done",
+      "priority": "high",
+      "completedAt": "2026-01-10T20:35:00.000Z",
+      "notes": "Completed comprehensive mapping of FileMaker devProjectObjectives layout to proposed Supabase project_objectives table schema with field-by-field analysis, code references, business rules, API operations, and migration dependencies",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Enhanced the Project Objectives data model mapping in 'requirements/projects/data-model-mapping.md' with comprehensive field-by-field documentation including code references (projectService.js:108-125, useProject.js:520-552, projects.js:201-213). Verified via SSH that project_objectives table does NOT exist in Supabase (only projects table exists), documented this as a BLOCKING migration issue. Added detailed field mapping table showing FileMaker fields (7 fields including __ID, recordId, _projectID, projectObjective, status, order, f_completed) to proposed Supabase columns (id, project_id, objective, status, order_num, completed, created_at, updated_at) with type conversions (especially string '1'/'0' to boolean for completion flag). Documented business rules: default status 'Open', default completed false, sorted by order ascending, filtered by _projectID. Added API operations section showing createObjective() is implemented but update/delete are not. Included frontend processing code snippet showing how data is transformed. Documented relationship to objective steps (one-to-many, embedded as steps array). Added proposed SQL schema with indexes and foreign key constraints. Documented migration dependencies: projects table exists (✅), but project_objectives and project_objective_steps tables must be created (⚠️ BLOCKING). Build verified successfully. Task marked complete in tasks.json."
     },
     {
       "id": "TSK0005",
