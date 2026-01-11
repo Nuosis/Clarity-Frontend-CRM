@@ -47,14 +47,18 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive 'requirements/quickbooks/data-model-mapping.md' (986 lines) documenting complete data architecture for QuickBooks migration. Covers: (1) Token storage requirements with 'quickbooks_tokens' table schema for OAuth 2.0 credentials, (2) Organization configuration via 'organization_quickbooks_config' table for QB-specific settings (tax codes, item IDs, invoice numbering), (3) QB entity mappings for customers, invoices, and items with new 'quickbooks_invoices' tracking table, (4) Enhanced 'customer_sales' schema with 'invoice_id', 'billed_status', and deprecation of FileMaker 'financial_id', (5) Complete data transformation mappings from FileMaker→Supabase→QuickBooks with code references to 'invoiceGenerationService.js' and 'financialSyncService.js', and (6) Backend change requirements summary referencing Backend Change Protocol. All code references verified with actual line numbers. No code changes made - documentation only per standing constraints."
+      "implementation_notes": "Implemented a comprehensive QuickBooks data model mapping specification to support migrating the integration from FileMaker to a Supabase-only architecture, covering token storage, org-level QB configuration, entity mappings (customers, invoices, items), transformation rules, and backend change requirements. The primary deliverable is the new or updated document at 'requirements/quickbooks/data-model-mapping.md' (about 986 lines), which includes proposed DDL for new tables like 'quickbooks_tokens', 'organization_quickbooks_config', and 'quickbooks_sync_log', plus required schema updates to existing tables such as 'customers' and 'customer_sales' with RLS and indexing guidance. Key decisions included moving hardcoded QuickBooks settings (tax codes, item IDs, invoice defaults) into database-driven configuration and defining a deprecation strategy for the FileMaker 'financial_id'. The session also verified referenced implementation points against existing code in 'src/api/quickbooksApi.js', 'src/services/invoiceGenerationService.js', and 'src/services/financialSyncService.js', and confirmed task status in 'tasks.json' was already marked 'done'."
     },
     {
       "id": "TSK0004",
       "title": "Define QuickBooks API contracts",
       "description": "Create api-contracts.md specifying backend endpoints for QB initialization, OAuth flow, token refresh, invoice generation, customer sync, and testing operations",
-      "status": "queued",
-      "priority": "high"
+      "status": "done",
+      "priority": "high",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive QuickBooks API contracts specification in 'api-contracts.md' (2,203 lines, 56KB) documenting all 30 backend endpoints across 6 categories: OAuth & Initialization (4 endpoints), Customer Management (6 endpoints), Invoice Operations (7 endpoints), Reference Data (3 endpoints), Bill Operations (5 endpoints), and Testing & Utilities (5 endpoints). All endpoints are currently implemented and working in production. Document includes: HMAC-SHA256 authentication requirements with code examples from 'src/api/quickbooksApi.js' (line 31-60), complete request/response schemas with TypeScript interfaces, accurate function references with verified line numbers (e.g., 'getQBOAuthorizationUrl()' at line 195, 'createQBOInvoice()' at line 343), business logic rules (document number format, tax code determination, due date calculation, item reference mapping), data models for Customer, Invoice, Item, Vendor, and Bill entities, error handling patterns, and references to frontend implementation ('src/services/invoiceGenerationService.js' line 26 for 'generateInvoicePayload()', 'src/components/financial/CustomerSalesTable.jsx' for UI). All line numbers verified against actual source code. Build verified successfully. No backend changes required - this is documentation only per Backend Change Protocol."
     },
     {
       "id": "TSK0005",
