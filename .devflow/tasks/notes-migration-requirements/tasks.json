@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-11T06:30:00.000Z",
+  "updated_at": "2026-01-11T06:34:04.000Z",
   "feature": {
     "name": "Notes Migration Requirements",
     "slug": "notes-migration-requirements",
@@ -83,17 +83,21 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive backend API contracts documentation in 'requirements/notes/api-contracts.md' (722 lines), defining 5 REST API endpoints (GET /api/notes, GET /api/notes/:id, POST /api/notes, PATCH /api/notes/:id, DELETE /api/notes/:id) with complete request/response schemas, query parameters, validation rules, error handling, and example requests. Documented HMAC-SHA256 authentication requirements, Supabase direct access patterns with RLS policies, realtime subscription patterns, pagination strategy (default 50, max 200), performance targets (< 500ms for list queries), and comprehensive error code catalog (EMPTY_NOTE_CONTENT, NO_PARENT_ENTITY, MULTIPLE_PARENT_ENTITIES, etc.). Included frontend integration patterns referencing 'src/services/dataService.js', 'src/api/notes.js', and 'src/services/supabaseService.js'. Followed Teams migration API contract pattern from 'BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md'. Key decisions: polymorphic parent entity validation (exactly one of customer_id/project_id/task_id required), organization_id auto-inferred from JWT, offset-based pagination, no application-level caching, hard delete operations."
+      "implementation_notes": "Implemented complete backend API contract documentation for the notes feature by replacing placeholder content in 'requirements/notes/api-contracts.md' with a full 722-line spec covering 5 REST endpoints, request and response schemas, validation rules, error catalog, and Supabase RLS and realtime access patterns based on existing backend documentation conventions. Updated 'tasks.json' to mark 'TSK0005' as completed and verified the project still builds successfully. Key decisions documented include HMAC-SHA256 auth for the backend API vs JWT for Supabase access, enforcing exactly one parent entity with organization scoping, offset pagination (default 50 max 200), hard deletes, and immutable parent assignment after creation."
     },
     {
       "id": "TSK0006",
       "title": "Design authorization and RLS policies",
       "description": "Create authorization.md documenting: row-level security policies needed, org-scoping requirements, who can create/read/update/delete notes, how permissions inherit from parent entities (project/task access), service role vs anon key usage",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0004"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented comprehensive authorization and RLS policy documentation for the notes feature by fully replacing placeholder content in 'requirements/notes/authorization.md' with a complete 1,138-line specification covering authentication methods (HMAC vs JWT), RLS helper functions, detailed policies for SELECT/INSERT/UPDATE/DELETE operations, parent entity access inheritance model, permission matrices (simple and future RBAC), service role vs anon key usage guidelines, backend API authorization patterns, multi-layered security considerations (XSS, SQL injection, CSRF, rate limiting), and extensive test requirements with 9 concrete test cases. Updated 'tasks.json' to mark 'TSK0006' as completed after confirming the build succeeded. Key decisions documented include: (1) simple permission model matching current FileMaker (all authenticated org users have equal permissions), (2) organization scoping via RLS policies and JWT claims, (3) parent entity access validated via helper functions (has_customer_access, has_project_access, has_task_access), (4) service role for backend API (bypasses RLS, enforces app-level checks) vs anon key for frontend (subject to RLS), (5) cascade deletion on parent removal, (6) no role-based access control initially (future enhancement documented), and (7) comprehensive security layers (frontend validation, backend validation, database constraints, RLS policies). Documentation includes code references to existing implementation files, pseudo-code examples for backend team, and clear action items for database changes, API implementation, and testing."
     },
     {
       "id": "TSK0007",
