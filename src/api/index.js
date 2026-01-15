@@ -16,7 +16,8 @@ export {
     createCustomer,
     toggleCustomerStatus,
     fetchActiveCustomers,
-    deleteCustomer
+    deleteCustomer,
+    searchCustomers
 } from './customers';
 
 // Team operations

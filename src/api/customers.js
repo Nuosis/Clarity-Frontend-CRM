@@ -31,14 +31,22 @@ function normalizeCustomerData(data, environment) {
 
 /**
  * Fetches all customers (environment-aware)
- * @returns {Promise<Array>} Array of customer records
+ * @param {Object} options - Fetch options
+ * @param {number} options.limit - Number of records per page (default: 50, max: 200)
+ * @param {number} options.offset - Pagination offset (default: 0)
+ * @param {boolean} options.active - Filter by active status (optional)
+ * @param {string} options.search - Search by business name (optional)
+ * @param {string} options.sort - Sort field (default: 'business_name')
+ * @param {string} options.order - Sort order ('asc' or 'desc')
+ * @param {boolean} options.include_related - Include nested emails/phones/addresses
+ * @returns {Promise<Object>} Customer list with pagination
  */
-export async function fetchCustomers() {
+export async function fetchCustomers(options = {}) {
     const env = getEnvironmentContext();
 
     try {
         if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-            // FileMaker environment - use legacy method
+            // FileMaker environment - use legacy method (no pagination)
             return handleFileMakerOperation(async () => {
                 const params = {
                     layout: Layouts.CUSTOMERS,
@@ -49,8 +57,28 @@ export async function fetchCustomers() {
                 return await dataService.request(params);
             });
         } else {
-            // Web app environment - use backend API
-            const response = await dataService.get('/contacts_api');
+            // Web app environment - use backend API with pagination
+            const queryParams = {
+                limit: options.limit || 50,
+                offset: options.offset || 0,
+                include_related: options.include_related !== false // Default true
+            };
+
+            // Add optional filters
+            if (options.active !== undefined) {
+                queryParams.active = options.active;
+            }
+            if (options.search) {
+                queryParams.search = options.search;
+            }
+            if (options.sort) {
+                queryParams.sort = options.sort;
+            }
+            if (options.order) {
+                queryParams.order = options.order;
+            }
+
+            const response = await dataService.get('/contacts_api', { params: queryParams });
             return normalizeCustomerData(response.data || response, env.type);
         }
     } catch (error) {
@@ -254,5 +282,64 @@ export async function deleteCustomer(customerId) {
     } catch (error) {
         console.error('[Customers API] deleteCustomer error:', error);
         throw new Error(`Failed to delete customer ${customerId}: ${error.message}`);
+    }
+}
+
+/**
+ * Searches customers by query string (environment-aware)
+ * @param {string} query - Search query string (min 1 character)
+ * @param {Object} options - Search options
+ * @param {number} options.limit - Maximum number of results (default: 20, max: 100)
+ * @returns {Promise<Array>} Array of matching customer records
+ */
+export async function searchCustomers(query, options = {}) {
+    validateParams({ query }, ['query']);
+    const env = getEnvironmentContext();
+
+    // Validate query length
+    if (!query || query.trim().length < 1) {
+        throw new Error('Search query must be at least 1 character');
+    }
+
+    try {
+        if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+            // FileMaker environment - fetch all and filter client-side
+            const allCustomers = await fetchCustomers();
+            const searchTerm = query.toLowerCase().trim();
+
+            // Filter using the same logic as local search
+            const filtered = allCustomers.response?.data?.filter(customer => {
+                const fieldData = customer.fieldData || {};
+                const name = (fieldData.Name || '').toLowerCase();
+                const email = (fieldData.Email || '').toLowerCase();
+                const phone = (fieldData.Phone || '').toLowerCase();
+                const contactPerson = (fieldData.ContactPerson || '').toLowerCase();
+
+                return name.includes(searchTerm) ||
+                       email.includes(searchTerm) ||
+                       phone.includes(searchTerm) ||
+                       contactPerson.includes(searchTerm);
+            }) || [];
+
+            // Apply limit if specified
+            const limit = options.limit || 20;
+            return {
+                response: {
+                    data: filtered.slice(0, limit)
+                }
+            };
+        } else {
+            // Web app environment - use backend search endpoint
+            const queryParams = {
+                q: query.trim(),
+                limit: Math.min(options.limit || 20, 100) // Max 100
+            };
+
+            const response = await dataService.get('/api/customers/search', { params: queryParams });
+            return normalizeCustomerData(response.data || response, env.type);
+        }
+    } catch (error) {
+        console.error('[Customers API] searchCustomers error:', error);
+        throw new Error(`Failed to search customers: ${error.message}`);
     }
 }

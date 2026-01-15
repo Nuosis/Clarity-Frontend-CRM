@@ -1,13 +1,24 @@
 // Customer service exports
 export {
     processCustomerData,
+    processBackendCustomerList,
+    processBackendCustomerDetail,
     filterActiveCustomers,
     sortCustomers,
     validateCustomerData,
     formatCustomerForDisplay,
     formatCustomerForFileMaker,
     groupCustomersByStatus,
-    calculateCustomerStats
+    calculateCustomerStats,
+    searchCustomers,
+    transformFileMakerToBackend,
+    transformBackendToFileMaker,
+    transformFileMakerArrayToBackend,
+    transformBackendArrayToFileMaker,
+    extractPrimaryContact,
+    extractPrimaryAddress,
+    validateTransformedData,
+    mergeNestedContacts
 } from './customerService';
 
 // Team service exports
