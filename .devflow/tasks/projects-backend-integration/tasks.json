@@ -23,10 +23,14 @@
       "id": "TSK0001",
       "title": "Update API layer for core project operations",
       "description": "Replace FileMaker API calls in src/api/projects.js with backend REST endpoints. Implement: listByCustomer (GET /projects/customer/{customer_id}), getById (GET /projects/{project_id}), getWithDetails (GET /projects/{project_id}/detail), create (POST /projects), update (PUT /projects/{project_id}), delete (DELETE /projects/{project_id}), updateStatus (PATCH /projects/{project_id}/status). Use HMAC auth for all requests.",
-      "status": "complete",
+      "status": "done",
       "priority": "high",
       "completed_at": "2026-01-15T00:00:00Z",
-      "notes": "Implemented environment-aware API client with backend REST endpoints for core project operations, objectives, images, and notes. All requests use HMAC authentication via dataService. Maintains backward compatibility with FileMaker environment. Build verified successfully."
+      "notes": "Implemented environment-aware API client with backend REST endpoints for core project operations, objectives, images, and notes. All requests use HMAC authentication via dataService. Maintains backward compatibility with FileMaker environment. Build verified successfully.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented a new API layer for projects, objectives, images, and notes by replacing FileMaker Data API calls with backend REST endpoints, including project CRUD plus status updates, objective CRUD plus reorder and completion toggles, and project image and note CRUD. Key changes were made in 'src/api/projects.js' (rewritten to be environment-aware, use HMAC-SHA256 auth via 'dataService.generateBackendAuthHeader()', enforce org scoping from JWT claims, and normalize responses while preserving legacy FileMaker fallbacks like 'fetchProjectRelatedData()' and 'fetchAllProjectData()'). Updated 'tasks.json' to mark 'TSK0001', 'TSK0002', and 'TSK0003' complete and added a completion summary document, with the notable decision to keep links support on the legacy FileMaker path due to missing backend links endpoints. Verified the build compiles successfully, with unrelated proposal warnings only."
     },
     {
       "id": "TSK0002",
@@ -50,8 +54,14 @@
       "id": "TSK0004",
       "title": "Update service layer data transformations",
       "description": "Update src/services/projectService.js to transform data between frontend and backend schemas. Update processProjectData(), formatProjectForBackend() with field mappings: projectName→name, _custID→customer_id, value→budget, dateStart→start_date, dateEnd→target_end_date, f_fixedPrice→is_fixed_price, f_subscription→is_subscription. Map status values: Open→active, Closed→completed. Remove FileMaker-specific logic (recordId handling).",
-      "status": "queued",
-      "priority": "high"
+      "status": "complete",
+      "priority": "high",
+      "completed_at": "2026-01-15T00:00:00Z",
+      "notes": "Updated projectService.js with bidirectional transformations between frontend and backend schemas. Added processBackendProject() to transform backend API responses, formatProjectForBackend() to prepare data for API requests, and status mapping functions (mapBackendStatusToFrontend, mapFrontendStatusToBackend). Updated processProjectValue() to handle both FileMaker and backend formats. Build verified successfully.",
+      "implementation_notes": "Key changes: (1) Extended processProjectData() with 'source' parameter to handle both FileMaker and backend responses, (2) Added processBackendProject() for backend→frontend transformation with field mappings (name→projectName, customer_id→_custID, budget→value, start_date→dateStart, target_end_date→dateEnd, is_fixed_price→f_fixedPrice, is_subscription→f_subscription), (3) Created formatProjectForBackend() for frontend→backend transformation, (4) Added bidirectional status mapping functions (active↔Open, completed↔Closed, on_hold↔On Hold, pending↔Open, cancelled↔Cancelled), (5) Updated processProjectValue() to normalize field names and work with both data formats, (6) Exported status mapping functions for use by other modules. All transformations preserve business logic for fixed-price and subscription projects.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0005",

@@ -17,12 +17,21 @@ function convertToFileMakerDate(dateString) {
 }
 
 /**
- * Processes raw project data from FileMaker
+ * Processes raw project data from either FileMaker or Backend API
  * @param {Object} projectData - Raw project data
  * @param {Object} relatedData - Related project data (images, links, etc.)
+ * @param {string} source - Data source: 'filemaker' or 'backend'
  * @returns {Array} Processed project records
  */
-export function processProjectData(projectData, relatedData = {}) {
+export function processProjectData(projectData, relatedData = {}, source = 'filemaker') {
+    // Handle backend API response format
+    if (source === 'backend') {
+        // Backend returns array directly or wrapped in data property
+        const projects = Array.isArray(projectData) ? projectData : (projectData?.data || []);
+        return projects.map(project => processBackendProject(project, relatedData));
+    }
+
+    // FileMaker response format
     if (!projectData?.response?.data) {
         return [];
     }
@@ -53,6 +62,101 @@ export function processProjectData(projectData, relatedData = {}) {
             dateEnd: project.fieldData.dateEnd || null
         };
     });
+}
+
+/**
+ * Processes a single project from backend API response
+ * Transforms backend schema to frontend format
+ * @param {Object} project - Backend project data
+ * @param {Object} relatedData - Related data (objectives, images, etc.)
+ * @returns {Object} Processed project
+ */
+function processBackendProject(project, relatedData = {}) {
+    return {
+        // Core fields - backend schema → frontend format
+        id: project.id,
+        __ID: project.id, // Maintain compatibility with existing code
+        projectName: project.name,
+        _custID: project.customer_id,
+        _teamID: project.team_id || null,
+        description: project.description || '',
+
+        // Status mapping: backend uses lowercase with underscores
+        status: mapBackendStatusToFrontend(project.status),
+
+        // Date fields: backend uses YYYY-MM-DD format
+        dateStart: project.start_date || null,
+        dateEnd: project.target_end_date || project.actual_end_date || null,
+
+        // Pricing fields
+        value: parseFloat(project.budget) || 0,
+        f_fixedPrice: project.is_fixed_price === true,
+        f_subscription: project.is_subscription === true,
+
+        // Time estimate (if field exists in backend)
+        estOfTime: project.time_estimate || '',
+
+        // Additional backend fields
+        github_repo_url: project.github_repo_url || '',
+        project_link: project.project_link || '',
+
+        // Timestamps
+        createdAt: project.created_at,
+        modifiedAt: project.updated_at,
+        '~creationTimestamp': project.created_at,
+        '~modificationTimestamp': project.updated_at,
+
+        // Related data (from nested response or separate queries)
+        images: project.images || relatedData.images || [],
+        links: project.links || relatedData.links || [],
+        objectives: project.objectives || relatedData.objectives || [],
+        records: project.records || relatedData.records || [],
+
+        // Computed fields
+        isActive: project.status === 'active' || project.status === 'pending',
+
+        // Stats (from backend or computed)
+        stats: project.stats || {
+            totalHours: 0,
+            unbilledHours: 0,
+            completion_percentage: 0
+        }
+    };
+}
+
+/**
+ * Maps backend status values to frontend format
+ * @param {string} backendStatus - Backend status value
+ * @returns {string} Frontend status value
+ */
+export function mapBackendStatusToFrontend(backendStatus) {
+    const statusMap = {
+        'active': 'Open',
+        'pending': 'Open',
+        'on_hold': 'On Hold',
+        'completed': 'Closed',
+        'cancelled': 'Cancelled'
+    };
+    return statusMap[backendStatus] || 'Open';
+}
+
+/**
+ * Maps frontend status values to backend format
+ * @param {string} frontendStatus - Frontend status value
+ * @returns {string} Backend status value
+ */
+export function mapFrontendStatusToBackend(frontendStatus) {
+    const statusMap = {
+        'Open': 'active',
+        'Active': 'active',
+        'Pending': 'pending',
+        'On Hold': 'on_hold',
+        'Completed': 'completed',
+        'Complete': 'completed',
+        'Closed': 'completed',
+        'Cancelled': 'cancelled'
+    };
+    return statusMap[frontendStatus] || 'active';
 }
 
 /**
@@ -305,6 +409,57 @@ export function formatProjectForFileMaker(data) {
 }
 
 /**
+ * Formats project data for Backend API
+ * Transforms frontend format to backend schema
+ * @param {Object} data - Project data to format
+ * @returns {Object} Formatted data for backend API
+ */
+export function formatProjectForBackend(data) {
+    const backendData = {
+        name: data.name || data.projectName,
+        customer_id: data.customerId || data._custID,
+        description: data.description || '',
+        status: mapFrontendStatusToBackend(data.status || 'Open'),
+        budget: parseFloat(data.value) || null,
+        start_date: data.dateStart || null,
+        target_end_date: data.dateEnd || null,
+    };
+
+    // Optional fields - only include if they exist
+    if (data.teamId || data._teamID) {
+        backendData.team_id = data.teamId || data._teamID;
+    }
+
+    if (data.timeEstimate || data.estOfTime) {
+        backendData.time_estimate = data.timeEstimate || data.estOfTime;
+    }
+
+    if (data.github_repo_url) {
+        backendData.github_repo_url = data.github_repo_url;
+    }
+
+    if (data.project_link) {
+        backendData.project_link = data.project_link;
+    }
+
+    // Pricing flags (if backend schema supports them)
+    if (data.isFixedPrice !== undefined) {
+        backendData.is_fixed_price = data.isFixedPrice === true || data.isFixedPrice === "1";
+    }
+
+    if (data.isSubscription !== undefined) {
+        backendData.is_subscription = data.isSubscription === true || data.isSubscription === "1";
+    }
+
+    // Include ID for updates
+    if (data.id) {
+        backendData.id = data.id;
+    }
+
+    return backendData;
+}
+
+/**
  * Calculates project completion percentage
  * @param {Object} project - Project record
  * @returns {number} Completion percentage
@@ -501,6 +656,7 @@ export function getProcessedProject(project, relatedData) {
 
 /**
  * Processes a project's fixed price or subscription value according to business rules
+ * Works with both FileMaker and Backend API data formats
  * @param {Object} project - The project to process
  * @param {boolean} isUpdate - Whether this is an update to an existing project
  * @returns {Object} - Object containing any sales entries to be created
@@ -511,87 +667,97 @@ export function processProjectValue(project, isUpdate = false) {
         billableStatus: null
     };
 
+    // Normalize field names (handle both FileMaker and backend formats)
+    const isFixedPrice = project.f_fixedPrice || project.is_fixed_price;
+    const isSubscription = project.f_subscription || project.is_subscription;
+    const projectValue = project.value || project.budget || 0;
+    const customerId = project._custID || project.customer_id;
+    const projectName = project.projectName || project.name;
+    const projectId = project.id || project.__ID;
+    const startDate = project.dateStart || project.start_date;
+    const endDate = project.dateEnd || project.target_end_date || project.actual_end_date;
+
     // Skip processing if neither fixed price nor subscription is set
-    if (!project.f_fixedPrice && !project.f_subscription) {
+    if (!isFixedPrice && !isSubscription) {
         return result;
     }
 
     // Process fixed price projects
-    if (project.f_fixedPrice) {
+    if (isFixedPrice) {
         result.billableStatus = false; // All hours are non-billable for fixed price projects
-        
+
         // Check if project has a start date
-        if (project.dateStart) {
-            const startDate = new Date(project.dateStart);
+        if (startDate) {
+            const startDateObj = new Date(startDate);
             const today = new Date();
-            
+
             // Only process if the start date is today or in the past
-            if (startDate <= today) {
+            if (startDateObj <= today) {
                 // Add half the value to "sellable" when the project is started
                 result.salesToCreate.push({
-                    customer_id: project._custID,
-                    amount: project.value / 2,
-                    date: project.dateStart,
-                    description: `Fixed price project (${project.projectName}) - 50% on start`,
-                    project_id: project.id || project.__ID,
+                    customer_id: customerId,
+                    amount: projectValue / 2,
+                    date: startDate,
+                    description: `Fixed price project (${projectName}) - 50% on start`,
+                    project_id: projectId,
                     type: 'sellable'
                 });
             }
         }
-        
+
         // Check if project has an end date
-        if (project.dateEnd) {
-            const endDate = new Date(project.dateEnd);
+        if (endDate) {
+            const endDateObj = new Date(endDate);
             const today = new Date();
-            
+
             // Only process if the end date is today or in the past
-            if (endDate <= today) {
+            if (endDateObj <= today) {
                 // Add remaining half of the value to "sales" when the project is concluded
                 result.salesToCreate.push({
-                    customer_id: project._custID,
-                    amount: project.value / 2,
-                    date: project.dateEnd,
-                    description: `Fixed price project (${project.projectName}) - 50% on completion`,
-                    project_id: project.id || project.__ID,
+                    customer_id: customerId,
+                    amount: projectValue / 2,
+                    date: endDate,
+                    description: `Fixed price project (${projectName}) - 50% on completion`,
+                    project_id: projectId,
                     type: 'sales'
                 });
             }
         }
     }
-    
+
     // Process subscription projects
-    if (project.f_subscription && project.dateStart) {
-        const startDate = new Date(project.dateStart);
+    if (isSubscription && startDate) {
+        const startDateObj = new Date(startDate);
         const today = new Date();
-        const endDate = project.dateEnd ? new Date(project.dateEnd) : null;
-        
+        const endDateObj = endDate ? new Date(endDate) : null;
+
         // Only process if the project has started and hasn't ended
-        if (startDate <= today && (!endDate || endDate >= today)) {
+        if (startDateObj <= today && (!endDateObj || endDateObj >= today)) {
             // Calculate how many months have passed since the start date
-            const monthsPassed = calculateMonthsBetweenDates(startDate, today);
-            
+            const monthsPassed = calculateMonthsBetweenDates(startDateObj, today);
+
             // For each month, add the value to "sales"
             for (let i = 0; i < monthsPassed; i++) {
-                const monthDate = new Date(startDate);
-                monthDate.setMonth(startDate.getMonth() + i);
-                
+                const monthDate = new Date(startDateObj);
+                monthDate.setMonth(startDateObj.getMonth() + i);
+
                 // Skip if this date is after the end date
-                if (endDate && monthDate > endDate) {
+                if (endDateObj && monthDate > endDateObj) {
                     break;
                 }
-                
+
                 result.salesToCreate.push({
-                    customer_id: project._custID,
-                    amount: project.value,
+                    customer_id: customerId,
+                    amount: projectValue,
                     date: monthDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-                    description: `Subscription project (${project.projectName}) - Month ${i + 1}`,
-                    project_id: project.id || project.__ID,
+                    description: `Subscription project (${projectName}) - Month ${i + 1}`,
+                    project_id: projectId,
                     type: 'sales'
                 });
             }
         }
     }
-    
+
     return result;
 }
 
