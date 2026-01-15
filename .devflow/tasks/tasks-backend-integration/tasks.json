@@ -158,7 +158,7 @@
         ".devflow/tasks/tasks-backend-integration/TSK0008_IMPLEMENTATION.md"
       ],
       "notes": "Updated TaskTimer component to display new backend timer fields (status, pause_duration_seconds, adjustment_seconds) with visual indicators (RUNNING/PAUSED). Enhanced useTask hook to integrate pause/resume backend APIs with graceful FileMaker fallback. Added user-friendly error messages for timer concurrency conflicts. Updated TaskList to show active/paused timer status. All changes maintain backward compatibility with FileMaker. Build verified successfully.",
-      "implementation_notes": "Implemented comprehensive updates to task detail components for backend timer integration. Updated TaskTimer.jsx to handle dual field names (backend vs FileMaker), display timer status visually (green RUNNING, yellow PAUSED), and support new fields like status, pause_duration_seconds, and adjustment_seconds. Enhanced useTask.js hook to call backend pauseTimer/resumeTimer APIs with automatic fallback to local state for FileMaker mode, added concurrency error detection with user-friendly messages, and populate both new and legacy timer fields. Updated TaskList.jsx to show active/paused indicators with semantic colors. All components maintain full backward compatibility. Build verified with no errors.",
+      "implementation_notes": "Implemented TSK0008 updates to surface new backend timer fields and clearer timer state in the UI, including RUNNING and PAUSED indicators and improved, user-friendly error handling for concurrency and invalid state transitions. Key changes were made in 'src/components/tasks/TaskTimer.jsx' (dual support for backend fields like 'status', 'start_time', 'pause_duration_seconds', 'adjustment_seconds' plus legacy fields, updated initialization, time calculations, and PropTypes), 'src/hooks/useTask.js' (integrated 'pauseTimer', 'resumeTimer', 'getActiveTimer', refactored pause behavior, and enhanced start handling to detect 409 concurrency conflicts with a specific message while preserving FileMaker fallback), and 'src/components/tasks/TaskList.jsx' (added status indicators in the list). Important decisions included maintaining full backward compatibility with FileMaker mode via graceful degradation and populating both backend and legacy fields, plus adding supporting docs ('TSK0008_IMPLEMENTATION.md', 'TSK0008_QUICK_REFERENCE.md', 'TSK0008_VERIFICATION.md') and marking completion in 'tasks.json' after successful builds.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -167,12 +167,23 @@
       "id": "TSK0009",
       "title": "Update task form components",
       "description": "Update task creation and edit forms to match new schema. Update field validation to use new backend rules. Handle new error response format with field-level errors. Update success/error messaging.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0006",
         "TSK0001"
-      ]
+      ],
+      "completed_at": "2026-01-14T00:00:00.000Z",
+      "deliverables": [
+        "src/components/tasks/TaskForm.jsx",
+        ".devflow/tasks/tasks-backend-integration/TSK0009_IMPLEMENTATION.md",
+        ".devflow/tasks/tasks-backend-integration/TSK0009_QUICK_REFERENCE.md"
+      ],
+      "notes": "Created comprehensive TaskForm component with full backend schema support, field-level validation, and error display. Updated TaskList to use new TaskForm. Supports both create and edit modes. Maintains backward compatibility with FileMaker. Build verified successfully.",
+      "implementation_notes": "Implemented a comprehensive, reusable TaskForm component (src/components/tasks/TaskForm.jsx) that supports all backend schema fields (title, priority, status, task_type, notes, estimated_hours, due_date) with field-level validation, error display, and user-friendly messaging. The form handles both create and edit modes, parses backend validation errors in FastAPI format, and maintains backward compatibility by sending both new backend and legacy FileMaker field names. Updated TaskList.jsx to use TaskForm instead of simple TextInput, added customer_id resolution from multiple sources (props, selectedProject.customer_id, selectedProject._custID), and implemented proper state management for create/edit flows. Enhanced UX with loading states, field-specific error messages, helpful input descriptions, and accessibility features. Build verified successfully with no compilation errors.",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0010",

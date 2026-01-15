@@ -10,6 +10,7 @@ import { useSnackBar } from '../../context/SnackBarContext';
 import TextInput from '../global/TextInput';
 import ErrorBoundary from '../ErrorBoundary';
 import TaskTimer from './TaskTimer';
+import TaskForm from './TaskForm';
 
 // Memoized task item component
 const TaskItem = React.memo(function TaskItem({
@@ -355,13 +356,18 @@ TaskSection.propTypes = {
 };
 function TaskList({
     projectId = null,
+    customerId = null,
     onTaskStatusChange = () => {},
     onTaskUpdate = () => {}
 }) {
     const { darkMode } = useTheme();
-    const { user } = useAppState();
+    const { user, selectedProject } = useAppState();
     const [showCompleted, setShowCompleted] = useState(false);
-    const [showNewTaskInput, setShowNewTaskInput] = useState(false);
+    const [showNewTaskForm, setShowNewTaskForm] = useState(false);
+    const [editingTask, setEditingTask] = useState(null);
+
+    // Get customer_id from props, selectedProject, or fallback
+    const effectiveCustomerId = customerId || selectedProject?.customer_id || selectedProject?._custID;
     
     const {
         handleTaskSelect,
@@ -441,41 +447,36 @@ function TaskList({
         }
     }, [handleTaskStatusChange, onTaskStatusChange]);
 
-    const handleNewTask = useCallback(async (taskName) => {
-        const staffId = user?.userID;
-        if (!taskName?.trim() || !projectId || !user?.userID) {
+    const handleNewTask = useCallback(async (taskData) => {
+        if (!projectId || !effectiveCustomerId) {
             console.error('Missing required fields for task creation:', {
-                taskName: taskName?.trim(),
                 projectId,
-                staffId
+                customerId: effectiveCustomerId
             });
             return;
         }
-        console.log("new task called ... ",{projectId, staffId, taskName})
 
         try {
-            // Use both new and legacy field names for backward compatibility
-            // The service layer will handle mapping to the correct backend format
-            await handleTaskCreate({
-                // New backend field names
-                project_id: projectId,
-                staff_id: user.userID,
-                title: taskName.trim(),
-                priority: 3, // "active" maps to priority 3 in new schema
-                // Legacy FileMaker field names (for backward compatibility)
-                _projectID: projectId,
-                _staffID: user.userID,
-                taskName: taskName.trim()
-            });
-            console.log("setShowNewTaskInput ... ")
-            // this should cause a rerender of the tasks. Since task was added to state it should load the new task
-            setShowNewTaskInput(false);
-            // console.log("re-render tasks ")
-            // loadTasks(projectId)
+            await handleTaskCreate(taskData);
+            setShowNewTaskForm(false);
         } catch (error) {
             console.error('Error creating task:', error);
+            // Error is handled in TaskForm component
+            throw error;
         }
-    }, [projectId, user?.userID, handleTaskCreate]);
+    }, [projectId, effectiveCustomerId, handleTaskCreate]);
+
+    const handleEditTask = useCallback(async (taskData) => {
+        try {
+            await handleTaskUpdate(taskData.id, taskData);
+            setEditingTask(null);
+            onTaskUpdate(taskData.id, taskData);
+        } catch (error) {
+            console.error('Error updating task:', error);
+            // Error is handled in TaskForm component
+            throw error;
+        }
+    }, [handleTaskUpdate, onTaskUpdate]);
 
     return (
         <div className="space-y-6">
@@ -483,25 +484,34 @@ function TaskList({
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Tasks</h3>
                 <button
-                    onClick={() => setShowNewTaskInput(true)}
+                    onClick={() => setShowNewTaskForm(true)}
                     className="px-4 py-2 mr-5 bg-primary text-white rounded-md hover:bg-primary-hover"
+                    disabled={!projectId || !effectiveCustomerId}
                 >
                     New Task
                 </button>
             </div>
-            {showNewTaskInput && (
-                <TextInput
-                    title="New Task"
-                    placeholder="Enter task name..."
-                    submitLabel="Create"
-                    onSubmit={(taskName) => {
-                        if (!projectId || !user?.userID) {
-                            showError('Unable to create task: Missing project or user information');
-                            return;
-                        }
-                        return handleNewTask(taskName.trim());
-                    }}
-                    onCancel={() => setShowNewTaskInput(false)}
+
+            {/* New Task Form */}
+            {showNewTaskForm && projectId && effectiveCustomerId && (
+                <TaskForm
+                    projectId={projectId}
+                    customerId={effectiveCustomerId}
+                    staffId={user?.userID}
+                    onSubmit={handleNewTask}
+                    onCancel={() => setShowNewTaskForm(false)}
+                />
+            )}
+
+            {/* Edit Task Form */}
+            {editingTask && projectId && effectiveCustomerId && (
+                <TaskForm
+                    projectId={projectId}
+                    customerId={effectiveCustomerId}
+                    staffId={user?.userID}
+                    task={editingTask}
+                    onSubmit={handleEditTask}
+                    onCancel={() => setEditingTask(null)}
                 />
             )}
 
@@ -580,6 +590,7 @@ function TaskList({
 
 TaskList.propTypes = {
     projectId: PropTypes.string,
+    customerId: PropTypes.string,
     onTaskStatusChange: PropTypes.func,
     onTaskCreate: PropTypes.func,
     onTaskUpdate: PropTypes.func
