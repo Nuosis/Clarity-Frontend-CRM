@@ -72,6 +72,8 @@ export function processProjectData(projectData, relatedData = {}, source = 'file
  * @returns {Object} Processed project
  */
 function processBackendProject(project, relatedData = {}) {
+    const projectId = project.id;
+
     return {
         // Core fields - backend schema → frontend format
         id: project.id,
@@ -107,9 +109,19 @@ function processBackendProject(project, relatedData = {}) {
         '~modificationTimestamp': project.updated_at,
 
         // Related data (from nested response or separate queries)
-        images: project.images || relatedData.images || [],
-        links: project.links || relatedData.links || [],
-        objectives: project.objectives || relatedData.objectives || [],
+        // Process nested or separate related data using backend format handlers
+        images: project.images ?
+            processProjectImages(project.images, projectId, 'backend') :
+            (relatedData.images ? processProjectImages(relatedData.images, projectId, 'backend') : []),
+
+        links: project.links ?
+            processProjectLinks(project.links, projectId, 'backend') :
+            (relatedData.links ? processProjectLinks(relatedData.links, projectId, 'backend') : []),
+
+        objectives: project.objectives ?
+            processProjectObjectives(project.objectives, projectId, project.steps || relatedData.steps, 'backend') :
+            (relatedData.objectives ? processProjectObjectives(relatedData.objectives, projectId, relatedData.steps, 'backend') : []),
+
         records: project.records || relatedData.records || [],
 
         // Computed fields
@@ -161,17 +173,36 @@ export function mapFrontendStatusToBackend(frontendStatus) {
 
 /**
  * Processes project images
+ * Handles both FileMaker (response.data) and backend API formats
  * @param {Array} images - Raw image data
  * @param {string} projectId - Project ID
+ * @param {string} source - Data source: 'filemaker' or 'backend'
  * @returns {Array} Processed image records
  */
-export function processProjectImages(images, projectId) {
+export function processProjectImages(images, projectId, source = 'filemaker') {
+    // Backend API format: array directly or wrapped in data property
+    if (source === 'backend') {
+        const imageArray = Array.isArray(images) ? images : (images?.data || []);
+        return imageArray.map(img => ({
+            id: img.id,
+            url: img.url,
+            title: img.title || '',
+            description: img.description || '',
+            fileName: img.file_name || '',
+            storageProvider: img.storage_provider || null,
+            createdAt: img.created_at,
+            updatedAt: img.updated_at,
+            createdBy: img.created_by || ''
+        }));
+    }
+
+    // FileMaker format: response.data with fieldData
     if (!images?.response?.data) {
         return [];
     }
 
     return images.response.data
-        .filter(img => img.fieldData._projectID === projectId)
+        .filter(img => img.fieldData._fkID === projectId)
         .map(img => ({
             id: img.fieldData.__ID,
             recordId: img.recordId,
@@ -183,11 +214,31 @@ export function processProjectImages(images, projectId) {
 
 /**
  * Processes project links
+ * Handles both FileMaker (response.data) and backend API formats
+ * Backend uses explicit foreign keys (project_id), FileMaker uses polymorphic _fkID
  * @param {Array} links - Raw link data
  * @param {string} projectId - Project ID
+ * @param {string} source - Data source: 'filemaker' or 'backend'
  * @returns {Array} Processed link records
  */
-export function processProjectLinks(links, projectId) {
+export function processProjectLinks(links, projectId, source = 'filemaker') {
+    // Backend API format: array directly or wrapped in data property
+    if (source === 'backend') {
+        const linksArray = Array.isArray(links) ? links : (links?.data || []);
+        return linksArray.map(link => ({
+            id: link.id,
+            url: link.link,
+            // Backend has no title column - derive from URL hostname
+            title: link.title || (link.link ? new URL(link.link).hostname : ''),
+            customerId: link.customer_id,
+            organizationId: link.organization_id,
+            projectId: link.project_id,
+            createdAt: link.created_at,
+            updatedAt: link.updated_at
+        }));
+    }
+
+    // FileMaker format: response.data with fieldData
     if (!links?.response?.data) {
         return [];
     }
@@ -204,12 +255,34 @@ export function processProjectLinks(links, projectId) {
 
 /**
  * Processes project objectives and their steps
+ * Handles both FileMaker (response.data) and backend API formats
+ * Backend uses proper foreign keys (project_id), FileMaker uses _projectID
  * @param {Array} objectives - Raw objective data
  * @param {string} projectId - Project ID
  * @param {Array} steps - Raw step data
+ * @param {string} source - Data source: 'filemaker' or 'backend'
  * @returns {Array} Processed objective records with steps
  */
-export function processProjectObjectives(objectives, projectId, steps) {
+export function processProjectObjectives(objectives, projectId, steps, source = 'filemaker') {
+    // Backend API format: objectives with nested steps
+    if (source === 'backend') {
+        const objArray = Array.isArray(objectives) ? objectives : (objectives?.data || []);
+        return objArray.map(obj => ({
+            id: obj.id,
+            objective: obj.objective,
+            status: obj.status || 'Open',
+            order: obj.order_num || 0,
+            completed: obj.completed === true,
+            createdAt: obj.created_at,
+            updatedAt: obj.updated_at,
+            // Steps can be nested or provided separately
+            steps: obj.steps ? processObjectiveSteps(obj.steps, obj.id, source) :
+                   (steps ? processObjectiveSteps(steps, obj.id, source) : [])
+        }))
+        .sort((a, b) => a.order - b.order);
+    }
+
+    // FileMaker format: response.data with fieldData
     if (!objectives?.response?.data) {
         return [];
     }
@@ -223,18 +296,42 @@ export function processProjectObjectives(objectives, projectId, steps) {
             status: obj.fieldData.status || 'Open',
             order: obj.fieldData.order || 0,
             completed: obj.fieldData.f_completed === 1 || obj.fieldData.f_completed === "1",
-            steps: processObjectiveSteps(steps, obj.fieldData.__ID)
+            steps: processObjectiveSteps(steps, obj.fieldData.__ID, source)
         }))
         .sort((a, b) => a.order - b.order);
 }
 
 /**
  * Processes objective steps
+ * Handles both FileMaker (response.data) and backend API formats
+ * Backend uses proper foreign keys (objective_id), FileMaker uses _objectiveID
  * @param {Array} steps - Raw step data
  * @param {string} objectiveId - Objective ID
+ * @param {string} source - Data source: 'filemaker' or 'backend'
  * @returns {Array} Processed step records
  */
-export function processObjectiveSteps(steps, objectiveId) {
+export function processObjectiveSteps(steps, objectiveId, source = 'filemaker') {
+    // Backend API format: array directly or wrapped in data property
+    if (source === 'backend') {
+        const stepsArray = Array.isArray(steps) ? steps : (steps?.data || []);
+        // If steps already filtered (nested), don't filter again
+        const needsFilter = stepsArray.some(step => step.objective_id !== objectiveId);
+        const filteredSteps = needsFilter ?
+            stepsArray.filter(step => step.objective_id === objectiveId) :
+            stepsArray;
+
+        return filteredSteps.map(step => ({
+            id: step.id,
+            step: step.step,
+            order: step.order_num || 0,
+            completed: step.completed === true,
+            createdAt: step.created_at,
+            updatedAt: step.updated_at
+        }))
+        .sort((a, b) => a.order - b.order);
+    }
+
+    // FileMaker format: response.data with fieldData
     if (!steps?.response?.data) {
         return [];
     }

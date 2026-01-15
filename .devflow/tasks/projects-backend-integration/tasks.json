@@ -54,11 +54,11 @@
       "id": "TSK0004",
       "title": "Update service layer data transformations",
       "description": "Update src/services/projectService.js to transform data between frontend and backend schemas. Update processProjectData(), formatProjectForBackend() with field mappings: projectName→name, _custID→customer_id, value→budget, dateStart→start_date, dateEnd→target_end_date, f_fixedPrice→is_fixed_price, f_subscription→is_subscription. Map status values: Open→active, Closed→completed. Remove FileMaker-specific logic (recordId handling).",
-      "status": "complete",
+      "status": "done",
       "priority": "high",
       "completed_at": "2026-01-15T00:00:00Z",
       "notes": "Updated projectService.js with bidirectional transformations between frontend and backend schemas. Added processBackendProject() to transform backend API responses, formatProjectForBackend() to prepare data for API requests, and status mapping functions (mapBackendStatusToFrontend, mapFrontendStatusToBackend). Updated processProjectValue() to handle both FileMaker and backend formats. Build verified successfully.",
-      "implementation_notes": "Key changes: (1) Extended processProjectData() with 'source' parameter to handle both FileMaker and backend responses, (2) Added processBackendProject() for backend→frontend transformation with field mappings (name→projectName, customer_id→_custID, budget→value, start_date→dateStart, target_end_date→dateEnd, is_fixed_price→f_fixedPrice, is_subscription→f_subscription), (3) Created formatProjectForBackend() for frontend→backend transformation, (4) Added bidirectional status mapping functions (active↔Open, completed↔Closed, on_hold↔On Hold, pending↔Open, cancelled↔Cancelled), (5) Updated processProjectValue() to normalize field names and work with both data formats, (6) Exported status mapping functions for use by other modules. All transformations preserve business logic for fixed-price and subscription projects.",
+      "implementation_notes": "Implemented dual-schema project transformations in src/services/projectService.js to support both legacy FileMaker and the new backend API by enhancing processProjectData with a source parameter, adding processBackendProject, and introducing formatProjectForBackend plus updated processProjectValue field normalization. Exported status conversion helpers mapBackendStatusToFrontend and mapFrontendStatusToBackend to keep status handling consistent across layers, while preserving backward compatibility (including __ID aliasing and existing FileMaker formatting). Updated .devflow/tasks/projects-backend-integration/tasks.json to mark TSK0004 complete and added .devflow/tasks/projects-backend-integration/TSK0004_COMPLETION_SUMMARY.md documenting the schema mappings and usage decisions, with builds verified to compile cleanly.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -67,8 +67,14 @@
       "id": "TSK0005",
       "title": "Update service layer for objectives, steps, images, links",
       "description": "Update transformation functions in src/services/projectService.js for related entities. Update processProjectObjectives(), processObjectiveSteps(), processProjectImages(), processProjectLinks() to handle new backend schema. Ensure proper nesting of objectives→steps. Remove _fkID polymorphic logic, use proper foreign keys.",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completed_at": "2026-01-15T01:00:00Z",
+      "notes": "Updated all four transformation functions to handle both FileMaker and backend API data formats. Added source parameter to processProjectImages(), processProjectLinks(), processProjectObjectives(), and processObjectiveSteps(). Backend schema correctly maps: _fkID→project_id for images/links, _projectID→project_id for objectives, _objectiveID→objective_id for steps. Fixed FileMaker bug (_projectID vs _fkID for images). Build verified successfully.",
+      "implementation_notes": "Enhanced projectService.js transformation functions (processProjectImages, processProjectLinks, processProjectObjectives, processObjectiveSteps) with source-aware dual-format support for FileMaker (response.data with fieldData and polymorphic _fkID) and backend API (direct/wrapped arrays with proper foreign keys like project_id, objective_id). Key backend mappings include order→order_num, f_completed→completed (boolean), projectObjective→objective, projectObjectiveStep→step, and link→link (with title derived from URL hostname since backend lacks title column). Updated processBackendProject to pass source='backend' to all related data processors. Corrected FileMaker filter from _projectID to _fkID for images. Ensured proper nesting of objectives→steps, with smart filtering when steps are pre-nested vs mixed arrays. Build compiles cleanly.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0006",
