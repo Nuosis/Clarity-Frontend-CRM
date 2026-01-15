@@ -57,7 +57,10 @@
       "artifacts": [
         "src/api/notes.js"
       ],
-      "implementation_notes": "Key changes: (1) createNote() now accepts explicit foreign keys (project_id, customer_id, task_id) matching DB schema, not polymorphic entity_type/entity_id. (2) Added validation to ensure exactly ONE parent FK is provided. (3) Payload uses 'note' field (not 'content') and omits unsupported 'author' field. (4) Added fetchNotesByTask() and fetchNotesByCustomer() functions. (5) Maintained backward compatibility with legacy fetchProjectNotes() alias. (6) All backend calls use dataService.get/post/patch/delete which automatically adds HMAC auth and X-Organization-ID headers via interceptors. (7) Updated JSDoc to document actual schema constraints."
+      "implementation_notes": "Key changes: (1) createNote() now accepts explicit foreign keys (project_id, customer_id, task_id) matching DB schema, not polymorphic entity_type/entity_id. (2) Added validation to ensure exactly ONE parent FK is provided. (3) Payload uses 'note' field (not 'content') and omits unsupported 'author' field. (4) Added fetchNotesByTask() and fetchNotesByCustomer() functions. (5) Maintained backward compatibility with legacy fetchProjectNotes() alias. (6) All backend calls use dataService.get/post/patch/delete which automatically adds HMAC auth and X-Organization-ID headers via interceptors. (7) Updated JSDoc to document actual schema constraints.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0003",
