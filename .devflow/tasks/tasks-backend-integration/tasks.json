@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-15T06:30:00.000Z",
+  "updated_at": "2026-01-15T06:05:34.000Z",
   "feature": {
     "name": "Tasks Backend Integration",
     "slug": "tasks-backend-integration",
@@ -39,7 +39,7 @@
     {
       "id": "TSK0002",
       "title": "Create API request/response mappers",
-      "description": "Create mapper functions to transform between FileMaker data shapes and new backend API shapes. Handle ID conversions (recordId/__ID → UUID), field name changes, type conversions (string booleans → real booleans), and timestamp formats.",
+      "description": "Create mapper functions to transform between FileMaker data shapes and new backend API shapes. Handle ID conversions (recordId/__ID \u2192 UUID), field name changes, type conversions (string booleans \u2192 real booleans), and timestamp formats.",
       "status": "done",
       "priority": "high",
       "dependencies": [
@@ -69,7 +69,7 @@
       "id": "TSK0004",
       "title": "Implement timer endpoints in api/tasks.js",
       "description": "Implement new timer endpoints: startTaskTimer (with idempotency check), stopTaskTimer (with financial record creation), pauseTimer, resumeTimer, fetchTaskTimers, getActiveTimer. Handle concurrency control and atomic operations.",
-      "status": "done",
+      "status": "completed",
       "priority": "high",
       "dependencies": [
         "TSK0002"
@@ -99,7 +99,7 @@
         ".devflow/tasks/tasks-backend-integration/TSK0005_IMPLEMENTATION.md"
       ],
       "notes": "Updated taskService.js to handle new backend API shapes and implement timer business logic including idempotency, concurrency control, atomic financial record generation, pause/resume functionality, and 6-minute adjustment validation. Added new functions: pauseTimer, resumeTimer, getActiveTimer. Enhanced processTimerRecords and processTaskData to handle both backend (array) and FileMaker (object) response formats. Added comprehensive logging with [Task Service] prefix, user-friendly error messages, and helper functions for financial record extraction and timer statistics. Maintained FileMaker backward compatibility. Build verified successfully.",
-      "implementation_notes": "Successfully updated 'src/services/taskService.js' to integrate new backend timer business logic while maintaining FileMaker backward compatibility. Key changes include: (1) Enhanced startTimer() with concurrency control and active timer checking, (2) Enhanced stopTimer() with 6-minute adjustment validation and dual response handling for backend financial records and FileMaker legacy, (3) Added pauseTimer(), resumeTimer(), and getActiveTimer() functions with user-friendly error messages, (4) Updated processTimerRecords() and processTaskData() to handle both backend (array) and FileMaker (object) response formats, (5) Added validation functions for 6-minute increments (isValidTimerAdjustmentSeconds, roundToValidAdjustmentSeconds), (6) Added helper functions for financial record extraction (extractFinancialRecord, formatFinancialRecordForDisplay, calculateTimerStats), (7) Comprehensive logging throughout with '[Task Service]' prefix. All business requirements met: timer idempotency (one active per staff), concurrency control, atomic financial record generation with fixed-price detection, pause/resume accumulation, and adjustment validations. Build verified successfully with no errors.",
+      "implementation_notes": "Implemented updated timer business logic and new backend API shapes in 'taskService.js', including enhanced 'startTimer' and 'stopTimer' (active-timer concurrency checks, dual backend/FileMaker response handling, financial record extraction, and consistent '[Task Service]' logging) plus new timer methods 'pauseTimer', 'resumeTimer', and 'getActiveTimer'. Added 6-minute (360-second) adjustment validation and rounding helpers, and updated data processing ('processTimerRecords', 'processTaskData') to support both array-based backend and object-based FileMaker payloads while capturing new fields like status, pause duration, and adjustment seconds. Introduced helper utilities to extract and format financial records and compute timer stats, and verified compatibility and builds via 'npm run build'. Updated 'tasks.json' status and timestamps and added documentation deliverables 'TSK0005_IMPLEMENTATION.md', 'TASK_SERVICE_QUICK_REFERENCE.md', and 'TSK0005_VERIFICATION.md' to capture decisions, usage, and verification notes.'",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -108,11 +108,19 @@
       "id": "TSK0006",
       "title": "Update task validation rules",
       "description": "Update TASK_FIELDS validation in taskService.js to match new backend schema. Update field names, add new required fields, remove deprecated fields. Ensure validation errors match backend error messages.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0003"
-      ]
+      ],
+      "executionPid": 54619,
+      "sessionId": "b07fa4d8-9c36-44dd-9ef1-82175f02d320",
+      "completed_at": "2026-01-15T06:05:34.000Z",
+      "deliverables": [
+        ".devflow/tasks/tasks-backend-integration/TSK0006_IMPLEMENTATION.md"
+      ],
+      "notes": "Updated TASK_FIELDS validation in taskService.js to match new backend schema from TaskCreate API model. Changed field names (task\u2192title, _projectID\u2192project_id, f_completed\u2192is_completed, f_priority\u2192priority), added UUID validation for ID fields, updated priority from string to integer (1-5), added status enum validation, and implemented backward compatibility in createNewTask. Enhanced error messages to match backend validation. Build verified successfully.",
+      "implementation_notes": "Updated task validation rules in src/services/taskService.js to align with backend TaskCreate schema. Modified TASK_FIELDS constant to use new field names (title, project_id, customer_id, staff_id, task_type, is_completed, status, priority, estimated_hours, due_date, filemaker_task_id), added UUID format validation for ID fields, changed priority from string (\"active\", \"high\", \"low\") to integer (1-5), and implemented status enum validation (pending, in_progress, completed, cancelled). Updated validateTaskData to handle boolean type checking for backward compatibility and skip immutable fields on updates. Enhanced createNewTask with backward compatibility layer that accepts both old FileMaker field names and new backend field names, automatic priority conversion from string to integer, and comprehensive logging. Verified build compiles successfully with npm run build. Created TSK0006_IMPLEMENTATION.md documentation."
     },
     {
       "id": "TSK0007",
@@ -206,7 +214,7 @@
     {
       "id": "TSK0015",
       "title": "Add integration tests for complete task lifecycle",
-      "description": "Create end-to-end tests for: create task → start timer → stop timer → verify financial record. Test fixed-price project (no financial record). Test concurrent timer scenarios. Test error recovery paths.",
+      "description": "Create end-to-end tests for: create task \u2192 start timer \u2192 stop timer \u2192 verify financial record. Test fixed-price project (no financial record). Test concurrent timer scenarios. Test error recovery paths.",
       "status": "queued",
       "priority": "medium",
       "dependencies": [

@@ -494,45 +494,137 @@ export function formatDuration(minutes) {
 
 /**
  * Task field definitions with validation rules
+ * Updated to match new backend schema from TaskCreate API model
+ *
+ * Backend Required Fields: project_id, customer_id, title
+ * Backend Optional Fields: staff_id, task_type, notes, is_completed, status, priority, estimated_hours, due_date, filemaker_task_id
+ *
+ * Note: organization_id is NOT sent to backend - it's inferred from authenticated user context
  */
 export const TASK_FIELDS = {
-    // Required fields
-    task: {
+    // Required fields (backend API)
+    title: {
         required: true,
         type: 'string',
         minLength: 1,
-        maxLength: 200,
+        maxLength: 255,
         validate: (value) => {
-            if (!value?.trim()) return 'Task name is required';
-            if (value.length > 200) return 'Task name must be less than 200 characters';
+            if (!value?.trim()) return 'Task title is required';
+            if (value.length > 255) return 'Task title must be less than 255 characters';
             return null;
         }
     },
-    _projectID: {
+    project_id: {
         required: true,
         type: 'string',
-        validate: (value) => !value ? 'Project ID is required' : null
-    },
-    _staffID: {
-        required: true,
-        type: 'string',
-        validate: (value) => !value ? 'Staff ID is required' : null
-    },
-    
-    f_completed: {
-        required: false,
-        type: 'number',
         validate: (value) => {
-            if (value === undefined || value === null) return null;
-            return value === 0 || value === 1 ? null : 'Completion status must be 0 or 1';
+            if (!value) return 'Project ID is required';
+            // Basic UUID validation
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            return uuidRegex.test(value) ? null : 'Project ID must be a valid UUID';
         }
     },
-    f_priority: {
+    customer_id: {
+        required: true,
+        type: 'string',
+        validate: (value) => {
+            if (!value) return 'Customer ID is required';
+            // Basic UUID validation
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            return uuidRegex.test(value) ? null : 'Customer ID must be a valid UUID';
+        }
+    },
+
+    // Optional fields (backend API)
+    staff_id: {
         required: false,
         type: 'string',
         validate: (value) => {
             if (!value) return null;
-            return ['active', 'high', 'low'].includes(value) ? null : 'Invalid priority value';
+            // Basic UUID validation
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            return uuidRegex.test(value) ? null : 'Staff ID must be a valid UUID';
+        }
+    },
+    task_type: {
+        required: false,
+        type: 'string',
+        validate: (value) => {
+            if (!value) return null;
+            if (value.length > 255) return 'Task type must be less than 255 characters';
+            return null;
+        }
+    },
+    notes: {
+        required: false,
+        type: 'string',
+        validate: (value) => {
+            if (!value) return null;
+            return null; // No length limit in backend schema
+        }
+    },
+    is_completed: {
+        required: false,
+        type: 'boolean',
+        validate: (value) => {
+            if (value === undefined || value === null) return null;
+            return typeof value === 'boolean' ? null : 'Completion status must be a boolean';
+        }
+    },
+    status: {
+        required: false,
+        type: 'string',
+        validate: (value) => {
+            if (!value) return null;
+            const validStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
+            return validStatuses.includes(value) ? null : `Status must be one of: ${validStatuses.join(', ')}`;
+        }
+    },
+    priority: {
+        required: false,
+        type: 'number',
+        validate: (value) => {
+            if (value === undefined || value === null) return null;
+            if (!Number.isInteger(value)) return 'Priority must be an integer';
+            return (value >= 1 && value <= 5) ? null : 'Priority must be between 1 and 5';
+        }
+    },
+    estimated_hours: {
+        required: false,
+        type: 'number',
+        validate: (value) => {
+            if (value === undefined || value === null) return null;
+            // Backend accepts both number and string pattern
+            if (typeof value === 'string') {
+                const pattern = /^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$/;
+                if (!pattern.test(value)) return 'Estimated hours must be a valid number';
+                const parsed = parseFloat(value);
+                if (isNaN(parsed) || parsed < 0) return 'Estimated hours must be positive';
+                return null;
+            }
+            if (typeof value !== 'number' || isNaN(value)) return 'Estimated hours must be a number';
+            if (value < 0) return 'Estimated hours must be positive';
+            return null;
+        }
+    },
+    due_date: {
+        required: false,
+        type: 'string',
+        validate: (value) => {
+            if (!value) return null;
+            // ISO date format validation (YYYY-MM-DD)
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!dateRegex.test(value)) return 'Due date must be in YYYY-MM-DD format';
+            const date = new Date(value);
+            return !isNaN(date.getTime()) ? null : 'Due date must be a valid date';
+        }
+    },
+    filemaker_task_id: {
+        required: false,
+        type: 'string',
+        validate: (value) => {
+            if (!value) return null;
+            return null; // No specific validation needed
         }
     }
 };
@@ -563,8 +655,8 @@ export function validateTaskData(data, { isUpdate = false, partial = false } = {
         // Skip validation for fields not provided in partial validation
         if (partial && !(field in data)) return;
 
-        // Skip _projectID validation for updates
-        if (isUpdate && field === '_projectID') return;
+        // Skip immutable fields for updates (project_id, customer_id)
+        if (isUpdate && ['project_id', 'customer_id'].includes(field)) return;
 
         const value = data[field];
 
@@ -579,9 +671,15 @@ export function validateTaskData(data, { isUpdate = false, partial = false } = {
         // Skip validation if value is not provided and field is optional
         if (!rules.required && (value === undefined || value === null)) return;
 
-        // Type checking
+        // Type checking - special handling for boolean fields
         if (value !== undefined && value !== null) {
-            if (typeof value !== rules.type) {
+            // For boolean fields, accept both boolean and number (for backward compatibility)
+            if (rules.type === 'boolean') {
+                if (typeof value !== 'boolean' && typeof value !== 'number') {
+                    fieldErrors[field] = `${field} must be a boolean`;
+                    return;
+                }
+            } else if (typeof value !== rules.type) {
                 fieldErrors[field] = `${field} must be a ${rules.type}`;
                 return;
             }
@@ -636,65 +734,86 @@ export function formatTaskForDisplay(task, timerRecords = [], notes = [], links 
 
 /**
  * Creates a new task with proper validation and formatting
+ * Supports both new backend field names and legacy FileMaker field names for backward compatibility
+ *
  * @param {Object} params - Task creation parameters
- * @param {string} params.projectId - Project ID
- * @param {string} params.staffId - Staff ID
- * @param {string} params.taskName - Task name
- * @param {string} [params.type] - Task type (optional)
- * @param {string} [params.priority="active"] - Task priority
+ * @param {string} params.projectId|params.project_id|params._projectID - Project ID (UUID)
+ * @param {string} params.customerId|params.customer_id - Customer ID (UUID)
+ * @param {string} params.staffId|params.staff_id|params._staffID - Staff ID (UUID, optional)
+ * @param {string} params.taskName|params.title - Task title
+ * @param {string} [params.type|params.task_type] - Task type (optional)
+ * @param {number|string} [params.priority=3] - Task priority (1-5, defaults to 3)
+ * @param {string} [params.notes] - Task notes (optional)
+ * @param {string} [params.status="pending"] - Task status (optional)
+ * @param {boolean} [params.is_completed=false] - Completion status (optional)
+ * @param {number} [params.estimated_hours] - Estimated hours (optional)
+ * @param {string} [params.due_date] - Due date in YYYY-MM-DD format (optional)
  * @returns {Promise<Object>} Created task data
  */
 export async function createNewTask(params) {
-    // if (!params || typeof params !== 'object') {
-    //     throw new Error('Invalid task parameters');
-    // }
-
-    // Check for both old and new field name formats
-    const projectId = params._projectID || params.projectId;
-    const staffId = params._staffID || params.staffId;
-    const { taskName, type, priority = "active" } = params;
-
-    if (!projectId || !staffId || !taskName) {
-        throw new Error('Project ID, Staff ID, and Task Name are required');
+    if (!params || typeof params !== 'object') {
+        throw new Error('Invalid task parameters');
     }
-    // Prepare task data with UUID
+
+    // Support both old and new field name formats for backward compatibility
+    const projectId = params.project_id || params._projectID || params.projectId;
+    const customerId = params.customer_id || params.customerId;
+    const staffId = params.staff_id || params._staffID || params.staffId;
+    const taskTitle = params.title || params.taskName;
+    const taskType = params.task_type || params.type;
+    const notes = params.notes;
+    const status = params.status || 'pending';
+    const isCompleted = params.is_completed !== undefined ? params.is_completed : false;
+    const dueDate = params.due_date;
+    const estimatedHours = params.estimated_hours;
+
+    // Handle priority conversion: old format was string ("active", "high", "low"), new format is integer (1-5)
+    let priority = params.priority !== undefined ? params.priority : 3; // Default to 3 (medium)
+    if (typeof priority === 'string') {
+        // Convert legacy string priority to integer
+        const priorityMap = { 'high': 1, 'active': 3, 'low': 5 };
+        priority = priorityMap[priority.toLowerCase()] || 3;
+    }
+
+    // Validate required fields
+    if (!projectId || !customerId || !taskTitle) {
+        throw new Error('Project ID, Customer ID, and Task Title are required');
+    }
+
+    // Prepare task data for backend API
     const taskData = {
-        __ID: uuidv4(), // Generate a UUID for the task
-        _projectID: projectId,
-        _staffID: staffId,
-        task: taskName.trim(),
-        f_completed: 0,
-        f_priority: priority
+        project_id: projectId,
+        customer_id: customerId,
+        title: taskTitle.trim(),
+        is_completed: isCompleted,
+        status: status,
+        priority: priority
     };
 
-    // Validate task data
+    // Add optional fields if provided
+    if (staffId) taskData.staff_id = staffId;
+    if (taskType) taskData.task_type = taskType;
+    if (notes) taskData.notes = notes;
+    if (estimatedHours !== undefined) taskData.estimated_hours = estimatedHours;
+    if (dueDate) taskData.due_date = dueDate;
+
+    // Validate task data against backend schema
     const validation = validateTaskData(taskData, { partial: false });
     if (!validation.isValid) {
+        console.error('[Task Service] Validation failed:', validation.errors);
         throw new Error(validation.errors[0]); // Throw first error
     }
 
     try {
-        // Create task through API and wait for completion
+        console.log('[Task Service] Creating task with data:', taskData);
+
+        // Create task through API (backend or FileMaker based on USE_BACKEND_API flag in api/tasks.js)
         const result = await createTaskAPI(taskData);
-        
-        // For CREATE operations, we get recordId instead of data
-        if (!result?.response?.recordId) {
-            throw new Error('Failed to create task: No record ID returned');
-        }
-        
-        // Return a properly formatted response with the UUID
-        return {
-            response: {
-                data: [{
-                    recordId: result.response.recordId,
-                    modId: result.response.modId,
-                    fieldData: taskData // This includes the UUID in __ID field
-                }]
-            },
-            messages: result.messages
-        };
+
+        console.log('[Task Service] Task created successfully:', result);
+        return result;
     } catch (error) {
-        console.error('Error in createNewTask:', error);
+        console.error('[Task Service] Error in createNewTask:', error);
         throw error;
     }
 }
