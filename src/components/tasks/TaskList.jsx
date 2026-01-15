@@ -382,7 +382,10 @@ TaskSection.propTypes = {
     handleTimerStart: PropTypes.func.isRequired,
     handleTaskSelect: PropTypes.func.isRequired,
     handleCreateNote: PropTypes.func.isRequired,
-    handleCreateLink: PropTypes.func.isRequired
+    handleCreateLink: PropTypes.func.isRequired,
+    handleLoadMoreNotes: PropTypes.func.isRequired,
+    notesPagination: PropTypes.object,
+    notesLoading: PropTypes.bool
 };
 function TaskList({
     projectId = null,
@@ -395,10 +398,11 @@ function TaskList({
     const [showCompleted, setShowCompleted] = useState(false);
     const [showNewTaskForm, setShowNewTaskForm] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
+    const [allTaskNotes, setAllTaskNotes] = useState([]);
 
     // Get customer_id from props, selectedProject, or fallback
     const effectiveCustomerId = customerId || selectedProject?.customer_id || selectedProject?._custID;
-    
+
     const {
         handleTaskSelect,
         handleTimerStart,
@@ -420,6 +424,8 @@ function TaskList({
 
     const {
         handleNoteCreate,
+        handleFetchNotes,
+        getPagination,
         loading: noteLoading
     } = useNote();
 
@@ -430,7 +436,28 @@ function TaskList({
 
     const loading = taskLoading || noteLoading|| linkLoading;
 
+    // Get pagination for currently selected task
+    const notesPagination = selectedTask ? getPagination('task', selectedTask.id) : null;
+
+    // Update allTaskNotes when taskNotes changes
+    React.useEffect(() => {
+        if (taskNotes) {
+            setAllTaskNotes(taskNotes);
+        }
+    }, [taskNotes]);
+
     // Memoized handlers
+    const handleLoadMoreNotes = useCallback(async (taskId) => {
+        try {
+            const moreNotes = await handleFetchNotes('task', taskId, { append: true });
+            if (moreNotes && moreNotes.length > 0) {
+                setAllTaskNotes(prev => [...prev, ...moreNotes]);
+            }
+        } catch (error) {
+            console.error('Error loading more notes:', error);
+        }
+    }, [handleFetchNotes]);
+
     const handleCreateNote = useCallback(async (fkId, noteContent) => {
         try {
             console.log("new note called for task ... ",{fkId, noteContent})
@@ -568,7 +595,7 @@ function TaskList({
                 onEdit={handleEdit}
                 onStatusChange={handleStatusChange}
                 onExpand={handleTaskSelect}
-                taskNotes={taskNotes}
+                taskNotes={allTaskNotes}
                 taskLinks={taskLinks}
                 timerRecords={timerRecords}
                 isLoading={loading}
@@ -577,6 +604,9 @@ function TaskList({
                 handleTaskSelect={handleTaskSelect}
                 handleCreateNote={handleCreateNote}
                 handleCreateLink={handleCreateLink}
+                handleLoadMoreNotes={handleLoadMoreNotes}
+                notesPagination={notesPagination}
+                notesLoading={noteLoading}
             />
 
             {/* Completed Tasks Toggle */}
@@ -602,7 +632,7 @@ function TaskList({
                             onEdit={handleEdit}
                             onStatusChange={handleStatusChange}
                             onExpand={handleTaskSelect}
-                            taskNotes={taskNotes}
+                            taskNotes={allTaskNotes}
                             taskLinks={taskLinks}
                             timerRecords={timerRecords}
                             isLoading={loading}
@@ -611,6 +641,9 @@ function TaskList({
                             handleTaskSelect={handleTaskSelect}
                             handleCreateNote={handleCreateNote}
                             handleCreateLink={handleCreateLink}
+                            handleLoadMoreNotes={handleLoadMoreNotes}
+                            notesPagination={notesPagination}
+                            notesLoading={noteLoading}
                         />
                     )}
                 </div>
