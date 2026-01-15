@@ -71,7 +71,7 @@
       "priority": "medium",
       "completed_at": "2026-01-15T01:00:00Z",
       "notes": "Updated all four transformation functions to handle both FileMaker and backend API data formats. Added source parameter to processProjectImages(), processProjectLinks(), processProjectObjectives(), and processObjectiveSteps(). Backend schema correctly maps: _fkID→project_id for images/links, _projectID→project_id for objectives, _objectiveID→objective_id for steps. Fixed FileMaker bug (_projectID vs _fkID for images). Build verified successfully.",
-      "implementation_notes": "Enhanced projectService.js transformation functions (processProjectImages, processProjectLinks, processProjectObjectives, processObjectiveSteps) with source-aware dual-format support for FileMaker (response.data with fieldData and polymorphic _fkID) and backend API (direct/wrapped arrays with proper foreign keys like project_id, objective_id). Key backend mappings include order→order_num, f_completed→completed (boolean), projectObjective→objective, projectObjectiveStep→step, and link→link (with title derived from URL hostname since backend lacks title column). Updated processBackendProject to pass source='backend' to all related data processors. Corrected FileMaker filter from _projectID to _fkID for images. Ensured proper nesting of objectives→steps, with smart filtering when steps are pre-nested vs mixed arrays. Build compiles cleanly.",
+      "implementation_notes": "Implemented backend-schema support in the project service layer by updating transformation functions for objectives, steps, images, and links, including correct field mappings, boolean conversions, and handling both nested and separate steps arrays. Key changes were made in 'src/services/projectService.js' across 'processProjectImages', 'processProjectLinks', 'processProjectObjectives', 'processObjectiveSteps', and 'processBackendProject' to pass 'source=backend' while keeping 'source=filemaker' as the default for backward compatibility, plus a FileMaker bug fix changing the image filter from '_projectID' to the correct polymorphic '_fkID'. Important decisions included deriving link titles from the URL hostname due to the backend lacking a 'title' column and noting backend constraints like required 'customer_id' and 'organization_id' and a 2048 URL length limit. Task tracking was updated by marking completion in '.devflow/tasks/projects-backend-integration/tasks.json' and adding ' .devflow/tasks/projects-backend-integration/TSK0005_COMPLETION_SUMMARY.md', and the build was verified to compile successfully with only unrelated warnings.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -80,8 +80,14 @@
       "id": "TSK0006",
       "title": "Update useProject hook - load operations",
       "description": "Update src/hooks/useProject.js load operations to use new API. Update loadProjects() to call listByCustomer API, loadProjectDetails() to use getWithDetails endpoint or parallel calls. Remove FileMaker-specific filtering logic. Handle new data structure with nested objectives, steps, images, links, notes.",
-      "status": "queued",
-      "priority": "high"
+      "status": "done",
+      "priority": "high",
+      "completed_at": "2026-01-15T02:00:00Z",
+      "notes": "Updated loadProjects() to be environment-aware, calling backend API in webapp and FileMaker in legacy. Updated loadProjectDetails() to use fetchProjectWithDetails() endpoint in webapp (single call with nested data) and parallel calls in FileMaker. Updated handleProjectSelect() to work with new state management. Removed FileMaker-specific filtering logic. All functions now properly detect environment and route to correct API. Build verified successfully.",
+      "implementation_notes": "Implemented environment-aware load operations in useProject hook by updating loadProjects, loadProjectDetails, and handleProjectSelect. Added environment detection via getEnvironmentContext() to determine data source ('backend' vs 'filemaker'). In webapp environment, loadProjectDetails() uses single fetchProjectWithDetails() endpoint returning nested objectives/steps/images/notes; in FileMaker, uses legacy parallel calls. Simplified handleProjectSelect() to rely on state updates from loadProjectDetails(). Added fetchProjectWithDetails import to src/api/index.js exports. Build compiles successfully with only unrelated proposal warnings.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0007",

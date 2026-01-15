@@ -9,7 +9,8 @@ import {
     fetchProjectsForCustomers,
     fetchProjectNotes,
     deleteProject,
-    createObjective
+    createObjective,
+    fetchProjectWithDetails
 } from '../api';
 import { useProjectRecords } from '../context/ProjectContext';
 import { useSnackBar } from '../context/SnackBarContext';
@@ -18,6 +19,7 @@ import {
     processProjectData,
     validateProjectData,
     formatProjectForFileMaker,
+    formatProjectForBackend,
     calculateProjectCompletion,
     processProjectImages,
     processProjectLinks,
@@ -25,6 +27,7 @@ import {
     processProjectValue,
     updateProjectRecordsBillableStatus
 } from '../services/projectService';
+import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 import { createSalesFromProjectValue } from '../services/salesService';
 
 /**
@@ -51,35 +54,32 @@ export function useProject(customerId = null) {
 
     /**
      * Loads projects for a customer
-     * For prospects (Supabase-only customers), custId is the Supabase customer ID
-     * and we need to load all projects then filter client-side
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
      */
     const loadProjects = useCallback(async (custId) => {
         try {
             setLoading(true);
             setError(null);
-            
-            let projectResult;
+
+            const env = getEnvironmentContext();
+
             if (custId) {
-                // Try to fetch projects using the customer ID
-                // This will work for FileMaker customers with _custID
-                projectResult = await fetchProjectsForCustomer(custId);
-                
-                // If no projects found and this might be a Supabase-only customer (prospect),
-                // load all projects and filter client-side by the Supabase customer ID
-                const processedProjects = processProjectData(projectResult);
-                
-                // Filter projects by Supabase customer ID if no FileMaker match found
-                // Projects created for prospects store the Supabase customer ID in _custID field
-                const filteredProjects = processedProjects.filter(project =>
-                    project._custID === custId || project.customerId === custId
-                );
-                
-                setProjects(filteredProjects);
+                // Fetch projects for specific customer
+                const projectResult = await fetchProjectsForCustomer(custId);
+
+                // Process based on environment
+                const source = env.type === ENVIRONMENT_TYPES.WEBAPP ? 'backend' : 'filemaker';
+                const processedProjects = processProjectData(projectResult, {}, source);
+
+                setProjects(processedProjects);
             } else {
                 // Load all projects when no customer ID provided
-                projectResult = await fetchProjectsForCustomers([]);
-                const processedProjects = processProjectData(projectResult);
+                const projectResult = await fetchProjectsForCustomers([]);
+
+                // Process based on environment
+                const source = env.type === ENVIRONMENT_TYPES.WEBAPP ? 'backend' : 'filemaker';
+                const processedProjects = processProjectData(projectResult, {}, source);
+
                 setProjects(processedProjects);
             }
         } catch (err) {
@@ -92,44 +92,85 @@ export function useProject(customerId = null) {
 
     /**
      * Loads detailed data for a specific project
+     * Environment-aware: Uses /projects/{id}/detail endpoint in webapp, parallel calls in FileMaker
      */
     const loadProjectDetails = useCallback(async (projectId) => {
         try {
-            const [images, links, objectives, steps, notes] = await Promise.all([
-                fetchProjectRelatedData([projectId], 'devProjectImages'),
-                fetchProjectRelatedData([projectId], 'devProjectLinks'),
-                fetchProjectRelatedData([projectId], 'devProjectObjectives'),
-                fetchProjectRelatedData([projectId], 'devProjectObjSteps'),
-                fetchProjectRelatedData([projectId], 'devNotes')
-            ]);
-            console.log("Links: ",links)
-            // Process each type of data
-            const processedImages = processProjectImages(images, projectId);
-            const processedLinks = processProjectLinks(links, projectId);
-            const processedObjectives = processProjectObjectives(
-                objectives,
-                projectId,
-                { response: { data: steps.response?.data || [] } }
-            );
-            const processedNotes = notes.response?.data || [];
+            const env = getEnvironmentContext();
 
-            const projectDetails = {
-                images: processedImages,
-                links: processedLinks,
-                objectives: processedObjectives,
-                notes: processedNotes
-            };
+            if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+                // Backend API: Use single endpoint that returns nested data
+                const projectWithDetails = await fetchProjectWithDetails(projectId);
 
-            // Update the project with the processed details
-            setProjects(prevProjects =>
-                prevProjects.map(p =>
-                    p.id === projectId
-                        ? { ...p, ...projectDetails }
-                        : p
-                )
-            );
+                // Process the backend response
+                const source = 'backend';
+                const processedImages = processProjectImages(projectWithDetails.images || [], projectId, source);
+                const processedLinks = processProjectLinks(projectWithDetails.links || [], projectId, source);
+                const processedObjectives = processProjectObjectives(
+                    projectWithDetails.objectives || [],
+                    projectId,
+                    projectWithDetails.steps || [],
+                    source
+                );
+                const processedNotes = projectWithDetails.notes || [];
 
-            return projectDetails;
+                const projectDetails = {
+                    images: processedImages,
+                    links: processedLinks,
+                    objectives: processedObjectives,
+                    notes: processedNotes
+                };
+
+                // Update the project with the processed details
+                setProjects(prevProjects =>
+                    prevProjects.map(p =>
+                        p.id === projectId
+                            ? { ...p, ...projectDetails }
+                            : p
+                    )
+                );
+
+                return projectDetails;
+            } else {
+                // FileMaker: Use parallel calls to legacy endpoints
+                const [images, links, objectives, steps, notes] = await Promise.all([
+                    fetchProjectRelatedData([projectId], 'devProjectImages'),
+                    fetchProjectRelatedData([projectId], 'devProjectLinks'),
+                    fetchProjectRelatedData([projectId], 'devProjectObjectives'),
+                    fetchProjectRelatedData([projectId], 'devProjectObjSteps'),
+                    fetchProjectRelatedData([projectId], 'devNotes')
+                ]);
+
+                const source = 'filemaker';
+                // Process each type of data
+                const processedImages = processProjectImages(images, projectId, source);
+                const processedLinks = processProjectLinks(links, projectId, source);
+                const processedObjectives = processProjectObjectives(
+                    objectives,
+                    projectId,
+                    { response: { data: steps.response?.data || [] } },
+                    source
+                );
+                const processedNotes = notes.response?.data || [];
+
+                const projectDetails = {
+                    images: processedImages,
+                    links: processedLinks,
+                    objectives: processedObjectives,
+                    notes: processedNotes
+                };
+
+                // Update the project with the processed details
+                setProjects(prevProjects =>
+                    prevProjects.map(p =>
+                        p.id === projectId
+                            ? { ...p, ...projectDetails }
+                            : p
+                    )
+                );
+
+                return projectDetails;
+            }
         } catch (err) {
             console.error('Error loading project details:', err);
             throw err;
@@ -143,31 +184,24 @@ export function useProject(customerId = null) {
         try {
             setLoading(true);
             setError(null);
-            
+
             // Handle both project object and project ID
             const projectId = typeof projectOrId === 'string' ? projectOrId : projectOrId.id;
             const project = typeof projectOrId === 'string' ?
                 projects.find(p => p.id === projectId) :
                 projectOrId;
-            
+
             if (!project) {
                 throw new Error('Project not found');
             }
 
             // Load details if not already loaded
-            if (!project.images || !project.links) {
-                const details = await loadProjectDetails(projectId);
-                const processedProject = processProjectData({
-                    response: {
-                        data: [{
-                            fieldData: {
-                                ...project,
-                                __ID: project.id
-                            }
-                        }]
-                    }
-                }, details)[0];
-                setSelectedProject(processedProject);
+            if (!project.images || !project.links || !project.objectives) {
+                await loadProjectDetails(projectId);
+
+                // Get the updated project from state (loadProjectDetails updates it)
+                const updatedProject = projects.find(p => p.id === projectId);
+                setSelectedProject(updatedProject || project);
             } else {
                 setSelectedProject(project);
             }
