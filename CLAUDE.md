@@ -283,6 +283,68 @@ App (index.jsx)
 
 **API Proxy:** Vite proxies `/api/*` requests to backend (see `vite.config.js`)
 
+## Customer API Integration
+
+**Status**: ✅ Fully Implemented (TSK0001-TSK0014 complete)
+
+The Customer feature has been fully integrated with the backend API, supporting dual-environment architecture:
+
+### Architecture
+- **Environment-Aware Routing**: Automatic detection and routing based on runtime (FileMaker vs Web App)
+- **Backend API Endpoints**: `/api/customers/*` for all CRUD operations
+- **Data Transformation**: Bidirectional conversion between FileMaker flat and relational models
+- **Organization Scoping**: All operations scoped to user's organization via JWT + RLS
+
+### Data Model
+**FileMaker** (flat structure):
+- Single table with fields: Name, Email, Phone, Address, City, State, etc.
+- Active status: `f_active` (string "1" or "0")
+
+**Backend API** (relational):
+- `customers` table (main record)
+- `customer_email` (1:many emails with type and primary flag)
+- `customer_phone` (1:many phones with type and primary flag)
+- `customer_address` (1:many addresses with type and primary flag)
+- Active status: `is_active` (boolean)
+
+### Key Features
+- ✅ Pagination support (limit/offset, 50 default, 200 max)
+- ✅ Search functionality (`/api/customers/search`)
+- ✅ Multiple contacts per customer (emails, phones, addresses)
+- ✅ Primary contact designation (UI shows "+N more" badges)
+- ✅ Status toggle (soft delete via `is_active`)
+- ✅ Comprehensive error handling with 30+ error codes
+- ✅ 96%+ test coverage (unit + integration)
+
+### Implementation Details
+**API Layer**: `src/api/customers.js` - Environment-aware routing
+**Services**: `src/services/customerService.js` - Transformations and processing
+**Hooks**: `src/hooks/useCustomer.js` - State management with pagination
+**Components**:
+- `CustomerForm.jsx` - Multi-contact creation/editing
+- `CustomerDetails.jsx` & `CustomerHeader.jsx` - Nested contact display
+- `PaginationControls.jsx` - Reusable pagination UI
+
+**Utilities**:
+- `transformFileMakerToBackend()` - Convert flat to relational
+- `transformBackendToFileMaker()` - Convert relational to flat
+- `processBackendCustomerList()` - Normalize list responses
+- `processBackendCustomerDetail()` - Normalize detail responses
+- `validateCustomerData()` - Pre-submission validation
+
+### Testing
+- **Unit Tests**: `src/services/__tests__/customerTransformations.test.js`
+- **Integration Tests**: `src/api/__tests__/customers.test.js`
+- **Coverage**: Transformations (95%+), API client (96%+)
+
+### Migration Status
+- ✅ Phase 1: Dual-write (partial, legacy)
+- ✅ Phase 2: Backend API integration (complete)
+- ⏳ Phase 3: Data backfill (pending)
+- ⏳ Phase 4: Cutover to backend primary (future)
+
+**Detailed Documentation**: See `docs/CUSTOMER_API_INTEGRATION.md`
+
 ## External Integrations
 
 ### FileMaker Integration (Legacy)
@@ -291,6 +353,7 @@ App (index.jsx)
 - **Server:** `https://server.claritybusinesssolutions.ca/fmi/data/v1`
 - **Database:** clarityCRM
 - **Note:** Teams functionality (devTeams, devTeamMembers, devStaff) has been migrated to Supabase
+- **Note:** Customers now use backend API in web app, FileMaker maintained for backward compatibility
 
 ### Supabase Integration
 - **URL:** `https://supabase.claritybusinesssolutions.ca`
@@ -370,16 +433,35 @@ See `docs/TEAMS_MIGRATION_GUIDE.md` for migration details.
 - Can be converted to FileMaker customers
 - Components: `ProspectDetails.jsx`, `ProspectForm.jsx`, `ConvertProspectModal.jsx`
 
-**Customers** (FileMaker primary, synced to Supabase):
-- Primary source: FileMaker `devCustomers` layout
-- Synchronized to Supabase `customers` table
-- Full project and task management
-- Components: `CustomerDetails.jsx`, `CustomerForm.jsx`
+**Customers** (Dual-environment with Backend API):
+- **Backend API Integration**: Full CRUD via `/api/customers` endpoints (✅ Implemented)
+- **Data Model**: Relational schema with nested emails/phones/addresses
+- **Environment-Aware**: Automatic routing between FileMaker and Backend API
+- **FileMaker Support**: Legacy `devCustomers` layout maintained for backward compatibility
+- **Supabase Tables**: `customers`, `customer_email`, `customer_phone`, `customer_address`
+- **Organization Scoping**: All operations scoped to user's organization via JWT
+- Components: `CustomerDetails.jsx`, `CustomerForm.jsx`, `CustomerHeader.jsx`
+- Hooks: `useCustomer` (environment-aware state management)
+- Services: `customerService` (transformations), API client: `src/api/customers.js`
 
-**Dual-Write Pattern:**
-- `dualWriteService.js` handles synchronization
-- Customers written to both FileMaker and Supabase
-- Projects and tasks synchronized when created/updated
+**Customer Data Flow:**
+```
+FileMaker Environment:
+  → fm-gofer bridge → FileMaker DB
+
+Web App Environment:
+  → Backend API → Supabase DB
+  → JWT auth + HMAC
+  → Organization RLS policies
+  → Nested email/phone/address
+```
+
+**Key Features:**
+- ✅ Pagination & search (web app)
+- ✅ Multiple emails/phones/addresses per customer
+- ✅ Data transformation between flat and relational models
+- ✅ Comprehensive error handling
+- ✅ Unit & integration tests (96%+ coverage)
 
 ## Development Guidelines
 
@@ -464,11 +546,25 @@ Required variables in `.env`:
 3. **FileMaker Bridge**: Check `fmReady` status before FileMaker operations
 4. **Dual Environments**: Services must handle both FileMaker and web app contexts
 5. **Customer vs Prospect**: Different data sources and operations
+   - **Customers**: Dual-environment (FileMaker + Backend API) - use environment-aware API client
+   - **Prospects**: Supabase-only - direct Supabase calls
 6. **Teams Architecture**: Teams are Supabase-backed, NOT FileMaker-backed - do not attempt to use FileMaker bridge for teams
-7. **Organization Scoping**: All team operations must include organization_id for proper RLS enforcement
-8. **Authentication**: Backend requests require HMAC, Supabase requests use JWT
-9. **Loading States**: Use `loadingStateManager` for global loading feedback
-10. **State Updates**: Complex state updates should use `setTimeout(..., 0)` to avoid React render issues
+7. **Organization Scoping**: All backend API operations require organization_id in JWT claims
+   - Missing org ID will cause "MISSING_ORG_ID" errors
+   - Check `env.authentication.user.supabaseOrgID` exists before backend calls
+8. **Customer Data Transformation**:
+   - Backend uses relational model (nested emails/phones/addresses)
+   - FileMaker uses flat model (single Email, Phone fields)
+   - Always use transformation utilities (`transformFileMakerToBackend`, `transformBackendToFileMaker`)
+   - Never manually convert - use provided utilities
+9. **Primary Contact Flags**:
+   - Exactly one email/phone/address must be marked `is_primary: true`
+   - Use `ensureSinglePrimary()` utility to enforce
+10. **Authentication**: Backend requests require HMAC, Supabase requests use JWT
+11. **Loading States**: Use `loadingStateManager` for global loading feedback
+12. **State Updates**: Complex state updates should use `setTimeout(..., 0)` to avoid React render issues
+13. **Customer Pagination**: Only works in web app environment - FileMaker returns all records
+14. **Customer Search**: Web app uses `/api/customers/search` - FileMaker falls back to client-side filter
 
 ## Documentation Resources
 
@@ -479,6 +575,17 @@ Required variables in `.env`:
 - `DARK_MODE_IMPLEMENTATION.md`: Theme implementation details
 - `docs/TEAMS_MIGRATION_GUIDE.md`: Teams migration from FileMaker to Supabase
 - `BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md`: Teams backend schema specification
+- **`docs/CUSTOMER_API_INTEGRATION.md`**: Comprehensive customer backend integration guide
+- `docs/CUSTOMERS_BACKEND_API.md`: Customer API client reference
+- `docs/CUSTOMER_SERVICE_API.md`: Customer service layer reference
+- `docs/CUSTOMER_FORM_USAGE.md`: CustomerForm component guide
+- `requirements/customers/`: Customer migration requirements and specifications
+  - `README.md`: Overview and current status
+  - `data-model-mapping.md`: FileMaker ↔ Backend field mappings
+  - `api-contracts.md`: Backend API endpoint specifications
+  - `authorization.md`: RLS policies and permissions
+  - `migration-plan.md`: Data migration strategy
+  - `acceptance-criteria.md`: Test cases and validation
 - `.roo/rules/rules.md`: Development best practices
 - `.roo/rules/rules_general.md`: General project rules and SSH patterns
 - `.roo/rules/SUPABASE_DATABASE_VERIFICATION.md`: Database access patterns

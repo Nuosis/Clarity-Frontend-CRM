@@ -355,7 +355,7 @@
       "id": "TSK0013",
       "title": "Write integration tests for API client",
       "description": "Write integration tests for the customer API client. Mock backend responses and test all CRUD operations. Verify authentication headers, organization scoping, and error handling.",
-      "status": "in_progress",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0001",
@@ -374,14 +374,16 @@
         "All tests pass",
         "Mocks match actual backend contract"
       ],
-      "executionPid": 22413,
-      "sessionId": "a35c2a4a-6a59-4ce0-ba1c-a4ed73e4d5b9"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented comprehensive integration tests for the customer API client by adding 'src/api/__tests__/customers.test.js', covering all CRUD flows plus search, status toggling, org scoping, auth headers, data normalization, and extensive error handling across both FileMaker and backend API paths (46 tests total). Resolved Jest incompatibility with 'import.meta' in 'config.js' by shifting to a broader mocking strategy, ultimately mocking the 'supabaseService' and other config-dependent imports so the suite could execute reliably. Verified outputs by rerunning the full test suite and confirming strong coverage on 'customers.js' (96.42% statements, 82.35% branches) and a successful production build, ensuring all referenced endpoints, exports, and error codes matched the actual implementation."
     },
     {
       "id": "TSK0014",
       "title": "Update documentation for customer API integration",
       "description": "Update CLAUDE.md and create customer-specific documentation explaining the new backend integration, data model, and migration strategy. Document the dual-environment architecture.",
-      "status": "queued",
+      "status": "done",
       "priority": "low",
       "dependencies": [
         "TSK0013"
@@ -399,7 +401,11 @@
         "Document migration from FileMaker to backend",
         "Include troubleshooting guide",
         "Include API endpoint reference"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Created comprehensive documentation for customer backend API integration by adding 'docs/CUSTOMER_API_INTEGRATION.md' (700+ lines covering architecture, dual-environment support, data transformations, authentication, implementation details across all layers, error handling, migration strategy, testing, and troubleshooting) and updating 'CLAUDE.md' with a new 'Customer API Integration' section detailing status, architecture, data model, key features, implementation components, testing coverage, and migration phases, plus enhanced 'Prospects vs Customers' section with data flow diagrams, updated 'Common Pitfalls' with 14 customer-specific guidelines, and expanded 'Documentation Resources' section to reference all customer documentation. Verified successful build ('npm run build') with no breaking changes, completing all 8 acceptance criteria including comprehensive examples, environment routing logic, authentication/authorization details, organization scoping patterns, migration strategy, troubleshooting guide with 6 common issues and solutions, and full API endpoint reference. Documentation provides production-ready guidance for developers working with the customer feature in both FileMaker and web app environments."
     },
     {
       "id": "TSK0015",
