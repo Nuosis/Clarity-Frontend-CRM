@@ -1,8 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { createQBOCustomer, createQBOInvoice, listQBOCustomers, sendQBOInvoiceEmail, searchQBOCustomers } from '../../api/quickbooksApi';
-import { update } from '../../services/supabaseService';
-import { fetchFinancialRecordByUUID, updateFinancialRecordBilledStatus } from '../../api/financialRecords';
+import { update, getSupabaseClient } from '../../services/supabaseService';
 import { generateInvoicePayload, validateInvoiceData, formatInvoiceForLogging } from '../../services/invoiceGenerationService';
 import CreateQBOCustomerModal from './CreateQBOCustomerModal';
 import RecordDetailsModal from './RecordDetailsModal';
@@ -94,7 +93,7 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
   const [showRecordDetailsModal, setShowRecordDetailsModal] = useState(false);
   const [selectedGroupRecords, setSelectedGroupRecords] = useState([]);
   const [selectedGroupTitle, setSelectedGroupTitle] = useState('');
-  const customerName = records.length > 0 ? records[0].customers?.business_name : 'Unknown Customer';
+  const customerName = records.length > 0 ? (records[0].customer_name || records[0].customers?.business_name) : 'Unknown Customer';
 
   /**
    * Search for QuickBooks customers using the dedicated search endpoint
@@ -290,8 +289,8 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       // Get the customer ID and name from the first record
       const firstRecord = records[0];
       const customerId = firstRecord.customer_id;
-      const customerName = firstRecord.customers?.business_name || 'Unknown Customer';
-      
+      const customerName = firstRecord.customer_name || firstRecord.customers?.business_name || 'Unknown Customer';
+
       console.log('🔍 [INVESTIGATION] Customer details:', { customerId, customerName });
 
       if (!customerId) {
@@ -526,63 +525,30 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       console.log(`Invoice created in QBO with ID: ${qboInvoiceId}`);
 
       setProcessingMilestone('Updating records...');
-      // Update the inv_id field in Supabase for each sales item
-      const updatePromises = recordsToInvoice.map(async (record) => {
-        const updateData = {
-          inv_id: qboInvoiceId
-        };
+      // Update the inv_id field in Supabase for each sales item using mark_records_billed RPC
+      try {
+        // Extract record IDs (Supabase id) from recordsToInvoice
+        const recordIds = recordsToInvoice.map(record => record.id);
 
-        const updateResult = await update('customer_sales', updateData, { id: record.id });
-        
-        if (!updateResult.success) {
-          console.error(`Failed to update inv_id for record ${record.id}: ${updateResult.error}`);
-          return false;
-        }
-        
-        // If the record has a financial_id, update the corresponding billable hours record in FileMaker
-        if (record.financial_id) {
-          try {
-            // First, fetch the FileMaker record using the UUID to get the actual recordId
-            console.log(`Looking up FileMaker record by UUID: ${record.financial_id}`);
-            const fileMakerRecord = await fetchFinancialRecordByUUID(record.financial_id);
-            console.log("FileMaker record: ", fileMakerRecord)
-            if (!fileMakerRecord.response || !fileMakerRecord.response.data || fileMakerRecord.response.data.length === 0) {
-              console.error(`Failed to find FileMaker record with UUID ${record.financial_id}`);
-              return false;
-            }
-            
-            // Get the actual FileMaker recordId from the response
-            const recordId = fileMakerRecord.response.data[0].recordId;
-            console.log(`Found FileMaker record with recordId: ${recordId}`);
-            
-            // Update the billable hours record in FileMaker to mark as billed
-            const billableUpdateResult = await updateFinancialRecordBilledStatus(recordId, 1);
-            console.log("Update: ", billableUpdateResult);
-            
-            // Check if the update was successful
-            if (!billableUpdateResult || !billableUpdateResult.response || !billableUpdateResult.response.data) {
-              console.error(`Error updating billable hours record for UUID ${record.financial_id}:`, billableUpdateResult);
-              return false;
-            }
-            
-            console.log(`Successfully marked billable hours record ${recordId} (UUID: ${record.financial_id}) as billed in FileMaker`);
-          } catch (error) {
-            console.error(`Error updating billable hours record for UUID ${record.financial_id}:`, error);
-            return false;
-          }
+        console.log(`Marking ${recordIds.length} records as billed with invoice ID: ${qboInvoiceId}`);
+
+        // Call mark_records_billed RPC directly to set the actual QuickBooks invoice ID
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase.rpc('mark_records_billed', {
+          p_record_ids: recordIds,
+          p_invoice_id: qboInvoiceId
+        });
+
+        if (error) {
+          console.error('[CustomerSalesTable] RPC error:', error);
+          throw new Error(`Failed to update records with invoice ID: ${error.message}`);
         }
 
-        return true;
-      });
+        console.log(`Successfully marked ${data || 0} records as billed with invoice ${qboInvoiceId}`);
 
-      // Wait for all updates to complete
-      const updateResults = await Promise.all(updatePromises);
-      
-      // Check if all updates were successful
-      const allUpdatesSuccessful = updateResults.every(result => result === true);
-      
-      if (!allUpdatesSuccessful) {
-        throw new Error('Some records failed to update');
+      } catch (error) {
+        console.error('Error marking records as billed:', error);
+        throw new Error(`Failed to update records: ${error.message}`);
       }
 
       // Send the invoice email using QBO native functionality

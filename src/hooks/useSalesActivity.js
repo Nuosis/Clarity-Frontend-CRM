@@ -242,9 +242,9 @@ export function useSalesActivity(initialTimeframe = 'today') {
       if (!customerId) return;
       
       if (!customerMap.has(customerId)) {
-        // Get customer name from the customers object if available
-        const customerName = record.customers?.business_name || 'Unknown Customer';
-        
+        // Get customer name from customer_name field (Supabase) or fallback to relation (FileMaker)
+        const customerName = record.customer_name || record.customers?.business_name || 'Unknown Customer';
+
         customerMap.set(customerId, {
           customerId,
           customerName,

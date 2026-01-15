@@ -104,7 +104,7 @@
       "id": "TSK0005",
       "title": "Update timer record creation to use create_financial_record RPC",
       "description": "Find where timer stop creates financial records (likely in taskService or timer component). Replace FileMaker record creation with Supabase create_financial_record RPC call. Pass p_financial_id (UUID), p_organization_id, p_customer_id, p_product_name, p_quantity (billable hours), p_unit_price (rate), p_date. Ensure proper error handling and validation. Product name should follow format: CUSTOMERCAPS:ProjectFirstWord.",
-      "status": "completed",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001"
@@ -117,22 +117,29 @@
       "notes": "This is critical - ensures new records go directly to Supabase, not FileMaker",
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Added 'createFinancialRecord' function to 'src/api/financialRecords.js' to call the Supabase 'create_financial_record' RPC with proper validation. Updated 'src/services/taskService.js' to create financial records via RPC when stopping a timer. The implementation includes: (1) Helper function 'formatProductName' to format product names as CUSTOMERCAPS:ProjectFirstWord, (2) Helper function 'createFinancialRecordFromTimeEntry' to create financial records from time entry data, fetching customer and project info from Supabase, (3) Updated 'stopTimer' function to call the RPC if backend doesn't return a financial record, maintaining backward compatibility. The implementation ensures proper error handling (non-critical failures don't break timer stop), validates required data (customer_id, is_billable, duration), calculates billable hours correctly, and uses organization ID from context. Build verified successfully."
+      "implementation_notes": "Implemented Supabase-based financial record creation on timer stop by adding a new `createFinancialRecord` API wrapper that calls the `create_financial_record` RPC and validating required inputs in `src/api/financialRecords.js`. Updated `src/services/taskService.js` to format the required product name, derive billable quantity from the stopped time entry, fetch missing customer and project names from Supabase, and create a financial record via the RPC only when the backend does not return one and the entry is billable. Key decision: keep backward compatibility by preferring an existing backend-returned financial record and treating RPC creation failures as non-blocking so the timer stop still succeeds. Also added supporting docs and task status updates via `TSK0005_COMPLETION_SUMMARY.md`, `TSK0005_QUICK_REFERENCE.md`, and `tasks.json`.",
+      "executionError": null
     },
     {
       "id": "TSK0006",
       "title": "Update CustomerSalesTable component for new data shapes",
       "description": "Verify src/components/financial/CustomerSalesTable.jsx works with Supabase data. Check field references: use financial_id (not __ID), customer_name (not customers.business_name relation), inv_id (not f_billed). Update any date formatting. Test QuickBooks invoice generation flow - ensure updateFinancialRecordBilledStatus() call works with new mark_records_billed RPC.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0001",
         "TSK0002"
       ],
       "files": [
-        "src/components/financial/CustomerSalesTable.jsx"
+        "src/components/financial/CustomerSalesTable.jsx",
+        "src/hooks/useSalesActivity.js"
       ],
-      "notes": "This component handles QB invoice creation - critical path"
+      "notes": "✅ COMPLETED: Updated customer name references to use customer_name field with fallback to relation. Replaced FileMaker billable hours update logic with direct mark_records_billed RPC call using actual QuickBooks invoice ID. Updated useSalesActivity hook to use customer_name field. Removed all FileMaker UUID lookup and update code. Build verified successful.",
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "executionError": null,
+      "implementation_notes": "Updated CustomerSalesTable component and useSalesActivity hook to work with Supabase data shapes by replacing customers?.business_name relation access with customer_name field (with fallback for backward compatibility). Removed obsolete FileMaker billable hours update logic that used fetchFinancialRecordByUUID() and updateFinancialRecordBilledStatus() with FileMaker recordId - replaced with direct Supabase RPC call to mark_records_billed passing actual QuickBooks invoice ID for all records in a single batch operation. Key decision: call mark_records_billed RPC directly from component instead of using wrapper function to ensure actual QB invoice ID is stored (not generic 'BILLED' string). Build verified successful with no compilation errors."
     },
     {
       "id": "TSK0007",
