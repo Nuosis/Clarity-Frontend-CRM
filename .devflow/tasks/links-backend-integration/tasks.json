@@ -234,7 +234,7 @@
       ],
       "completed_at": "2026-01-15T23:30:00.000Z",
       "notes": "✅ Added edit/delete UI controls to ProjectLinksTab with hover-revealed buttons, inline editing form, and confirmation dialog for delete. ✅ Added edit/delete UI controls to TaskList with same UX pattern for consistency. ✅ Both components now support handleLinkUpdate and handleLinkDelete from useLink hook. ✅ Edit mode shows inline input field with Save/Cancel buttons. ✅ Delete operation requires confirmation dialog. ✅ UI updates after successful operations by calling loadProjectDetails or onExpand. ✅ All acceptance criteria met. ✅ Build verified successfully with no compilation errors.",
-      "implementation_notes": "Implemented edit and delete UI controls for links in both ProjectLinksTab and TaskList components by adding hover-revealed Edit and Delete buttons, inline editing mode with input fields and Save/Cancel buttons, and confirmation dialogs for delete operations. Enhanced both components to destructure handleLinkUpdate and handleLinkDelete from useLink hook, added local state for editing (editingLinkId, editingUrl/editLinkUrl), updated renderLink callback in ProjectLinksTab to conditionally render editing UI vs normal link display with action buttons, and similarly updated the link rendering section in TaskList TaskItem. Updated component prop signatures and PropTypes in TaskList to pass the new handlers through TaskSection to TaskItem. Key UX decisions: hover-revealed buttons for clean UI, inline editing to avoid modals, confirmation for destructive delete action, automatic refresh after successful operations via loadProjectDetails/onExpand, and consistent styling with existing note edit/delete patterns. Verified successful build and marked TSK0008 complete in tasks.json.",
+      "implementation_notes": "Implemented edit and delete UI controls for links across both project and task views by enhancing 'src/components/projects/ProjectLinksTab.jsx' and 'src/components/tasks/TaskList.jsx', leveraging existing 'handleLinkUpdate' and 'handleLinkDelete' from 'useLink.js'. Added inline edit mode with Save Cancel, hover-revealed action buttons, and delete confirmation dialogs, plus loading and error handling with SnackBar and test IDs for automation. Updated TaskList plumbing by introducing wrapper handlers and passing new props through 'TaskSection' and 'TaskItem' with corresponding PropTypes changes, and ensured data refresh after operations via 'loadProjectDetails(projectId)' and 'onExpand(task.id)'. Marked the work complete in '.devflow/tasks/links-backend-integration/tasks.json' and recorded completion docs, with builds verified successful (existing proposalService warnings unchanged).",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -243,7 +243,7 @@
       "id": "TSK0009",
       "title": "Update tests and fixtures",
       "description": "Update all link-related tests to use new backend schema and mocks",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "acceptance_criteria": [
         "API tests updated for backend format",
@@ -261,7 +261,12 @@
         "TSK0002",
         "TSK0003",
         "TSK0005"
-      ]
+      ],
+      "completed_at": "2026-01-15T22:30:00.000Z",
+      "notes": "✅ Created comprehensive test suite for links API integration (26 tests, 100% passing). ✅ Created linkService transformation tests (29 tests, 100% passing). ✅ Created useLink hook integration tests (20 tests, 100% passing). ✅ All tests use backend LinkResponse format with snake_case to camelCase transformations. ✅ Tests cover: CRUD operations, organization scoping, multi-entity support (project/task/customer), environment detection (FileMaker vs webapp), GitHub URL detection, error handling, data validation, URL format validation. ✅ Mock data uses correct backend schema (link field, foreign keys, timestamps). ✅ 75 total tests passing. ✅ Build verified successfully with no compilation errors.",
+      "implementation_notes": "Implemented comprehensive test coverage for the links backend integration by creating three test files: 'src/api/__tests__/links.test.js' with 26 tests covering CRUD operations, organization scoping, multi-entity support, pagination, error handling, and data validation; 'src/services/__tests__/linkService.test.js' with 29 tests covering backend data transformation (snake_case to camelCase), link creation with parent entity types, fetching with entity filtering, updates with URL validation, deletion, and FileMaker legacy support; and 'src/hooks/__tests__/useLink.test.js' with 20 integration tests covering service layer integration, GitHub URL detection, environment detection, error handling, data transformation, URL validation, and metadata augmentation. All tests use proper mocking of dependencies (dataService, linksApi, githubUtils) and validate the backend LinkResponse format with correct field mappings. Tests verify organization scoping requirements, multi-entity support (project_id, task_id, customer_id, organization_id), and environment-aware behavior. Build verified successfully with all 75 tests passing and no compilation errors.",
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0010",
