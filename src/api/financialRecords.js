@@ -1,4 +1,73 @@
-import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
+/**
+ * Financial Records API Client
+ *
+ * This module provides access to financial records (customer billing/sales) via Supabase RPCs.
+ * All operations use Supabase as the single source of truth.
+ *
+ * Key RPC Functions:
+ * - get_financial_records: Query with filters (date range, customer, billing status)
+ * - get_unpaid_records: Unbilled records query
+ * - get_monthly_summary: Monthly aggregations
+ * - get_quarterly_summary: Quarterly aggregations
+ * - get_yearly_summary: Yearly aggregations
+ * - create_financial_record: Create new record
+ * - mark_records_billed: Bulk billing update
+ */
+
+import { getSupabaseClient } from '../services/supabaseService';
+import { getOrganizationId, hasOrganizationContext } from '../services/dataService';
+
+/**
+ * Helper function to validate required parameters
+ * @param {Object} params - Parameters to validate
+ * @param {Array} required - Required parameter names
+ * @throws {Error} If a required parameter is missing
+ */
+function validateParams(params, required) {
+    for (const param of required) {
+        if (params[param] === undefined || params[param] === null) {
+            throw new Error(`Missing required parameter: ${param}`);
+        }
+    }
+}
+
+/**
+ * Helper function to get organization ID with validation
+ * @returns {string} Organization ID
+ * @throws {Error} If organization context is missing
+ */
+function getRequiredOrganizationId() {
+    if (!hasOrganizationContext()) {
+        throw new Error('Organization context is required for financial records operations');
+    }
+    const orgId = getOrganizationId();
+    if (!orgId) {
+        throw new Error('Organization ID is missing from context');
+    }
+    return orgId;
+}
+
+/**
+ * Helper function to convert YYYY-MM-DD to MM/DD/YYYY format (for backward compatibility)
+ * @param {string} dateString - Date in YYYY-MM-DD format
+ * @returns {string} Date in MM/DD/YYYY format
+ */
+function convertToDisplayDate(dateString) {
+    if (!dateString) return null;
+    const [year, month, day] = dateString.split('-');
+    return `${month}/${day}/${year}`;
+}
+
+/**
+ * Helper function to convert MM/DD/YYYY to YYYY-MM-DD format
+ * @param {string} dateString - Date in MM/DD/YYYY format
+ * @returns {string} Date in YYYY-MM-DD format
+ */
+function convertToISODate(dateString) {
+    if (!dateString) return null;
+    const [month, day, year] = dateString.split('/');
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
 
 /**
  * Helper function to get current date information
@@ -9,10 +78,10 @@ function getCurrentDateInfo() {
     const month = (now.getMonth() + 1).toString(); // JavaScript months are 0-indexed
     const year = now.getFullYear().toString();
     const quarter = Math.ceil((now.getMonth() + 1) / 3).toString();
-    
+
     // Get current date in YYYY-MM-DD format
     const date = now.toISOString().split('T')[0];
-    
+
     // Get current week number
     // ISO week starts on Monday, so we need to adjust
     const dayOfWeek = now.getDay() || 7; // Convert Sunday (0) to 7
@@ -20,7 +89,7 @@ function getCurrentDateInfo() {
     thursdayDate.setDate(now.getDate() - dayOfWeek + 4); // Find the Thursday of this week
     const firstDayOfYear = new Date(thursdayDate.getFullYear(), 0, 1);
     const weekNumber = Math.ceil((((thursdayDate - firstDayOfYear) / 86400000) + 1) / 7);
-    
+
     return {
         date,
         week: weekNumber.toString(),
@@ -39,198 +108,180 @@ function getLastMonthInfo() {
     now.setMonth(now.getMonth() - 1);
     const month = (now.getMonth() + 1).toString(); // JavaScript months are 0-indexed
     const year = now.getFullYear().toString();
-    
+
     return { month, year };
 }
 
 /**
- * Helper function to get quarter months
- * @param {string} quarter - The quarter (1-4)
- * @param {string} year - The year
- * @returns {Array} Array of month objects for the quarter
+ * Helper function to normalize Supabase RPC response to expected format
+ * Transforms Supabase customer_sales schema to match FileMaker response shape for backward compatibility
+ * @param {Array} records - Supabase RPC response records
+ * @returns {Object} Normalized response matching FileMaker format
  */
-function getQuarterMonths(quarter, year) {
-    const startMonth = (parseInt(quarter) - 1) * 3 + 1;
-    return [
-        { "month": startMonth.toString(), "year": year },
-        { "month": (startMonth + 1).toString(), "year": year },
-        { "month": (startMonth + 2).toString(), "year": year }
-    ];
-}
+function normalizeFinancialRecords(records) {
+    if (!records || !Array.isArray(records)) {
+        return {
+            response: {
+                data: []
+            }
+        };
+    }
 
-/**
- * Helper function to get year months
- * @param {string} year - The year
- * @returns {Array} Array of month objects for the year
- */
-function getYearMonths(year) {
-    return Array.from({ length: 12 }, (_, i) => ({
-        "month": (i + 1).toString(),
-        "year": year
+    // Transform each record from Supabase format to FileMaker-compatible format
+    const transformedRecords = records.map(record => ({
+        // FileMaker compatibility wrapper
+        fieldData: {
+            __ID: record.financial_id, // Map financial_id to __ID for backward compatibility
+            _custID: record.customer_id,
+            _projectID: null, // Supabase schema doesn't have project_id
+            DateStart: convertToDisplayDate(record.date), // Convert YYYY-MM-DD to MM/DD/YYYY
+            Billable_Time_Rounded: record.quantity,
+            Hourly_Rate: record.unit_price,
+            'Customers::Name': record.customer_name,
+            f_billed: record.inv_id ? 1 : 0, // Convert inv_id to f_billed (0 = unbilled, 1 = billed)
+            product_name: record.product_name,
+            total_price: record.total_price,
+            // Additional Supabase fields
+            financial_id: record.financial_id,
+            inv_id: record.inv_id,
+            created_at: record.created_at,
+            updated_at: record.updated_at
+        },
+        recordId: record.id // Supabase id for updates
     }));
-}
 
-/**
- * Builds query parameters for financial records
- * @param {Object} options - Query options
- * @returns {Array} Array of query parameters
- */
-function buildFinancialQuery(options = {}) {
-    const query = [];
-    
-    // Add date-based filters
-    if (options.month && options.year) {
-        query.push({ "month": options.month, "year": options.year });
-    }
-    
-    // Add payment status filter
-    if (options.paymentStatus !== undefined) {
-        query.push({ "f_billed": options.paymentStatus.toString() });
-    }
-    
-    // Add customer filter
-    if (options.customerId) {
-        query.push({ "_custID": options.customerId });
-    }
-    
-    // Add project filter
-    if (options.projectId) {
-        query.push({ "_projectID": options.projectId });
-    }
-    
-    return query;
+    return {
+        response: {
+            data: transformedRecords
+        }
+    };
 }
 
 /**
  * Fetches financial records based on timeframe and optional filters
- * @param {string} timeframe - The timeframe to fetch ("thisMonth", "unpaid", "lastMonth", "thisQuarter", "thisYear")
+ * @param {string} timeframe - The timeframe to fetch ("today", "thisWeek", "thisMonth", "unpaid", "lastMonth", "thisQuarter", "thisYear")
  * @param {string} customerId - Optional customer ID to filter by
- * @param {string} projectId - Optional project ID to filter by
+ * @param {string} projectId - Optional project ID to filter by (ignored - not supported in Supabase schema)
  * @returns {Promise} Promise resolving to the financial records data
  */
 export async function fetchFinancialRecords(timeframe, customerId = null, projectId = null) {
     validateParams({ timeframe }, ['timeframe']);
-    
-    return handleFileMakerOperation(async () => {
-        let query = [];
-        
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    if (projectId) {
+        console.warn('[FinancialRecords] projectId filtering is not supported in Supabase schema - ignoring parameter');
+    }
+
+    try {
+        let startDate = null;
+        let endDate = null;
+        let billedOnly = null;
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+
         switch (timeframe.toLowerCase()) {
             case 'today': {
-                // Get current date and format it as MM/DD/YYYY for FileMaker
-                const now = new Date();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const year = now.getFullYear();
-                const formattedDate = `${month}/${day}/${year}`;
-                
-                query = [{
-                    "DateStart": formattedDate,
-                    ...(customerId && { "_custID": customerId }),
-                    ...(projectId && { "_projectID": projectId })
-                }];
+                const today = now.toISOString().split('T')[0];
+                startDate = today;
+                endDate = today;
                 break;
             }
             case 'thisweek': {
-                const { week, year } = getCurrentDateInfo();
-                query = [{
-                    "weekNo": week,
-                    "year": year,
-                    ...(customerId && { "_custID": customerId }),
-                    ...(projectId && { "_projectID": projectId })
-                }];
+                // Get start of week (Monday)
+                const dayOfWeek = now.getDay() || 7; // Sunday = 7
+                const mondayDate = new Date(now);
+                mondayDate.setDate(now.getDate() - dayOfWeek + 1);
+                startDate = mondayDate.toISOString().split('T')[0];
+                endDate = now.toISOString().split('T')[0];
                 break;
             }
             case 'thismonth': {
                 const { month, year } = getCurrentDateInfo();
-                query = buildFinancialQuery({ month, year, customerId, projectId });
+                startDate = `${year}-${month.padStart(2, '0')}-01`;
+
+                // Last day of month
+                const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+                endDate = `${year}-${month.padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
                 break;
             }
             case 'unpaid': {
-                query = buildFinancialQuery({ paymentStatus: 0, customerId, projectId });
+                billedOnly = false; // Only unbilled records
                 break;
             }
             case 'lastmonth': {
                 const { month, year } = getLastMonthInfo();
-                query = buildFinancialQuery({ month, year, customerId, projectId });
+                startDate = `${year}-${month.padStart(2, '0')}-01`;
+
+                // Last day of month
+                const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+                endDate = `${year}-${month.padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
                 break;
             }
             case 'thisquarter': {
-                // Get current date info
-                const now = new Date();
+                // Get current quarter
                 const currentMonth = now.getMonth() + 1; // 1-12
-                const currentYear = now.getFullYear();
-                
+
                 // Calculate the last three completed months
                 const lastThreeMonths = [];
                 for (let i = 1; i <= 3; i++) {
                     let month = currentMonth - i;
                     let year = currentYear;
-                    
-                    // Adjust for previous year if needed
+
                     if (month <= 0) {
                         month += 12;
                         year -= 1;
                     }
-                    
-                    lastThreeMonths.push({
-                        "month": month.toString(),
-                        "year": year.toString()
-                    });
+
+                    lastThreeMonths.push({ month, year });
                 }
-                
-                // Get the same three months from the previous year
-                const previousYearMonths = lastThreeMonths.map(monthObj => ({
-                    "month": monthObj.month,
-                    "year": (parseInt(monthObj.year) - 1).toString()
-                }));
-                
-                // Combine both sets of months
-                const allMonths = [...lastThreeMonths, ...previousYearMonths];
-                
-                console.log("API - Last three months:", JSON.stringify(lastThreeMonths));
-                console.log("API - Previous year months:", JSON.stringify(previousYearMonths));
-                console.log("API - All months:", JSON.stringify(allMonths));
-                
-                query = allMonths.map(monthObj => ({
-                    ...monthObj,
-                    ...(customerId && { "_custID": customerId }),
-                    ...(projectId && { "_projectID": projectId })
-                }));
+
+                // Get the earliest date (start of oldest month)
+                const earliestMonth = lastThreeMonths[lastThreeMonths.length - 1];
+                startDate = `${earliestMonth.year}-${earliestMonth.month.toString().padStart(2, '0')}-01`;
+
+                // Get the latest date (end of most recent month)
+                const latestMonth = lastThreeMonths[0];
+                const lastDay = new Date(latestMonth.year, latestMonth.month, 0).getDate();
+                endDate = `${latestMonth.year}-${latestMonth.month.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
+
+                console.log('[FinancialRecords] Quarter range:', { startDate, endDate, lastThreeMonths });
                 break;
             }
             case 'thisyear': {
-                const { year } = getCurrentDateInfo();
-                const currentYear = parseInt(year);
-                const lastYear = currentYear - 1;
-                
-                // Get months for current year
-                const currentYearMonths = getYearMonths(year);
-                
-                // Get months for last year
-                const lastYearMonths = getYearMonths(lastYear.toString());
-                
-                // Combine both sets of months
-                const allMonths = [...currentYearMonths, ...lastYearMonths];
-                
-                query = allMonths.map(monthObj => ({
-                    ...monthObj,
-                    ...(customerId && { "_custID": customerId }),
-                    ...(projectId && { "_projectID": projectId })
-                }));
+                // Current year + last year
+                startDate = `${currentYear - 1}-01-01`;
+                endDate = `${currentYear}-12-31`;
                 break;
             }
             default:
                 throw new Error(`Invalid timeframe: ${timeframe}`);
         }
-        
-        const params = {
-            layout: Layouts.RECORDS,
-            action: Actions.READ,
-            query
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
+
+        // Call get_financial_records RPC
+        const { data, error } = await supabase.rpc('get_financial_records', {
+            p_organization_id: organizationId,
+            p_start_date: startDate,
+            p_end_date: endDate,
+            p_customer_id: customerId || null,
+            p_billed_only: billedOnly
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch financial records: ${error.message}`);
+        }
+
+        console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for timeframe: ${timeframe}`);
+
+        return normalizeFinancialRecords(data);
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching financial records:', error);
+        throw error;
+    }
 }
 
 /**
@@ -239,17 +290,28 @@ export async function fetchFinancialRecords(timeframe, customerId = null, projec
  * @returns {Promise} Promise resolving to the unpaid financial records data
  */
 export async function fetchUnpaidRecords(customerId = null) {
-    return handleFileMakerOperation(async () => {
-        const query = buildFinancialQuery({ paymentStatus: 0, customerId });
-        
-        const params = {
-            layout: Layouts.RECORDS,
-            action: Actions.READ,
-            query
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        const { data, error } = await supabase.rpc('get_unpaid_records', {
+            p_organization_id: organizationId,
+            p_customer_id: customerId || null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch unpaid records: ${error.message}`);
+        }
+
+        console.log(`[FinancialRecords] Fetched ${data?.length || 0} unpaid records`);
+
+        return normalizeFinancialRecords(data);
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching unpaid records:', error);
+        throw error;
+    }
 }
 
 /**
@@ -261,18 +323,38 @@ export async function fetchUnpaidRecords(customerId = null) {
  */
 export async function fetchMonthlyRecords(month, year, customerId = null) {
     validateParams({ month, year }, ['month', 'year']);
-    
-    return handleFileMakerOperation(async () => {
-        const query = buildFinancialQuery({ month, year, customerId });
-        
-        const params = {
-            layout: Layouts.RECORDS,
-            action: Actions.READ,
-            query
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        const startDate = `${year}-${month.padStart(2, '0')}-01`;
+
+        // Last day of month
+        const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+        const endDate = `${year}-${month.padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
+
+        const { data, error } = await supabase.rpc('get_financial_records', {
+            p_organization_id: organizationId,
+            p_start_date: startDate,
+            p_end_date: endDate,
+            p_customer_id: customerId || null,
+            p_billed_only: null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch monthly records: ${error.message}`);
+        }
+
+        console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for month ${month}/${year}`);
+
+        return normalizeFinancialRecords(data);
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching monthly records:', error);
+        throw error;
+    }
 }
 
 /**
@@ -284,22 +366,45 @@ export async function fetchMonthlyRecords(month, year, customerId = null) {
  */
 export async function fetchQuarterlyRecords(quarter, year, customerId = null) {
     validateParams({ quarter, year }, ['quarter', 'year']);
-    
-    return handleFileMakerOperation(async () => {
-        const months = getQuarterMonths(quarter, year);
-        const query = months.map(monthObj => ({
-            ...monthObj,
-            ...(customerId && { "_custID": customerId })
-        }));
-        
-        const params = {
-            layout: Layouts.RECORDS,
-            action: Actions.READ,
-            query
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        const quarterNum = parseInt(quarter);
+        if (quarterNum < 1 || quarterNum > 4) {
+            throw new Error('Quarter must be between 1 and 4');
+        }
+
+        // Calculate quarter date range
+        const startMonth = (quarterNum - 1) * 3 + 1;
+        const endMonth = startMonth + 2;
+
+        const startDate = `${year}-${startMonth.toString().padStart(2, '0')}-01`;
+        const lastDay = new Date(parseInt(year), endMonth, 0).getDate();
+        const endDate = `${year}-${endMonth.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
+
+        const { data, error } = await supabase.rpc('get_financial_records', {
+            p_organization_id: organizationId,
+            p_start_date: startDate,
+            p_end_date: endDate,
+            p_customer_id: customerId || null,
+            p_billed_only: null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch quarterly records: ${error.message}`);
+        }
+
+        console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for Q${quarter} ${year}`);
+
+        return normalizeFinancialRecords(data);
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching quarterly records:', error);
+        throw error;
+    }
 }
 
 /**
@@ -310,188 +415,303 @@ export async function fetchQuarterlyRecords(quarter, year, customerId = null) {
  */
 export async function fetchYearlyRecords(year, customerId = null) {
     validateParams({ year }, ['year']);
-    
-    return handleFileMakerOperation(async () => {
-        const months = getYearMonths(year);
-        const query = months.map(monthObj => ({
-            ...monthObj,
-            ...(customerId && { "_custID": customerId })
-        }));
-        
-        const params = {
-            layout: Layouts.RECORDS,
-            action: Actions.READ,
-            query
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        const startDate = `${year}-01-01`;
+        const endDate = `${year}-12-31`;
+
+        const { data, error } = await supabase.rpc('get_financial_records', {
+            p_organization_id: organizationId,
+            p_start_date: startDate,
+            p_end_date: endDate,
+            p_customer_id: customerId || null,
+            p_billed_only: null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch yearly records: ${error.message}`);
+        }
+
+        console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for year ${year}`);
+
+        return normalizeFinancialRecords(data);
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching yearly records:', error);
+        throw error;
+    }
 }
 
 /**
- * Fetches a financial record by its recordId
- * @param {string} recordId - The recordId of the record to fetch
+ * Fetches a financial record by its recordId (Supabase id)
+ * @param {string} recordId - The Supabase id of the record to fetch
  * @returns {Promise} Promise resolving to the financial record data
  */
 export async function fetchFinancialRecordByRecordId(recordId) {
     validateParams({ recordId }, ['recordId']);
-    
-    return handleFileMakerOperation(async () => {
-        const params = {
-            layout: Layouts.RECORDS,
-            action: Actions.READ,
-            query: [{ "~recordId": recordId }]
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        // Use get_financial_records without date filters, then filter by id in JS
+        const { data, error } = await supabase.rpc('get_financial_records', {
+            p_organization_id: organizationId,
+            p_start_date: null,
+            p_end_date: null,
+            p_customer_id: null,
+            p_billed_only: null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch financial record: ${error.message}`);
+        }
+
+        // Filter by recordId (Supabase id)
+        const record = data?.find(r => r.id === recordId);
+
+        if (!record) {
+            console.warn(`[FinancialRecords] Record not found: ${recordId}`);
+            return normalizeFinancialRecords([]);
+        }
+
+        return normalizeFinancialRecords([record]);
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching financial record by recordId:', error);
+        throw error;
+    }
 }
 
 /**
- * Fetches a financial record by its UUID (__ID field)
- * @param {string} financialId - The UUID (__ID) of the record to fetch
+ * Fetches a financial record by its UUID (financial_id field)
+ * @param {string} financialId - The UUID (financial_id) of the record to fetch
  * @returns {Promise} Promise resolving to the financial record data
  */
 export async function fetchFinancialRecordByUUID(financialId) {
     validateParams({ financialId }, ['financialId']);
-    
-    return handleFileMakerOperation(async () => {
-        const params = {
-            layout: Layouts.RECORDS,
-            action: Actions.READ,
-            query: [{ "__ID": financialId }]
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        // Use get_financial_records without date filters, then filter by financial_id in JS
+        const { data, error } = await supabase.rpc('get_financial_records', {
+            p_organization_id: organizationId,
+            p_start_date: null,
+            p_end_date: null,
+            p_customer_id: null,
+            p_billed_only: null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch financial record: ${error.message}`);
+        }
+
+        // Filter by financial_id
+        const record = data?.find(r => r.financial_id === financialId);
+
+        if (!record) {
+            console.warn(`[FinancialRecords] Record not found: ${financialId}`);
+            return normalizeFinancialRecords([]);
+        }
+
+        return normalizeFinancialRecords([record]);
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching financial record by UUID:', error);
+        throw error;
+    }
 }
 
 /**
- * Updates the f_billed field for a financial record by its recordId
- * @param {string} recordId - The recordId of the record to update
+ * Updates the billed status for a financial record by its recordId (Supabase id)
+ * Uses mark_records_billed RPC to set invoice ID
+ * @param {string} recordId - The Supabase id of the record to update
  * @param {number} billedStatus - The billed status (0 = not billed, 1 = billed)
  * @returns {Promise} Promise resolving to the update result
  */
 export async function updateFinancialRecordBilledStatus(recordId, billedStatus = 1) {
     validateParams({ recordId, billedStatus }, ['recordId', 'billedStatus']);
-    
-    return handleFileMakerOperation(async () => {
-        const params = {
-            layout: Layouts.RECORDS,
-            action: Actions.UPDATE,
-            recordId: recordId,
-            fieldData: {
-                f_billed: billedStatus
+
+    const supabase = getSupabaseClient();
+
+    try {
+        // Convert billedStatus to invoice ID
+        const invoiceId = billedStatus === 1 ? 'BILLED' : null;
+
+        if (invoiceId === null) {
+            // To mark as unbilled, set inv_id to NULL
+            const { data, error } = await supabase
+                .from('customer_sales')
+                .update({ inv_id: null, updated_at: new Date().toISOString() })
+                .eq('id', recordId)
+                .select();
+
+            if (error) {
+                console.error('[FinancialRecords] Update error:', error);
+                throw new Error(`Failed to update billed status: ${error.message}`);
+            }
+
+            console.log('[FinancialRecords] Marked record as unbilled:', recordId);
+
+            return {
+                response: {
+                    modId: '1',
+                    recordId: recordId
+                }
+            };
+        }
+
+        // Use mark_records_billed RPC for setting invoiceId
+        const { data, error } = await supabase.rpc('mark_records_billed', {
+            p_record_ids: [recordId],
+            p_invoice_id: invoiceId
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to update billed status: ${error.message}`);
+        }
+
+        console.log('[FinancialRecords] Updated billed status for record:', recordId, 'affected:', data);
+
+        return {
+            response: {
+                modId: data.toString(),
+                recordId: recordId
             }
         };
-        
-        return await fetchDataFromFileMaker(params);
-    });
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error updating billed status:', error);
+        throw error;
+    }
 }
 
 /**
- * Updates the f_billed field for multiple financial records in bulk
- * @param {Array} recordIds - Array of recordIds to update
+ * Updates the billed status for multiple financial records in bulk
+ * Uses mark_records_billed RPC
+ * @param {Array} recordIds - Array of Supabase ids to update
  * @param {number} billedStatus - The billed status (0 = not billed, 1 = billed)
  * @returns {Promise} Promise resolving to the bulk update results
  */
 export async function bulkUpdateFinancialRecordsBilledStatus(recordIds, billedStatus = 1) {
     validateParams({ recordIds, billedStatus }, ['recordIds', 'billedStatus']);
-    
+
     if (!Array.isArray(recordIds) || recordIds.length === 0) {
         throw new Error('recordIds must be a non-empty array');
     }
-    
-    return handleFileMakerOperation(async () => {
-        // Process records in batches to avoid overwhelming the API
-        const batchSize = 10;
-        const results = [];
-        const errors = [];
-        
-        for (let i = 0; i < recordIds.length; i += batchSize) {
-            const batch = recordIds.slice(i, i + batchSize);
-            
-            // Process batch concurrently
-            const batchPromises = batch.map(async (recordId) => {
-                try {
-                    const params = {
-                        layout: Layouts.RECORDS,
-                        action: Actions.UPDATE,
-                        recordId: recordId,
-                        fieldData: {
-                            f_billed: billedStatus
-                        }
-                    };
-                    
-                    const result = await fetchDataFromFileMaker(params);
-                    return { recordId, success: true, result };
-                } catch (error) {
-                    console.error(`Failed to update record ${recordId}:`, error);
-                    return { recordId, success: false, error: error.message };
-                }
-            });
-            
-            const batchResults = await Promise.all(batchPromises);
-            results.push(...batchResults);
-            
-            // Track errors
-            const batchErrors = batchResults.filter(r => !r.success);
-            errors.push(...batchErrors);
+
+    const supabase = getSupabaseClient();
+
+    try {
+        // Convert billedStatus to invoice ID
+        const invoiceId = billedStatus === 1 ? 'BILLED' : null;
+
+        if (invoiceId === null) {
+            // To mark as unbilled, set inv_id to NULL
+            const { data, error } = await supabase
+                .from('customer_sales')
+                .update({ inv_id: null, updated_at: new Date().toISOString() })
+                .in('id', recordIds)
+                .select();
+
+            if (error) {
+                console.error('[FinancialRecords] Bulk update error:', error);
+                throw new Error(`Failed to bulk update billed status: ${error.message}`);
+            }
+
+            const updatedCount = data?.length || 0;
+            console.log(`[FinancialRecords] Marked ${updatedCount} records as unbilled`);
+
+            return {
+                success: true,
+                totalRecords: recordIds.length,
+                successCount: updatedCount,
+                errorCount: recordIds.length - updatedCount,
+                results: recordIds.map((id, index) => ({
+                    recordId: id,
+                    success: index < updatedCount,
+                    result: index < updatedCount ? data[index] : null
+                })),
+                errors: []
+            };
         }
-        
-        const successCount = results.filter(r => r.success).length;
-        const errorCount = errors.length;
-        
-        console.log(`Bulk update completed: ${successCount} successful, ${errorCount} failed`);
-        
+
+        // Use mark_records_billed RPC
+        const { data, error } = await supabase.rpc('mark_records_billed', {
+            p_record_ids: recordIds,
+            p_invoice_id: invoiceId
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to bulk update billed status: ${error.message}`);
+        }
+
+        const updatedCount = data || 0;
+        console.log(`[FinancialRecords] Bulk updated ${updatedCount} records as billed`);
+
         return {
-            success: errorCount === 0,
+            success: updatedCount === recordIds.length,
             totalRecords: recordIds.length,
-            successCount,
-            errorCount,
-            results,
-            errors
+            successCount: updatedCount,
+            errorCount: recordIds.length - updatedCount,
+            results: recordIds.map((id, index) => ({
+                recordId: id,
+                success: index < updatedCount,
+                result: { recordId: id, modId: '1' }
+            })),
+            errors: []
         };
-    });
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error in bulk update:', error);
+        throw error;
+    }
 }
 
 /**
- * Fetches financial records for a specific date range (simplified for sync)
+ * Fetches financial records for a specific date range
  * @param {string} startDate - Start date in YYYY-MM-DD format
  * @param {string} endDate - End date in YYYY-MM-DD format
  * @returns {Promise} Promise resolving to the financial records data
  */
 export async function fetchRecordsForDateRange(startDate, endDate) {
     validateParams({ startDate, endDate }, ['startDate', 'endDate']);
-    
-    return handleFileMakerOperation(async () => {
-        // Convert dates to FileMaker format (MM/DD/YYYY)
-        const startDateFM = convertToFileMakerDate(startDate);
-        const endDateFM = convertToFileMakerDate(endDate);
-        
-        console.log(`Fetching records for date range: ${startDateFM} to ${endDateFM}`);
-        
-        // Simple query for date range - no filtering by payment status
-        const query = [{
-            "DateStart": `${startDateFM}...${endDateFM}`
-        }];
-        
-        const params = {
-            layout: Layouts.RECORDS,
-            action: Actions.READ,
-            query
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
-}
 
-/**
- * Helper function to convert YYYY-MM-DD to MM/DD/YYYY format for FileMaker
- * @param {string} dateString - Date in YYYY-MM-DD format
- * @returns {string} Date in MM/DD/YYYY format
- */
-function convertToFileMakerDate(dateString) {
-    const [year, month, day] = dateString.split('-');
-    return `${month}/${day}/${year}`;
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        console.log(`[FinancialRecords] Fetching records for date range: ${startDate} to ${endDate}`);
+
+        const { data, error } = await supabase.rpc('get_financial_records', {
+            p_organization_id: organizationId,
+            p_start_date: startDate,
+            p_end_date: endDate,
+            p_customer_id: null,
+            p_billed_only: null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch records for date range: ${error.message}`);
+        }
+
+        console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for date range`);
+
+        return normalizeFinancialRecords(data);
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching records for date range:', error);
+        throw error;
+    }
 }
