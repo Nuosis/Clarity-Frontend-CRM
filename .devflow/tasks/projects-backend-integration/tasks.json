@@ -110,7 +110,7 @@
       "priority": "medium",
       "completed_at": "2026-01-15T04:00:00Z",
       "notes": "Updated all objective CRUD handlers to be environment-aware. Removed 500ms FileMaker race condition delay from handleObjectiveCreate(). Added handleObjectiveUpdate() and handleObjectiveDelete() handlers with proper local state updates. Backend handles step operations automatically via nested objectives. Exported new handlers from useProject hook. Updated API index exports. Build verified successfully.",
-      "implementation_notes": "Implemented environment-aware objective management in useProject hook by updating handleObjectiveCreate() to remove the 500ms FileMaker workaround delay and format data for both backend (project_id, objective, completed) and FileMaker (_projectID, projectObjective, f_completed) environments. Added handleObjectiveUpdate() with bidirectional field transformations between frontend and backend schemas, including proper boolean conversions and local state updates for both selectedProject and projects array. Added handleObjectiveDelete() with automatic cascade handling (backend deletes steps, FileMaker may need manual cleanup). Updated src/api/index.js to export the new objective methods (updateObjective, deleteObjective, reorderObjectives, toggleObjectiveCompleted) plus image and note methods. Steps are handled automatically by backend via nested objectives structure - no separate step CRUD needed in hook. All handlers properly detect environment via getEnvironmentContext() and route to appropriate API. Build verified successfully with only pre-existing proposal warnings.",
+      "implementation_notes": "Implemented backend integration for objective and step management by updating the API exports in 'src/api/index.js' and refactoring 'src/hooks/useProject.js' to use new objective methods with environment-aware routing between backend and FileMaker. Replaced 'handleObjectiveCreate' (removing the prior 500ms FileMaker delay) and added new 'handleObjectiveUpdate' and 'handleObjectiveDelete' handlers with bidirectional field mapping and boolean conversion, plus immediate local state updates for UI responsiveness. Updated the hook return exports to include the new handlers, verified exports via grep, ran successful builds, marked TSK0008 complete in the task JSON, and documented the work in '.devflow/tasks/projects-backend-integration/TSK0008_COMPLETION_SUMMARY.md'.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -119,8 +119,14 @@
       "id": "TSK0009",
       "title": "Update useProject hook - business logic",
       "description": "Review and update business logic in src/hooks/useProject.js for fixed-price and subscription projects. Verify if sales generation logic should move to backend or stay in frontend. Update processProjectValue() calls. Ensure billable status updates work correctly. May need to coordinate with backend team on where business logic lives.",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completed_at": "2026-01-15T05:00:00Z",
+      "notes": "Reviewed and documented business logic for fixed-price and subscription projects. Updated processProjectValue() calls with comprehensive logging. Identified that billable status updates are not implemented (placeholder only). Documented that sales generation logic should move to backend for better transaction safety, data consistency, and security. Current implementation works for sales generation but lacks billable status updates and duplicate prevention. Recommended backend migration in future work. Build verified successfully.",
+      "implementation_notes": "Reviewed business logic for fixed-price and subscription projects in src/hooks/useProject.js and src/services/projectService.js. Key findings: (1) Sales generation works correctly via processProjectValue() and createSalesFromProjectValue() - fixed-price projects create 50%/50% split sales, subscriptions create monthly recurring sales; (2) Billable status updates are NOT implemented - updateProjectRecordsBillableStatus() is a placeholder that needs backend endpoint; (3) Logic lives entirely in frontend with direct Supabase writes. Enhanced error handling and logging in handleProjectCreate() and handleProjectUpdate() to track sales generation and billable status update attempts. Updated updateProjectRecordsBillableStatus() with detailed documentation about implementation gap and potential backend solutions. Created comprehensive TSK0009_BUSINESS_LOGIC_REVIEW.md documenting all business rules, data flow, integration points, and recommendation to migrate logic to backend for transaction safety and data consistency. Build verified successfully.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0010",

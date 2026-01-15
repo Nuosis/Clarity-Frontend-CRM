@@ -256,10 +256,13 @@ export function useProject(customerId = null) {
             const result = await createProject(formattedData);
 
             // Process fixed price or subscription logic if applicable
+            // BUSINESS LOGIC: Fixed-price and subscription projects trigger sales entries
             if ((projectData.f_fixedPrice === "1" || projectData.f_fixedPrice === 1 ||
                  projectData.isFixedPrice) ||
                 (projectData.f_subscription === "1" || projectData.f_subscription === 1 ||
                  projectData.isSubscription)) {
+
+                console.log('[Business Logic] Processing fixed-price or subscription project');
 
                 // Process the project value according to business rules
                 const projectWithId = {
@@ -271,17 +274,35 @@ export function useProject(customerId = null) {
                     value: parseFloat(projectData.value) || 0
                 };
 
-                // Process the project value and create sales entries if needed
-                const { billableStatus } = processProjectValue(projectWithId, false);
+                // Process the project value and determine sales entries and billable status
+                const { billableStatus, salesToCreate } = processProjectValue(projectWithId, false);
+                console.log(`[Business Logic] Generated ${salesToCreate?.length || 0} sales entries, billable status: ${billableStatus}`);
 
                 // Update billable status for all time records if needed
+                // NOTE: For fixed-price projects, billableStatus will be false (all hours non-billable)
                 if (billableStatus !== null) {
-                    await updateProjectRecordsBillableStatus(projectId, billableStatus);
+                    const billableResult = await updateProjectRecordsBillableStatus(projectId, billableStatus);
+                    if (!billableResult.implemented) {
+                        console.warn('[Business Logic] Billable status update not implemented - may require manual updates');
+                    }
                 }
 
                 // Create sales entries if the user has an organization ID
+                // NOTE: This writes directly to Supabase customer_sales table (frontend-only logic)
                 if (user?.supabaseOrgID) {
-                    await createSalesFromProjectValue(projectWithId, user.supabaseOrgID);
+                    try {
+                        const salesResult = await createSalesFromProjectValue(projectWithId, user.supabaseOrgID);
+                        if (salesResult.success) {
+                            console.log(`[Business Logic] Created ${salesResult.data?.length || 0} sales entries`);
+                        } else {
+                            console.error('[Business Logic] Failed to create sales entries:', salesResult.error);
+                        }
+                    } catch (salesError) {
+                        console.error('[Business Logic] Error creating sales entries:', salesError);
+                        // Don't fail the entire project creation due to sales entry errors
+                    }
+                } else {
+                    console.warn('[Business Logic] No organization ID available - skipping sales entry creation');
                 }
             }
 
@@ -335,12 +356,15 @@ export function useProject(customerId = null) {
             const result = await updateProject(idToUse, formattedData);
 
             // Process fixed price or subscription logic if applicable
+            // BUSINESS LOGIC: Process sales and billable status for special project types
             const isFixedPrice = projectData.f_fixedPrice === "1" || projectData.f_fixedPrice === 1 ||
                                 projectData.isFixedPrice || project.f_fixedPrice;
             const isSubscription = projectData.f_subscription === "1" || projectData.f_subscription === 1 ||
                                   projectData.isSubscription || project.f_subscription;
 
             if (isFixedPrice || isSubscription) {
+                console.log('[Business Logic] Processing fixed-price or subscription project update');
+
                 // Merge the existing project with the update data for processing
                 const updatedProject = {
                     ...project,
@@ -354,17 +378,34 @@ export function useProject(customerId = null) {
                     dateEnd: projectData.dateEnd || project.dateEnd
                 };
 
-                // Process the project value and create sales entries if needed
-                const { billableStatus } = processProjectValue(updatedProject, true);
+                // Process the project value and determine sales entries and billable status
+                const { billableStatus, salesToCreate } = processProjectValue(updatedProject, true);
+                console.log(`[Business Logic] Update generated ${salesToCreate?.length || 0} sales entries, billable status: ${billableStatus}`);
 
                 // Update billable status for all time records if needed
                 if (billableStatus !== null) {
-                    await updateProjectRecordsBillableStatus(projectId, billableStatus);
+                    const billableResult = await updateProjectRecordsBillableStatus(projectId, billableStatus);
+                    if (!billableResult.implemented) {
+                        console.warn('[Business Logic] Billable status update not implemented - may require manual updates');
+                    }
                 }
 
                 // Create sales entries if the user has an organization ID
+                // NOTE: This handles incremental sales for subscription projects
                 if (user?.supabaseOrgID) {
-                    await createSalesFromProjectValue(updatedProject, user.supabaseOrgID);
+                    try {
+                        const salesResult = await createSalesFromProjectValue(updatedProject, user.supabaseOrgID);
+                        if (salesResult.success) {
+                            console.log(`[Business Logic] Created/updated ${salesResult.data?.length || 0} sales entries`);
+                        } else {
+                            console.error('[Business Logic] Failed to create sales entries:', salesResult.error);
+                        }
+                    } catch (salesError) {
+                        console.error('[Business Logic] Error creating sales entries:', salesError);
+                        // Don't fail the entire project update due to sales entry errors
+                    }
+                } else {
+                    console.warn('[Business Logic] No organization ID available - skipping sales entry creation');
                 }
             }
 

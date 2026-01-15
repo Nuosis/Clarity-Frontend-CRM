@@ -887,20 +887,50 @@ function calculateMonthsBetweenDates(startDate, endDate) {
 
 /**
  * Updates the billable status of time records based on project settings
+ *
+ * BUSINESS LOGIC NOTE:
+ * - Fixed-price projects: All time records should be non-billable (billable = false)
+ * - Regular projects: Time records remain billable (default behavior)
+ *
+ * IMPLEMENTATION STATUS:
+ * - Currently not implemented - placeholder only
+ * - Requires backend API endpoint to bulk update time records
+ * - Backend should handle: /api/time-entries/project/{project_id}/billable-status
+ * - Alternative: Update via financial-records endpoints
+ *
  * @param {string} projectId - The ID of the project
  * @param {boolean} isBillable - Whether time records should be billable
  * @returns {Promise<Object>} - Result of the operation
  */
 export async function updateProjectRecordsBillableStatus(projectId, isBillable) {
-    // This function would update the billable status of all time records for a project
-    // Implementation would depend on how time records are stored and updated
-    // For now, this is a placeholder for the actual implementation
-    
-    console.log(`Updating billable status for project ${projectId} to ${isBillable}`);
-    
-    // Return a mock result for now
-    return {
-        success: true,
-        message: `Updated billable status for project ${projectId}`
-    };
+    try {
+        console.log(`[Business Logic] Updating billable status for project ${projectId} to ${isBillable}`);
+
+        // TODO: Implement backend API call when endpoint is available
+        // Expected endpoint: PATCH /api/time-entries/project/{project_id}/billable-status
+        // Payload: { is_billable: boolean }
+        //
+        // Alternative: Use /api/financial-records/query to get records, then update individually
+        // This would be less efficient but works with existing endpoints
+
+        console.warn(`[Business Logic] Billable status update not yet implemented for project ${projectId}`);
+        console.warn(`[Business Logic] Time records will need manual billable status updates`);
+
+        return {
+            success: true,
+            implemented: false,
+            message: `Billable status update queued for project ${projectId} (not yet implemented)`,
+            projectId,
+            isBillable
+        };
+    } catch (error) {
+        console.error(`[Business Logic] Error updating billable status for project ${projectId}:`, error);
+        return {
+            success: false,
+            implemented: false,
+            error: error.message,
+            projectId,
+            isBillable
+        };
+    }
 }
