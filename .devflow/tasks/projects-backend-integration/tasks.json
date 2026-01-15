@@ -23,22 +23,28 @@
       "id": "TSK0001",
       "title": "Update API layer for core project operations",
       "description": "Replace FileMaker API calls in src/api/projects.js with backend REST endpoints. Implement: listByCustomer (GET /projects/customer/{customer_id}), getById (GET /projects/{project_id}), getWithDetails (GET /projects/{project_id}/detail), create (POST /projects), update (PUT /projects/{project_id}), delete (DELETE /projects/{project_id}), updateStatus (PATCH /projects/{project_id}/status). Use HMAC auth for all requests.",
-      "status": "queued",
-      "priority": "high"
+      "status": "complete",
+      "priority": "high",
+      "completed_at": "2026-01-15T00:00:00Z",
+      "notes": "Implemented environment-aware API client with backend REST endpoints for core project operations, objectives, images, and notes. All requests use HMAC authentication via dataService. Maintains backward compatibility with FileMaker environment. Build verified successfully."
     },
     {
       "id": "TSK0002",
       "title": "Update API layer for objectives and steps",
       "description": "Add new API methods for objectives and steps in src/api/projects.js. Implement: listObjectives (GET /objectives/project/{project_id}), createObjective (POST /objectives), updateObjective (PUT /objectives/{objective_id}), deleteObjective (DELETE /objectives/{objective_id}), reorderObjectives (POST /objectives/projects/{project_id}/reorder). Add step CRUD operations if available.",
-      "status": "queued",
-      "priority": "high"
+      "status": "complete",
+      "priority": "high",
+      "completed_at": "2026-01-15T00:00:00Z",
+      "notes": "Implemented all objective CRUD operations plus reordering and completion toggle. Step operations available via objectives endpoint (backend returns nested steps)."
     },
     {
       "id": "TSK0003",
       "title": "Update API layer for images, links, and notes",
       "description": "Add API methods for project images, links, and notes in src/api/projects.js. Implement: listImages (GET /projects/{project_id}/images), createImage (POST /projects/{project_id}/images), deleteImage (DELETE /projects/images/{image_id}), listNotes (GET /projects/{project_id}/notes), createNote (POST /projects/{project_id}/notes), updateNote (PATCH /projects/notes/{note_id}), deleteNote (DELETE /projects/notes/{note_id}). Check if links endpoints exist.",
-      "status": "queued",
-      "priority": "medium"
+      "status": "complete",
+      "priority": "medium",
+      "completed_at": "2026-01-15T00:00:00Z",
+      "notes": "Implemented full CRUD for images and notes. Links endpoints not found in backend API - will use legacy FileMaker method or may need backend team to add links endpoints."
     },
     {
       "id": "TSK0004",
