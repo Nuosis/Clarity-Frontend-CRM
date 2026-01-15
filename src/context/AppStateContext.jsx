@@ -373,6 +373,18 @@ export function useAppDispatch() {
     return context;
 }
 
+// Custom hook to get organization context
+export function useOrganizationContext() {
+    const state = useAppState();
+
+    return {
+        organizationId: state.user?.supabaseOrgID || null,
+        hasOrganization: Boolean(state.user?.supabaseOrgID),
+        userId: state.user?.supabaseUserID || null,
+        user: state.user
+    };
+}
+
 // Custom hook for common state operations
 export function useAppStateOperations() {
     const dispatch = useAppDispatch();

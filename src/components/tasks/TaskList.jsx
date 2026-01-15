@@ -25,7 +25,10 @@ const TaskItem = React.memo(function TaskItem({
     handleTimerStart,
     handleTaskSelect,
     handleCreateNote,
-    handleCreateLink
+    handleCreateLink,
+    handleLoadMoreNotes,
+    notesPagination,
+    notesLoading
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showNoteInput, setShowNoteInput] = useState(false);
@@ -35,7 +38,7 @@ const TaskItem = React.memo(function TaskItem({
     const toggleExpand = useCallback(async () => {
         const newExpandedState = !isExpanded;
         setIsExpanded(newExpandedState);
-        
+
         if (newExpandedState) {
             await onExpand(task.id);
         }
@@ -128,6 +131,24 @@ const TaskItem = React.memo(function TaskItem({
                                             ))}
                                         </div>
                                     </div>
+                                    {notesPagination?.hasMore && (
+                                        <div className="mt-2">
+                                            <button
+                                                onClick={() => handleLoadMoreNotes(task.id)}
+                                                disabled={notesLoading}
+                                                data-testid="load-more-task-notes"
+                                                className={`
+                                                    w-full px-3 py-1 text-xs rounded-md transition-colors
+                                                    ${darkMode
+                                                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
+                                                    ${notesLoading ? 'opacity-50 cursor-not-allowed' : ''}
+                                                `}
+                                            >
+                                                {notesLoading ? 'Loading...' : 'Load More Notes'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             {taskLinks?.length > 0 && (
@@ -271,7 +292,10 @@ TaskItem.propTypes = {
     handleTimerStart: PropTypes.func.isRequired,
     handleTaskSelect: PropTypes.func.isRequired,
     handleCreateNote: PropTypes.func.isRequired,
-    handleCreateLink: PropTypes.func.isRequired
+    handleCreateLink: PropTypes.func.isRequired,
+    handleLoadMoreNotes: PropTypes.func.isRequired,
+    notesPagination: PropTypes.object,
+    notesLoading: PropTypes.bool
 };
 
 // Memoized task section component
@@ -290,7 +314,10 @@ const TaskSection = React.memo(function TaskSection({
     handleTimerStart,
     handleTaskSelect,
     handleCreateNote,
-    handleCreateLink
+    handleCreateLink,
+    handleLoadMoreNotes,
+    notesPagination,
+    notesLoading
 }) {
     if (!tasks?.length) {
         return (
@@ -330,6 +357,9 @@ const TaskSection = React.memo(function TaskSection({
                         handleTaskSelect={handleTaskSelect}
                         handleCreateNote={handleCreateNote}
                         handleCreateLink={handleCreateLink}
+                        handleLoadMoreNotes={handleLoadMoreNotes}
+                        notesPagination={notesPagination}
+                        notesLoading={notesLoading}
                     />
                 ))}
             </div>

@@ -85,6 +85,56 @@ export async function fetchNotesByProject(projectId, options = {}) {
 }
 
 /**
+ * Fetch notes for a task
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * @param {string} taskId - The task ID
+ * @param {Object} options - Query options (limit, offset)
+ * @returns {Promise<Array>} Array of notes
+ */
+export async function fetchNotesByTask(taskId, options = {}) {
+    if (!taskId) {
+        throw new Error('Task ID is required');
+    }
+
+    const { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');
+    const result = await fetchTaskNotesAPI(taskId, options);
+    const env = getEnvironmentContext();
+
+    // Process based on environment
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return processNotes(result);
+    } else {
+        // Backend API returns array directly - transform to normalized format
+        return Array.isArray(result) ? result.map(transformBackendNote) : [];
+    }
+}
+
+/**
+ * Fetch notes for a customer
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * @param {string} customerId - The customer ID
+ * @param {Object} options - Query options (limit, offset)
+ * @returns {Promise<Array>} Array of notes
+ */
+export async function fetchNotesByCustomer(customerId, options = {}) {
+    if (!customerId) {
+        throw new Error('Customer ID is required');
+    }
+
+    const { fetchNotesByCustomer: fetchCustomerNotesAPI } = await import('../api/notes');
+    const result = await fetchCustomerNotesAPI(customerId, options);
+    const env = getEnvironmentContext();
+
+    // Process based on environment
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return processNotes(result);
+    } else {
+        // Backend API returns array directly - transform to normalized format
+        return Array.isArray(result) ? result.map(transformBackendNote) : [];
+    }
+}
+
+/**
  * Delete a note by ID
  * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
  * @param {string} noteId - The note ID

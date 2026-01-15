@@ -54,6 +54,22 @@ export const getEnvironmentContext = () => {
 };
 
 /**
+ * Get organization ID from environment context
+ * @returns {string|null} Organization ID or null
+ */
+export const getOrganizationId = () => {
+  return currentEnvironment?.authentication?.user?.supabaseOrgID || null;
+};
+
+/**
+ * Check if organization context is available
+ * @returns {boolean} True if organization ID is available
+ */
+export const hasOrganizationContext = () => {
+  return Boolean(currentEnvironment?.authentication?.user?.supabaseOrgID);
+};
+
+/**
  * Generate HMAC-SHA256 authentication header for backend API
  * @param {string} payload - Request payload
  * @returns {Promise<string>} Authorization header
@@ -198,6 +214,13 @@ const createDataServiceClient = () => {
       // Web app environment - add backend authentication and organization context
       if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
         console.log('[DataService] Routing through backend API');
+        console.log('[DataService] Environment context:', {
+          type: env.type,
+          hasAuth: !!env.authentication,
+          hasUser: !!env.authentication?.user,
+          hasOrgId: !!env.authentication?.user?.supabaseOrgID,
+          orgId: env.authentication?.user?.supabaseOrgID
+        });
 
         const payload = config.data ? JSON.stringify(config.data) : '';
         const authHeader = await generateBackendAuthHeader(payload);
@@ -208,7 +231,13 @@ const createDataServiceClient = () => {
           config.headers['X-Organization-ID'] = env.authentication.user.supabaseOrgID;
           console.log('[DataService] Added organization context:', env.authentication.user.supabaseOrgID);
         } else {
-          console.warn('[DataService] Organization ID not found in user context. This may cause authorization errors.');
+          console.warn('[DataService] Organization ID not found in user context. This may cause authorization errors.', {
+            url: config.url,
+            method: config.method,
+            hasAuthentication: !!env.authentication,
+            hasUser: !!env.authentication?.user,
+            userKeys: env.authentication?.user ? Object.keys(env.authentication.user) : []
+          });
           // Note: We don't throw an error here to allow initialization to complete
           // Some endpoints may not require organization scoping
         }

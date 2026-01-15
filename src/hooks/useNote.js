@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useSnackBar } from '../context/SnackBarContext';
-import { createNewNote, fetchNotesByProject, deleteNoteById } from '../services/noteService';
+import { createNewNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, deleteNoteById } from '../services/noteService';
 import { updateNote } from '../api/notes';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 
@@ -11,13 +11,44 @@ import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataServic
 export function useNote() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [pagination, setPagination] = useState({
-        limit: 50,
-        offset: 0,
-        hasMore: false,
-        total: 0
-    });
+
+    // Separate pagination state for each entity type
+    const [paginationByEntity, setPaginationByEntity] = useState({});
+
     const { showError } = useSnackBar();
+
+    /**
+     * Get pagination state for a specific entity
+     * @param {string} entityType - 'project', 'task', or 'customer'
+     * @param {string} entityId - Entity ID
+     * @returns {Object} Pagination state
+     */
+    const getPagination = useCallback((entityType, entityId) => {
+        const key = `${entityType}-${entityId}`;
+        return paginationByEntity[key] || {
+            limit: 50,
+            offset: 0,
+            hasMore: false,
+            total: 0
+        };
+    }, [paginationByEntity]);
+
+    /**
+     * Update pagination state for a specific entity
+     * @param {string} entityType - 'project', 'task', or 'customer'
+     * @param {string} entityId - Entity ID
+     * @param {Object} updates - Pagination updates
+     */
+    const updatePagination = useCallback((entityType, entityId, updates) => {
+        const key = `${entityType}-${entityId}`;
+        setPaginationByEntity(prev => ({
+            ...prev,
+            [key]: {
+                ...prev[key],
+                ...updates
+            }
+        }));
+    }, []);
 
     /**
      * Create a new note
@@ -82,21 +113,41 @@ export function useNote() {
     }, [showError]);
 
     /**
-     * Fetch notes for a project with pagination support
+     * Fetch notes for any entity type with pagination support
      * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
      *
-     * @param {string} projectId - Project ID
-     * @param {Object} options - Query options
+     * Supports both legacy and new signatures:
+     * - Legacy: handleFetchNotes(projectId, options) - assumes entityType='project'
+     * - New: handleFetchNotes(entityType, entityId, options)
+     *
+     * @param {string} entityTypeOrId - Entity type ('project'/'task'/'customer') OR entity ID (legacy)
+     * @param {string|Object} entityIdOrOptions - Entity ID OR options object (legacy)
+     * @param {Object} options - Query options (new signature)
      * @param {number} options.limit - Max records to return (default: 50)
      * @param {number} options.offset - Pagination offset (default: 0)
-     * @param {boolean} options.updatePagination - Whether to update pagination state (default: true)
+     * @param {boolean} options.append - Whether to append to existing notes (for "Load More")
      * @returns {Promise<Array>} Array of notes
      */
-    const handleFetchNotes = useCallback(async (projectId, options = {}) => {
-        if (!projectId) {
-            const errorMessage = 'Project ID is required';
+    const handleFetchNotes = useCallback(async (entityTypeOrId, entityIdOrOptions = {}, options = {}) => {
+        let entityType, entityId, fetchOptions;
+
+        // Detect signature pattern
+        if (['project', 'task', 'customer'].includes(entityTypeOrId)) {
+            // New signature: (entityType, entityId, options)
+            entityType = entityTypeOrId;
+            entityId = entityIdOrOptions;
+            fetchOptions = options;
+        } else {
+            // Legacy signature: (projectId, options) - assume 'project'
+            entityType = 'project';
+            entityId = entityTypeOrId;
+            fetchOptions = entityIdOrOptions || {};
+        }
+
+        if (!entityId) {
+            const errorMessage = `${entityType} ID is required`;
             showError(errorMessage);
-            console.error('[useNote] handleFetchNotes validation error: missing projectId');
+            console.error(`[useNote] handleFetchNotes validation error: missing ${entityType}Id`);
             return [];
         }
 
@@ -104,31 +155,35 @@ export function useNote() {
             setLoading(true);
             setError(null);
 
+            const currentPagination = getPagination(entityType, entityId);
             const {
-                limit = pagination.limit,
-                offset = pagination.offset,
-                updatePagination: shouldUpdatePagination = true
-            } = options;
+                limit = currentPagination.limit,
+                offset = fetchOptions.append ? currentPagination.offset + currentPagination.limit : 0,
+                append = false
+            } = fetchOptions;
 
-            const notes = await fetchNotesByProject(projectId, { limit, offset });
-
-            // Update pagination state if requested
-            if (shouldUpdatePagination) {
-                const env = getEnvironmentContext();
-
-                // Pagination only works in web app environment
-                if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-                    setPagination(prev => ({
-                        ...prev,
-                        offset,
-                        limit,
-                        hasMore: notes.length >= limit,
-                        total: prev.total + notes.length
-                    }));
-                }
+            // Fetch notes based on entity type
+            let notes = [];
+            if (entityType === 'project') {
+                notes = await fetchNotesByProject(entityId, { limit, offset });
+            } else if (entityType === 'task') {
+                notes = await fetchNotesByTask(entityId, { limit, offset });
+            } else if (entityType === 'customer') {
+                notes = await fetchNotesByCustomer(entityId, { limit, offset });
             }
 
-            console.log('[useNote] Notes fetched successfully:', { projectId, count: notes.length, offset, limit });
+            // Update pagination state
+            const env = getEnvironmentContext();
+            if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+                updatePagination(entityType, entityId, {
+                    offset,
+                    limit,
+                    hasMore: notes.length >= limit,
+                    total: append ? currentPagination.total + notes.length : notes.length
+                });
+            }
+
+            console.log(`[useNote] Notes fetched successfully:`, { entityType, entityId, count: notes.length, offset, limit });
             return notes;
         } catch (err) {
             const errorMessage = err.response?.data?.message || err.message || 'Error fetching notes';
@@ -139,7 +194,7 @@ export function useNote() {
         } finally {
             setLoading(false);
         }
-    }, [showError, pagination.limit, pagination.offset]);
+    }, [showError, getPagination, updatePagination]);
 
     /**
      * Update a note
@@ -227,12 +282,12 @@ export function useNote() {
     return {
         loading,
         error,
-        pagination,
         handleNoteCreate,
         handleFetchNotes,
         handleNoteUpdate,
         handleNoteDelete,
-        setPagination,
+        getPagination,
+        updatePagination,
         clearError: () => setError(null)
     };
 }
