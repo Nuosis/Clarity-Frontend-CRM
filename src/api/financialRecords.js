@@ -16,7 +16,7 @@
 
 import { getSupabaseClient } from '../services/supabaseService';
 import { getOrganizationId, hasOrganizationContext } from '../services/dataService';
-import { convertSupabaseToFileMaker, convertFileMakerToSupabase } from '../utils/dateUtils';
+import { convertSupabaseToFileMaker } from '../utils/dateUtils';
 
 /**
  * Helper function to validate required parameters
@@ -48,9 +48,8 @@ function getRequiredOrganizationId() {
     return orgId;
 }
 
-// Date conversion functions are now imported from dateUtils
-// convertSupabaseToFileMaker: YYYY-MM-DD → MM/DD/YYYY
-// convertFileMakerToSupabase: MM/DD/YYYY → YYYY-MM-DD
+// Date conversion function imported from dateUtils
+// convertSupabaseToFileMaker: YYYY-MM-DD → MM/DD/YYYY (UI compatibility)
 
 /**
  * Helper function to get current date information
@@ -97,9 +96,10 @@ function getLastMonthInfo() {
 
 /**
  * Helper function to normalize Supabase RPC response to expected format
- * Transforms Supabase customer_sales schema to match FileMaker response shape for backward compatibility
+ * Transforms Supabase customer_sales schema to legacy field structure for backward compatibility
+ * with existing service layer (billableHoursService.js)
  * @param {Array} records - Supabase RPC response records
- * @returns {Object} Normalized response matching FileMaker format
+ * @returns {Object} Normalized response with fieldData wrapper
  */
 function normalizeFinancialRecords(records) {
     if (!records || !Array.isArray(records)) {
@@ -110,27 +110,27 @@ function normalizeFinancialRecords(records) {
         };
     }
 
-    // Transform each record from Supabase format to FileMaker-compatible format
+    // Transform each record to legacy fieldData structure expected by billableHoursService
     const transformedRecords = records.map(record => ({
-        // FileMaker compatibility wrapper
+        // Legacy fieldData wrapper for backward compatibility with existing services
         fieldData: {
-            __ID: record.financial_id, // Map financial_id to __ID for backward compatibility
+            __ID: record.financial_id, // Legacy field name
             _custID: record.customer_id,
-            _projectID: null, // Supabase schema doesn't have project_id
-            DateStart: convertSupabaseToFileMaker(record.date), // Convert YYYY-MM-DD to MM/DD/YYYY
+            _projectID: null, // Not supported in Supabase schema
+            DateStart: convertSupabaseToFileMaker(record.date), // UI expects MM/DD/YYYY format
             Billable_Time_Rounded: record.quantity,
             Hourly_Rate: record.unit_price,
             'Customers::Name': record.customer_name,
-            f_billed: record.inv_id ? 1 : 0, // Convert inv_id to f_billed (0 = unbilled, 1 = billed)
+            f_billed: record.inv_id ? 1 : 0, // Legacy billed flag (0 = unbilled, 1 = billed)
             product_name: record.product_name,
             total_price: record.total_price,
-            // Additional Supabase fields
+            // Include Supabase native fields for components that can use them directly
             financial_id: record.financial_id,
             inv_id: record.inv_id,
             created_at: record.created_at,
             updated_at: record.updated_at
         },
-        recordId: record.id // Supabase id for updates
+        recordId: record.id // Supabase record ID for updates
     }));
 
     return {

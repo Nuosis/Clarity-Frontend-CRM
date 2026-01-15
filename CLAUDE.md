@@ -365,10 +365,10 @@ The Customer feature has been fully integrated with the backend API, supporting 
 - **Storage:** `staff-images` bucket for staff profile images
 
 ### QuickBooks Integration
-- **Service:** `financialSyncService.js`
 - **Edge Function:** `quickbooksEdgeFunction.js`
 - **OAuth:** Client ID/Secret in `.env`
 - **Features:** Invoice generation, customer sync, time entry billing
+- **Financial Records:** Direct Supabase RPC calls via `src/api/financialRecords.js`
 
 ### Mailjet Integration
 - **Service:** `mailjetService.js`

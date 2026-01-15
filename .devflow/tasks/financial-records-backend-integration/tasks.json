@@ -310,13 +310,13 @@
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented comprehensive organization_id scoping verification by creating three automated verification scripts covering RPC parameter validation, RLS enforcement, and user session flow, all of which passed. Verified that all 7 RPC functions (get_financial_records, get_unpaid_records, get_monthly_summary, get_quarterly_summary, get_yearly_summary, create_financial_record, mark_records_billed) properly enforce organization scoping through either p_organization_id parameter or JWT-based current_org_id() function. Confirmed complete data flow: user login → initializationService.fetchSupabaseUserId() queries customer_organization → user.supabaseOrgID set → environment context updated → dataService.getOrganizationId() retrieves → financialRecords.getRequiredOrganizationId() validates → RPC calls include organization_id → RLS policies enforce isolation. Verified error handling throws clear exceptions when organization context is missing. Documented findings in ORGANIZATION_SCOPING_VERIFICATION_REPORT.md with security guarantee that cross-organization access is impossible. Key decision: mark_records_billed uses JWT-based org ID which is MORE secure than parameter passing (cannot be spoofed)."
+      "implementation_notes": "Implemented a full audit of Supabase RPC usage for financial records to confirm strict organization_id scoping and RLS isolation, validating the end-to-end flow from login and initializationService through environment context and dataService into RPC calls. Added three verification scripts: 'verify-organization-scoping.js' (RPC org scoping checks, with a regex adjustment after a false positive), 'test-rls-isolation.js' (RLS enforcement), and 'test-user-session-org-id.js' (session org_id propagation), and confirmed all checks pass. Verified 'mark_records_billed' intentionally omits 'p_organization_id' because it relies on DB-side 'current_org_id()' from the JWT for non-spoofable scoping, and confirmed RLS policies are correctly configured. Updated documentation in 'ORGANIZATION_SCOPING_VERIFICATION_REPORT.md' and 'TSK0014_COMPLETION_SUMMARY.md', marked the task complete in 'tasks.json', and verified the build still compiles successfully."
     },
     {
       "id": "TSK0015",
       "title": "Remove obsolete FileMaker code paths",
       "description": "After all tasks complete and testing passes, remove obsolete FileMaker-specific code: Remove FileMaker layout references in financialRecords.js, remove dual-write logic if no longer needed, clean up unused imports, update comments/documentation. Keep minimal backward compatibility shims if needed for gradual rollout.",
-      "status": "queued",
+      "status": "done",
       "priority": "low",
       "dependencies": [
         "TSK0001",
@@ -334,9 +334,15 @@
       ],
       "files": [
         "src/api/financialRecords.js",
-        "src/services/financialSyncService.js"
+        "src/services/index.js",
+        "CLAUDE.md"
       ],
-      "notes": "Final cleanup after migration is stable"
+      "notes": "✅ COMPLETED: Removed obsolete FileMaker references while preserving backward compatibility. Updated financialRecords.js comments to clarify legacy field structure is for UI compatibility (not FileMaker). Removed unused import convertFileMakerToSupabase. Commented out financialSyncService exports from services/index.js with deprecation notice. Updated CLAUDE.md to remove financialSyncService reference from QuickBooks integration section. Build verified successful. Key decision: Kept fieldData wrapper and date conversion for backward compatibility with billableHoursService and existing UI components.",
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "executionError": null,
+      "implementation_notes": "Implemented cleanup of obsolete FileMaker code paths by updating src/api/financialRecords.js to clarify that the fieldData wrapper and date conversion are for UI/legacy compatibility (not FileMaker-specific), removing the unused convertFileMakerToSupabase import. Commented out financialSyncService exports in src/services/index.js with a clear deprecation notice pointing to FINANCIAL_SYNC_SERVICE_DEPRECATION.md. Updated CLAUDE.md QuickBooks integration section to remove financialSyncService reference and add note about direct Supabase RPC usage. Key decision: preserved backward compatibility layer (fieldData wrapper, date conversion) because billableHoursService and existing UI components still depend on this structure - full removal would require refactoring the entire service layer and components. Build verified successful with no compilation errors."
     }
   ]
 }

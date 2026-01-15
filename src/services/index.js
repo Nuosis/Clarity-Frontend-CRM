@@ -142,11 +142,13 @@ export {
     loadOrganizationSales
 } from './salesService';
 
-// Financial sync service exports
-export {
-    synchronizeFinancialRecords,
-    getFinancialSyncStatus
-} from './financialSyncService';
+// Financial sync service exports - DEPRECATED
+// These exports are kept only for backward compatibility with migration scripts
+// DO NOT use in new code - see FINANCIAL_SYNC_SERVICE_DEPRECATION.md
+// export {
+//     synchronizeFinancialRecords,
+//     getFinancialSyncStatus
+// } from './financialSyncService';
 
 // Service version
 export const SERVICES_VERSION = '1.0.0';
