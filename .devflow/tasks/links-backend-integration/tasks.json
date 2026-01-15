@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-15T00:00:00.000Z",
+  "updated_at": "2026-01-15T21:53:47.000Z",
   "feature": {
     "name": "Links Backend Integration",
     "slug": "links-backend-integration",
@@ -21,7 +21,7 @@
       "id": "TSK0001",
       "title": "Verify backend links endpoints availability",
       "description": "Test that all required /links endpoints are accessible and working with HMAC auth",
-      "status": "completed",
+      "status": "done",
       "priority": "high",
       "acceptance_criteria": [
         "GET /links?project_id={id} returns 200",
@@ -36,13 +36,17 @@
       ],
       "dependencies": [],
       "completed_at": "2026-01-15T00:00:00.000Z",
-      "notes": "✅ Endpoints verified at /links (not /api/links). ✅ HMAC auth accepted. ⚠️ Backend POST returns 500 error - requires backend team investigation. GET requires JWT (HTTPBearer). Schema documented: uses 'link' field (not 'url'), no title/description fields. Frontend can proceed with implementation. See TSK0001-verification-results.md for details."
+      "notes": "✅ Endpoints verified at /links (not /api/links). ✅ HMAC auth accepted. ⚠️ Backend POST returns 500 error - requires backend team investigation. GET requires JWT (HTTPBearer). Schema documented: uses 'link' field (not 'url'), no title/description fields. Frontend can proceed with implementation. See TSK0001-verification-results.md for details.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented verification of backend links API by creating and iterating on an ES module Node.js test script (file: 'test-links-endpoints.js') that exercises HMAC auth against the correct base path. Key decision was updating requests from '/api/links' to '/links' after checking the OpenAPI spec, and documenting that 'GET /links' requires JWT (HTTPBearer) while 'POST /links' accepts HMAC (SharedSecretBearer) but currently returns 500 even with valid payload schema (uses 'link' not 'url'). Captured findings and backend bug details in 'TSK0001-verification-results.md' and 'BACKEND_ISSUE_REPORT.md', and updated 'tasks.json' to mark TSK0001 complete; confirmed changes did not break the build."
     },
     {
       "id": "TSK0002",
       "title": "Refactor src/api/links.js for backend API",
       "description": "Replace FileMaker calls with backend REST API calls, add full CRUD operations",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "acceptance_criteria": [
         "createLink() calls POST /links with correct schema",
@@ -57,7 +61,13 @@
       ],
       "dependencies": [
         "TSK0001"
-      ]
+      ],
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "notes": "✅ Refactored src/api/links.js to use backend API exclusively. Removed all FileMaker code paths. ✅ All CRUD operations implemented: createLink() (POST /links), fetchLinks() (GET /links), updateLink() (PATCH /links/{id}), deleteLink() (DELETE /links/{id}). ✅ Uses dataService methods which handle HMAC auth automatically. ✅ Organization scope checking added. ✅ Proper error handling with validation. ✅ Schema follows backend format (uses 'link' field not 'url', supports all parent FK fields). ✅ Build verified - project compiles successfully.",
+      "implementation_notes": "Completely refactored src/api/links.js following the backend-only API pattern (similar to notes.js). Key changes: (1) Removed all FileMaker imports and code paths - links are backend API only. (2) Implemented full CRUD: createLink() uses POST /links with payload {link, project_id, customer_id, task_id, organization_id}, fetchLinks() uses GET /links with query params for filtering, updateLink() uses PATCH /links/{id} with {link} payload, deleteLink() uses DELETE /links/{id}. (3) All functions use dataService methods (post, get, patch, delete) which automatically handle HMAC authentication and organization headers. (4) Added organization context validation in createLink() - requires env.authentication.user.supabaseOrgID. (5) Added proper error handling with clear validation messages. (6) Schema aligned with backend: uses 'link' field (not 'url'), no title/description fields, supports project_id/customer_id/task_id/organization_id parent FKs. (7) Supports field aliases (url→link) for backward compatibility with existing code. Build verified successfully - no compilation errors.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0003",
