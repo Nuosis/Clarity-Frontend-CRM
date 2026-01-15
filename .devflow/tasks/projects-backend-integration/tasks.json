@@ -188,14 +188,20 @@
       "notes": "Updated all three components to support both FileMaker and backend API data structures. ProjectList.jsx: Added normalizeProject() helper to ensure both projectId/projectName and id/name are available. ProjectReportButton.jsx: Added documentation noting it works with both ID formats. ProjectProposalsTab.jsx: Updated documentation and PropTypes to reflect dual-format support (id/__ID, customer_id/_custID, name/projectName). All components now handle normalized project data regardless of source. Build verified successfully.",
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented backward-compatible updates to project displays in financial and proposal features by adding data normalization and comprehensive documentation. Updated 'src/components/financial/ProjectList.jsx' to add a normalizeProject() helper that unifies FileMaker fields (projectId, projectName) with backend fields (id, name) so both are available regardless of source, plus added detailed documentation about aggregated financial data. Updated 'src/components/financial/ProjectReportButton.jsx' to document dual-format ID support (customerId works with both _custID and customer_id, projectId works with __ID/recordId and id). Updated 'src/components/proposals/ProjectProposalsTab.jsx' to add documentation about normalized project data and expanded PropTypes to include both schema variants (__ID, customer_id, name, projectName). Build verified successfully. Task marked complete in tasks.json."
+      "implementation_notes": "Implemented backend-compatible project display handling across financial and proposals features while preserving FileMaker backward compatibility by normalizing field access for both schemas. Updated 'src/components/financial/ProjectList.jsx' to add a 'normalizeProject()' helper for id and name resolution in the aggregated financial-by-project view, clarified 'src/components/financial/ProjectReportButton.jsx' expectations via documentation, and expanded 'src/components/proposals/ProjectProposalsTab.jsx' PropTypes and comments to accept both id and customer field variants. Marked TSK0014 complete by updating '.devflow/tasks/projects-backend-integration/tasks.json' and adding the writeup in '.devflow/tasks/projects-backend-integration/TSK0014_COMPLETION_SUMMARY.md', with the key decision to rely on upstream 'projectService' normalization and only harden component-level compatibility where needed.",
+      "executionError": null
     },
     {
       "id": "TSK0015",
       "title": "Update tests and fixtures",
       "description": "Find and update all project-related tests. Update test fixtures with new data structure (Supabase schema instead of FileMaker). Update API mocks to match new endpoints. Ensure all CRUD operations are tested. Add tests for new endpoints (objectives, images, notes). Verify business logic tests still pass.",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completed_at": "2026-01-15T10:00:00Z",
+      "notes": "Created comprehensive test suites for project API and service layers with 65 passing tests total. Added project fixtures with both FileMaker and backend formats. Verified build compiles successfully. All CRUD operations for projects, objectives, steps, images, and notes are tested. Error handling, data normalization, and status mapping fully covered.",
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive test coverage for the projects backend integration by creating two new test suites: 'src/api/__tests__/projects.test.js' (42 tests covering environment detection, organization scoping, all CRUD operations for projects/objectives/steps/images/notes, error handling, and data normalization) and 'src/services/__tests__/projectService.test.js' (23 tests covering status mapping, data formatting, validation, completion calculations, and project grouping). Created 'src/__tests__/fixtures/projectFixtures.js' as a comprehensive fixtures library with backend/FileMaker formats for projects, objectives, steps, images, links, notes, plus error fixtures and helper functions. All 65 tests pass successfully, and the build compiles without errors (2.39s, 2,062.05 kB output). Key discoveries included API endpoint patterns (PATCH for toggles, no body), schema field mappings, and service function signatures that differed from initial assumptions. Followed the same testing patterns as customer API tests for consistency."
     }
   ]
 }
