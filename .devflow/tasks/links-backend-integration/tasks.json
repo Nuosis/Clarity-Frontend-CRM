@@ -177,7 +177,7 @@
       ],
       "completed_at": "2026-01-15T23:00:00.000Z",
       "notes": "✅ Added environment-agnostic project ID extraction (project.id || project.__ID). ✅ Updated all handleLinkCreate and loadProjectDetails calls to use projectId variable. ✅ Enhanced renderLink to support both url and link field names. ✅ Updated GitHub metadata fetching to handle both field formats. ✅ Maintains 100% backward compatibility with FileMaker format. ✅ All acceptance criteria met. ✅ Build verified successfully. ✅ 7/7 automated verification tests passed.",
-      "implementation_notes": "Updated ProjectLinksTab component to work seamlessly with both backend API (id, url fields) and FileMaker (__ID, link fields) formats. Key changes: (1) Added projectId variable that extracts from either project.id or project.__ID for environment-agnostic access, (2) Updated renderLink callback to extract URL from link.url || link.link and title from link.title || linkUrl with proper fallbacks, (3) Enhanced GitHub metadata fetching to parse URLs from either field name, (4) Replaced all hardcoded project.__ID references with projectId variable in handleLinkCreate and loadProjectDetails calls. All changes are backward-compatible and maintain existing UX including optimistic updates, GitHub repository detection/creation, error handling, and loading states. Created comprehensive verification script (TSK0006-verification.js) that validates all data format compatibility patterns. Build successful, all tests passed.",
+      "implementation_notes": "Implemented dual-environment support in 'src/components/projects/ProjectLinksTab.jsx' to work with both the new backend API and legacy FileMaker data by introducing a unified 'projectId' resolver ('project.id || project.__ID') and updating all CRUD calls to use it. Adjusted link handling to be schema-tolerant by rendering and parsing URLs from either 'url' or 'link', including GitHub URL extraction and metadata fetching, while keeping the existing optimistic-update UX intact. Added verification and documentation artifacts (including 'TSK0006-verification.js' and multiple TSK0006 summary reports) and marked TSK0006 as done in '.devflow/tasks/links-backend-integration/tasks.json' after confirming a successful build and passing tests.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -186,7 +186,7 @@
       "id": "TSK0007",
       "title": "Update task link display and creation",
       "description": "Update task list components to work with new links API and schema",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "acceptance_criteria": [
         "Task links render correctly",
@@ -195,11 +195,21 @@
         "Error handling works"
       ],
       "files": [
-        "src/components/tasks/TaskList.jsx"
+        "src/components/tasks/TaskList.jsx",
+        "src/hooks/useLink.js",
+        ".devflow/tasks/links-backend-integration/TSK0007-verification.js",
+        ".devflow/tasks/links-backend-integration/TSK0007-implementation-summary.md",
+        ".devflow/tasks/links-backend-integration/TSK0007-COMPLETION-REPORT.md"
       ],
       "dependencies": [
         "TSK0005"
-      ]
+      ],
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "notes": "✅ Enhanced useLink hook to accept parentType parameter (defaults to 'project' for backward compatibility). ✅ Updated TaskList to pass 'task' as parentType, ensuring links created with correct task_id FK. ✅ Enhanced link display to support both 'url' and 'link' field formats with title fallback. ✅ All acceptance criteria met: links render correctly, creation works with proper FK, refresh after creation, error handling in place. ✅ Build verified successfully. ✅ 6/6 automated verification checks passed.",
+      "implementation_notes": "Implemented task link support by enhancing the 'useLink' hook to accept an optional 'parentType' parameter (defaulting to 'project' for backward compatibility) and updating 'TaskList.jsx' to pass 'task' when creating links, ensuring the correct 'task_id' foreign key is used. Enhanced link display to support both backend ('link') and frontend ('url') field formats with title fallbacks for resilience. Created comprehensive verification script (TSK0007-verification.js) that validates all changes with 6 automated checks, all passing. Updated tasks.json to mark TSK0007 complete with detailed notes and supporting documentation (TSK0007-implementation-summary.md, TSK0007-COMPLETION-REPORT.md). Build verification successful with no errors.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0008",

@@ -252,20 +252,25 @@ const TaskItem = React.memo(function TaskItem({
                                     `}>
                                         Links
                                     </h5>
-                                    {taskLinks.map(link => (
-                                        <a
-                                            key={link.id}
-                                            href={link.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={`
-                                                text-sm block hover:underline
-                                                ${darkMode ? 'text-blue-400' : 'text-blue-600'}
-                                            `}
-                                        >
-                                            {link.url}
-                                        </a>
-                                    ))}
+                                    {taskLinks.map(link => {
+                                        // Support both 'url' (frontend format) and 'link' (backend format)
+                                        const linkUrl = link.url || link.link;
+                                        const displayText = link.title || linkUrl;
+                                        return (
+                                            <a
+                                                key={link.id}
+                                                href={linkUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={`
+                                                    text-sm block hover:underline
+                                                    ${darkMode ? 'text-blue-400' : 'text-blue-600'}
+                                                `}
+                                            >
+                                                {displayText}
+                                            </a>
+                                        );
+                                    })}
                                 </div>
                             )}
                             {timerRecords?.length > 0 && (
@@ -598,16 +603,17 @@ function TaskList({
         }
     }, [handleNoteDelete]);
 
-    const handleCreateLink = useCallback(async (fkId, url) => {
+    const handleCreateLink = useCallback(async (taskId, url) => {
         try {
-            console.log("new link called ... ",{fkId, url})
-            const result = await handleLinkCreate(fkId, url);
+            console.log("new link called for task ... ", { taskId, url })
+            // Create link with task_id parent type (third parameter)
+            const result = await handleLinkCreate(taskId, url, 'task');
             if (result) {
-                await handleTaskSelect(fkId);
+                await handleTaskSelect(taskId);
             }
             return result;
         } catch (error) {
-            console.error('Error creating note:', error);
+            console.error('Error creating link for task:', error);
             throw error;
         }
     }, [handleLinkCreate, handleTaskSelect]);

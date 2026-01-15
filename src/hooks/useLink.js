@@ -21,11 +21,12 @@ export function useLink() {
      *
      * @param {string} fkId - Foreign key ID (e.g., Task or Project ID)
      * @param {string} linkUrl - The URL to link
+     * @param {string} [parentType='project'] - Type of parent entity (project/task/customer/organization)
      * @returns {Promise<{id: string, url: string, createdAt: string, metadata?: { github: { owner: string, repo: string, normalizedUrl: string }}}|null>}
      */
-    const handleLinkCreate = useCallback(async (fkId, linkUrl) => {
+    const handleLinkCreate = useCallback(async (fkId, linkUrl, parentType = 'project') => {
         if (!fkId || !linkUrl?.trim()) {
-            showError('Project ID and link URL are required');
+            showError('Entity ID and link URL are required');
             return null;
         }
 
@@ -43,7 +44,8 @@ export function useLink() {
                 ? { github: { owner: gh.owner, repo: gh.repo, normalizedUrl: gh.normalizedUrl || trimmedUrl } }
                 : undefined;
 
-            const result = await createNewLink(fkId, trimmedUrl);
+            // Pass parentType to createNewLink so it creates the correct FK
+            const result = await createNewLink(fkId, trimmedUrl, parentType);
 
             // Handle response based on environment
             let newLink;
@@ -58,16 +60,16 @@ export function useLink() {
                     createdAt: new Date().toISOString()
                 };
             } else {
-                // Backend API response
+                // Backend API response (already transformed by linkService)
                 if (!result?.id) {
                     throw new Error('Failed to create link: No ID returned');
                 }
 
                 newLink = {
                     id: result.id,
-                    url: result.link || trimmedUrl,
-                    title: new URL(trimmedUrl).hostname,
-                    createdAt: result.created_at || new Date().toISOString()
+                    url: result.url || trimmedUrl,
+                    title: result.title || new URL(trimmedUrl).hostname,
+                    createdAt: result.createdAt || new Date().toISOString()
                 };
             }
 
