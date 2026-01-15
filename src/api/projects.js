@@ -9,6 +9,7 @@
 
 import { dataService, getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 import { handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
+import { fetchNotesByProject } from './notes';
 
 /**
  * Normalize project data based on environment
@@ -529,26 +530,14 @@ export async function deleteProjectImage(imageId) {
  * List project notes (environment-aware)
  * GET /projects/{project_id}/notes
  * @param {string} projectId - The project ID
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Max records to return
+ * @param {number} options.offset - Pagination offset
  * @returns {Promise<Array>} Array of note records
  */
-export async function fetchProjectNotes(projectId) {
-    validateParams({ projectId }, ['projectId']);
-    const env = getEnvironmentContext();
-    checkOrganizationScope(env, 'fetchProjectNotes');
-
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return handleFileMakerOperation(async () => {
-            const params = {
-                layout: Layouts.NOTES,
-                action: Actions.READ,
-                query: [{ "_fkID": projectId }]
-            };
-            return await dataService.request(params);
-        });
-    } else {
-        const response = await dataService.get(`/projects/${projectId}/notes`);
-        return response.data || response;
-    }
+export async function fetchProjectNotes(projectId, options = {}) {
+    // Delegate to notes.js API client for consistent note handling
+    return fetchNotesByProject(projectId, options);
 }
 
 /**

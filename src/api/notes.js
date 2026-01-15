@@ -2,15 +2,21 @@ import { dataService, getEnvironmentContext, ENVIRONMENT_TYPES } from '../servic
 import { handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
 
 /**
- * Creates a new note for a project
+ * Creates a new note
  * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ *
  * @param {Object} data - The note data
- * @param {string} data.project_id - Project ID (required for project notes)
- * @param {string} data.content - Note content (required)
- * @param {string} data.entity_type - Entity type (e.g., 'project', 'customer')
- * @param {string} data.entity_id - Entity ID
- * @param {string} data.author - Author name/ID (optional)
+ * @param {string} data.note - Note content (required)
+ * @param {string} data.content - Note content (alias for 'note')
+ * @param {string} data.project_id - Project ID (mutually exclusive with customer_id/task_id)
+ * @param {string} data.customer_id - Customer ID (mutually exclusive with project_id/task_id)
+ * @param {string} data.task_id - Task ID (mutually exclusive with project_id/customer_id)
+ * @param {string} data.type - Note type (default: 'general')
  * @returns {Promise<Object>} Created note record
+ *
+ * @note Backend database uses explicit foreign keys (project_id, customer_id, task_id)
+ *       NOT polymorphic entity_type/entity_id. Exactly ONE parent FK must be provided.
+ * @note 'created_by' is set automatically by backend from JWT, not from request payload
  */
 export async function createNote(data) {
     validateParams({ data }, ['data']);
@@ -23,7 +29,7 @@ export async function createNote(data) {
                 action: Actions.CREATE,
                 fieldData: {
                     note: data.content || data.note,
-                    _fkID: data.project_id || data.fkId || data.entity_id,
+                    _fkID: data.project_id || data.customer_id || data.task_id,
                     type: data.type || 'general'
                 }
             };
@@ -31,12 +37,23 @@ export async function createNote(data) {
             return await dataService.request(params);
         });
     } else {
-        // Backend API: POST /projects/{project_id}/notes
-        // Notes use polymorphic structure with entity_type and entity_id
-        const projectId = data.project_id || data.fkId || data.entity_id;
+        // Backend API: POST /projects/{parent_id}/notes
+        // Database schema uses explicit FKs: project_id, customer_id, task_id
+        // Exactly ONE must be provided (enforced by check constraint)
 
-        if (!projectId) {
-            throw new Error('project_id is required for creating notes');
+        const projectId = data.project_id;
+        const customerId = data.customer_id;
+        const taskId = data.task_id;
+
+        // Determine parent entity
+        if (!projectId && !customerId && !taskId) {
+            throw new Error('One of project_id, customer_id, or task_id is required for creating notes');
+        }
+
+        // Ensure exactly one parent is provided
+        const parentCount = [projectId, customerId, taskId].filter(Boolean).length;
+        if (parentCount > 1) {
+            throw new Error('Only one of project_id, customer_id, or task_id should be provided');
         }
 
         // Check organization scope
@@ -44,26 +61,43 @@ export async function createNote(data) {
             throw new Error('Organization context required for creating notes. Please authenticate.');
         }
 
+        // Build payload matching database schema
         const payload = {
-            entity_type: data.entity_type || 'project',
-            entity_id: projectId,
-            organization_id: env.authentication.user.supabaseOrgID,
-            content: data.content || data.note,
-            author: data.author || null
+            note: data.content || data.note,
+            type: data.type || 'general',
+            project_id: projectId || null,
+            customer_id: customerId || null,
+            task_id: taskId || null
+            // organization_id added by backend from X-Organization-ID header
+            // created_by set by backend from JWT token
         };
 
-        const response = await dataService.post(`/projects/${projectId}/notes`, payload);
+        // Use appropriate endpoint based on parent entity
+        let endpoint;
+        if (projectId) {
+            endpoint = `/projects/${projectId}/notes`;
+        } else if (taskId) {
+            endpoint = `/tasks/${taskId}/notes`;
+        } else if (customerId) {
+            endpoint = `/customers/${customerId}/notes`;
+        }
+
+        const response = await dataService.post(endpoint, payload);
         return response.data || response;
     }
 }
 
 /**
- * List notes for a project
+ * Fetch notes for a project
  * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ *
  * @param {string} projectId - Project ID
- * @returns {Promise<Array>} Array of notes
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Max records to return (default: backend default)
+ * @param {number} options.offset - Pagination offset (default: 0)
+ * @returns {Promise<Array>} Array of note objects
  */
-export async function fetchProjectNotes(projectId) {
+export async function fetchNotesByProject(projectId, options = {}) {
     validateParams({ projectId }, ['projectId']);
     const env = getEnvironmentContext();
 
@@ -79,7 +113,135 @@ export async function fetchProjectNotes(projectId) {
         });
     } else {
         // Backend API: GET /projects/{project_id}/notes
-        const response = await dataService.get(`/projects/${projectId}/notes`);
+        const queryParams = {};
+        if (options.limit) queryParams.limit = options.limit;
+        if (options.offset) queryParams.offset = options.offset;
+
+        const response = await dataService.get(`/projects/${projectId}/notes`, { params: queryParams });
+        return response.data || response;
+    }
+}
+
+/**
+ * Fetch notes for a task
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ *
+ * @param {string} taskId - Task ID
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Max records to return
+ * @param {number} options.offset - Pagination offset
+ * @returns {Promise<Array>} Array of note objects
+ */
+export async function fetchNotesByTask(taskId, options = {}) {
+    validateParams({ taskId }, ['taskId']);
+    const env = getEnvironmentContext();
+
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return handleFileMakerOperation(async () => {
+            const params = {
+                layout: Layouts.NOTES,
+                action: Actions.READ,
+                query: [{ "_fkID": taskId }]
+            };
+
+            return await dataService.request(params);
+        });
+    } else {
+        // Backend API: GET /tasks/{task_id}/notes
+        const queryParams = {};
+        if (options.limit) queryParams.limit = options.limit;
+        if (options.offset) queryParams.offset = options.offset;
+
+        const response = await dataService.get(`/tasks/${taskId}/notes`, { params: queryParams });
+        return response.data || response;
+    }
+}
+
+/**
+ * Fetch notes for a customer
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ *
+ * @param {string} customerId - Customer ID
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Max records to return
+ * @param {number} options.offset - Pagination offset
+ * @returns {Promise<Array>} Array of note objects
+ */
+export async function fetchNotesByCustomer(customerId, options = {}) {
+    validateParams({ customerId }, ['customerId']);
+    const env = getEnvironmentContext();
+
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return handleFileMakerOperation(async () => {
+            const params = {
+                layout: Layouts.NOTES,
+                action: Actions.READ,
+                query: [{ "_fkID": customerId }]
+            };
+
+            return await dataService.request(params);
+        });
+    } else {
+        // Backend API: GET /customers/{customer_id}/notes
+        const queryParams = {};
+        if (options.limit) queryParams.limit = options.limit;
+        if (options.offset) queryParams.offset = options.offset;
+
+        const response = await dataService.get(`/customers/${customerId}/notes`, { params: queryParams });
+        return response.data || response;
+    }
+}
+
+/**
+ * Legacy alias for fetchNotesByProject
+ * @deprecated Use fetchNotesByProject instead
+ */
+export async function fetchProjectNotes(projectId, options = {}) {
+    return fetchNotesByProject(projectId, options);
+}
+
+/**
+ * Update a note by ID
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ *
+ * @param {string} noteId - The note ID
+ * @param {Object} data - Update data
+ * @param {string} data.note - Updated note content
+ * @param {string} data.content - Updated note content (alias)
+ * @param {string} data.type - Updated note type
+ * @returns {Promise<Object>} Updated note record
+ *
+ * @note Backend sets 'updated_by' automatically from JWT token
+ */
+export async function updateNote(noteId, data) {
+    validateParams({ noteId, data }, ['noteId', 'data']);
+    const env = getEnvironmentContext();
+
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return handleFileMakerOperation(async () => {
+            const params = {
+                layout: Layouts.NOTES,
+                action: Actions.UPDATE,
+                recordId: noteId,
+                fieldData: {
+                    note: data.content || data.note,
+                    type: data.type
+                }
+            };
+
+            return await dataService.request(params);
+        });
+    } else {
+        // Backend API: PATCH /projects/notes/{note_id}
+        const payload = {};
+        if (data.note || data.content) {
+            payload.note = data.content || data.note;
+        }
+        if (data.type) {
+            payload.type = data.type;
+        }
+
+        const response = await dataService.patch(`/projects/notes/${noteId}`, payload);
         return response.data || response;
     }
 }
@@ -87,6 +249,7 @@ export async function fetchProjectNotes(projectId) {
 /**
  * Delete a note by ID
  * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ *
  * @param {string} noteId - The note ID
  * @returns {Promise<Object>} Deletion result
  */

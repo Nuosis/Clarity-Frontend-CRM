@@ -22,7 +22,7 @@
       "id": "TSK0001",
       "title": "Verify backend schema and test API endpoints",
       "description": "Test actual backend /api/notes endpoints to confirm schema matches OpenAPI spec. Test create, list, update, delete operations. Document any discrepancies.",
-      "status": "completed",
+      "status": "done",
       "priority": "high",
       "dependencies": [],
       "estimated_effort": "30 minutes",
@@ -32,13 +32,17 @@
         "test-notes-backend-schema.js",
         "NOTES_BACKEND_SCHEMA_VERIFICATION_REPORT.md"
       ],
-      "completed_at": "2026-01-15T00:00:00Z"
+      "completed_at": "2026-01-15T00:00:00Z",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented a notes backend verification workflow by pulling and analyzing the OpenAPI spec and building a reusable Node test harness to exercise CRUD against the correct endpoints, confirming that '/projects/{project_id}/notes' uses HMAC while '/api/notes' requires JWT. Added/updated 'test-notes-backend-schema.js' plus supporting reports 'NOTES_BACKEND_SCHEMA_VERIFICATION_REPORT.md', 'NOTES_BACKEND_SCHEMA_DISCREPANCIES_SUMMARY.md', and '.devflow/tasks/notes-backend-integration/TSK0001_EXECUTION_SUMMARY.md', and marked the task complete in '.devflow/tasks/notes-backend-integration/tasks.json'. Key decision: pivoted testing to the project-scoped notes endpoints used by the frontend after identifying auth differences, and documented critical schema mismatches blocking integration (spec expects 'author' and polymorphic 'entity_id', while DB uses 'created_by' and explicit 'customer_id'/'project_id'/'task_id', plus 'content' vs 'note' and 'org_id' vs 'organization_id' mapping)."
     },
     {
       "id": "TSK0002",
       "title": "Update src/api/notes.js with backend API functions",
       "description": "Replace FileMaker createNote() with backend API wrapper functions: fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, createNote, updateNote, deleteNote. Use dataService.request() with HMAC auth.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001"
@@ -46,13 +50,20 @@
       "files_to_modify": [
         "src/api/notes.js"
       ],
-      "estimated_effort": "1 hour"
+      "estimated_effort": "1 hour",
+      "actual_effort": "45 minutes",
+      "completed_at": "2026-01-15T00:30:00Z",
+      "completion_notes": "Successfully updated src/api/notes.js with backend API functions matching actual database schema. Implemented: createNote() (with explicit FK support for project_id/customer_id/task_id), fetchNotesByProject(), fetchNotesByTask(), fetchNotesByCustomer(), updateNote(), deleteNote(). All functions use dataService with HMAC auth via interceptors. Maintained FileMaker backward compatibility. Added comprehensive JSDoc documentation. Verified build compiles successfully.",
+      "artifacts": [
+        "src/api/notes.js"
+      ],
+      "implementation_notes": "Key changes: (1) createNote() now accepts explicit foreign keys (project_id, customer_id, task_id) matching DB schema, not polymorphic entity_type/entity_id. (2) Added validation to ensure exactly ONE parent FK is provided. (3) Payload uses 'note' field (not 'content') and omits unsupported 'author' field. (4) Added fetchNotesByTask() and fetchNotesByCustomer() functions. (5) Maintained backward compatibility with legacy fetchProjectNotes() alias. (6) All backend calls use dataService.get/post/patch/delete which automatically adds HMAC auth and X-Organization-ID headers via interceptors. (7) Updated JSDoc to document actual schema constraints."
     },
     {
       "id": "TSK0003",
       "title": "Update src/api/projects.js fetchProjectNotes()",
       "description": "Replace FileMaker query with call to fetchNotesByProject() from notes.js. Ensure return format matches what ProjectNotesTab expects.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0002"
@@ -60,13 +71,24 @@
       "files_to_modify": [
         "src/api/projects.js"
       ],
-      "estimated_effort": "20 minutes"
+      "estimated_effort": "20 minutes",
+      "actual_effort": "15 minutes",
+      "completed_at": "2026-01-15T01:00:00Z",
+      "completion_notes": "Successfully updated fetchProjectNotes() to delegate to fetchNotesByProject() from notes.js. Removed duplicate FileMaker and backend API logic. Added pagination support via options parameter. Verified build compiles successfully and return format is compatible with ProjectNotesTab component.",
+      "artifacts": [
+        "src/api/projects.js",
+        "TSK0003_IMPLEMENTATION_SUMMARY.md"
+      ],
+      "implementation_notes": "Simplified fetchProjectNotes() to a single-line delegation to fetchNotesByProject() from notes.js. This eliminates code duplication and ensures consistent note handling across the application. Added optional 'options' parameter for pagination support (limit/offset). No changes required in consuming components as return format is handled by the delegated function.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0004",
       "title": "Update src/api/tasks.js fetchTaskNotes()",
       "description": "Replace FileMaker query with call to fetchNotesByTask() from notes.js. Ensure return format matches what TaskList expects.",
-      "status": "queued",
+      "status": "in_progress",
       "priority": "high",
       "dependencies": [
         "TSK0002"
@@ -74,7 +96,9 @@
       "files_to_modify": [
         "src/api/tasks.js"
       ],
-      "estimated_effort": "20 minutes"
+      "estimated_effort": "20 minutes",
+      "executionPid": 47367,
+      "sessionId": "553aa389-e9ac-477a-873e-269390a9aa4b"
     },
     {
       "id": "TSK0005",
