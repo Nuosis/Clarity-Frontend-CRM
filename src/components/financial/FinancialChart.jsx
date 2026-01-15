@@ -30,7 +30,7 @@ ChartJS.register(
 /**
  * Financial chart component for displaying financial data
  * @param {Object} props - Component props
- * @param {Object} props.data - Chart data
+ * @param {Object} props.data - Chart data (supports both aggregated and detailed data)
  * @param {string} props.timeframe - Current timeframe
  * @param {function} props.onMonthClick - Function to call when a month is clicked on the line chart
  * @param {boolean} props.darkMode - Whether dark mode is enabled
@@ -38,11 +38,15 @@ ChartJS.register(
  */
 function FinancialChart({ data, timeframe, onMonthClick, darkMode = false }) {
   const isLineChart = timeframe === 'thisQuarter' || timeframe === 'thisYear';
-  
+
+  // Check if data contains aggregated data (billed/unbilled breakdown)
+  const hasAggregatedData = data?.datasets?.length > 1 ||
+    (data?.datasets?.[0]?.data && data.datasets.some(ds => ds.label === 'Billed' || ds.label === 'Unbilled'));
+
   // Set chart colors based on theme
   const textColor = darkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)';
   const gridColor = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-  
+
   // Chart configuration
   const chartOptions = {
     responsive: true,
@@ -50,7 +54,7 @@ function FinancialChart({ data, timeframe, onMonthClick, darkMode = false }) {
     plugins: {
       legend: {
         position: 'top',
-        display: isLineChart, // Only show legend for line charts
+        display: hasAggregatedData || isLineChart, // Show legend for aggregated data or line charts
         labels: {
           color: textColor,
           font: {
@@ -73,9 +77,9 @@ function FinancialChart({ data, timeframe, onMonthClick, darkMode = false }) {
               label += ': ';
             }
             if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat('en-US', { 
-                style: 'currency', 
-                currency: 'USD' 
+              label += new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
               }).format(context.parsed.y);
             }
             return label;
@@ -85,6 +89,7 @@ function FinancialChart({ data, timeframe, onMonthClick, darkMode = false }) {
     },
     scales: {
       x: {
+        stacked: hasAggregatedData && !isLineChart, // Stack for aggregated bar charts
         grid: {
           color: gridColor
         },
@@ -93,51 +98,22 @@ function FinancialChart({ data, timeframe, onMonthClick, darkMode = false }) {
         }
       },
       y: {
+        stacked: hasAggregatedData && !isLineChart, // Stack for aggregated bar charts
         grid: {
           color: gridColor
         },
         ticks: {
           color: textColor,
           callback: function(value) {
-            return new Intl.NumberFormat('en-US', { 
-              style: 'currency', 
+            return new Intl.NumberFormat('en-US', {
+              style: 'currency',
               currency: 'USD',
               maximumFractionDigits: 0
             }).format(value);
           }
         }
       }
-    },
-    // For stacked bar charts
-    ...(isLineChart ? {} : {
-      scales: {
-        x: {
-          stacked: true,
-          grid: {
-            color: gridColor
-          },
-          ticks: {
-            color: textColor
-          }
-        },
-        y: {
-          stacked: true,
-          grid: {
-            color: gridColor
-          },
-          ticks: {
-            color: textColor,
-            callback: function(value) {
-              return new Intl.NumberFormat('en-US', { 
-                style: 'currency', 
-                currency: 'USD',
-                maximumFractionDigits: 0
-              }).format(value);
-            }
-          }
-        }
-      }
-    })
+    }
   };
 
   // Handle click on line chart

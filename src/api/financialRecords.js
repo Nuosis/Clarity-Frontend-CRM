@@ -791,3 +791,112 @@ export async function createFinancialRecord(params) {
         throw error;
     }
 }
+
+/**
+ * Fetches monthly summary aggregations for a given year
+ * @param {number} year - The year to query (e.g., 2026)
+ * @param {string} customerId - Optional customer ID to filter by
+ * @returns {Promise} Promise resolving to monthly summary data
+ */
+export async function fetchMonthlySummary(year, customerId = null) {
+    validateParams({ year }, ['year']);
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        const { data, error } = await supabase.rpc('get_monthly_summary', {
+            p_organization_id: organizationId,
+            p_year: parseInt(year, 10),
+            p_customer_id: customerId || null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch monthly summary: ${error.message}`);
+        }
+
+        console.log(`[FinancialRecords] Fetched monthly summary for year ${year}: ${data?.length || 0} months`);
+
+        return data;
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching monthly summary:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetches quarterly summary aggregations
+ * @param {number} year - The year to query
+ * @param {number} quarter - The quarter number (1-4)
+ * @param {string} customerId - Optional customer ID to filter by
+ * @returns {Promise} Promise resolving to quarterly summary data
+ */
+export async function fetchQuarterlySummary(year, quarter, customerId = null) {
+    validateParams({ year, quarter }, ['year', 'quarter']);
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        const quarterNum = parseInt(quarter, 10);
+        if (quarterNum < 1 || quarterNum > 4) {
+            throw new Error('Quarter must be between 1 and 4');
+        }
+
+        const { data, error } = await supabase.rpc('get_quarterly_summary', {
+            p_organization_id: organizationId,
+            p_year: parseInt(year, 10),
+            p_quarter: quarterNum,
+            p_customer_id: customerId || null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch quarterly summary: ${error.message}`);
+        }
+
+        console.log(`[FinancialRecords] Fetched quarterly summary for Q${quarter} ${year}`);
+
+        return data;
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching quarterly summary:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetches yearly summary aggregations
+ * @param {number} year - The year to query
+ * @param {string} customerId - Optional customer ID to filter by
+ * @returns {Promise} Promise resolving to yearly summary data
+ */
+export async function fetchYearlySummary(year, customerId = null) {
+    validateParams({ year }, ['year']);
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    try {
+        const { data, error } = await supabase.rpc('get_yearly_summary', {
+            p_organization_id: organizationId,
+            p_year: parseInt(year, 10),
+            p_customer_id: customerId || null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to fetch yearly summary: ${error.message}`);
+        }
+
+        console.log(`[FinancialRecords] Fetched yearly summary for ${year}`);
+
+        return data;
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error fetching yearly summary:', error);
+        throw error;
+    }
+}
