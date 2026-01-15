@@ -145,7 +145,7 @@
       ],
       "completed_at": "2026-01-15T22:15:00.000Z",
       "notes": "✅ Added handleLinkUpdate() method to useLink hook with full GitHub metadata re-augmentation support. ✅ handleLinkDelete() already existed and is working correctly. ✅ handleLinkCreate() maintained with GitHub URL detection and metadata augmentation. ✅ Imported updateExistingLink() from linkService. ✅ All operations include proper error handling with user-friendly messages via SnackBar. ✅ Loading states managed correctly for all operations. ✅ GitHub detection works for both create and update operations via parseGitHubUrl(). ✅ Build verified - project compiles successfully with no errors.",
-      "implementation_notes": "Enhanced 'src/hooks/useLink.js' by adding 'handleLinkUpdate()' callback that leverages the existing 'updateExistingLink' service method from 'linkService.js', validates inputs (linkId and data.link/url), manages loading/error states, and crucially re-augments the updated link with GitHub metadata using the same 'parseGitHubUrl' logic as 'handleLinkCreate'. Key decisions included importing 'updateExistingLink' from linkService, maintaining consistency with existing create/delete patterns (validation → service call → error handling), and preserving GitHub repository detection for updated URLs (non-invasive metadata.github tagging). Verified the implementation by checking the updated hook exports 'handleLinkUpdate' alongside create/fetch/delete, confirmed existing components (ProjectLinksTab.jsx and TaskList.jsx) can consume the new method, and validated successful build with 'npm run build'. Updated 'tasks.json' to mark TSK0005 complete with timestamp 2026-01-15T22:15:00.000Z.",
+      "implementation_notes": "Implemented full CRUD support in the 'useLink' hook by adding a new 'handleLinkUpdate' callback that uses 'updateExistingLink' from 'src/services/linkService.js', mirrors existing validation and loading error patterns, and re-applies GitHub URL parsing and metadata augmentation before returning the updated link. Updated 'src/hooks/useLink.js' imports and exports to include the new update handler while preserving existing create, fetch, and delete behavior, and verified consumers like 'ProjectLinksTab' and 'TaskList' remain compatible. Marked 'TSK0005' complete in 'tasks.json' and added supporting artifacts including 'TSK0005-COMPLETION-REPORT.md', 'TSK0005-implementation-summary.md', and 'TSK0005-hook-verification.js', then confirmed a successful production build and passing verification script after fixing a script path issue. Key decision was to keep the update flow consistent with create by centralizing the update call in the service layer and ensuring the same GitHub integration and SnackBar-based error messaging in the hook.",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -154,7 +154,7 @@
       "id": "TSK0006",
       "title": "Update ProjectLinksTab component",
       "description": "Update ProjectLinksTab to use new API and schema, maintain existing UX",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "acceptance_criteria": [
         "Links render correctly with new schema",
@@ -165,11 +165,22 @@
         "Loading states display correctly"
       ],
       "files": [
-        "src/components/projects/ProjectLinksTab.jsx"
+        "src/components/projects/ProjectLinksTab.jsx",
+        ".devflow/tasks/links-backend-integration/TSK0006-verification.js",
+        ".devflow/tasks/links-backend-integration/TSK0006-COMPLETION-REPORT.md",
+        ".devflow/tasks/links-backend-integration/TSK0006-implementation-summary.md",
+        ".devflow/tasks/links-backend-integration/TSK0006-quick-reference.md",
+        ".devflow/tasks/links-backend-integration/TSK0006-test-coverage.md"
       ],
       "dependencies": [
         "TSK0005"
-      ]
+      ],
+      "completed_at": "2026-01-15T23:00:00.000Z",
+      "notes": "✅ Added environment-agnostic project ID extraction (project.id || project.__ID). ✅ Updated all handleLinkCreate and loadProjectDetails calls to use projectId variable. ✅ Enhanced renderLink to support both url and link field names. ✅ Updated GitHub metadata fetching to handle both field formats. ✅ Maintains 100% backward compatibility with FileMaker format. ✅ All acceptance criteria met. ✅ Build verified successfully. ✅ 7/7 automated verification tests passed.",
+      "implementation_notes": "Updated ProjectLinksTab component to work seamlessly with both backend API (id, url fields) and FileMaker (__ID, link fields) formats. Key changes: (1) Added projectId variable that extracts from either project.id or project.__ID for environment-agnostic access, (2) Updated renderLink callback to extract URL from link.url || link.link and title from link.title || linkUrl with proper fallbacks, (3) Enhanced GitHub metadata fetching to parse URLs from either field name, (4) Replaced all hardcoded project.__ID references with projectId variable in handleLinkCreate and loadProjectDetails calls. All changes are backward-compatible and maintain existing UX including optimistic updates, GitHub repository detection/creation, error handling, and loading states. Created comprehensive verification script (TSK0006-verification.js) that validates all data format compatibility patterns. Build successful, all tests passed.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0007",

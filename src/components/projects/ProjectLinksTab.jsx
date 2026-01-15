@@ -50,13 +50,18 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
   const [pendingUrl, setPendingUrl] = useState('');
   const [ghMeta, setGhMeta] = useState({}); // key 'owner/repo' → { data, loading, error }
 
+  // Get project ID - support both backend (id) and FileMaker (__ID) formats
+  const projectId = project?.id || project?.__ID;
+
   // Fetch GitHub metadata for visible links once per repo
   useEffect(() => {
     const links = (localProject?.links || project?.links) || [];
     const toFetch = [];
 
     links.forEach((link) => {
-      const gh = parseGitHubUrl(link.url);
+      // Support both backend (url) and any legacy (link) field names
+      const linkUrl = link.url || link.link;
+      const gh = parseGitHubUrl(linkUrl);
       if (gh?.isGitHub && gh.owner && gh.repo) {
         const key = `${gh.owner}/${gh.repo}`;
         if (!ghMeta[key]) {
@@ -101,10 +106,14 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
 
   // Memoized renderers
   const renderLink = useCallback((link) => {
+    // Support both backend (url) and any legacy (link) field names
+    const linkUrl = link.url || link.link;
+    const linkTitle = link.title || linkUrl;
+
     return (
       <a
         key={link.id}
-        href={link.url}
+        href={linkUrl}
         target="_blank"
         rel="noopener noreferrer"
         className={`
@@ -114,7 +123,7 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
             : 'text-blue-600 hover:bg-gray-100'}
         `}
       >
-        <span>{link.title || link.url}</span>
+        <span>{linkTitle}</span>
       </a>
     );
   }, [darkMode]);
@@ -177,11 +186,11 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
                 setShowNewLinkInput(false);
                 
                 // Make the actual API call
-                const result = await handleLinkCreate(project.__ID, trimmed);
-                
+                const result = await handleLinkCreate(projectId, trimmed);
+
                 if (result) {
                   // On success, refresh the project details to get the actual link data
-                  await loadProjectDetails(project.__ID);
+                  await loadProjectDetails(projectId);
                 } else {
                   // If the API call failed, revert the optimistic update
                   const revertedLinks = (localProject?.links || project?.links || [])
@@ -232,9 +241,9 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
           try {
             await createRepository({ owner, repo, description, visibility });
             const normalized = `https://github.com/${owner}/${repo}`;
-            const result = await handleLinkCreate(project.__ID, normalized);
+            const result = await handleLinkCreate(projectId, normalized);
             if (result) {
-              await loadProjectDetails(project.__ID);
+              await loadProjectDetails(projectId);
             }
             setRepoModalOpen(false);
             setPendingUrl('');
