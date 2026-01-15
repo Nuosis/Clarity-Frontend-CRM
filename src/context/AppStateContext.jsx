@@ -41,7 +41,7 @@ export const APP_ACTIONS = {
 const initialState = {
     loading: true,
     error: null,
-    user: null, // Will include userID, userEmail, userName, teamID, supabaseUserID, and supabaseOrgID
+    user: null, // Will include userID, userEmail, userName, teamID, supabaseUserID, and supabaseOrgID (organization context)
     selectedCustomer: null,
     selectedProject: null,
     selectedTask: null,

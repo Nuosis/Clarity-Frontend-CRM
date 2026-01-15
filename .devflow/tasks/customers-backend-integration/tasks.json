@@ -233,20 +233,22 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Completely refactored CustomerForm to support both FileMaker flat model and backend relational model with nested contacts. Key changes: (1) Added support for business_name, primary_contact_name, type, and is_active fields. (2) Implemented dynamic arrays for emails, phones, and addresses with add/remove/update functions ensuring exactly one primary contact per type. (3) Added edit mode support via customer prop with automatic data initialization from both FileMaker and backend formats. (4) Implemented environment-aware submission logic that formats data correctly for FileMaker (flat) or web app (relational) environments. (5) Maintained backward compatibility by conditionally showing legacy FileMaker fields only in FileMaker environment. (6) Enhanced validation to check all nested contacts and ensure business_name is required. (7) Form now supports creating and editing customers with full CRUD operations in both environments. Build verified successfully with no compilation errors."
+      "implementation_notes": "Implemented a full rewrite of the customer entry UI to support the new relational backend model by adding nested state and CRUD handlers for emails, phones, and addresses (including type selectors and enforcing exactly one primary per contact type), while supporting both create and edit modes via a new 'customer' prop and preserving contact IDs for updates. Updated submission and initialization logic in 'src/components/customers/CustomerForm.jsx' to be environment-aware, transforming data to nested arrays for the web app backend and to a flat primary-only payload for FileMaker, with legacy fields conditionally shown and FileMaker compatibility maintained. Marked the work complete in '.devflow/tasks/customers-backend-integration/tasks.json' and added documentation in 'TSK0008_CUSTOMER_FORM_COMPLETION.md' and 'docs/CUSTOMER_FORM_USAGE.md'. Verified the implementation with a successful 'npm run build' and import checks to ensure the component compiles and exports correctly."
     },
     {
       "id": "TSK0009",
       "title": "Add organization context to customer operations",
       "description": "Ensure all customer operations include organization_id from the authenticated user context. Update AppStateContext to provide organization info. Handle organization scoping in API calls.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001"
       ],
       "files_to_modify": [
         "src/context/AppStateContext.jsx",
-        "src/api/customers.js"
+        "src/api/customers.js",
+        "src/services/dataService.js",
+        "src/index.jsx"
       ],
       "acceptance_criteria": [
         "Organization ID is available in AppStateContext",
@@ -255,7 +257,10 @@
         "Organization scoping is enforced client-side",
         "Clear error if organization context is missing",
         "FileMaker environment handles organization appropriately"
-      ]
+      ],
+      "executionPid": 16184,
+      "sessionId": "e0778843-90ee-41e3-8e8b-04351a1e3dd9",
+      "implementation_notes": "Implemented organization context scoping for all customer operations by updating the dataService request interceptor to automatically include the X-Organization-ID header for all backend API calls in the web app environment. The organization ID (supabaseOrgID) is retrieved during initialization via initializationService.fetchSupabaseUserId() which queries the customer_organization table. Updated src/index.jsx to set the environment context with the complete user object (including supabaseOrgID) after the organization ID is fetched for both FileMaker and web app environments. Added comprehensive logging and warning messages when organization ID is missing. Updated AppStateContext documentation to clarify that the user object includes organization context. All customer API operations automatically inherit organization scoping through the dataService interceptor without requiring individual endpoint modifications. FileMaker environment continues to work with organization scoping when available. Build verified successfully with no compilation errors related to these changes."
     },
     {
       "id": "TSK0010",

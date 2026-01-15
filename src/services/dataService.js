@@ -195,14 +195,24 @@ const createDataServiceClient = () => {
         return config;
       }
 
-      // Web app environment - add backend authentication
+      // Web app environment - add backend authentication and organization context
       if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
         console.log('[DataService] Routing through backend API');
-        
+
         const payload = config.data ? JSON.stringify(config.data) : '';
         const authHeader = await generateBackendAuthHeader(payload);
         config.headers.Authorization = authHeader;
-        
+
+        // Add organization_id to headers for backend API calls
+        if (env.authentication && env.authentication.user && env.authentication.user.supabaseOrgID) {
+          config.headers['X-Organization-ID'] = env.authentication.user.supabaseOrgID;
+          console.log('[DataService] Added organization context:', env.authentication.user.supabaseOrgID);
+        } else {
+          console.warn('[DataService] Organization ID not found in user context. This may cause authorization errors.');
+          // Note: We don't throw an error here to allow initialization to complete
+          // Some endpoints may not require organization scoping
+        }
+
         return config;
       }
 

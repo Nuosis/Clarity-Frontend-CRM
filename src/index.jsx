@@ -193,6 +193,25 @@ function AppContent() {
                         loadingStateManager.setLoading('initialization', true, 'Retrieving Supabase user ID...');
                         const supabaseIds = await initializationService.fetchSupabaseUserId(userContext, setUser);
 
+                        // Update environment context with organization ID after it's fetched
+                        if (supabaseIds && supabaseIds.supabaseOrgId) {
+                            const updatedUser = {
+                                ...userContext,
+                                supabaseUserID: supabaseIds.supabaseUserId,
+                                supabaseOrgID: supabaseIds.supabaseOrgId
+                            };
+
+                            setEnvironmentContext({
+                                type: ENVIRONMENT_TYPES.FILEMAKER,
+                                authentication: {
+                                    isAuthenticated: true,
+                                    method: AUTH_METHODS.FILEMAKER,
+                                    user: updatedUser
+                                }
+                            });
+                            console.log('[App] FileMaker environment context updated with organization ID:', supabaseIds.supabaseOrgId);
+                        }
+
                         // Load products and sales (single-tenancy)
                         loadingStateManager.setLoading('initialization', true, 'Loading products...');
                         await loadProducts();
@@ -222,7 +241,26 @@ function AppContent() {
                         
                         const supabaseIds = await initializationService.fetchSupabaseUserId(webAppUser, setUser);
                         console.log('[App] fetchSupabaseUserId result:', supabaseIds);
-                        
+
+                        // Update environment context with organization ID after it's fetched
+                        if (supabaseIds && supabaseIds.supabaseOrgId) {
+                            const updatedUser = {
+                                ...webAppUser,
+                                supabaseUserID: supabaseIds.supabaseUserId,
+                                supabaseOrgID: supabaseIds.supabaseOrgId
+                            };
+
+                            setEnvironmentContext({
+                                type: ENVIRONMENT_TYPES.WEBAPP,
+                                authentication: {
+                                    isAuthenticated: true,
+                                    method: AUTH_METHODS.SUPABASE,
+                                    user: updatedUser
+                                }
+                            });
+                            console.log('[App] Environment context updated with organization ID:', supabaseIds.supabaseOrgId);
+                        }
+
                         // Load products (single-tenancy)
                         loadingStateManager.setLoading('initialization', true, 'Loading products...');
                         await loadProducts();
