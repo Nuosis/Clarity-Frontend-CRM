@@ -84,7 +84,7 @@
       "priority": "high",
       "completed_at": "2026-01-15T02:00:00Z",
       "notes": "Updated loadProjects() to be environment-aware, calling backend API in webapp and FileMaker in legacy. Updated loadProjectDetails() to use fetchProjectWithDetails() endpoint in webapp (single call with nested data) and parallel calls in FileMaker. Updated handleProjectSelect() to work with new state management. Removed FileMaker-specific filtering logic. All functions now properly detect environment and route to correct API. Build verified successfully.",
-      "implementation_notes": "Implemented environment-aware load operations in useProject hook by updating loadProjects, loadProjectDetails, and handleProjectSelect. Added environment detection via getEnvironmentContext() to determine data source ('backend' vs 'filemaker'). In webapp environment, loadProjectDetails() uses single fetchProjectWithDetails() endpoint returning nested objectives/steps/images/notes; in FileMaker, uses legacy parallel calls. Simplified handleProjectSelect() to rely on state updates from loadProjectDetails(). Added fetchProjectWithDetails import to src/api/index.js exports. Build compiles successfully with only unrelated proposal warnings.",
+      "implementation_notes": "Implemented environment-aware updates to the useProject hook load operations so the webapp uses the new backend REST API while the legacy FileMaker path remains intact. Updated 'src/hooks/useProject.js' to route 'loadProjects()' and 'loadProjectDetails()' via 'getEnvironmentContext()', using 'fetchProjectWithDetails()' for a single 'GET /projects/{id}/detail' call in webapp and retaining parallel FileMaker layout calls; also simplified 'handleProjectSelect()' to rely on the updated detail loader and state. Added the missing export for 'fetchProjectWithDetails' in 'src/api/index.js', and updated task tracking in '.devflow/tasks/projects-backend-integration/tasks.json' plus documentation in '.devflow/tasks/projects-backend-integration/TSK0006_COMPLETION_SUMMARY.md' after confirming successful builds.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -93,8 +93,14 @@
       "id": "TSK0007",
       "title": "Update useProject hook - CRUD operations",
       "description": "Update src/hooks/useProject.js CRUD operations. Update handleProjectCreate(), handleProjectUpdate(), handleProjectDelete(), handleProjectStatusChange() to use new backend endpoints. Remove Supabase dual-write logic (was only in create anyway). Remove recordId usage. Update to use project.id for all operations.",
-      "status": "queued",
-      "priority": "high"
+      "status": "done",
+      "priority": "high",
+      "completed_at": "2026-01-15T03:00:00Z",
+      "notes": "Updated all CRUD operations in useProject hook to be environment-aware. Removed Supabase dual-write logic from handleProjectCreate(). Updated all operations to use project.id in webapp and recordId in FileMaker. Operations now route to backend API in webapp and FileMaker in legacy. Also updated handleProjectTeamChange() for consistency. Build verified successfully.",
+      "implementation_notes": "Implemented environment-aware CRUD operations in useProject hook by updating handleProjectCreate (removed Supabase dual-write, added environment detection, uses formatProjectForBackend in webapp), handleProjectUpdate (uses project.id for webapp, recordId for FileMaker), handleProjectStatusChange (finds project by both id and recordId for compatibility), handleProjectDelete (uses appropriate ID based on environment), and handleProjectTeamChange (uses team_id for backend, _teamID for FileMaker). All operations now properly detect environment via getEnvironmentContext() and route to correct endpoints. Business logic for fixed-price and subscription projects preserved. Build compiles successfully.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0008",

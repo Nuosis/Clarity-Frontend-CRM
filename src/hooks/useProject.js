@@ -215,6 +215,7 @@ export function useProject(customerId = null) {
 
     /**
      * Creates a new project
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
      */
     const handleProjectCreate = useCallback(async (projectData) => {
         try {
@@ -231,6 +232,8 @@ export function useProject(customerId = null) {
                 throw new Error(validation.errors.join(', '));
             }
 
+            const env = getEnvironmentContext();
+
             // Generate a UUID for the new project
             const projectId = uuidv4();
 
@@ -240,57 +243,15 @@ export function useProject(customerId = null) {
                 id: projectId
             };
 
-            const formattedData = formatProjectForFileMaker(dataWithId);
-            console.log('Formatted data for FileMaker:', formattedData);
+            // Format data based on environment
+            const formattedData = env.type === ENVIRONMENT_TYPES.WEBAPP
+                ? formatProjectForBackend(dataWithId)
+                : formatProjectForFileMaker(dataWithId);
 
+            console.log(`Formatted data for ${env.type}:`, formattedData);
+
+            // Create project via environment-aware API
             const result = await createProject(formattedData);
-
-            console.log('[PROJECT SYNC] Starting Supabase sync for project:', projectId);
-
-            // Sync project to Supabase for proposal foreign key support
-            // Always sync projects in web app environment since proposals require projects table
-            try {
-                const { insert } = await import('../services/supabaseService');
-
-                // Map status to Supabase status values
-                let supabaseStatus = 'active';
-                const projectStatus = (projectData.status || 'Open').toLowerCase();
-                if (projectStatus === 'closed' || projectStatus === 'complete' || projectStatus === 'completed') {
-                    supabaseStatus = 'completed';
-                } else if (projectStatus === 'pending') {
-                    supabaseStatus = 'pending';
-                } else if (projectStatus === 'on hold' || projectStatus === 'on_hold') {
-                    supabaseStatus = 'on_hold';
-                } else if (projectStatus === 'cancelled') {
-                    supabaseStatus = 'cancelled';
-                }
-
-                const supabaseProjectData = {
-                    id: projectId,
-                    name: projectData.name || projectData.projectName,
-                    customer_id: projectData.customerId || projectData._custID,
-                    status: supabaseStatus,
-                    description: projectData.description || null,
-                    budget: parseFloat(projectData.value) || null,
-                    start_date: projectData.dateStart || null,
-                    target_end_date: projectData.dateEnd || null,
-                    created_by: user?.email || user?.username || null
-                };
-
-                console.log('Syncing project to Supabase:', supabaseProjectData);
-                const supabaseResult = await insert('projects', supabaseProjectData);
-
-                if (!supabaseResult.success) {
-                    console.error('Failed to sync project to Supabase:', supabaseResult.error);
-                    // Show error to user since proposals won't work without this
-                    showError(`Project created in FileMaker but failed to sync to Supabase: ${supabaseResult.error}`);
-                } else {
-                    console.log('Project synced to Supabase successfully');
-                }
-            } catch (supabaseError) {
-                console.error('Error syncing project to Supabase:', supabaseError);
-                showError(`Project created in FileMaker but failed to sync to Supabase: ${supabaseError.message}`);
-            }
 
             // Process fixed price or subscription logic if applicable
             if ((projectData.f_fixedPrice === "1" || projectData.f_fixedPrice === 1 ||
@@ -323,7 +284,7 @@ export function useProject(customerId = null) {
             }
 
             // Reload projects to get updated list
-            await loadProjects(projectData.customerId);
+            await loadProjects(projectData.customerId || projectData._custID);
 
             return result;
         } catch (err) {
@@ -336,37 +297,47 @@ export function useProject(customerId = null) {
         } finally {
             setLoading(false);
         }
-    }, [loadProjects, user]);
+    }, [loadProjects, user, showError]);
 
     /**
      * Updates an existing project
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
      */
     const handleProjectUpdate = useCallback(async (projectId, projectData) => {
         try {
             setLoading(true);
             setError(null);
-            
-            // Find the project in the state to get its recordId
+
+            const env = getEnvironmentContext();
+
+            // Find the project in the state
             const project = projects.find(p => p.id === projectId);
             if (!project) {
                 throw new Error('Project not found');
             }
-            
+
             const validation = validateProjectData(projectData);
             if (!validation.isValid) {
                 throw new Error(validation.errors.join(', '));
             }
-            
-            const formattedData = formatProjectForFileMaker(projectData);
-            // Use recordId instead of UUID for FileMaker update
-            const result = await updateProject(project.recordId, formattedData);
-            
+
+            // Format data based on environment
+            const formattedData = env.type === ENVIRONMENT_TYPES.WEBAPP
+                ? formatProjectForBackend(projectData)
+                : formatProjectForFileMaker(projectData);
+
+            // Update via environment-aware API
+            // In webapp: uses project.id (UUID)
+            // In FileMaker: uses project.recordId (FileMaker record ID)
+            const idToUse = env.type === ENVIRONMENT_TYPES.WEBAPP ? projectId : project.recordId;
+            const result = await updateProject(idToUse, formattedData);
+
             // Process fixed price or subscription logic if applicable
             const isFixedPrice = projectData.f_fixedPrice === "1" || projectData.f_fixedPrice === 1 ||
                                 projectData.isFixedPrice || project.f_fixedPrice;
             const isSubscription = projectData.f_subscription === "1" || projectData.f_subscription === 1 ||
                                   projectData.isSubscription || project.f_subscription;
-            
+
             if (isFixedPrice || isSubscription) {
                 // Merge the existing project with the update data for processing
                 const updatedProject = {
@@ -380,21 +351,21 @@ export function useProject(customerId = null) {
                     dateStart: projectData.dateStart || project.dateStart,
                     dateEnd: projectData.dateEnd || project.dateEnd
                 };
-                
+
                 // Process the project value and create sales entries if needed
                 const { billableStatus } = processProjectValue(updatedProject, true);
-                
+
                 // Update billable status for all time records if needed
                 if (billableStatus !== null) {
                     await updateProjectRecordsBillableStatus(projectId, billableStatus);
                 }
-                
+
                 // Create sales entries if the user has an organization ID
                 if (user?.supabaseOrgID) {
                     await createSalesFromProjectValue(updatedProject, user.supabaseOrgID);
                 }
             }
-            
+
             // Update local state
             setProjects(prevProjects =>
                 prevProjects.map(project =>
@@ -403,12 +374,12 @@ export function useProject(customerId = null) {
                         : project
                 )
             );
-            
+
             // Update selected project if it's the one being updated
             if (selectedProject?.id === projectId) {
                 setSelectedProject(prevProject => ({ ...prevProject, ...projectData }));
             }
-            
+
             return result;
         } catch (err) {
             setError(err.message);
@@ -417,40 +388,49 @@ export function useProject(customerId = null) {
         } finally {
             setLoading(false);
         }
-    }, [selectedProject]);
+    }, [projects, selectedProject, user]);
 
     /**
      * Updates project status
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * @param {string} projectId - The project ID (UUID in webapp, may be recordId in FileMaker)
+     * @param {string} status - The new status value
      */
     const handleProjectStatusChange = useCallback(async (projectId, status) => {
         try {
             setLoading(true);
             setError(null);
-            
-            // The projectId parameter is already the recordId from ProjectDetails.jsx
-            const result = await updateProjectStatus(projectId, status);
-            
-            // Find the project in the state by recordId to update local state
-            const project = projects.find(p => p.recordId === projectId);
+
+            const env = getEnvironmentContext();
+
+            // Find the project in the state
+            // Try both id and recordId for backward compatibility
+            const project = projects.find(p => p.id === projectId || p.recordId === projectId);
             if (!project) {
-                console.error('Project not found in state with recordId:', projectId);
-                // Continue with the update even if we can't find the project in the state
+                console.error('Project not found in state with ID:', projectId);
+                throw new Error('Project not found');
             }
-            
-            // Update local state using recordId
+
+            // Determine which ID to use for the API call
+            // In webapp: uses project.id (UUID)
+            // In FileMaker: uses projectId as passed (may be recordId from ProjectDetails.jsx)
+            const idToUse = env.type === ENVIRONMENT_TYPES.WEBAPP ? project.id : projectId;
+            const result = await updateProjectStatus(idToUse, status);
+
+            // Update local state using project.id for consistency
             setProjects(prevProjects =>
-                prevProjects.map(project =>
-                    project.recordId === projectId
-                        ? { ...project, status }
-                        : project
+                prevProjects.map(p =>
+                    p.id === project.id
+                        ? { ...p, status }
+                        : p
                 )
             );
-            
+
             // Update selected project if it's the one being updated
-            if (selectedProject?.recordId === projectId) {
+            if (selectedProject?.id === project.id) {
                 setSelectedProject(prevProject => ({ ...prevProject, status }));
             }
-            
+
             return result;
         } catch (err) {
             setError(err.message);
@@ -459,7 +439,7 @@ export function useProject(customerId = null) {
         } finally {
             setLoading(false);
         }
-    }, [selectedProject]);
+    }, [projects, selectedProject]);
 
     /**
      * Calculates completion percentage for a project
@@ -471,31 +451,37 @@ export function useProject(customerId = null) {
 
     /**
      * Deletes a project
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
      */
     const handleProjectDelete = useCallback(async (projectId) => {
         try {
             setLoading(true);
             setError(null);
-            
-            // Find the project in the state to get its recordId
+
+            const env = getEnvironmentContext();
+
+            // Find the project in the state
             const project = projects.find(p => p.id === projectId);
             if (!project) {
                 throw new Error('Project not found');
             }
-            
-            // Use recordId for FileMaker delete operation
-            const result = await deleteProject(project.recordId);
-            
+
+            // Delete via environment-aware API
+            // In webapp: uses project.id (UUID)
+            // In FileMaker: uses project.recordId (FileMaker record ID)
+            const idToUse = env.type === ENVIRONMENT_TYPES.WEBAPP ? projectId : project.recordId;
+            const result = await deleteProject(idToUse);
+
             // Update local state by removing the deleted project
             setProjects(prevProjects =>
                 prevProjects.filter(p => p.id !== projectId)
             );
-            
+
             // Clear selected project if it was the one being deleted
             if (selectedProject?.id === projectId) {
                 setSelectedProject(null);
             }
-            
+
             return result;
         } catch (err) {
             setError(err.message);
@@ -508,36 +494,50 @@ export function useProject(customerId = null) {
 
     /**
      * Updates a project's team assignment
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * @param {string} projectId - The project ID (UUID in webapp, may be recordId in FileMaker)
+     * @param {string} teamId - The team ID to assign
      */
     const handleProjectTeamChange = useCallback(async (projectId, teamId) => {
         try {
             setLoading(true);
             setError(null);
-            
-            // Find the project in the state by recordId
-            const project = projects.find(p => p.recordId === projectId);
+
+            const env = getEnvironmentContext();
+
+            // Find the project in the state
+            // Try both id and recordId for backward compatibility
+            const project = projects.find(p => p.id === projectId || p.recordId === projectId);
             if (!project) {
-                console.error('Project not found in state with recordId:', projectId);
+                console.error('Project not found in state with ID:', projectId);
                 throw new Error('Project not found');
             }
-            
-            // Update the project in FileMaker
-            const result = await updateProject(projectId, { _teamID: teamId });
-            
-            // Update local state using recordId
+
+            // Prepare update data based on environment
+            const updateData = env.type === ENVIRONMENT_TYPES.WEBAPP
+                ? { team_id: teamId }
+                : { _teamID: teamId };
+
+            // Update via environment-aware API
+            // In webapp: uses project.id (UUID)
+            // In FileMaker: uses projectId as passed (may be recordId)
+            const idToUse = env.type === ENVIRONMENT_TYPES.WEBAPP ? project.id : projectId;
+            const result = await updateProject(idToUse, updateData);
+
+            // Update local state using project.id for consistency
             setProjects(prevProjects =>
-                prevProjects.map(project =>
-                    project.recordId === projectId
-                        ? { ...project, _teamID: teamId }
-                        : project
+                prevProjects.map(p =>
+                    p.id === project.id
+                        ? { ...p, _teamID: teamId }
+                        : p
                 )
             );
-            
+
             // Update selected project if it's the one being updated
-            if (selectedProject?.recordId === projectId) {
+            if (selectedProject?.id === project.id) {
                 setSelectedProject(prevProject => ({ ...prevProject, _teamID: teamId }));
             }
-            
+
             return result;
         } catch (err) {
             setError(err.message);
@@ -546,7 +546,7 @@ export function useProject(customerId = null) {
         } finally {
             setLoading(false);
         }
-    }, [selectedProject, projects]);
+    }, [projects, selectedProject]);
 
     /**
      * Creates a new objective for a project
