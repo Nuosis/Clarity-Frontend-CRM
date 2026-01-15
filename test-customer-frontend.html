@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer API E2E Test</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00ff00;
+            text-align: center;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #2a2a2a;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+        }
+        .test-title {
+            font-weight: bold;
+            color: #ffff00;
+            margin-bottom: 10px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success {
+            background: #004400;
+            color: #00ff00;
+        }
+        .error {
+            background: #440000;
+            color: #ff4444;
+        }
+        .info {
+            background: #003344;
+            color: #44aaff;
+        }
+        button {
+            background: #004400;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #005500;
+        }
+        button:disabled {
+            background: #222;
+            color: #666;
+            border-color: #666;
+            cursor: not-allowed;
+        }
+        .summary {
+            text-align: center;
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        pre {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Customer API End-to-End Test Suite</h1>
+
+    <div class="test-section">
+        <div class="test-title">Environment Detection</div>
+        <div id="env-status"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">Authentication Status</div>
+        <div id="auth-status"></div>
+        <button id="login-btn">Login with Test Credentials</button>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">Test Controls</div>
+        <button id="run-all-btn" disabled>Run All Tests</button>
+        <button id="clear-btn">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">Test Results</div>
+        <div class="summary" id="summary">Ready to run tests...</div>
+        <div id="test-results"></div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        // Initialize Supabase client
+        const SUPABASE_URL = 'https://supabase.claritybusinesssolutions.ca';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzUyNjIzMzI5LCJleHAiOjQ5MDYyMjMzMjl9.WQEq0YFA3FpuaOG-z3m0M8Vsk34vz0nzmevjdkbJ_Ts';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let testResults = { passed: 0, failed: 0, tests: [] };
+        let testCustomerId = null;
+
+        // Display environment info
+        document.getElementById('env-status').innerHTML = `
+            <div class="info">Environment: Web App (Standalone)</div>
+            <div class="info">Supabase URL: ${SUPABASE_URL}</div>
+        `;
+
+        // Check auth status
+        async function checkAuthStatus() {
+            const { data: { session } } = await supabase.auth.getSession();
+            const authDiv = document.getElementById('auth-status');
+            const loginBtn = document.getElementById('login-btn');
+            const runAllBtn = document.getElementById('run-all-btn');
+
+            if (session) {
+                authDiv.innerHTML = `
+                    <div class="success">✅ Authenticated as: ${session.user.email}</div>
+                    <div class="info">User ID: ${session.user.id}</div>
+                    <div class="info">Organization ID: ${session.user.app_metadata?.organization_id || 'Not set'}</div>
+                `;
+                loginBtn.textContent = 'Logout';
+                runAllBtn.disabled = false;
+            } else {
+                authDiv.innerHTML = `<div class="error">❌ Not authenticated</div>`;
+                loginBtn.textContent = 'Login with Test Credentials';
+                runAllBtn.disabled = true;
+            }
+        }
+
+        // Login/Logout handler
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session) {
+                await supabase.auth.signOut();
+                await checkAuthStatus();
+            } else {
+                // Test credentials
+                const email = prompt('Enter email:', 'marcus@claritybusinesssolutions.ca');
+                const password = prompt('Enter password:');
+
+                if (email && password) {
+                    const { error } = await supabase.auth.signInWithPassword({ email, password });
+                    if (error) {
+                        alert('Login failed: ' + error.message);
+                    } else {
+                        await checkAuthStatus();
+                    }
+                }
+            }
+        });
+
+        // Test runner
+        async function runTest(name, testFn) {
+            const resultsDiv = document.getElementById('test-results');
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test-result info';
+            testDiv.innerHTML = `🧪 Running: ${name}...`;
+            resultsDiv.appendChild(testDiv);
+
+            try {
+                const result = await testFn();
+                testResults.passed++;
+                testResults.tests.push({ name, status: 'PASS' });
+                testDiv.className = 'test-result success';
+                testDiv.innerHTML = `
+                    ✅ PASS: ${name}
+                    ${result ? '<pre>' + JSON.stringify(result, null, 2) + '</pre>' : ''}
+                `;
+            } catch (error) {
+                testResults.failed++;
+                testResults.tests.push({ name, status: 'FAIL', error: error.message });
+                testDiv.className = 'test-result error';
+                testDiv.innerHTML = `
+                    ❌ FAIL: ${name}
+                    <pre>Error: ${error.message}</pre>
+                    ${error.response ? '<pre>' + JSON.stringify(error.response, null, 2) + '</pre>' : ''}
+                `;
+            }
+
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summaryDiv = document.getElementById('summary');
+            summaryDiv.innerHTML = `
+                ✅ Passed: ${testResults.passed} |
+                ❌ Failed: ${testResults.failed} |
+                📊 Total: ${testResults.passed + testResults.failed}
+            `;
+        }
+
+        // Test: List customers
+        async function testListCustomers() {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch('http://localhost:1235/api/contacts_api?limit=10&offset=0', {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
+            }
+
+            const data = await response.json();
+            return { count: data.length, sample: data.slice(0, 2) };
+        }
+
+        // Test: Get customer detail
+        async function testGetCustomerDetail() {
+            const { data: { session } } = await supabase.auth.getSession();
+
+            // First get list
+            const listResponse = await fetch('http://localhost:1235/api/contacts_api?limit=1', {
+                headers: { 'Authorization': `Bearer ${session.access_token}` }
+            });
+            const customers = await listResponse.json();
+
+            if (!customers || customers.length === 0) {
+                throw new Error('No customers found');
+            }
+
+            const customerId = customers[0].id;
+
+            // Get detail
+            const detailResponse = await fetch(`http://localhost:1235/api/contacts_api/${customerId}`, {
+                headers: { 'Authorization': `Bearer ${session.access_token}` }
+            });
+
+            if (!detailResponse.ok) {
+                throw new Error(`HTTP ${detailResponse.status}`);
+            }
+
+            const customer = await detailResponse.json();
+            return {
+                id: customer.id,
+                name: customer.business_name,
+                emails: customer.emails?.length || 0,
+                phones: customer.phones?.length || 0
+            };
+        }
+
+        // Test: Create customer
+        async function testCreateCustomer() {
+            const { data: { session } } = await supabase.auth.getSession();
+            const timestamp = Date.now();
+
+            const customerData = {
+                business_name: `E2E Test Customer ${timestamp}`,
+                primary_contact_name: 'Test User',
+                is_active: true,
+                type: 'CUSTOMER',
+                emails: [{
+                    email: `test${timestamp}@e2etest.com`,
+                    email_type: 'work',
+                    is_primary: true
+                }],
+                phones: [{
+                    phone: '+1-555-9999',
+                    phone_type: 'office',
+                    is_primary: true
+                }]
+            };
+
+            const response = await fetch('http://localhost:1235/api/contacts_api', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(customerData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
+            }
+
+            const customer = await response.json();
+            testCustomerId = customer.id;
+            return { id: customer.id, name: customer.business_name };
+        }
+
+        // Test: Update customer
+        async function testUpdateCustomer() {
+            if (!testCustomerId) {
+                throw new Error('No test customer ID available');
+            }
+
+            const { data: { session } } = await supabase.auth.getSession();
+            const updateData = {
+                business_name: `Updated E2E Test ${Date.now()}`
+            };
+
+            const response = await fetch(`http://localhost:1235/api/contacts_api/${testCustomerId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const customer = await response.json();
+            return { id: customer.id, name: customer.business_name };
+        }
+
+        // Run all tests
+        document.getElementById('run-all-btn').addEventListener('click', async () => {
+            testResults = { passed: 0, failed: 0, tests: [] };
+            document.getElementById('test-results').innerHTML = '';
+            testCustomerId = null;
+
+            document.getElementById('run-all-btn').disabled = true;
+
+            await runTest('1. List customers with pagination', testListCustomers);
+            await runTest('2. Get customer detail', testGetCustomerDetail);
+            await runTest('3. Create customer', testCreateCustomer);
+            await runTest('4. Update customer', testUpdateCustomer);
+
+            document.getElementById('run-all-btn').disabled = false;
+        });
+
+        // Clear results
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            testResults = { passed: 0, failed: 0, tests: [] };
+            document.getElementById('test-results').innerHTML = '';
+            updateSummary();
+        });
+
+        // Initial auth check
+        checkAuthStatus();
+    </script>
+</body>
+</html>
