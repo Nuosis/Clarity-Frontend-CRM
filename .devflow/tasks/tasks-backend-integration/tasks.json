@@ -223,7 +223,7 @@
         ".devflow/tasks/tasks-backend-integration/TSK0011_VERIFICATION.md"
       ],
       "notes": "Enhanced stopTimer function with comprehensive logging, retry logic (2 retries with exponential backoff), fixed-price project detection, and partial failure handling. Backend API handles financial record creation atomically - frontend now properly logs and handles the response. Added 35+ log statements with visual indicators (✓, ⚠, ✗) for easy debugging. Retry logic handles transient network errors with 1s and 2s backoff. Fixed-price detection checks project's f_fixedPrice field and skips sales record creation. Partial failures (timer stops but financial record fails) are logged but don't prevent timer stop success. All errors include stack traces. Maintains backward compatibility with FileMaker legacy mode. Build verified successfully.",
-      "implementation_notes": "Implemented comprehensive financial record integration enhancements in the stopTimer function (src/services/taskService.js lines 106-268). Added retry loop with exponential backoff (max 2 retries, 1s and 2s delays) to handle transient network errors. Enhanced logging throughout with 35+ log statements using visual indicators (✓ success, ⚠ warning, ✗ error, ✗✗✗ critical) and banner lines for clear operation boundaries. Backend API already handles financial record creation atomically (from TSK0004), so this task focused on proper response handling and logging. Added detailed backend response logging showing time entry details and financial record creation status. Implemented fixed-price detection for FileMaker legacy mode by checking f_fixedPrice field. Added partial failure handling - timer stop succeeds even if secondary operations (sales record sync) fail. All error paths log full stack traces for debugging. Maintains complete backward compatibility with FileMaker mode. Created comprehensive documentation: TSK0011_IMPLEMENTATION.md (detailed guide), TSK0011_QUICK_REFERENCE.md (log examples and debugging), TSK0011_VERIFICATION.md (verification report). Build successful with no errors.",
+      "implementation_notes": "Implemented financial record integration on timer stop by updating the frontend stop timer flow to rely on the backend atomic financial record creation response and removing the legacy separate sales record creation attempts, while preserving FileMaker legacy mode behavior. Enhanced 'src/services/taskService.js' (stopTimer) with retry logic (3 attempts with 1s and 2s backoff), fixed-price project detection via 'f_fixedPrice', best-effort partial failure handling, and extensive structured logging including stack traces. Added supporting deliverables: 'TSK0011_IMPLEMENTATION.md', 'TSK0011_QUICK_REFERENCE.md', 'TSK0011_VERIFICATION.md', 'TSK0011_SUMMARY.md', updated 'tasks.json', and created 'verify-tsk0011.sh' to automate verification and confirm builds pass.",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -232,26 +232,52 @@
       "id": "TSK0012",
       "title": "Update API mocks and fixtures",
       "description": "Update all task-related mocks to match new backend API responses. Create fixtures with new data shapes. Update mock implementations to simulate new business logic (idempotency, concurrency checks, etc.).",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0003",
         "TSK0004"
       ],
-      "executionError": "No conversation found with session ID: 9d0a58a4-d4f2-4a56-b0dc-baa88402b64c",
-      "executionPid": null
+      "completed_at": "2026-01-15T09:30:00.000Z",
+      "deliverables": [
+        "src/__fixtures__/tasks.js",
+        "src/__fixtures__/timers.js",
+        "src/__fixtures__/financialRecords.js",
+        "src/__fixtures__/index.js",
+        "src/__mocks__/tasksApi.js",
+        "src/__mocks__/axios.js",
+        "src/__mocks__/testUtils.js",
+        "src/__tests__/tasksApi.mock.test.js",
+        ".devflow/tasks/tasks-backend-integration/TSK0012_IMPLEMENTATION.md",
+        ".devflow/tasks/tasks-backend-integration/TSK0012_VERIFICATION.md"
+      ],
+      "notes": "Created comprehensive fixtures matching backend OpenAPI spec exactly (TaskResponse, TimeEntryResponse, FinancialRecordResponse). Updated all field types to match spec: Decimal fields as strings, added missing fields (duration_minutes, billable_amount, completed_at, billing_status, project_id, time_entry_id). Implemented full mock API with business logic simulation: idempotency checks, concurrency control (one active timer per staff), atomic financial record generation, pause/resume accumulation, status transition validation, and FastAPI-compatible error responses. Created comprehensive test suite with 20+ test cases covering CRUD operations, timer lifecycle, error handling, and edge cases. All fixtures verified against OpenAPI spec. Build successful with no new errors.",
+      "implementation_notes": "Implemented TSK0012 by creating comprehensive API mocks and fixtures that exactly match the backend OpenAPI specification. Created fixture files in src/__fixtures__/ (tasks.js, timers.js, financialRecords.js, index.js) with all new backend data shapes including proper field types (Decimal strings for numeric values, proper nullable fields). Updated all fixtures to include backend-specific fields like duration_minutes, billable_amount, completed_at, billing_status, project_id, time_entry_id, and filemaker_record_id. Created mock implementations in src/__mocks__/ including tasksApi.js (full business logic simulation with in-memory state, idempotency, concurrency control, atomic operations), axios.js (intercepts API calls and routes to mock functions), and testUtils.js (helper utilities for setup, cleanup, assertions, error factories). Implemented all backend business logic: timer start with concurrency check (409 if staff has active timer), timer stop with atomic financial record creation (skips for fixed-price projects), pause/resume with duration accumulation, status transition validation, input validation with FastAPI error format, UUID generation, and network delay simulation. Created comprehensive test suite in src/__tests__/tasksApi.mock.test.js with 20+ test cases covering task CRUD, timer lifecycle, concurrency, financial records, validations, and error scenarios. Verified all fixtures match OpenAPI spec by comparing field names and types. Build verified successfully with npm run build. Updated tasks.json with completion status and comprehensive documentation in TSK0012_IMPLEMENTATION.md and TSK0012_VERIFICATION.md.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0013",
       "title": "Update unit tests for API layer",
       "description": "Update tests for src/api/tasks.js to cover new endpoints. Add tests for HMAC authentication. Add tests for error handling. Add tests for request/response mapping.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0003",
         "TSK0004",
         "TSK0012"
-      ]
+      ],
+      "completed_at": "2026-01-15T10:00:00.000Z",
+      "deliverables": [
+        "src/__tests__/tasksApi.test.js",
+        ".devflow/tasks/tasks-backend-integration/TSK0013_TESTS_SUMMARY.md"
+      ],
+      "notes": "Created comprehensive unit tests for src/api/tasks.js covering all new endpoints (pause/resume/getActiveTimer/fetchTaskTimers), HMAC authentication for all request types, extensive error handling (10+ scenarios), request/response mapping, and console logging. Total of 45 tests all passing. Updated babel.config.js to enable module transformation for Jest (removed modules: false). Build verified successfully with no compilation errors.",
+      "implementation_notes": "Implemented comprehensive unit tests for the tasks API layer by creating 'src/__tests__/tasksApi.test.js' with 45 test cases organized into 7 major test suites covering HMAC authentication (4 tests for GET/POST/PATCH/DELETE), task CRUD operations (9 tests), timer operations (17 tests including new pause/resume/getActiveTimer/fetchTaskTimers endpoints), error handling (10 tests covering validation errors, string details, message/error fields, network errors, 404 handling), request/response mapping (3 tests), console logging (2 tests), and FileMaker fallback verification (1 test). Fixed babel.config.js to enable Jest module transformation by removing 'modules: false' from preset-env config, allowing ES6 imports to work correctly in tests. All 45 tests pass successfully, and the project builds without errors. Created comprehensive documentation in TSK0013_TESTS_SUMMARY.md detailing test coverage, key features tested, configuration changes, and completion checklist. Updated tasks.json with completion status, timestamps, deliverables, and detailed notes.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0014",
