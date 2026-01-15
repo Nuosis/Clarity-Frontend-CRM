@@ -206,7 +206,7 @@
       ],
       "completed_at": "2026-01-15T00:00:00.000Z",
       "notes": "✅ Enhanced useLink hook to accept parentType parameter (defaults to 'project' for backward compatibility). ✅ Updated TaskList to pass 'task' as parentType, ensuring links created with correct task_id FK. ✅ Enhanced link display to support both 'url' and 'link' field formats with title fallback. ✅ All acceptance criteria met: links render correctly, creation works with proper FK, refresh after creation, error handling in place. ✅ Build verified successfully. ✅ 6/6 automated verification checks passed.",
-      "implementation_notes": "Implemented task link support by enhancing the 'useLink' hook to accept an optional 'parentType' parameter (defaulting to 'project' for backward compatibility) and updating 'TaskList.jsx' to pass 'task' when creating links, ensuring the correct 'task_id' foreign key is used. Enhanced link display to support both backend ('link') and frontend ('url') field formats with title fallbacks for resilience. Created comprehensive verification script (TSK0007-verification.js) that validates all changes with 6 automated checks, all passing. Updated tasks.json to mark TSK0007 complete with detailed notes and supporting documentation (TSK0007-implementation-summary.md, TSK0007-COMPLETION-REPORT.md). Build verification successful with no errors.",
+      "implementation_notes": "Implemented task link creation and display updates to support the new links API by fixing incorrect foreign key usage and adding defensive rendering. Updated 'src/hooks/useLink.js' to accept an optional 'parentType' parameter on 'handleLinkCreate' (defaulting to 'project' for backward compatibility) and to use transformed backend responses, then updated 'src/components/tasks/TaskList.jsx' to pass 'task' so links are created with 'task_id' instead of mistakenly defaulting to 'project_id', and to fall back between 'url' and 'link' fields (with title or URL fallback). Added verification and documentation artifacts including 'TSK0007-verification.js' and multiple TSK0007 summary reports, and marked TSK0007 complete in 'tasks.json', while noting the known backend POST '/links' 500 issue is external to these frontend changes.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -215,7 +215,7 @@
       "id": "TSK0008",
       "title": "Add edit/delete UI for links (optional)",
       "description": "Add UI controls for editing and deleting links now that backend supports it",
-      "status": "queued",
+      "status": "done",
       "priority": "low",
       "acceptance_criteria": [
         "Edit button on links opens edit modal/input",
@@ -231,7 +231,13 @@
       "dependencies": [
         "TSK0006",
         "TSK0007"
-      ]
+      ],
+      "completed_at": "2026-01-15T23:30:00.000Z",
+      "notes": "✅ Added edit/delete UI controls to ProjectLinksTab with hover-revealed buttons, inline editing form, and confirmation dialog for delete. ✅ Added edit/delete UI controls to TaskList with same UX pattern for consistency. ✅ Both components now support handleLinkUpdate and handleLinkDelete from useLink hook. ✅ Edit mode shows inline input field with Save/Cancel buttons. ✅ Delete operation requires confirmation dialog. ✅ UI updates after successful operations by calling loadProjectDetails or onExpand. ✅ All acceptance criteria met. ✅ Build verified successfully with no compilation errors.",
+      "implementation_notes": "Implemented edit and delete UI controls for links in both ProjectLinksTab and TaskList components by adding hover-revealed Edit and Delete buttons, inline editing mode with input fields and Save/Cancel buttons, and confirmation dialogs for delete operations. Enhanced both components to destructure handleLinkUpdate and handleLinkDelete from useLink hook, added local state for editing (editingLinkId, editingUrl/editLinkUrl), updated renderLink callback in ProjectLinksTab to conditionally render editing UI vs normal link display with action buttons, and similarly updated the link rendering section in TaskList TaskItem. Updated component prop signatures and PropTypes in TaskList to pass the new handlers through TaskSection to TaskItem. Key UX decisions: hover-revealed buttons for clean UI, inline editing to avoid modals, confirmation for destructive delete action, automatic refresh after successful operations via loadProjectDetails/onExpand, and consistent styling with existing note edit/delete patterns. Verified successful build and marked TSK0008 complete in tasks.json.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0009",

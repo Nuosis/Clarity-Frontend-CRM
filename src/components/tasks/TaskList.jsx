@@ -28,6 +28,8 @@ const TaskItem = React.memo(function TaskItem({
     handleUpdateNote,
     handleDeleteNote,
     handleCreateLink,
+    handleUpdateLink,
+    handleDeleteLink,
     handleLoadMoreNotes,
     notesPagination,
     notesLoading
@@ -37,6 +39,8 @@ const TaskItem = React.memo(function TaskItem({
     const [showLinkInput, setShowLinkInput] = useState(false);
     const [editingNoteId, setEditingNoteId] = useState(null);
     const [editContent, setEditContent] = useState('');
+    const [editingLinkId, setEditingLinkId] = useState(null);
+    const [editLinkUrl, setEditLinkUrl] = useState('');
     const { showError } = useSnackBar();
 
     const toggleExpand = useCallback(async () => {
@@ -256,19 +260,111 @@ const TaskItem = React.memo(function TaskItem({
                                         // Support both 'url' (frontend format) and 'link' (backend format)
                                         const linkUrl = link.url || link.link;
                                         const displayText = link.title || linkUrl;
+                                        const isEditingLink = editingLinkId === link.id;
+
+                                        if (isEditingLink) {
+                                            return (
+                                                <div key={link.id} className="space-y-1">
+                                                    <input
+                                                        type="text"
+                                                        value={editLinkUrl}
+                                                        onChange={(e) => setEditLinkUrl(e.target.value)}
+                                                        className={`
+                                                            w-full px-2 py-1 text-sm rounded border
+                                                            ${darkMode
+                                                                ? 'bg-gray-700 border-gray-600 text-gray-200'
+                                                                : 'bg-white border-gray-300 text-gray-900'}
+                                                        `}
+                                                        placeholder="Enter URL..."
+                                                    />
+                                                    <div className="flex gap-1">
+                                                        <button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await handleUpdateLink(link.id, { url: editLinkUrl.trim() });
+                                                                    await onExpand(task.id);
+                                                                    setEditingLinkId(null);
+                                                                    setEditLinkUrl('');
+                                                                } catch (error) {
+                                                                    showError('Error updating link');
+                                                                }
+                                                            }}
+                                                            disabled={!editLinkUrl.trim()}
+                                                            className="px-2 py-0.5 text-xs bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingLinkId(null);
+                                                                setEditLinkUrl('');
+                                                            }}
+                                                            className={`
+                                                                px-2 py-0.5 text-xs rounded
+                                                                ${darkMode
+                                                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}
+                                                            `}
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
                                         return (
-                                            <a
-                                                key={link.id}
-                                                href={linkUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={`
-                                                    text-sm block hover:underline
-                                                    ${darkMode ? 'text-blue-400' : 'text-blue-600'}
-                                                `}
-                                            >
-                                                {displayText}
-                                            </a>
+                                            <div key={link.id} className="flex justify-between items-start group">
+                                                <a
+                                                    href={linkUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={`
+                                                        text-sm hover:underline flex-1
+                                                        ${darkMode ? 'text-blue-400' : 'text-blue-600'}
+                                                    `}
+                                                >
+                                                    {displayText}
+                                                </a>
+                                                <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingLinkId(link.id);
+                                                            setEditLinkUrl(linkUrl);
+                                                        }}
+                                                        className={`
+                                                            px-1 py-0.5 text-xs rounded
+                                                            ${darkMode
+                                                                ? 'text-blue-400 hover:bg-gray-700'
+                                                                : 'text-blue-600 hover:bg-blue-50'}
+                                                        `}
+                                                        data-testid={`edit-task-link-${link.id}`}
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (window.confirm('Delete this link?')) {
+                                                                try {
+                                                                    await handleDeleteLink(link.id);
+                                                                    await onExpand(task.id);
+                                                                } catch (error) {
+                                                                    showError('Error deleting link');
+                                                                }
+                                                            }
+                                                        }}
+                                                        className={`
+                                                            px-1 py-0.5 text-xs rounded
+                                                            ${darkMode
+                                                                ? 'text-red-400 hover:bg-gray-700'
+                                                                : 'text-red-600 hover:bg-red-50'}
+                                                        `}
+                                                        data-testid={`delete-task-link-${link.id}`}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
                                         );
                                     })}
                                 </div>
@@ -393,6 +489,8 @@ TaskItem.propTypes = {
     handleUpdateNote: PropTypes.func.isRequired,
     handleDeleteNote: PropTypes.func.isRequired,
     handleCreateLink: PropTypes.func.isRequired,
+    handleUpdateLink: PropTypes.func.isRequired,
+    handleDeleteLink: PropTypes.func.isRequired,
     handleLoadMoreNotes: PropTypes.func.isRequired,
     notesPagination: PropTypes.object,
     notesLoading: PropTypes.bool
@@ -417,6 +515,8 @@ const TaskSection = React.memo(function TaskSection({
     handleUpdateNote,
     handleDeleteNote,
     handleCreateLink,
+    handleUpdateLink,
+    handleDeleteLink,
     handleLoadMoreNotes,
     notesPagination,
     notesLoading
@@ -461,6 +561,8 @@ const TaskSection = React.memo(function TaskSection({
                         handleUpdateNote={handleUpdateNote}
                         handleDeleteNote={handleDeleteNote}
                         handleCreateLink={handleCreateLink}
+                        handleUpdateLink={handleUpdateLink}
+                        handleDeleteLink={handleDeleteLink}
                         handleLoadMoreNotes={handleLoadMoreNotes}
                         notesPagination={notesPagination}
                         notesLoading={notesLoading}
@@ -489,6 +591,8 @@ TaskSection.propTypes = {
     handleUpdateNote: PropTypes.func.isRequired,
     handleDeleteNote: PropTypes.func.isRequired,
     handleCreateLink: PropTypes.func.isRequired,
+    handleUpdateLink: PropTypes.func.isRequired,
+    handleDeleteLink: PropTypes.func.isRequired,
     handleLoadMoreNotes: PropTypes.func.isRequired,
     notesPagination: PropTypes.object,
     notesLoading: PropTypes.bool
@@ -539,6 +643,8 @@ function TaskList({
 
     const {
         handleLinkCreate,
+        handleLinkUpdate,
+        handleLinkDelete,
         loading: linkLoading
     } = useLink();
 
@@ -617,6 +723,28 @@ function TaskList({
             throw error;
         }
     }, [handleLinkCreate, handleTaskSelect]);
+
+    const handleUpdateLink = useCallback(async (linkId, data) => {
+        try {
+            console.log("update link called for task ... ", { linkId, data })
+            const result = await handleLinkUpdate(linkId, data);
+            return result;
+        } catch (error) {
+            console.error('Error updating link:', error);
+            throw error;
+        }
+    }, [handleLinkUpdate]);
+
+    const handleDeleteLink = useCallback(async (linkId) => {
+        try {
+            console.log("delete link called for task ... ", { linkId })
+            const result = await handleLinkDelete(linkId);
+            return result;
+        } catch (error) {
+            console.error('Error deleting link:', error);
+            throw error;
+        }
+    }, [handleLinkDelete]);
 
     const handleEdit = useCallback(async (taskData) => {
         try {
@@ -737,6 +865,8 @@ function TaskList({
                 handleUpdateNote={handleUpdateNote}
                 handleDeleteNote={handleDeleteNote}
                 handleCreateLink={handleCreateLink}
+                handleUpdateLink={handleUpdateLink}
+                handleDeleteLink={handleDeleteLink}
                 handleLoadMoreNotes={handleLoadMoreNotes}
                 notesPagination={notesPagination}
                 notesLoading={noteLoading}
@@ -776,6 +906,8 @@ function TaskList({
                             handleUpdateNote={handleUpdateNote}
                             handleDeleteNote={handleDeleteNote}
                             handleCreateLink={handleCreateLink}
+                            handleUpdateLink={handleUpdateLink}
+                            handleDeleteLink={handleDeleteLink}
                             handleLoadMoreNotes={handleLoadMoreNotes}
                             notesPagination={notesPagination}
                             notesLoading={noteLoading}

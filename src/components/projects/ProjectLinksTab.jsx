@@ -43,12 +43,14 @@ ResourceGrid.propTypes = {
 
 function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
   const [showNewLinkInput, setShowNewLinkInput] = useState(false);
-  const { handleLinkCreate, loading: linkLoading } = useLink();
+  const { handleLinkCreate, handleLinkUpdate, handleLinkDelete, loading: linkLoading } = useLink();
   const { loadProjectDetails } = useProject();
   const [repoModalOpen, setRepoModalOpen] = useState(false);
   const [ghPrefill, setGhPrefill] = useState({ owner: '', repo: '', description: '', visibility: 'private' });
   const [pendingUrl, setPendingUrl] = useState('');
   const [ghMeta, setGhMeta] = useState({}); // key 'owner/repo' → { data, loading, error }
+  const [editingLinkId, setEditingLinkId] = useState(null);
+  const [editingUrl, setEditingUrl] = useState('');
 
   // Get project ID - support both backend (id) and FileMaker (__ID) formats
   const projectId = project?.id || project?.__ID;
@@ -109,24 +111,128 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
     // Support both backend (url) and any legacy (link) field names
     const linkUrl = link.url || link.link;
     const linkTitle = link.title || linkUrl;
+    const isEditing = editingLinkId === link.id;
+
+    if (isEditing) {
+      return (
+        <div key={link.id} className={`
+          p-2 rounded border
+          ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-300'}
+        `}>
+          <input
+            type="text"
+            value={editingUrl}
+            onChange={(e) => setEditingUrl(e.target.value)}
+            className={`
+              w-full px-2 py-1 text-sm rounded border mb-2
+              ${darkMode
+                ? 'bg-gray-700 border-gray-600 text-gray-200'
+                : 'bg-white border-gray-300 text-gray-900'}
+            `}
+            placeholder="Enter URL..."
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                try {
+                  const result = await handleLinkUpdate(link.id, { url: editingUrl.trim() });
+                  if (result) {
+                    await loadProjectDetails(projectId);
+                    setEditingLinkId(null);
+                    setEditingUrl('');
+                  }
+                } catch (error) {
+                  console.error('Error updating link:', error);
+                }
+              }}
+              disabled={!editingUrl.trim() || linkLoading}
+              className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => {
+                setEditingLinkId(null);
+                setEditingUrl('');
+              }}
+              className={`
+                px-3 py-1 text-sm rounded
+                ${darkMode
+                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}
+              `}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     return (
-      <a
+      <div
         key={link.id}
-        href={linkUrl}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`
-          block p-2 rounded
+          flex items-center justify-between p-2 rounded group
           ${darkMode
-            ? 'text-blue-400 hover:bg-gray-800'
-            : 'text-blue-600 hover:bg-gray-100'}
+            ? 'hover:bg-gray-800'
+            : 'hover:bg-gray-100'}
         `}
       >
-        <span>{linkTitle}</span>
-      </a>
+        <a
+          href={linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`
+            flex-1 truncate
+            ${darkMode ? 'text-blue-400' : 'text-blue-600'}
+          `}
+        >
+          {linkTitle}
+        </a>
+        <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => {
+              setEditingLinkId(link.id);
+              setEditingUrl(linkUrl);
+            }}
+            className={`
+              px-2 py-1 text-xs rounded
+              ${darkMode
+                ? 'text-blue-400 hover:bg-gray-700'
+                : 'text-blue-600 hover:bg-blue-50'}
+            `}
+            data-testid={`edit-link-${link.id}`}
+          >
+            Edit
+          </button>
+          <button
+            onClick={async () => {
+              if (window.confirm('Delete this link?')) {
+                try {
+                  const success = await handleLinkDelete(link.id);
+                  if (success) {
+                    await loadProjectDetails(projectId);
+                  }
+                } catch (error) {
+                  console.error('Error deleting link:', error);
+                }
+              }
+            }}
+            className={`
+              px-2 py-1 text-xs rounded
+              ${darkMode
+                ? 'text-red-400 hover:bg-gray-700'
+                : 'text-red-600 hover:bg-red-50'}
+            `}
+            data-testid={`delete-link-${link.id}`}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
     );
-  }, [darkMode]);
+  }, [darkMode, editingLinkId, editingUrl, handleLinkUpdate, handleLinkDelete, linkLoading, loadProjectDetails, projectId]);
 
   return (
     <div>
