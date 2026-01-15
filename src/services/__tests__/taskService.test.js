@@ -283,34 +283,33 @@ describe('Task Service', () => {
                 expect(result.financial_record).toBeNull();
             });
 
-            it('should handle FileMaker legacy response with sales sync', async () => {
-                const mockFileMakerResponse = {
-                    response: {
-                        data: [{
-                            recordId: 'timer-1',
-                            fieldData: {
-                                endTime: '12:30:00 PM'
-                            }
-                        }]
-                    }
-                };
-
-                const mockFinancialRecord = {
-                    response: {
-                        data: [{
-                            fieldData: {
-                                __ID: 'fin-1',
-                                'customers_Projects::f_fixedPrice': '0'
-                            }
-                        }]
+            it('should handle backend response with sales sync', async () => {
+                const mockBackendResponse = {
+                    time_entry: {
+                        id: 'timer-1',
+                        status: 'completed',
+                        duration_minutes: 150,
+                        is_billable: true
+                    },
+                    financial_record: {
+                        id: 'rec-1',
+                        financial_id: 'fin-1',
+                        organization_id: 'org-123',
+                        customer_id: 'cust-1',
+                        product_name: 'CUSTOMER:Project',
+                        quantity: 2.5,
+                        unit_price: 100.00,
+                        total_price: 250.00,
+                        date: '2026-01-15',
+                        inv_id: null,
+                        billing_status: 'unbilled'
                     }
                 };
 
                 // Set organization ID in global state
                 global.window = { state: { user: { supabaseOrgID: 'org-123' } } };
 
-                tasksApi.stopTaskTimer.mockResolvedValue(mockFileMakerResponse);
-                financialRecordsApi.fetchFinancialRecordByRecordId.mockResolvedValue(mockFinancialRecord);
+                tasksApi.stopTaskTimer.mockResolvedValue(mockBackendResponse);
                 salesService.createSaleFromFinancialRecord.mockResolvedValue({ id: 'sale-1' });
 
                 const result = await taskService.stopTimer({
@@ -321,31 +320,20 @@ describe('Task Service', () => {
                 expect(salesService.createSaleFromFinancialRecord).toHaveBeenCalledWith('fin-1', 'org-123');
             });
 
-            it('should skip sales sync for fixed-price in FileMaker mode', async () => {
-                const mockFileMakerResponse = {
-                    response: {
-                        data: [{
-                            recordId: 'timer-1',
-                            fieldData: {}
-                        }]
-                    }
-                };
-
-                const mockFinancialRecord = {
-                    response: {
-                        data: [{
-                            fieldData: {
-                                __ID: 'fin-1',
-                                'customers_Projects::f_fixedPrice': '1000' // Fixed price > 0
-                            }
-                        }]
-                    }
+            it('should skip sales sync for fixed-price projects', async () => {
+                const mockBackendResponse = {
+                    time_entry: {
+                        id: 'timer-1',
+                        status: 'completed',
+                        duration_minutes: 150,
+                        is_billable: false // Fixed-price project
+                    },
+                    financial_record: null // No financial record for fixed-price
                 };
 
                 global.window = { state: { user: { supabaseOrgID: 'org-123' } } };
 
-                tasksApi.stopTaskTimer.mockResolvedValue(mockFileMakerResponse);
-                financialRecordsApi.fetchFinancialRecordByRecordId.mockResolvedValue(mockFinancialRecord);
+                tasksApi.stopTaskTimer.mockResolvedValue(mockBackendResponse);
 
                 await taskService.stopTimer({
                     recordId: 'timer-1',
@@ -1091,13 +1079,13 @@ describe('Task Service', () => {
                         start_time: '2026-01-15T10:00:00Z',
                         end_time: '2026-01-15T12:00:00Z',
                         description: 'Development work',
-                        duration_minutes: 120,
+                        duration_minutes: '120.0',
                         status: 'completed',
                         pause_duration_seconds: 600,
                         adjustment_seconds: 360,
                         is_billable: true,
-                        billable_amount: 200.00,
-                        hourly_rate: 100.00
+                        billable_amount: '200.00',
+                        hourly_rate: '100.00'
                     }
                 ];
 
@@ -1110,26 +1098,24 @@ describe('Task Service', () => {
                 expect(result[0].adjustmentSeconds).toBe(360);
             });
 
-            it('should handle FileMaker timer records', () => {
-                const fmRecords = {
-                    response: {
-                        data: [
-                            {
-                                recordId: 'rec-1',
-                                fieldData: {
-                                    __ID: 'timer-1',
-                                    startTime: '10:00:00 AM',
-                                    endTime: '12:00:00 PM',
-                                    'Work Performed': 'Development',
-                                    Billable_Time_Rounded: 2.0,
-                                    TimeAdjust: 360
-                                }
-                            }
-                        ]
+            it('should handle array of timer records', () => {
+                const timerRecords = [
+                    {
+                        id: 'timer-1',
+                        start_time: '2026-01-15T10:00:00Z',
+                        end_time: '2026-01-15T12:00:00Z',
+                        description: 'Development',
+                        duration_minutes: '120.0',
+                        status: 'completed',
+                        pause_duration_seconds: 0,
+                        adjustment_seconds: 360,
+                        is_billable: true,
+                        billable_amount: '200.00',
+                        hourly_rate: '100.00'
                     }
-                };
+                ];
 
-                const result = taskService.processTimerRecords(fmRecords);
+                const result = taskService.processTimerRecords(timerRecords);
 
                 expect(result).toHaveLength(1);
                 expect(result[0].id).toBe('timer-1');
@@ -1140,7 +1126,7 @@ describe('Task Service', () => {
             it('should return empty array for invalid input', () => {
                 expect(taskService.processTimerRecords(null)).toEqual([]);
                 expect(taskService.processTimerRecords({})).toEqual([]);
-                expect(taskService.processTimerRecords({ response: {} })).toEqual([]);
+                expect(taskService.processTimerRecords([])).toEqual([]);
             });
         });
     });
