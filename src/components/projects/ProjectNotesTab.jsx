@@ -49,7 +49,7 @@ function ProjectNotesTab({ project, darkMode }) {
             // Support both backend API format and FileMaker format
             const noteId = note.id || note.fieldData?.__ID;
             const noteContent = note.content || note.fieldData?.note;
-            const noteAuthor = note.author;
+            const noteAuthor = note.author || note.createdBy;
             const noteCreatedAt = note.createdAt || note.created_at;
 
             return (
