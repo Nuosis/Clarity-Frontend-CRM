@@ -72,13 +72,14 @@ function ProjectTeamTab({ project, darkMode, localProject, setLocalProject, onTe
                       onClick={() => {
                         // Create a copy of the project with the updated team
                         const updatedProject = { ...localProject, _teamID: team.id };
-                        
+
                         // Optimistically update the UI
                         setLocalProject(updatedProject);
-                        
-                        // Call onTeamChange with the team ID
+
+                        // Call onTeamChange with the project ID and team ID
+                        // Hook will handle environment detection (id for webapp, recordId for FileMaker)
                         try {
-                          const result = onTeamChange(localProject.recordId, team.id);
+                          const result = onTeamChange(localProject.id, team.id);
                           // Handle Promise if returned
                           if (result && typeof result.catch === 'function') {
                             result.catch(error => {
@@ -90,7 +91,7 @@ function ProjectTeamTab({ project, darkMode, localProject, setLocalProject, onTe
                           console.error("Error updating team:", error);
                           setLocalProject(localProject);
                         }
-                        
+
                         // Close the modal
                         setShowTeamModal(false);
                       }}

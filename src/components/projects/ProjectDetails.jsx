@@ -73,35 +73,31 @@ function ProjectDetails({
               <div className="flex items-center">
                 <button
                   onClick={() => {
-                    console.log("Toggle clicked");
-                    
                     // Use localProject if available, otherwise fall back to project
                     const currentProject = localProject || project;
-                    
+
                     // Get the new status
                     const newStatus = currentProject.status === "Open" ? "Closed" : "Open";
-                    console.log("New status:", newStatus);
-                    
-                    // Get the recordId
-                    const recordId = currentProject?.recordId;
-                    console.log("Project recordId:", recordId);
-                    
-                    if (recordId) {
+
+                    // Use project.id (UUID in webapp, matches hook expectations)
+                    const projectId = currentProject?.id;
+
+                    if (projectId) {
                       // Create a copy of the project with the updated status for optimistic UI update
                       const updatedProject = { ...currentProject, status: newStatus };
-                      
+
                       // Optimistically update the UI by setting the local project state
                       setLocalProject(updatedProject);
-                      
-                      // Call onStatusChange with the recordId and new status
-                      console.log("Calling onStatusChange with:", recordId, newStatus);
-                      onStatusChange(recordId, newStatus).catch(error => {
+
+                      // Call onStatusChange with the project ID and new status
+                      // Hook will handle environment detection (id for webapp, recordId for FileMaker)
+                      onStatusChange(projectId, newStatus).catch(error => {
                         // If there's an error, revert the optimistic update
                         console.error("Error updating status:", error);
                         setLocalProject(currentProject);
                       });
                     } else {
-                      console.error("Could not find a valid recordId in the project object");
+                      console.error("Could not find a valid project ID");
                     }
                   }}
                   className={`
@@ -421,21 +417,29 @@ ProjectDetails.propTypes = {
   onDelete: PropTypes.func,
   onTeamChange: PropTypes.func,
   project: PropTypes.shape({
-    id: PropTypes.string,
-    recordId: PropTypes.string.isRequired,
+    id: PropTypes.string.isRequired, // UUID (backend) or FileMaker __ID
+    recordId: PropTypes.string, // Optional: FileMaker recordId for backward compatibility
     projectName: PropTypes.string.isRequired,
-    status: PropTypes.string,
+    status: PropTypes.string, // Frontend format: 'Open', 'Closed', 'On Hold', etc.
     estOfTime: PropTypes.string,
     createdAt: PropTypes.string,
     _teamID: PropTypes.string,
+    _custID: PropTypes.string,
+    value: PropTypes.number,
+    f_fixedPrice: PropTypes.bool,
+    f_subscription: PropTypes.bool,
+    dateStart: PropTypes.string,
+    dateEnd: PropTypes.string,
     stats: PropTypes.shape({
       totalHours: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       unbilledHours: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-      completion: PropTypes.number
+      completion: PropTypes.number,
+      completion_percentage: PropTypes.number
     }),
     notes: PropTypes.arrayOf(PropTypes.object),
     links: PropTypes.arrayOf(PropTypes.object),
-    objectives: PropTypes.arrayOf(PropTypes.object)
+    objectives: PropTypes.arrayOf(PropTypes.object),
+    images: PropTypes.arrayOf(PropTypes.object)
   }).isRequired
 };
 

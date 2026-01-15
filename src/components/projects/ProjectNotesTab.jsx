@@ -29,9 +29,10 @@ function ProjectNotesTab({ project, darkMode }) {
             submitLabel="Create"
             onSubmit={async (noteContent) => {
               try {
-                const result = await handleNoteCreate(project.recordId, noteContent);
+                // Use project.id - hook handles environment detection
+                const result = await handleNoteCreate(project.id, noteContent);
                 if (result) {
-                  await loadProjectDetails(project.recordId);
+                  await loadProjectDetails(project.id);
                   setShowNewNoteInput(false);
                 }
               } catch (error) {
