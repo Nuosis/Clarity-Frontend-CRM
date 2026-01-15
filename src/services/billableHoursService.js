@@ -5,94 +5,128 @@
 import { formatCurrency, formatDateTime, validateRequired } from './index';
 
 /**
- * Processes raw financial data from FileMaker
- * @param {Object} data - Raw financial data from FileMaker
+ * Processes raw financial data from Supabase (via normalized API response)
+ * Handles data from customer_sales table via get_financial_records RPC
+ * @param {Object} data - Normalized financial data from Supabase API client
  * @returns {Array} Processed financial records
  */
 export function processFinancialData(data) {
   if (!data?.response?.data) {
     console.error("processFinancialData: Missing data.response.data", data);
-    return [];  }
+    return [];
+  }
 
   console.log("Processing financial data. First record sample:",
     data.response.data[0] ? JSON.stringify(data.response.data[0].fieldData, null, 2) : "No records");
 
-  // Log customer IDs from the first few records to check for empty values
-  const customerIdSamples = data.response.data.slice(0, 5).map(record => ({
-    id: record.fieldData.__ID,
-    customerId: record.fieldData["_custID"],
-    customerName: record.fieldData["Customers::Name"]
-  }));
-  console.log("Customer ID samples from first 5 records:", customerIdSamples);
+  // Validate required fields in first few records
+  const validationSamples = data.response.data.slice(0, 5).map(record => {
+    const fieldData = record.fieldData;
+    return {
+      financial_id: fieldData.financial_id || fieldData.__ID,
+      customer_id: fieldData._custID,
+      customer_name: fieldData['Customers::Name'],
+      date: fieldData.DateStart,
+      hasRequiredFields: !!(
+        (fieldData.financial_id || fieldData.__ID) &&
+        fieldData._custID &&
+        fieldData.DateStart
+      )
+    };
+  });
+  console.log("Field validation samples:", validationSamples);
 
-  // Count records with empty customer IDs
-  const emptyCustomerIdCount = data.response.data.filter(record =>
-    !record.fieldData["_custID"] || record.fieldData["_custID"] === ""
-  ).length;
-  console.log(`Records with empty customer IDs: ${emptyCustomerIdCount} out of ${data.response.data.length}`);
+  // Count records with missing required fields
+  const invalidRecordCount = data.response.data.filter(record => {
+    const fieldData = record.fieldData;
+    return !(
+      (fieldData.financial_id || fieldData.__ID) &&
+      fieldData._custID &&
+      fieldData.DateStart
+    );
+  }).length;
+
+  if (invalidRecordCount > 0) {
+    console.warn(`⚠️  Found ${invalidRecordCount} records with missing required fields out of ${data.response.data.length} total`);
+  }
 
   return data.response.data.map(record => {
-    // Extract field data for logging
     const fieldData = record.fieldData;
-    const hourlyRate = fieldData.Hourly_Rate || fieldData["Customers::chargeRate"] || 0;
-    const projectName = fieldData["customers_Projects::projectName"] || fieldData["customers_Projects::Name"] || "Unknown Project";
-    
-    // Log field mapping for debugging
+
+    // Supabase customer_sales schema fields
+    const financialId = fieldData.financial_id || fieldData.__ID; // Support both normalized and legacy
+    const customerId = fieldData._custID;
+    const customerName = fieldData['Customers::Name']; // Normalized response includes joined customer name
+    const date = fieldData.DateStart; // Already converted to MM/DD/YYYY by normalizeFinancialRecords
+    const quantity = parseFloat(fieldData.Billable_Time_Rounded || 0); // Maps to quantity (billable hours)
+    const unitPrice = parseFloat(fieldData.Hourly_Rate || 0); // Maps to unit_price (hourly rate)
+    const totalPrice = fieldData.total_price || calculateAmount(quantity, unitPrice);
+    const invId = fieldData.inv_id; // Invoice ID (null = unbilled, non-null = billed)
+    const billed = fieldData.f_billed === 1 || fieldData.f_billed === "1" || !!invId; // Backward compatible billed flag
+    const productName = fieldData.product_name || ""; // Product name from customer_sales
+
+    // Validate required fields
+    if (!financialId) {
+      console.warn('⚠️  Record missing financial_id:', record);
+    }
+    if (!customerId) {
+      console.warn('⚠️  Record missing customer_id:', record);
+    }
+    if (!date) {
+      console.warn('⚠️  Record missing date:', record);
+    }
+
+    // Extract month and year from date (MM/DD/YYYY format from normalized response)
+    let month = 0;
+    let year = 0;
+    if (date) {
+      const dateParts = date.split('/');
+      if (dateParts.length === 3) {
+        month = parseInt(dateParts[0], 10);
+        year = parseInt(dateParts[2], 10);
+      }
+    }
+
+    // Log field mapping for first record
     if (record === data.response.data[0]) {
       console.log("Field mapping for first record:", {
-        id: fieldData.__ID,
-        date: fieldData.DateStart,
-        customerId: fieldData["_custID"],
-        customerName: fieldData["Customers::Name"],
-        projectId: fieldData._projectID,
-        projectName: projectName,
-        billableTime: fieldData.Billable_Time_Rounded,
-        hourlyRate: hourlyRate,
-        calculatedAmount: calculateAmount(fieldData.Billable_Time_Rounded, hourlyRate)
+        financial_id: financialId,
+        customer_id: customerId,
+        customer_name: customerName,
+        date: date,
+        quantity: quantity,
+        unit_price: unitPrice,
+        total_price: totalPrice,
+        inv_id: invId,
+        billed: billed,
+        product_name: productName,
+        month: month,
+        year: year
       });
     }
-    
-    // INVESTIGATION LOGGING: Capture field mapping for Task Name and Work Performed
-    const taskNameRaw = fieldData["Tasks::task"];
-    const taskNameFallback = fieldData["dapiTasks::task"];
-    const workPerformedRaw = fieldData["Work Performed"];
-    const workPerformedFallback = fieldData["dapiRecords::Work Performed"];
-    
-    console.log(`🔍 FIELD MAPPING DEBUG - Record ID: ${fieldData.__ID}`, {
-      timestamp: new Date().toISOString(),
-      taskNameRaw: taskNameRaw,
-      taskNameFallback: taskNameFallback,
-      taskNameFinal: taskNameRaw || taskNameFallback || null,
-      workPerformedRaw: workPerformedRaw,
-      workPerformedFallback: workPerformedFallback,
-      workPerformedFinal: workPerformedRaw || workPerformedFallback || "",
-      allAvailableFields: Object.keys(fieldData).filter(key =>
-        key.toLowerCase().includes('task') ||
-        key.toLowerCase().includes('work') ||
-        key.toLowerCase().includes('performed')
-      )
-    });
 
     return {
-      id: fieldData.__ID,
-      recordId: record.recordId, // used for delete and patch
-      customerId: fieldData["_custID"],
-      customerName: fieldData["Customers::Name"] || "Unknown Customer",
-      projectId: fieldData._projectID,
-      projectName: projectName,
-      amount: calculateAmount(fieldData.Billable_Time_Rounded, hourlyRate),
-      hours: parseFloat(fieldData.Billable_Time_Rounded || 0),
-      rate: parseFloat(hourlyRate),
-      date: fieldData.DateStart,
-      month: parseInt(fieldData.month || 0),
-      year: parseInt(fieldData.year || 0),
-      billed: fieldData.f_billed === "1" || fieldData.f_billed === 1,
-      description: fieldData["Work Performed"] || "",
-      taskName: taskNameRaw || taskNameFallback || null,
-      workPerformed: workPerformedRaw || workPerformedFallback || "",
-      fixedPrice: parseFloat(fieldData["customers_Projects::f_fixedPrice"] || 0),
-      createdAt: fieldData['~creationTimestamp'],
-      modifiedAt: fieldData['~ModificationTimestamp'] || fieldData['~modificationTimestamp']
+      id: financialId, // Use financial_id as primary identifier
+      recordId: record.recordId, // Supabase id for updates/deletes
+      customerId: customerId,
+      customerName: customerName || "Unknown Customer",
+      projectId: fieldData._projectID || null, // Not in Supabase schema, but preserved if exists
+      projectName: productName || "Unknown Project", // Use product_name as project name
+      amount: totalPrice,
+      hours: quantity,
+      rate: unitPrice,
+      date: date,
+      month: month,
+      year: year,
+      billed: billed,
+      description: productName || "", // Use product_name as description for backward compatibility
+      taskName: null, // Not in Supabase customer_sales schema
+      workPerformed: "", // Not in Supabase customer_sales schema
+      fixedPrice: 0, // Not in Supabase customer_sales schema
+      createdAt: fieldData.created_at || null,
+      modifiedAt: fieldData.updated_at || null,
+      // Supabase-specific fields
+      invId: invId // Keep invoice ID for QB integration
     };
   });
 }
@@ -607,19 +641,36 @@ export function prepareChartData(records, chartType) {
 }
 
 /**
- * Validates financial record data
+ * Validates financial record data for Supabase customer_sales schema
  * @param {Object} data - Financial record data to validate
  * @returns {Object} Validation result
  */
 export function validateFinancialRecordData(data) {
   const errors = {};
-  
-  // Required fields
+
+  // Required fields for Supabase customer_sales table
   validateRequired(errors, data, 'customerId', 'Customer is required');
-  validateRequired(errors, data, 'projectId', 'Project is required');
-  validateRequired(errors, data, 'hours', 'Hours are required');
+  validateRequired(errors, data, 'hours', 'Hours (quantity) are required');
   validateRequired(errors, data, 'date', 'Date is required');
-  
+
+  // Validate date format (should be YYYY-MM-DD for Supabase)
+  if (data.date) {
+    const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+    const displayDatePattern = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    if (!isoDatePattern.test(data.date) && !displayDatePattern.test(data.date)) {
+      errors.date = 'Date must be in YYYY-MM-DD or MM/DD/YYYY format';
+    }
+  }
+
+  // Validate hours is a positive number
+  if (data.hours !== undefined && data.hours !== null) {
+    const hours = parseFloat(data.hours);
+    if (isNaN(hours) || hours <= 0) {
+      errors.hours = 'Hours must be a positive number';
+    }
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors
@@ -627,20 +678,22 @@ export function validateFinancialRecordData(data) {
 }
 
 /**
- * Formats financial record for FileMaker
+ * Formats financial record for Supabase (backward compatibility wrapper)
+ * @deprecated This function is maintained for backward compatibility but should not be used for new code
  * @param {Object} data - Financial record data
- * @returns {Object} Formatted data for FileMaker
+ * @returns {Object} Formatted data for Supabase customer_sales table
  */
 export function formatFinancialRecordForFileMaker(data) {
-  // Convert to FileMaker field names
+  // Convert to Supabase customer_sales field names (maintaining function name for backward compatibility)
   return {
-    __ID: data.id,
-    _custID: data.customerId,
-    _projectID: data.projectId,
-    Billable_Time_Rounded: data.hours.toString(),
-    DateStart: data.date,
-    f_billed: data.billed ? "1" : "0",
-    "Work Performed": data.description || ""
+    financial_id: data.id,
+    customer_id: data.customerId,
+    product_name: data.description || data.projectName || "",
+    quantity: parseFloat(data.hours || 0),
+    unit_price: parseFloat(data.rate || 0),
+    total_price: parseFloat(data.amount || 0),
+    date: data.date, // Should be in YYYY-MM-DD format for Supabase
+    inv_id: data.billed ? (data.invId || 'BILLED') : null
   };
 }
 

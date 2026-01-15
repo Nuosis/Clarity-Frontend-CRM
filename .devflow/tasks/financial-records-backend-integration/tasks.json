@@ -24,22 +24,24 @@
       "id": "TSK0001",
       "title": "Update financialRecords API client to use Supabase RPCs",
       "description": "Replace all FileMaker API calls in src/api/financialRecords.js with Supabase RPC calls. Update fetchFinancialRecords(), fetchUnpaidRecords(), fetchMonthlyRecords(), fetchQuarterlyRecords(), fetchYearlyRecords() to use get_financial_records and get_unpaid_records RPCs. Replace updateFinancialRecordBilledStatus() and bulkUpdateFinancialRecordsBilledStatus() with mark_records_billed RPC. Maintain existing function signatures for backward compatibility. Add response normalization layer to match expected data shape.",
-      "status": "completed",
+      "status": "done",
       "priority": "high",
       "dependencies": [],
       "files": [
         "src/api/financialRecords.js"
       ],
       "notes": "✅ COMPLETED: All functions updated to use Supabase RPCs. Response normalization layer added for backward compatibility. Date conversion utilities included. Organization ID validation enforced. Build verified successful.",
-      "executionPid": 77894,
-      "sessionId": "0a7984fb-8533-4af8-b9dd-a5a306dfc4dd",
-      "completed_at": "2026-01-15T00:00:00.000Z"
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "executionError": null,
+      "implementation_notes": "Implemented a full migration of the financialRecords API client to Supabase by rewriting 'src/api/financialRecords.js' to replace all FileMaker dependencies with Supabase RPC calls (including 'get_financial_records', 'get_unpaid_records', and 'mark_records_billed') while preserving existing function signatures. Added a compatibility layer via 'normalizeFinancialRecords()' plus date conversion helpers to keep UI expectations intact, and introduced 'getRequiredOrganizationId()' to enforce organization scoping on every RPC with clear validation errors. Updated '.devflow/tasks/financial-records-backend-integration/tasks.json' to mark TSK0001 complete and added a completion summary document, with a key decision to keep FileMaker references only as comments for backward-compatibility documentation."
     },
     {
       "id": "TSK0002",
       "title": "Update billableHoursService for Supabase data shapes",
       "description": "Update src/services/billableHoursService.js processFinancialData() function to handle Supabase customer_sales schema instead of FileMaker devRecords layout. Update field mappings: financial_id (not __ID), customer_name (joined, not relationship), date (YYYY-MM-DD not MM/DD/YYYY), inv_id (not f_billed). Remove FileMaker-specific transformations. Add validation for required fields.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001"
@@ -47,7 +49,12 @@
       "files": [
         "src/services/billableHoursService.js"
       ],
-      "notes": "processFinancialData() is used by multiple components - must maintain output format"
+      "notes": "✅ COMPLETED: Updated processFinancialData() to handle Supabase customer_sales schema. Updated field mappings to use financial_id, customer_name (from joined data), inv_id for billed status. Added required field validation with warnings for missing data. Updated formatFinancialRecordForFileMaker() to output Supabase format (deprecated but maintained for backward compatibility). Updated validateFinancialRecordData() to remove projectId requirement and add date format validation. Build verified successful.",
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "executionError": null,
+      "implementation_notes": "Migrated billableHoursService from FileMaker to Supabase by updating processFinancialData() to handle normalized customer_sales data with field mappings (financial_id, customer_name, inv_id, date in MM/DD/YYYY from API normalization). Added required field validation with console warnings for missing financial_id/customer_id/date. Updated formatFinancialRecordForFileMaker() to output Supabase format (marked deprecated). Updated validateFinancialRecordData() to reflect Supabase schema (removed projectId requirement, added date format and hours validation). Maintained backward-compatible output format for UI components. Month/year extraction from MM/DD/YYYY date format. Build verified successful."
     },
     {
       "id": "TSK0003",
