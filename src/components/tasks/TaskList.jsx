@@ -71,7 +71,7 @@ const TaskItem = React.memo(function TaskItem({
                             />
                         </svg>
                     </button>
-                    <h4 className="font-medium">{task.task}</h4>
+                    <h4 className="font-medium">{task.title || task.task}</h4>
                 </div>
                 <div className="flex items-center">
                     {!task.isCompleted && (
@@ -243,9 +243,11 @@ const TaskItem = React.memo(function TaskItem({
 TaskItem.propTypes = {
     task: PropTypes.shape({
         id: PropTypes.string.isRequired,
-        task: PropTypes.string.isRequired,
+        title: PropTypes.string, // New backend field
+        task: PropTypes.string, // Legacy FileMaker field
         notes: PropTypes.string,
-        isCompleted: PropTypes.bool.isRequired
+        isCompleted: PropTypes.bool.isRequired,
+        recordId: PropTypes.string
     }).isRequired,
     darkMode: PropTypes.bool.isRequired,
     onEdit: PropTypes.func.isRequired,
@@ -440,13 +442,20 @@ function TaskList({
             return;
         }
         console.log("new task called ... ",{projectId, staffId, taskName})
-        
+
         try {
+            // Use both new and legacy field names for backward compatibility
+            // The service layer will handle mapping to the correct backend format
             await handleTaskCreate({
-                _projectID: projectId, // Use the correct field name
-                _staffID: user.userID, // Use the correct field name
-                taskName: taskName.trim(),
-                priority: "active"
+                // New backend field names
+                project_id: projectId,
+                staff_id: user.userID,
+                title: taskName.trim(),
+                priority: 3, // "active" maps to priority 3 in new schema
+                // Legacy FileMaker field names (for backward compatibility)
+                _projectID: projectId,
+                _staffID: user.userID,
+                taskName: taskName.trim()
             });
             console.log("setShowNewTaskInput ... ")
             // this should cause a rerender of the tasks. Since task was added to state it should load the new task

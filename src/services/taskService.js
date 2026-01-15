@@ -332,8 +332,10 @@ export function processTaskData(data) {
             return {
                 id: task.id,
                 recordId: task.filemaker_record_id || task.id, // Use UUID as fallback
-                task: task.name || task.task,
-                type: task.type || 'General',
+                // Include both 'task' (legacy) and 'title' (new) for backward compatibility
+                task: task.title || task.name || task.task,
+                title: task.title || task.name || task.task,
+                type: task.task_type || task.type || 'General',
                 isCompleted: task.is_completed || false,
                 createdAt: task.created_at,
                 modifiedAt: task.updated_at,
@@ -359,6 +361,7 @@ export function processTaskData(data) {
             id: task.fieldData.__ID,
             recordId: task.recordId,
             task: task.fieldData.task,
+            title: task.fieldData.task, // Also include title for consistency with new schema
             type: task.fieldData.type,
             isCompleted: task.fieldData.f_completed === "1" || task.fieldData.f_completed === 1,
             createdAt: task.fieldData['~creationTimestamp'],
