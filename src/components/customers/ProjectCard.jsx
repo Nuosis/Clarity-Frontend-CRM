@@ -10,8 +10,9 @@ function ProjectCard({
 }) {
   // Determine project type
   const getProjectType = () => {
-    if (project.f_fixedPrice) return 'Fixed Cost';
-    if (project.f_subscription) return 'Subscription';
+    // Check both backend (is_fixed_price) and frontend (f_fixedPrice) formats
+    if (project.is_fixed_price || project.f_fixedPrice) return 'Fixed Cost';
+    if (project.is_subscription || project.f_subscription) return 'Subscription';
     return 'Billable';
   };
 
@@ -73,7 +74,7 @@ function ProjectCard({
         )}
         
         {/* Show value and payment structure for fixed price projects */}
-        {project.f_fixedPrice && project.value > 0 && (
+        {(project.f_fixedPrice || project.is_fixed_price) && project.value > 0 && (
           <div className="mt-2">
             <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               Fixed Value: ${project.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
@@ -86,9 +87,9 @@ function ProjectCard({
             </p>
           </div>
         )}
-        
+
         {/* Show value and payment structure for subscription projects */}
-        {project.f_subscription && project.value > 0 && (
+        {(project.f_subscription || project.is_subscription) && project.value > 0 && (
           <div className="mt-2">
             <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               Monthly Value: ${project.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
@@ -98,19 +99,19 @@ function ProjectCard({
         
         {/* Show relevant dates based on project type */}
         <div className="mt-2">
-          {project.dateStart && (
+          {(project.dateStart || project.start_date) && (
             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {project.f_fixedPrice ? 'Start Date (50% payment):' :
-               project.f_subscription ? 'Subscription Start:' :
-               'Start Date:'} {new Date(project.dateStart).toLocaleDateString()}
+              {(project.f_fixedPrice || project.is_fixed_price) ? 'Start Date (50% payment):' :
+               (project.f_subscription || project.is_subscription) ? 'Subscription Start:' :
+               'Start Date:'} {new Date(project.dateStart || project.start_date).toLocaleDateString()}
             </p>
           )}
-          
-          {project.dateEnd && (
+
+          {(project.dateEnd || project.target_end_date || project.actual_end_date) && (
             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {project.f_fixedPrice ? 'End Date (50% payment):' :
-               project.f_subscription ? 'Subscription End:' :
-               'End Date:'} {new Date(project.dateEnd).toLocaleDateString()}
+              {(project.f_fixedPrice || project.is_fixed_price) ? 'End Date (50% payment):' :
+               (project.f_subscription || project.is_subscription) ? 'Subscription End:' :
+               'End Date:'} {new Date(project.dateEnd || project.target_end_date || project.actual_end_date).toLocaleDateString()}
             </p>
           )}
         </div>
@@ -124,11 +125,18 @@ ProjectCard.propTypes = {
     projectName: PropTypes.string.isRequired,
     status: PropTypes.string.isRequired,
     estOfTime: PropTypes.string,
+    // Support both backend and frontend field names
     f_fixedPrice: PropTypes.bool,
+    is_fixed_price: PropTypes.bool,
     f_subscription: PropTypes.bool,
+    is_subscription: PropTypes.bool,
     value: PropTypes.number,
+    budget: PropTypes.number,
     dateStart: PropTypes.string,
-    dateEnd: PropTypes.string
+    start_date: PropTypes.string,
+    dateEnd: PropTypes.string,
+    target_end_date: PropTypes.string,
+    actual_end_date: PropTypes.string
   }).isRequired,
   darkMode: PropTypes.bool.isRequired,
   onSelect: PropTypes.func.isRequired,

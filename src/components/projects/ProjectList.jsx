@@ -27,23 +27,20 @@ function ProjectList({
     // Group projects by customer name and status
     const groupedProjects = useMemo(() => {
         const groups = {};
-        
+
         projects.forEach(project => {
-            // Extract customer name from various possible locations in the data structure
+            // Extract customer name from backend structure
             let customerName = 'Unknown Customer';
-            
-            if (project.fieldData && project.fieldData.Customers__Name) {
-                customerName = project.fieldData.Customers__Name;
+
+            // Backend provides customer name through relationship or directly
+            if (project.customer_name) {
+                customerName = project.customer_name;
             } else if (project.Customers__Name) {
                 customerName = project.Customers__Name;
-            } else if (project.fieldData && project.fieldData['Customers::Name']) {
-                customerName = project.fieldData['Customers::Name'];
             } else if (project['Customers::Name']) {
                 customerName = project['Customers::Name'];
             }
-            
-            // Don't log here to avoid infinite loop
-            
+
             // Create customer group if it doesn't exist
             if (!groups[customerName]) {
                 groups[customerName] = {
@@ -52,16 +49,17 @@ function ProjectList({
                     closed: []
                 };
             }
-            
+
             // Add project to appropriate status group
-            const status = project.status || project.fieldData?.status || 'Unknown';
-            if (status.toLowerCase() === 'open') {
+            // Backend statuses are mapped to frontend format by projectService
+            const status = project.status || 'Open';
+            if (status === 'Open') {
                 groups[customerName].open.push(project);
             } else {
                 groups[customerName].closed.push(project);
             }
         });
-        
+
         return groups;
     }, [projects]);
 
@@ -221,18 +219,8 @@ function ProjectList({
                                                                     `}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        console.log('Project clicked:', project);
                                                                         setLoading(true);
-                                                                        
-                                                                        // Ensure project has the correct ID format
-                                                                        const projectWithCorrectId = {
-                                                                            ...project,
-                                                                            __ID: project.__ID || project.id || project.recordId
-                                                                        };
-                                                                        
-                                                                        // Call onProjectSelect with the project data
-                                                                        onProjectSelect(projectWithCorrectId);
-                                                                        console.log('onProjectSelect called with:', projectWithCorrectId);
+                                                                        onProjectSelect(project);
                                                                     }}
                                                                 >
                                                                     <div>
@@ -287,18 +275,8 @@ function ProjectList({
                                                                     `}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        console.log('Closed project clicked:', project);
                                                                         setLoading(true);
-                                                                        
-                                                                        // Ensure project has the correct ID format
-                                                                        const projectWithCorrectId = {
-                                                                            ...project,
-                                                                            __ID: project.__ID || project.id || project.recordId
-                                                                        };
-                                                                        
-                                                                        // Call onProjectSelect with the project data
-                                                                        onProjectSelect(projectWithCorrectId);
-                                                                        console.log('onProjectSelect called for closed project with:', projectWithCorrectId);
+                                                                        onProjectSelect(project);
                                                                     }}
                                                                 >
                                                                     <div>

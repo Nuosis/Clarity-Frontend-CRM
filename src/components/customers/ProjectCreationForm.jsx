@@ -53,24 +53,42 @@ function ProjectCreationForm({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (!validate()) {
       return;
     }
-    
+
     const projectData = {
+      // Core identifiers
       customerId: customer.id,
       customerName: customer.Name,
+
+      // Project name (both formats for compatibility)
       name: projectName,
       projectName: projectName,
+
+      // Customer ID (both formats for compatibility)
       _custID: customer.id,
-      // Set the appropriate fields based on project type
+      customer_id: customer.id,
+
+      // Project type flags
       isFixedPrice: projectType === 'fixed',
       isSubscription: projectType === 'subscription',
+      is_fixed_price: projectType === 'fixed',
+      is_subscription: projectType === 'subscription',
+
+      // Value/budget
       value: (projectType === 'fixed' || projectType === 'subscription') ? parseFloat(value) : 0,
-      dateStart: dateStart || null
+      budget: (projectType === 'fixed' || projectType === 'subscription') ? parseFloat(value) : 0,
+
+      // Start date
+      dateStart: dateStart || null,
+      start_date: dateStart || null,
+
+      // Default status
+      status: 'Open'
     };
-    
+
     onSubmit(projectData);
   };
 
