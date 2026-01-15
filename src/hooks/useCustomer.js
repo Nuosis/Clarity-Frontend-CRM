@@ -22,6 +22,12 @@ import {
 import { useSupabaseCustomer } from './useSupabaseCustomer';
 import { useAppState } from '../context/AppStateContext';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
+import {
+    formatErrorForUI,
+    parseValidationError,
+    CustomerError,
+    CustomerErrorCodes
+} from '../errors/customerErrors';
 
 /**
  * Hook for managing customer state and operations with backend API integration
@@ -30,6 +36,7 @@ import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataServic
 export function useCustomer() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [formattedError, setFormattedError] = useState(null);
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [stats, setStats] = useState(null);
@@ -46,6 +53,21 @@ export function useCustomer() {
     const { updateCustomerInSupabase } = useSupabaseCustomer();
     const { user } = useAppState();
     const searchTimeoutRef = useRef(null);
+
+    /**
+     * Helper function to set error state with formatting
+     * @param {Error} err - Error object
+     */
+    const setErrorWithFormatting = useCallback((err) => {
+        const formatted = formatErrorForUI(err);
+        setError(err);
+        setFormattedError(formatted);
+        console.error('[useCustomer] Error:', {
+            raw: err,
+            formatted,
+            stack: err.stack
+        });
+    }, []);
 
     // Update stats when customers change
     useEffect(() => {
@@ -99,12 +121,11 @@ export function useCustomer() {
             setCustomers(sortedCustomers);
             setPagination(paginationInfo);
         } catch (err) {
-            setError(err.message);
-            console.error('[useCustomer] Error loading customers:', err);
+            setErrorWithFormatting(err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [setErrorWithFormatting]);
 
     /**
      * Selects a customer by ID and loads full details
@@ -134,12 +155,11 @@ export function useCustomer() {
 
             setSelectedCustomer(processedCustomer);
         } catch (err) {
-            setError(err.message);
-            console.error('[useCustomer] Error selecting customer:', err);
+            setErrorWithFormatting(err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [setErrorWithFormatting]);
 
     /**
      * Creates a new customer
@@ -157,7 +177,7 @@ export function useCustomer() {
             const validationFormat = env.type === ENVIRONMENT_TYPES.FILEMAKER ? 'filemaker' : 'backend';
             const validation = validateCustomerData(customerData, validationFormat);
             if (!validation.isValid) {
-                throw new Error(validation.errors.join(', '));
+                throw parseValidationError(validation, env.type === ENVIRONMENT_TYPES.FILEMAKER ? 'createCustomer' : 'updateCustomer');
             }
 
             let formattedData;
@@ -178,13 +198,12 @@ export function useCustomer() {
 
             return result;
         } catch (err) {
-            setError(err.message);
-            console.error('[useCustomer] Error creating customer:', err);
+            setErrorWithFormatting(err);
             throw err;
         } finally {
             setLoading(false);
         }
-    }, [loadCustomers]);
+    }, [loadCustomers, setErrorWithFormatting]);
 
     /**
      * Updates an existing customer
@@ -203,7 +222,7 @@ export function useCustomer() {
             const validationFormat = env.type === ENVIRONMENT_TYPES.FILEMAKER ? 'filemaker' : 'backend';
             const validation = validateCustomerData(customerData, validationFormat);
             if (!validation.isValid) {
-                throw new Error(validation.errors.join(', '));
+                throw parseValidationError(validation, env.type === ENVIRONMENT_TYPES.FILEMAKER ? 'createCustomer' : 'updateCustomer');
             }
 
             let result;
@@ -260,13 +279,12 @@ export function useCustomer() {
 
             return result;
         } catch (err) {
-            setError(err.message);
-            console.error('[useCustomer] Error updating customer:', err);
+            setErrorWithFormatting(err);
             throw err;
         } finally {
             setLoading(false);
         }
-    }, [selectedCustomer, user, updateCustomerInSupabase]);
+    }, [selectedCustomer, user, updateCustomerInSupabase, setErrorWithFormatting]);
 
     /**
      * Toggles customer active status
@@ -305,13 +323,12 @@ export function useCustomer() {
 
             return result;
         } catch (err) {
-            setError(err.message);
-            console.error('[useCustomer] Error toggling customer status:', err);
+            setErrorWithFormatting(err);
             throw err;
         } finally {
             setLoading(false);
         }
-    }, [selectedCustomer]);
+    }, [selectedCustomer, setErrorWithFormatting]);
 
     /**
      * Deletes a customer
@@ -346,13 +363,12 @@ export function useCustomer() {
 
             return result;
         } catch (err) {
-            setError(err.message);
-            console.error('[useCustomer] Error deleting customer:', err);
+            setErrorWithFormatting(err);
             throw err;
         } finally {
             setLoading(false);
         }
-    }, [selectedCustomer]);
+    }, [selectedCustomer, setErrorWithFormatting]);
 
     /**
      * Searches customers by query string with debouncing
@@ -412,14 +428,13 @@ export function useCustomer() {
                 console.log(`[useCustomer] Search returned ${processedResults.length} results`);
                 setSearchResults(processedResults);
             } catch (err) {
-                setError(err.message);
-                console.error('[useCustomer] Error searching customers:', err);
+                setErrorWithFormatting(err);
                 setSearchResults([]);
             } finally {
                 setIsSearching(false);
             }
         }, debounceMs);
-    }, []);
+    }, [setErrorWithFormatting]);
 
     /**
      * Clears search results and query
@@ -446,6 +461,7 @@ export function useCustomer() {
         // State
         loading,
         error,
+        formattedError,
         customers,
         selectedCustomer,
         stats,
@@ -470,7 +486,10 @@ export function useCustomer() {
         clearSearch,
 
         // Utility functions
-        clearError: () => setError(null),
+        clearError: () => {
+            setError(null);
+            setFormattedError(null);
+        },
         clearSelectedCustomer: () => setSelectedCustomer(null),
         setPagination
     };

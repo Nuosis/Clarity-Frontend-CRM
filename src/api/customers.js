@@ -1,5 +1,11 @@
 import { dataService, getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 import { handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
+import {
+    withErrorHandling,
+    checkOrganizationScope,
+    CustomerErrorCodes,
+    CustomerError
+} from '../errors/customerErrors';
 
 /**
  * Normalize customer data based on environment
@@ -42,9 +48,14 @@ function normalizeCustomerData(data, environment) {
  * @returns {Promise<Object>} Customer list with pagination
  */
 export async function fetchCustomers(options = {}) {
-    const env = getEnvironmentContext();
+    return withErrorHandling(async () => {
+        const env = getEnvironmentContext();
 
-    try {
+        // Check organization scope for web app environment
+        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+            checkOrganizationScope(env, 'fetchCustomers');
+        }
+
         if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
             // FileMaker environment - use legacy method (no pagination)
             return handleFileMakerOperation(async () => {
@@ -81,10 +92,7 @@ export async function fetchCustomers(options = {}) {
             const response = await dataService.get('/contacts_api', { params: queryParams });
             return normalizeCustomerData(response.data || response, env.type);
         }
-    } catch (error) {
-        console.error('[Customers API] fetchCustomers error:', error);
-        throw new Error(`Failed to fetch customers: ${error.message}`);
-    }
+    }, 'fetchCustomers', { options });
 }
 
 /**
@@ -93,10 +101,15 @@ export async function fetchCustomers(options = {}) {
  * @returns {Promise<Object>} Customer record
  */
 export async function fetchCustomerById(customerId) {
-    validateParams({ customerId }, ['customerId']);
-    const env = getEnvironmentContext();
+    return withErrorHandling(async () => {
+        validateParams({ customerId }, ['customerId']);
+        const env = getEnvironmentContext();
 
-    try {
+        // Check organization scope for web app environment
+        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+            checkOrganizationScope(env, 'fetchCustomerById');
+        }
+
         if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
             // FileMaker environment
             return handleFileMakerOperation(async () => {
@@ -113,10 +126,7 @@ export async function fetchCustomerById(customerId) {
             const response = await dataService.get(`/contacts_api/${customerId}`);
             return normalizeCustomerData(response.data || response, env.type);
         }
-    } catch (error) {
-        console.error('[Customers API] fetchCustomerById error:', error);
-        throw new Error(`Failed to fetch customer ${customerId}: ${error.message}`);
-    }
+    }, 'fetchCustomerById', { customerId });
 }
 
 /**
@@ -126,10 +136,15 @@ export async function fetchCustomerById(customerId) {
  * @returns {Promise<Object>} Updated customer record
  */
 export async function updateCustomer(customerId, data) {
-    validateParams({ customerId, data }, ['customerId', 'data']);
-    const env = getEnvironmentContext();
+    return withErrorHandling(async () => {
+        validateParams({ customerId, data }, ['customerId', 'data']);
+        const env = getEnvironmentContext();
 
-    try {
+        // Check organization scope for web app environment
+        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+            checkOrganizationScope(env, 'updateCustomer');
+        }
+
         if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
             // FileMaker environment
             return handleFileMakerOperation(async () => {
@@ -147,10 +162,7 @@ export async function updateCustomer(customerId, data) {
             const response = await dataService.patch(`/contacts_api/${customerId}`, data);
             return normalizeCustomerData(response.data || response, env.type);
         }
-    } catch (error) {
-        console.error('[Customers API] updateCustomer error:', error);
-        throw new Error(`Failed to update customer ${customerId}: ${error.message}`);
-    }
+    }, 'updateCustomer', { customerId, dataKeys: Object.keys(data) });
 }
 
 /**
@@ -159,10 +171,15 @@ export async function updateCustomer(customerId, data) {
  * @returns {Promise<Object>} Created customer record
  */
 export async function createCustomer(data) {
-    validateParams({ data }, ['data']);
-    const env = getEnvironmentContext();
+    return withErrorHandling(async () => {
+        validateParams({ data }, ['data']);
+        const env = getEnvironmentContext();
 
-    try {
+        // Check organization scope for web app environment
+        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+            checkOrganizationScope(env, 'createCustomer');
+        }
+
         if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
             // FileMaker environment
             return handleFileMakerOperation(async () => {
@@ -179,10 +196,7 @@ export async function createCustomer(data) {
             const response = await dataService.post('/contacts_api', data);
             return normalizeCustomerData(response.data || response, env.type);
         }
-    } catch (error) {
-        console.error('[Customers API] createCustomer error:', error);
-        throw new Error(`Failed to create customer: ${error.message}`);
-    }
+    }, 'createCustomer', { dataKeys: Object.keys(data) });
 }
 
 /**
@@ -192,10 +206,15 @@ export async function createCustomer(data) {
  * @returns {Promise<Object>} Updated customer record
  */
 export async function toggleCustomerStatus(customerId, active) {
-    validateParams({ customerId }, ['customerId']);
-    const env = getEnvironmentContext();
+    return withErrorHandling(async () => {
+        validateParams({ customerId }, ['customerId']);
+        const env = getEnvironmentContext();
 
-    try {
+        // Check organization scope for web app environment
+        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+            checkOrganizationScope(env, 'toggleCustomerStatus');
+        }
+
         if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
             // FileMaker environment
             return handleFileMakerOperation(async () => {
@@ -217,10 +236,7 @@ export async function toggleCustomerStatus(customerId, active) {
             });
             return normalizeCustomerData(response.data || response, env.type);
         }
-    } catch (error) {
-        console.error('[Customers API] toggleCustomerStatus error:', error);
-        throw new Error(`Failed to toggle customer status for ${customerId}: ${error.message}`);
-    }
+    }, 'toggleCustomerStatus', { customerId, active });
 }
 
 /**
@@ -228,9 +244,14 @@ export async function toggleCustomerStatus(customerId, active) {
  * @returns {Promise<Array>} Array of active customer records
  */
 export async function fetchActiveCustomers() {
-    const env = getEnvironmentContext();
+    return withErrorHandling(async () => {
+        const env = getEnvironmentContext();
 
-    try {
+        // Check organization scope for web app environment
+        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+            checkOrganizationScope(env, 'fetchActiveCustomers');
+        }
+
         if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
             // FileMaker environment
             return handleFileMakerOperation(async () => {
@@ -247,10 +268,7 @@ export async function fetchActiveCustomers() {
             const response = await dataService.get('/contacts_api', { f_active: "1" });
             return normalizeCustomerData(response.data || response, env.type);
         }
-    } catch (error) {
-        console.error('[Customers API] fetchActiveCustomers error:', error);
-        throw new Error(`Failed to fetch active customers: ${error.message}`);
-    }
+    }, 'fetchActiveCustomers');
 }
 
 /**
@@ -259,10 +277,15 @@ export async function fetchActiveCustomers() {
  * @returns {Promise<Object>} Result of the delete operation
  */
 export async function deleteCustomer(customerId) {
-    validateParams({ customerId }, ['customerId']);
-    const env = getEnvironmentContext();
+    return withErrorHandling(async () => {
+        validateParams({ customerId }, ['customerId']);
+        const env = getEnvironmentContext();
 
-    try {
+        // Check organization scope for web app environment
+        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+            checkOrganizationScope(env, 'deleteCustomer');
+        }
+
         if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
             // FileMaker environment
             return handleFileMakerOperation(async () => {
@@ -279,10 +302,7 @@ export async function deleteCustomer(customerId) {
             const response = await dataService.delete(`/contacts_api/${customerId}`);
             return response.data || response;
         }
-    } catch (error) {
-        console.error('[Customers API] deleteCustomer error:', error);
-        throw new Error(`Failed to delete customer ${customerId}: ${error.message}`);
-    }
+    }, 'deleteCustomer', { customerId });
 }
 
 /**
@@ -293,15 +313,24 @@ export async function deleteCustomer(customerId) {
  * @returns {Promise<Array>} Array of matching customer records
  */
 export async function searchCustomers(query, options = {}) {
-    validateParams({ query }, ['query']);
-    const env = getEnvironmentContext();
+    return withErrorHandling(async () => {
+        validateParams({ query }, ['query']);
+        const env = getEnvironmentContext();
 
-    // Validate query length
-    if (!query || query.trim().length < 1) {
-        throw new Error('Search query must be at least 1 character');
-    }
+        // Validate query length
+        if (!query || query.trim().length < 1) {
+            throw new CustomerError(
+                'Search query must be at least 1 character',
+                CustomerErrorCodes.VALIDATION_ERROR,
+                { query, minLength: 1 }
+            );
+        }
 
-    try {
+        // Check organization scope for web app environment
+        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+            checkOrganizationScope(env, 'searchCustomers');
+        }
+
         if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
             // FileMaker environment - fetch all and filter client-side
             const allCustomers = await fetchCustomers();
@@ -338,8 +367,5 @@ export async function searchCustomers(query, options = {}) {
             const response = await dataService.get('/api/customers/search', { params: queryParams });
             return normalizeCustomerData(response.data || response, env.type);
         }
-    } catch (error) {
-        console.error('[Customers API] searchCustomers error:', error);
-        throw new Error(`Failed to search customers: ${error.message}`);
-    }
+    }, 'searchCustomers', { query, options });
 }
