@@ -25,7 +25,10 @@
     "validate:teams:verbose": "node ./scripts/validate-teams-migration.js --verbose",
     "test:teams:integration": "node ./scripts/test-teams-integration.js",
     "test:teams:integration:verbose": "node ./scripts/test-teams-integration.js --verbose",
-    "test:teams:integration:report": "node ./scripts/test-teams-integration.js --report"
+    "test:teams:integration:report": "node ./scripts/test-teams-integration.js --report",
+    "test:task-lifecycle": "node ./scripts/test-task-lifecycle-integration.js",
+    "test:task-lifecycle:verbose": "node ./scripts/test-task-lifecycle-integration.js --verbose",
+    "test:task-lifecycle:report": "node ./scripts/test-task-lifecycle-integration.js --report"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
