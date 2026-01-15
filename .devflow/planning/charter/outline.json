@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "outline": {
+    "id": "051e2791-e7f3-4b16-86ad-44e588697701",
+    "section": "charter",
+    "nodes": [
+      {
+        "id": "a4a1e54c-27c7-47f7-85fd-c7c4dd4b8fb1",
+        "question": "What is the primary product vision/purpose we should anchor decisions to for this codebase?",
+        "recommendedAnswer": "A unified CRM/business-operations workspace for small-to-medium professional service businesses that combines customer + prospect management, project/task tracking with timers, proposal generation/approval, financial reporting and QuickBooks invoicing, and marketing campaigns—while supporting both legacy FileMaker WebViewer and a standalone web app.",
+        "category": "Vision",
+        "order": 0,
+        "confidence": 0.9,
+        "derivedFromCode": true,
+        "status": "approved",
+        "userAnswer": null
+      },
+      {
+        "id": "7db29b39-f06d-4b4d-9b0c-03c4b2e4fd7b",
+        "question": "Which user roles are in scope today, and what are their key jobs-to-be-done?",
+        "recommendedAnswer": "Roles appear to be: Admin (full access/config, financial oversight), Manager (project/team oversight, customer/proposal workflows, financial visibility), Team Member/Staff (tasks + time tracking + limited project/customer context), and External Client (token-based proposal review/approval and limited visibility).",
+        "category": "Stakeholders",
+        "order": 1,
+        "confidence": 0.85,
+        "derivedFromCode": true,
+        "status": "approved",
+        "userAnswer": null
+      },
+      {
+        "id": "4f6c62fb-9308-4c2e-8e79-8a71dbe54f55",
+        "question": "What are the top end-to-end workflows that must remain stable (MVP/critical path)?",
+        "recommendedAnswer": "Critical paths implemented across components/services: (1) Auth + organization context load (Supabase web; FileMaker auto-detect), (2) Customer/prospect CRUD and conversion, (3) Project CRUD + objectives/resources (links/images) + team assignments, (4) Task CRUD + timer lifecycle (start/stop/pause, 6-minute adjustments) with sales/financial record generation rules, (5) Proposal creation → client share link/token → review/approval, (6) Financial activity views + sync/invoice flows with QuickBooks, (7) Marketing campaigns via Mailjet (eligible emails, send).",
+        "category": "Scope",
+        "order": 2,
+        "confidence": 0.8,
+        "derivedFromCode": true,
+        "status": "approved",
+        "userAnswer": null
+      },
+      {
+        "id": "22aa7b58-bd10-4bd8-8342-e4c2d876a0a8",
+        "question": "What constitutes success for this project in measurable terms over the next release?",
+        "recommendedAnswer": "Likely success measures implied by the code: reliable cross-system data integrity (FileMaker↔Supabase dual-write where applicable), successful QuickBooks sync/invoice generation without manual rework, reduced time-to-create proposals and convert to projects, and operational reporting accuracy (billable hours, project/customer totals). Concrete KPIs to confirm: % successful sync jobs, invoice creation success rate, proposal approval conversion rate, and task timer accuracy (no lost time/records).",
+        "category": "Success Criteria",
+        "order": 3,
+        "confidence": 0.65,
+        "derivedFromCode": true,
+        "status": "current",
+        "userAnswer": null
+      },
+      {
+        "id": "b1f96fb6-7e0f-4d6e-9d7d-5d61d8b76ec9",
+        "question": "What are the hard technical constraints we must not break (platforms, deployment, security)?",
+        "recommendedAnswer": "Must continue to run in two environments: FileMaker WebViewer (fm-gofer bridge + FileMaker Data API patterns) and standalone web app (Vite SPA). Auth includes Supabase (email/password) and backend API calls protected via HMAC signature (VITE_SECRET_KEY) plus organization scoping headers (e.g., X-Organization-ID for QuickBooks). Supabase RLS/multi-tenant organization_id is a core constraint. Build/deploy includes Vite + optional deploy-to-fm upload script, and Supabase edge functions exist for filemaker/quickbooks APIs.",
+        "category": "Constraints",
+        "order": 4,
+        "confidence": 0.85,
+        "derivedFromCode": true,
+        "status": "approved",
+        "userAnswer": null
+      },
+      {
+        "id": "b23b3b8a-9b79-4f98-92c3-5a2c88d05a86",
+        "question": "What is the current architecture pattern we should follow when adding/changing features (state management, services, API boundaries)?",
+        "recommendedAnswer": "Domain-driven UI components under src/components/*, with an API layer under src/api/* and business logic under src/services/*. State is mixed: Redux Toolkit is used (notably proposals/proposalViewer slices), while other domains rely heavily on custom hooks + Context (AppState/Project/Team/Marketing/SnackBar). The intended direction (per internal docs) is “Redux-first” with createAsyncThunk for async work; confirm whether we are migrating hooks→Redux now or keeping hybrid for near-term changes.",
+        "category": "Architecture",
+        "order": 5,
+        "confidence": 0.75,
+        "derivedFromCode": true,
+        "status": "pending",
+        "userAnswer": null
+      },
+      {
+        "id": "b70fe8e3-8b3a-4f07-8b4c-6f490fb2a3fd",
+        "question": "Which data sources are authoritative for each domain, and where is dual-write/sync required vs optional?",
+        "recommendedAnswer": "App uses multiple sources: FileMaker is legacy/primary for customers/projects/tasks/time records in some flows; Supabase is primary for teams/staff/team_members, proposals (basic/extended), products/sales, prospects/marketing; QuickBooks is authoritative for invoicing/customer mapping (qbo_customer_id). Dual-write/sync appears required for customers/projects/tasks during migration period; teams already migrated to Supabase and has migration/validation scripts.",
+        "category": "Data & Integrations",
+        "order": 6,
+        "confidence": 0.7,
+        "derivedFromCode": true,
+        "status": "pending",
+        "userAnswer": null
+      },
+      {
+        "id": "c57dcf7a-7d88-4c18-b2c0-734fc0bb9a50",
+        "question": "What integrations are “must-have” for the majority of users (and therefore should be prioritized/kept robust)?",
+        "recommendedAnswer": "Must-haves that likely pass the “>100” prioritization threshold given the app’s focus: Supabase (auth + primary DB), core backend API (for domain APIs and cross-system operations), and—if this is for service businesses doing invoicing—QuickBooks integration. FileMaker integration is must-have only for users still on legacy workflows; confirm % of active users in FileMaker mode to decide priority. Mailjet marketing is likely secondary unless most customers run email campaigns from within the CRM.",
+        "category": "Prioritization",
+        "order": 7,
+        "confidence": 0.6,
+        "derivedFromCode": true,
+        "status": "pending",
+        "userAnswer": null
+      },
+      {
+        "id": "86c2df04-3d44-4690-97ff-0d89a3190d1f",
+        "question": "What known risks/technical debt should we plan around in the charter (things most likely to derail delivery)?",
+        "recommendedAnswer": "Key risks evident in docs/code: (1) multi-system consistency (FileMaker↔Supabase dual-write, id reconciliation), (2) hybrid state management with custom-hook ‘sources of truth’ vs Redux (hard to maintain/bug-prone), (3) QuickBooks integration complexity (auth, org scoping, invoice rules), (4) migration items like Teams backend deployment + data migration/validation scripts. Mitigations: define an authoritative source per domain, invest in integration tests (scripts already exist), and reduce state-management divergence in touched areas.",
+        "category": "Risks",
+        "order": 8,
+        "confidence": 0.8,
+        "derivedFromCode": true,
+        "status": "approved",
+        "userAnswer": null
+      }
+    ],
+    "isReady": false,
+    "createdAt": "2026-01-15T17:19:48.702Z",
+    "updatedAt": "2026-01-15T17:19:48.703Z"
+  },
+  "savedAt": "2026-01-15T17:19:48.703Z"
+}

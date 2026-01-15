@@ -21,6 +21,12 @@ function ProjectDetails({
   onDelete = () => {},
   onTeamChange = () => Promise.resolve(), // Ensure it returns a Promise
   onObjectiveCreate = () => {},
+  onObjectiveUpdate = () => {},
+  onObjectiveDelete = () => {},
+  onStepCreate = () => {},
+  onStepUpdate = () => {},
+  onStepDelete = () => {},
+  onStepToggle = () => {},
   project
 }) {
   const { darkMode } = useTheme();
@@ -360,6 +366,12 @@ function ProjectDetails({
             project={project}
             darkMode={darkMode}
             onCreateObjective={onObjectiveCreate}
+            onUpdateObjective={onObjectiveUpdate}
+            onDeleteObjective={onObjectiveDelete}
+            onCreateStep={onStepCreate}
+            onUpdateStep={onStepUpdate}
+            onDeleteStep={onStepDelete}
+            onToggleStep={onStepToggle}
           />
         )}
 
@@ -416,6 +428,13 @@ ProjectDetails.propTypes = {
   onTaskStatusChange: PropTypes.func,
   onDelete: PropTypes.func,
   onTeamChange: PropTypes.func,
+  onObjectiveCreate: PropTypes.func,
+  onObjectiveUpdate: PropTypes.func,
+  onObjectiveDelete: PropTypes.func,
+  onStepCreate: PropTypes.func,
+  onStepUpdate: PropTypes.func,
+  onStepDelete: PropTypes.func,
+  onStepToggle: PropTypes.func,
   project: PropTypes.shape({
     id: PropTypes.string.isRequired, // UUID (backend) or FileMaker __ID
     recordId: PropTypes.string, // Optional: FileMaker recordId for backward compatibility

@@ -665,6 +665,132 @@ export async function fetchProjectRelatedData(projectId, layout) {
 }
 
 /**
+ * Create a new objective step (environment-aware)
+ * POST /steps
+ * @param {Object} data - The step data (must include objective_id)
+ * @returns {Promise<Object>} Created step record
+ */
+export async function createStep(data) {
+    validateParams({ data }, ['data']);
+    const env = getEnvironmentContext();
+    checkOrganizationScope(env, 'createStep');
+
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return handleFileMakerOperation(async () => {
+            const params = {
+                layout: Layouts.PROJECT_OBJ_STEPS,
+                action: Actions.CREATE,
+                fieldData: data
+            };
+            return await dataService.request(params);
+        });
+    } else {
+        const response = await dataService.post('/steps', data);
+        return response.data || response;
+    }
+}
+
+/**
+ * Update an objective step (environment-aware)
+ * PATCH /steps/{step_id}
+ * @param {string} stepId - The step ID
+ * @param {Object} data - The data to update
+ * @returns {Promise<Object>} Updated step record
+ */
+export async function updateStep(stepId, data) {
+    validateParams({ stepId, data }, ['stepId', 'data']);
+    const env = getEnvironmentContext();
+    checkOrganizationScope(env, 'updateStep');
+
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return handleFileMakerOperation(async () => {
+            const params = {
+                layout: Layouts.PROJECT_OBJ_STEPS,
+                action: Actions.UPDATE,
+                recordId: stepId,
+                fieldData: data
+            };
+            return await dataService.request(params);
+        });
+    } else {
+        const response = await dataService.patch(`/steps/${stepId}`, data);
+        return response.data || response;
+    }
+}
+
+/**
+ * Delete an objective step (environment-aware)
+ * DELETE /steps/{step_id}
+ * @param {string} stepId - The step ID
+ * @returns {Promise<Object>} Result of the delete operation
+ */
+export async function deleteStep(stepId) {
+    validateParams({ stepId }, ['stepId']);
+    const env = getEnvironmentContext();
+    checkOrganizationScope(env, 'deleteStep');
+
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return handleFileMakerOperation(async () => {
+            const params = {
+                layout: Layouts.PROJECT_OBJ_STEPS,
+                action: Actions.DELETE,
+                recordId: stepId
+            };
+            return await dataService.request(params);
+        });
+    } else {
+        const response = await dataService.delete(`/steps/${stepId}`);
+        return response.data || response;
+    }
+}
+
+/**
+ * Toggle step completion status (environment-aware)
+ * PATCH /steps/{step_id}/completed
+ * @param {string} stepId - The step ID
+ * @returns {Promise<Object>} Updated step record
+ */
+export async function toggleStepCompleted(stepId) {
+    validateParams({ stepId }, ['stepId']);
+    const env = getEnvironmentContext();
+    checkOrganizationScope(env, 'toggleStepCompleted');
+
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return handleFileMakerOperation(async () => {
+            // FileMaker would need to fetch current state and toggle
+            throw new Error('Use updateStep with completed field for FileMaker');
+        });
+    } else {
+        const response = await dataService.patch(`/steps/${stepId}/completed`);
+        return response.data || response;
+    }
+}
+
+/**
+ * Reorder objective steps (environment-aware)
+ * POST /steps/objectives/{objective_id}/reorder
+ * @param {string} objectiveId - The objective ID
+ * @param {Array<string>} stepIds - Ordered array of step IDs
+ * @returns {Promise<Array>} Updated array of steps
+ */
+export async function reorderSteps(objectiveId, stepIds) {
+    validateParams({ objectiveId, stepIds }, ['objectiveId', 'stepIds']);
+    const env = getEnvironmentContext();
+    checkOrganizationScope(env, 'reorderSteps');
+
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        // FileMaker doesn't support reordering - would need manual update loop
+        throw new Error('Step reordering not supported in FileMaker environment');
+    } else {
+        const response = await dataService.post(
+            `/steps/objectives/${objectiveId}/reorder`,
+            stepIds
+        );
+        return response.data || response;
+    }
+}
+
+/**
  * Legacy method: Fetches all related data for a project (FileMaker compatibility)
  * Use fetchProjectWithDetails() for new code
  * @param {string} projectId - The project ID

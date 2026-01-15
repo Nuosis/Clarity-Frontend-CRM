@@ -36,7 +36,17 @@ const MainContent = React.memo(function MainContent({
     loading = false,
     handlers
 }) {
-    const { handleProjectSelect, handleProjectTeamChange, handleObjectiveCreate } = useProject();
+    const {
+        handleProjectSelect,
+        handleProjectTeamChange,
+        handleObjectiveCreate,
+        handleObjectiveUpdate,
+        handleObjectiveDelete,
+        handleStepCreate,
+        handleStepUpdate,
+        handleStepDelete,
+        handleStepToggle
+    } = useProject();
     const {
         handleAssignStaffToTeam,
         handleRemoveStaffFromTeam,
@@ -229,6 +239,12 @@ const MainContent = React.memo(function MainContent({
                     onDelete={handlers.handleProjectDelete}
                     onTeamChange={handleProjectTeamChange}
                     onObjectiveCreate={handleObjectiveCreate}
+                    onObjectiveUpdate={handleObjectiveUpdate}
+                    onObjectiveDelete={handleObjectiveDelete}
+                    onStepCreate={handleStepCreate}
+                    onStepUpdate={handleStepUpdate}
+                    onStepDelete={handleStepDelete}
+                    onStepToggle={handleStepToggle}
                     project={selectedProject}
                 />
             </ErrorBoundary>

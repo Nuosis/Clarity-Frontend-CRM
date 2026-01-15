@@ -12,7 +12,11 @@ import {
     fetchProjectWithDetails,
     createObjective,
     updateObjective,
-    deleteObjective
+    deleteObjective,
+    createStep,
+    updateStep,
+    deleteStep,
+    toggleStepCompleted
 } from '../api';
 import { useProjectRecords } from '../context/ProjectContext';
 import { useSnackBar } from '../context/SnackBarContext';
@@ -742,6 +746,227 @@ export function useProject(customerId = null) {
         }
     }, [selectedProject]);
 
+    /**
+     * Creates a new step for an objective
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     */
+    const handleStepCreate = useCallback(async (objectiveId, stepText) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const env = getEnvironmentContext();
+
+            // Prepare step data based on environment
+            const stepData = env.type === ENVIRONMENT_TYPES.WEBAPP
+                ? {
+                    objective_id: objectiveId,
+                    step: stepText,
+                    completed: false,
+                    order_num: 0
+                }
+                : {
+                    _objectiveID: objectiveId,
+                    projectObjectiveStep: stepText,
+                    f_completed: 0,
+                    sortOrder: 0
+                };
+
+            // Create the step via environment-aware API
+            const result = await createStep(stepData);
+
+            // Reload project details to get the updated objectives with steps
+            if (selectedProject) {
+                await loadProjectDetails(selectedProject.id);
+            }
+
+            return result;
+        } catch (err) {
+            setError(err.message);
+            console.error('Error creating step:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedProject, loadProjectDetails]);
+
+    /**
+     * Updates an existing step
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     */
+    const handleStepUpdate = useCallback(async (stepId, updateData) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const env = getEnvironmentContext();
+
+            // Format data based on environment
+            const formattedData = env.type === ENVIRONMENT_TYPES.WEBAPP
+                ? {
+                    step: updateData.step || updateData.projectObjectiveStep,
+                    completed: updateData.completed !== undefined
+                        ? updateData.completed
+                        : (updateData.f_completed === 1 || updateData.f_completed === "1"),
+                    order_num: updateData.order_num !== undefined
+                        ? updateData.order_num
+                        : updateData.sortOrder
+                }
+                : {
+                    projectObjectiveStep: updateData.projectObjectiveStep || updateData.step,
+                    f_completed: updateData.f_completed !== undefined
+                        ? updateData.f_completed
+                        : (updateData.completed ? 1 : 0),
+                    sortOrder: updateData.sortOrder !== undefined
+                        ? updateData.sortOrder
+                        : updateData.order_num
+                };
+
+            // Update via environment-aware API
+            const result = await updateStep(stepId, formattedData);
+
+            // Update local state
+            if (selectedProject) {
+                const updatedObjectives = selectedProject.objectives.map(obj => ({
+                    ...obj,
+                    steps: obj.steps.map(step =>
+                        step.id === stepId
+                            ? { ...step, ...formattedData }
+                            : step
+                    )
+                }));
+
+                setSelectedProject(prev => ({
+                    ...prev,
+                    objectives: updatedObjectives
+                }));
+
+                setProjects(prevProjects =>
+                    prevProjects.map(p =>
+                        p.id === selectedProject.id
+                            ? { ...p, objectives: updatedObjectives }
+                            : p
+                    )
+                );
+            }
+
+            return result;
+        } catch (err) {
+            setError(err.message);
+            console.error('Error updating step:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedProject]);
+
+    /**
+     * Deletes a step
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     */
+    const handleStepDelete = useCallback(async (stepId) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Delete via environment-aware API
+            const result = await deleteStep(stepId);
+
+            // Update local state
+            if (selectedProject) {
+                const updatedObjectives = selectedProject.objectives.map(obj => ({
+                    ...obj,
+                    steps: obj.steps.filter(step => step.id !== stepId)
+                }));
+
+                setSelectedProject(prev => ({
+                    ...prev,
+                    objectives: updatedObjectives
+                }));
+
+                setProjects(prevProjects =>
+                    prevProjects.map(p =>
+                        p.id === selectedProject.id
+                            ? { ...p, objectives: updatedObjectives }
+                            : p
+                    )
+                );
+            }
+
+            return result;
+        } catch (err) {
+            setError(err.message);
+            console.error('Error deleting step:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedProject]);
+
+    /**
+     * Toggles step completion status
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     */
+    const handleStepToggle = useCallback(async (stepId) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const env = getEnvironmentContext();
+
+            if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
+                // Use dedicated toggle endpoint
+                const result = await toggleStepCompleted(stepId);
+
+                // Update local state with result
+                if (selectedProject && result) {
+                    const updatedObjectives = selectedProject.objectives.map(obj => ({
+                        ...obj,
+                        steps: obj.steps.map(step =>
+                            step.id === stepId
+                                ? { ...step, completed: result.completed }
+                                : step
+                        )
+                    }));
+
+                    setSelectedProject(prev => ({
+                        ...prev,
+                        objectives: updatedObjectives
+                    }));
+
+                    setProjects(prevProjects =>
+                        prevProjects.map(p =>
+                            p.id === selectedProject.id
+                                ? { ...p, objectives: updatedObjectives }
+                                : p
+                        )
+                    );
+                }
+
+                return result;
+            } else {
+                // FileMaker: Find step, toggle, and update
+                const objective = selectedProject?.objectives.find(obj =>
+                    obj.steps.some(s => s.id === stepId)
+                );
+                const step = objective?.steps.find(s => s.id === stepId);
+
+                if (!step) {
+                    throw new Error('Step not found');
+                }
+
+                const newCompleted = step.f_completed === 1 ? 0 : 1;
+                return await handleStepUpdate(stepId, { f_completed: newCompleted });
+            }
+        } catch (err) {
+            setError(err.message);
+            console.error('Error toggling step:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedProject, handleStepUpdate]);
+
     return {
         // State
         loading,
@@ -765,6 +990,10 @@ export function useProject(customerId = null) {
         handleObjectiveCreate,
         handleObjectiveUpdate,
         handleObjectiveDelete,
+        handleStepCreate,
+        handleStepUpdate,
+        handleStepDelete,
+        handleStepToggle,
 
         // Utilities
         getProjectCompletion,

@@ -59,6 +59,12 @@ export {
     deleteObjective,
     reorderObjectives,
     toggleObjectiveCompleted,
+    // Steps
+    createStep,
+    updateStep,
+    deleteStep,
+    toggleStepCompleted,
+    reorderSteps,
     // Images
     fetchProjectImages,
     createProjectImage,
