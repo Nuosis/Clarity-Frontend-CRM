@@ -12,8 +12,9 @@ import {
     resumeTimer as resumeTimerAPI,
     getActiveTimer as getActiveTimerAPI
 } from '../api/tasks';
-import { fetchFinancialRecordByRecordId } from '../api/financialRecords';
+import { fetchFinancialRecordByRecordId, createFinancialRecord } from '../api/financialRecords';
 import { createSaleFromFinancialRecord } from './salesService';
+import { getSupabaseClient } from './supabaseService';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -104,8 +105,133 @@ export async function startTimer(task, staffId = null) {
 }
 
 /**
+ * Helper function to format product name for financial records
+ * Format: CUSTOMERCAPS:ProjectFirstWord
+ * @param {string} customerName - Customer business name
+ * @param {string} projectName - Project name
+ * @returns {string} Formatted product name
+ */
+function formatProductName(customerName, projectName) {
+    // Extract only capital letters and numbers from customer name
+    const customerCaps = customerName.replace(/[^A-Z0-9]/g, '').trim() || 'CUSTOMER';
+
+    // Get first word from project name
+    const projectFirstWord = projectName.split(/\s+/)[0] || 'Project';
+
+    return `${customerCaps}:${projectFirstWord}`;
+}
+
+/**
+ * Helper function to create financial record from time entry data
+ * Uses Supabase create_financial_record RPC
+ * @param {Object} timeEntry - Time entry data from backend
+ * @param {string} organizationId - Organization ID
+ * @returns {Promise<string>} Financial record ID
+ * @throws {Error} If required data is missing or creation fails
+ */
+async function createFinancialRecordFromTimeEntry(timeEntry, organizationId) {
+    console.log('[Task Service] Creating financial record from time entry:', timeEntry.id);
+
+    // Validate time entry has required data
+    if (!timeEntry.customer_id) {
+        throw new Error('Time entry missing customer_id - cannot create financial record');
+    }
+
+    if (!timeEntry.is_billable) {
+        console.log('[Task Service] ⚠ Time entry is not billable - skipping financial record creation');
+        return null;
+    }
+
+    if (!timeEntry.duration_minutes || timeEntry.duration_minutes <= 0) {
+        console.log('[Task Service] ⚠ Time entry has no duration - skipping financial record creation');
+        return null;
+    }
+
+    // Calculate billable hours (convert minutes to hours with 2 decimal places)
+    const billableHours = Math.round((timeEntry.duration_minutes / 60) * 100) / 100;
+
+    // Get unit price (hourly rate)
+    const unitPrice = timeEntry.hourly_rate || 0;
+
+    if (unitPrice <= 0) {
+        console.warn('[Task Service] ⚠ Hourly rate is 0 or negative - financial record will have $0 amount');
+    }
+
+    // Need to fetch customer and project names for product_name format
+    // Fetch from Supabase
+    const supabase = getSupabaseClient();
+
+    try {
+        // Fetch customer name
+        const { data: customer, error: customerError } = await supabase
+            .from('customers')
+            .select('business_name')
+            .eq('id', timeEntry.customer_id)
+            .single();
+
+        if (customerError || !customer) {
+            console.error('[Task Service] ✗ Failed to fetch customer:', customerError);
+            throw new Error(`Customer not found: ${timeEntry.customer_id}`);
+        }
+
+        // Fetch project name if available
+        let projectName = 'Project';
+        if (timeEntry.project_id) {
+            const { data: project, error: projectError } = await supabase
+                .from('projects')
+                .select('name, projectName')
+                .eq('id', timeEntry.project_id)
+                .single();
+
+            if (!projectError && project) {
+                projectName = project.name || project.projectName || 'Project';
+            } else {
+                console.warn('[Task Service] ⚠ Failed to fetch project name, using default');
+            }
+        }
+
+        // Format product name
+        const productName = formatProductName(customer.business_name, projectName);
+
+        // Generate financial ID
+        const financialId = uuidv4();
+
+        // Get current date in YYYY-MM-DD format
+        const date = new Date().toISOString().split('T')[0];
+
+        console.log('[Task Service] Creating financial record with params:', {
+            financialId,
+            customerId: timeEntry.customer_id,
+            productName,
+            quantity: billableHours,
+            unitPrice,
+            date
+        });
+
+        // Create financial record using Supabase RPC
+        const recordId = await createFinancialRecord({
+            financialId,
+            customerId: timeEntry.customer_id,
+            productName,
+            quantity: billableHours,
+            unitPrice,
+            date,
+            productId: null
+        });
+
+        console.log('[Task Service] ✓ Financial record created successfully, ID:', recordId);
+
+        return recordId;
+
+    } catch (error) {
+        console.error('[Task Service] ✗ Failed to create financial record:', error);
+        throw error;
+    }
+}
+
+/**
  * Stops a timer with validation and adjustments
- * Backend handles financial record creation atomically
+ * Creates financial record using Supabase create_financial_record RPC
  * Fixed-price projects are detected automatically and no financial record is created
  *
  * @param {Object} params - Timer stop parameters
@@ -114,7 +240,7 @@ export async function startTimer(task, staffId = null) {
  * @param {boolean} [params.saveImmediately=false] - Save without description
  * @param {number} [params.totalPauseTime=0] - Total pause duration in seconds
  * @param {number} [params.adjustment=0] - Manual adjustment in seconds
- * @param {string} organizationId - Organization ID for legacy sales record sync
+ * @param {string} organizationId - Organization ID for financial record creation
  * @returns {Promise<Object>} Updated timer record with financial record if created
  * @throws {Error} If timer record is invalid or stop operation fails
  */
@@ -137,6 +263,12 @@ export async function stopTimer(params, organizationId = null) {
     console.log('[Task Service] Adjustment:', params.adjustment || 0, 'seconds');
     console.log('[Task Service] Total adjustment:', (params.totalPauseTime || 0) + (params.adjustment || 0), 'seconds');
 
+    // Get organization ID
+    const orgId = organizationId || (window.state?.user?.supabaseOrgID);
+    if (!orgId) {
+        console.warn('[Task Service] ⚠ No organization ID found - financial record creation may fail');
+    }
+
     let retryCount = 0;
     const maxRetries = 2;
     let lastError = null;
@@ -144,7 +276,7 @@ export async function stopTimer(params, organizationId = null) {
     // Retry loop for backend API calls
     while (retryCount <= maxRetries) {
         try {
-            // Stop the timer - backend handles financial record creation atomically
+            // Stop the timer - backend handles time entry update
             const result = await stopTaskTimerAPI(
                 params.recordId,
                 params.description,
@@ -154,7 +286,7 @@ export async function stopTimer(params, organizationId = null) {
 
             console.log('[Task Service] Timer stopped successfully on attempt', retryCount + 1);
 
-            // Backend API returns structured response with time_entry and financial_record
+            // Backend API returns structured response with time_entry and optionally financial_record
             if (result?.time_entry) {
                 console.log('[Task Service] Backend API response received');
                 console.log('[Task Service] Time entry ID:', result.time_entry.id);
@@ -162,16 +294,39 @@ export async function stopTimer(params, organizationId = null) {
                 console.log('[Task Service] Is billable:', result.time_entry.is_billable);
                 console.log('[Task Service] Status:', result.time_entry.status);
 
+                // Check if backend already created a financial record
                 if (result.financial_record) {
-                    console.log('[Task Service] ✓ Financial record created successfully');
+                    console.log('[Task Service] ✓ Financial record already created by backend');
                     console.log('[Task Service] Financial record ID:', result.financial_record.id);
-                    console.log('[Task Service] Amount:', result.financial_record.amount);
-                    console.log('[Task Service] Hours:', result.financial_record.hours);
-                    console.log('[Task Service] Rate:', result.financial_record.rate);
-                    console.log('[Task Service] Is billable:', result.financial_record.is_billable);
+                } else if (result.time_entry.is_billable && orgId) {
+                    // Backend didn't create financial record - create one via RPC
+                    console.log('[Task Service] Creating financial record via RPC...');
+
+                    try {
+                        const financialRecordId = await createFinancialRecordFromTimeEntry(
+                            result.time_entry,
+                            orgId
+                        );
+
+                        if (financialRecordId) {
+                            console.log('[Task Service] ✓ Financial record created via RPC, ID:', financialRecordId);
+                            // Add financial_record to result for consistency
+                            result.financial_record = { id: financialRecordId };
+                        } else {
+                            console.log('[Task Service] ⚠ No financial record created (non-billable or fixed-price)');
+                        }
+                    } catch (financialError) {
+                        console.error('[Task Service] ✗ Failed to create financial record via RPC:', financialError);
+                        // Don't fail the timer stop - financial record creation is non-critical
+                        console.warn('[Task Service] Timer stopped but financial record creation failed');
+                    }
                 } else {
                     console.log('[Task Service] ⚠ No financial record created');
-                    console.log('[Task Service] Reason: Likely fixed-price project or non-billable time entry');
+                    if (!result.time_entry.is_billable) {
+                        console.log('[Task Service] Reason: Non-billable time entry');
+                    } else if (!orgId) {
+                        console.log('[Task Service] Reason: Missing organization ID');
+                    }
                 }
 
                 console.log('[Task Service] ========== STOP TIMER SUCCESS ==========');

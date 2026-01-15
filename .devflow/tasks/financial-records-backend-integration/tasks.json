@@ -98,22 +98,26 @@
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Analyzed financialSyncService and determined it is OBSOLETE because timer entries now go directly to Supabase via create_financial_record RPC (no FileMaker dual-write). Created FINANCIAL_SYNC_SERVICE_DEPRECATION.md with full architecture analysis showing the old sync flow (FileMaker→Sync→Supabase) vs new direct flow (App→Supabase RPC). Added @deprecated JSDoc warnings to financialSyncService.js, useFinancialSync.js, and FinancialSyncPanel.jsx clearly stating FOR NEW CODE use src/api/financialRecords.js directly. Updated CLAUDE.md Key Services section to strike through financialSyncService and note it's deprecated for historical migration only. Service currently used only by scripts/sync-missing-records.js and sync-december.mjs for one-time backfill operations. No breaking changes as sync service is not part of critical financial record operations (create/read/update handled by direct RPC calls)."
+      "implementation_notes": "Analyzed current financial record data flow and determined 'financialSyncService' is obsolete since the timer writes directly to Supabase via the 'create_financial_record' RPC, making dual-write and FileMaker sync unnecessary. Implemented a deprecation pass by adding warnings to 'src/services/financialSyncService.js', 'src/hooks/useFinancialSync.js', and 'src/components/financial/FinancialSyncPanel.jsx', and documented the decision in the newly created 'FINANCIAL_SYNC_SERVICE_DEPRECATION.md' plus an update to 'CLAUDE.md'. Marked TSK0004 complete in '.devflow/tasks/financial-records-backend-integration/tasks.json' and added '.devflow/tasks/financial-records-backend-integration/TSK0004_COMPLETION_SUMMARY.md', with the key decision to avoid breaking changes and leave the service only for historical migration scripts while verifying the build still passes."
     },
     {
       "id": "TSK0005",
       "title": "Update timer record creation to use create_financial_record RPC",
       "description": "Find where timer stop creates financial records (likely in taskService or timer component). Replace FileMaker record creation with Supabase create_financial_record RPC call. Pass p_financial_id (UUID), p_organization_id, p_customer_id, p_product_name, p_quantity (billable hours), p_unit_price (rate), p_date. Ensure proper error handling and validation. Product name should follow format: CUSTOMERCAPS:ProjectFirstWord.",
-      "status": "queued",
+      "status": "completed",
       "priority": "high",
       "dependencies": [
         "TSK0001"
       ],
       "files": [
         "src/services/taskService.js",
-        "src/components/tasks/TaskTimer.jsx"
+        "src/components/tasks/TaskTimer.jsx",
+        "src/api/financialRecords.js"
       ],
-      "notes": "This is critical - ensures new records go directly to Supabase, not FileMaker"
+      "notes": "This is critical - ensures new records go directly to Supabase, not FileMaker",
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Added 'createFinancialRecord' function to 'src/api/financialRecords.js' to call the Supabase 'create_financial_record' RPC with proper validation. Updated 'src/services/taskService.js' to create financial records via RPC when stopping a timer. The implementation includes: (1) Helper function 'formatProductName' to format product names as CUSTOMERCAPS:ProjectFirstWord, (2) Helper function 'createFinancialRecordFromTimeEntry' to create financial records from time entry data, fetching customer and project info from Supabase, (3) Updated 'stopTimer' function to call the RPC if backend doesn't return a financial record, maintaining backward compatibility. The implementation ensures proper error handling (non-critical failures don't break timer stop), validates required data (customer_id, is_billable, duration), calculates billable hours correctly, and uses organization ID from context. Build verified successfully."
     },
     {
       "id": "TSK0006",

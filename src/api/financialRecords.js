@@ -715,3 +715,79 @@ export async function fetchRecordsForDateRange(startDate, endDate) {
         throw error;
     }
 }
+
+/**
+ * Creates a new financial record using Supabase RPC
+ * @param {Object} params - Financial record parameters
+ * @param {string} params.financialId - Unique identifier (UUID v4)
+ * @param {string} params.customerId - Customer foreign key (UUID)
+ * @param {string} params.productName - Product/service name (format: CUSTOMERCAPS:ProjectFirstWord)
+ * @param {number} params.quantity - Billable hours (must be > 0)
+ * @param {number} params.unitPrice - Hourly rate (must be >= 0)
+ * @param {string} params.date - Record date in YYYY-MM-DD format
+ * @param {string} [params.productId=null] - Optional product foreign key (UUID)
+ * @returns {Promise<string>} Promise resolving to the created record's ID (UUID)
+ */
+export async function createFinancialRecord(params) {
+    validateParams(
+        params,
+        ['financialId', 'customerId', 'productName', 'quantity', 'unitPrice', 'date']
+    );
+
+    const supabase = getSupabaseClient();
+    const organizationId = getRequiredOrganizationId();
+
+    // Validation
+    if (!params.productName || params.productName.trim() === '') {
+        throw new Error('Product name is required and cannot be empty');
+    }
+
+    if (params.quantity <= 0) {
+        throw new Error('Quantity must be greater than 0');
+    }
+
+    if (params.unitPrice < 0) {
+        throw new Error('Unit price cannot be negative');
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(params.date)) {
+        throw new Error('Date must be in YYYY-MM-DD format');
+    }
+
+    try {
+        console.log('[FinancialRecords] Creating financial record:', {
+            financial_id: params.financialId,
+            customer_id: params.customerId,
+            product_name: params.productName,
+            quantity: params.quantity,
+            unit_price: params.unitPrice,
+            date: params.date
+        });
+
+        const { data, error } = await supabase.rpc('create_financial_record', {
+            p_financial_id: params.financialId,
+            p_organization_id: organizationId,
+            p_customer_id: params.customerId,
+            p_product_name: params.productName,
+            p_quantity: params.quantity,
+            p_unit_price: params.unitPrice,
+            p_date: params.date,
+            p_product_id: params.productId || null
+        });
+
+        if (error) {
+            console.error('[FinancialRecords] RPC error:', error);
+            throw new Error(`Failed to create financial record: ${error.message}`);
+        }
+
+        console.log('[FinancialRecords] Financial record created successfully, ID:', data);
+
+        return data; // Returns the created record's ID
+
+    } catch (error) {
+        console.error('[FinancialRecords] Error creating financial record:', error);
+        throw error;
+    }
+}
