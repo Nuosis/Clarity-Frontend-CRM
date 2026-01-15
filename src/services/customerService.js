@@ -23,48 +23,285 @@ export function processCustomerData(data) {
 }
 
 /**
+ * Processes backend customer list response with pagination
+ * @param {Object} response - Response from backend API
+ * @returns {Object} Processed response with customers array and pagination info
+ */
+export function processBackendCustomerList(response) {
+    // Handle direct array response (legacy)
+    if (Array.isArray(response)) {
+        return {
+            customers: response.map(customer => transformBackendToFileMaker(customer)),
+            pagination: {
+                total: response.length,
+                limit: response.length,
+                offset: 0,
+                has_more: false
+            }
+        };
+    }
+
+    // Handle envelope format { success, data }
+    const responseData = response.data || response;
+
+    // Handle wrapped format { data: { customers: [], pagination: {} } }
+    if (responseData.customers && Array.isArray(responseData.customers)) {
+        return {
+            customers: responseData.customers.map(customer => transformBackendToFileMaker(customer)),
+            pagination: responseData.pagination || {
+                total: responseData.customers.length,
+                limit: responseData.customers.length,
+                offset: 0,
+                has_more: false
+            }
+        };
+    }
+
+    // Handle direct array in data field
+    if (Array.isArray(responseData)) {
+        return {
+            customers: responseData.map(customer => transformBackendToFileMaker(customer)),
+            pagination: {
+                total: responseData.length,
+                limit: responseData.length,
+                offset: 0,
+                has_more: false
+            }
+        };
+    }
+
+    // Empty result
+    return {
+        customers: [],
+        pagination: {
+            total: 0,
+            limit: 0,
+            offset: 0,
+            has_more: false
+        }
+    };
+}
+
+/**
+ * Processes backend customer detail response
+ * @param {Object} response - Response from backend API
+ * @returns {Object} Processed customer record in FileMaker format
+ */
+export function processBackendCustomerDetail(response) {
+    // Handle envelope format { success, data }
+    const customerData = response.data || response;
+
+    // Validate we have customer data
+    if (!customerData || typeof customerData !== 'object') {
+        throw new Error('Invalid customer data received from backend');
+    }
+
+    // Transform to FileMaker format for consistent handling
+    return transformBackendToFileMaker(customerData);
+}
+
+/**
  * Filters active customers from a list
+ * Handles both FileMaker format (isActive boolean) and backend format (is_active)
  * @param {Array} customers - Array of customer records
  * @returns {Array} Active customer records
  */
 export function filterActiveCustomers(customers) {
-    return customers.filter(customer => customer.isActive);
+    return customers.filter(customer => {
+        // Handle both FileMaker (isActive) and backend (already transformed to isActive)
+        return customer.isActive === true;
+    });
 }
 
 /**
  * Sorts customers by active status and name
+ * Handles both FileMaker format (Name field) and backend format (business_name)
  * @param {Array} customers - Array of customer records
+ * @param {Object} options - Sort options
+ * @param {string} options.field - Field to sort by ('name', 'created', 'modified')
+ * @param {string} options.order - Sort order ('asc' or 'desc')
  * @returns {Array} Sorted customer records
  */
-export function sortCustomers(customers) {
+export function sortCustomers(customers, options = {}) {
+    const { field = 'name', order = 'asc' } = options;
+
     return [...customers].sort((a, b) => {
-        // Sort by active status first
-        if (a.isActive !== b.isActive) {
-            return a.isActive ? -1 : 1;
+        let comparison = 0;
+
+        if (field === 'name') {
+            // Sort by active status first
+            if (a.isActive !== b.isActive) {
+                comparison = a.isActive ? -1 : 1;
+            } else {
+                // Then sort by name (handles both Name and business_name)
+                const nameA = (a.Name || a.business_name || '').toLowerCase();
+                const nameB = (b.Name || b.business_name || '').toLowerCase();
+                comparison = nameA.localeCompare(nameB);
+            }
+        } else if (field === 'created') {
+            const dateA = new Date(a.createdAt || a.created_at);
+            const dateB = new Date(b.createdAt || b.created_at);
+            comparison = dateA - dateB;
+        } else if (field === 'modified') {
+            const dateA = new Date(a.modifiedAt || a.updated_at);
+            const dateB = new Date(b.modifiedAt || b.updated_at);
+            comparison = dateA - dateB;
         }
-        // Then sort by name
-        return a.Name.localeCompare(b.Name);
+
+        return order === 'desc' ? -comparison : comparison;
+    });
+}
+
+/**
+ * Calculates statistics from customer data
+ * Works with both FileMaker and backend formats
+ * @param {Array} customers - Array of customer records
+ * @returns {Object} Statistics object
+ */
+export function calculateCustomerStats(customers) {
+    if (!Array.isArray(customers) || customers.length === 0) {
+        return {
+            total: 0,
+            active: 0,
+            inactive: 0,
+            withEmail: 0,
+            withPhone: 0,
+            withAddress: 0
+        };
+    }
+
+    const stats = {
+        total: customers.length,
+        active: 0,
+        inactive: 0,
+        withEmail: 0,
+        withPhone: 0,
+        withAddress: 0
+    };
+
+    customers.forEach(customer => {
+        // Count active/inactive
+        if (customer.isActive) {
+            stats.active++;
+        } else {
+            stats.inactive++;
+        }
+
+        // Count with email (handle both formats)
+        if (customer.Email || customer.email || (customer.emails && customer.emails.length > 0)) {
+            stats.withEmail++;
+        }
+
+        // Count with phone (handle both formats)
+        if (customer.Phone || customer.phone || (customer.phones && customer.phones.length > 0)) {
+            stats.withPhone++;
+        }
+
+        // Count with address (handle both formats)
+        if (customer.Address || customer.address || (customer.addresses && customer.addresses.length > 0)) {
+            stats.withAddress++;
+        }
+    });
+
+    return stats;
+}
+
+/**
+ * Searches customers by query string
+ * Searches across name, email, phone, and contact person fields
+ * Works with both FileMaker and backend formats
+ * @param {Array} customers - Array of customer records
+ * @param {string} query - Search query string
+ * @returns {Array} Filtered customer records
+ */
+export function searchCustomers(customers, query) {
+    if (!query || !query.trim()) {
+        return customers;
+    }
+
+    const searchTerm = query.toLowerCase().trim();
+
+    return customers.filter(customer => {
+        // Search in name fields (FileMaker: Name, backend: business_name)
+        const name = (customer.Name || customer.business_name || '').toLowerCase();
+        if (name.includes(searchTerm)) return true;
+
+        // Search in contact person (FileMaker: ContactPerson, backend: primary_contact_name)
+        const contactPerson = (customer.ContactPerson || customer.primary_contact_name || '').toLowerCase();
+        if (contactPerson.includes(searchTerm)) return true;
+
+        // Search in email (both formats)
+        if (customer.Email && customer.Email.toLowerCase().includes(searchTerm)) return true;
+        if (customer.email && customer.email.toLowerCase().includes(searchTerm)) return true;
+        if (customer.emails && Array.isArray(customer.emails)) {
+            if (customer.emails.some(e => e.email && e.email.toLowerCase().includes(searchTerm))) {
+                return true;
+            }
+        }
+
+        // Search in phone (both formats)
+        if (customer.Phone && customer.Phone.toLowerCase().includes(searchTerm)) return true;
+        if (customer.phone && customer.phone.toLowerCase().includes(searchTerm)) return true;
+        if (customer.phones && Array.isArray(customer.phones)) {
+            if (customer.phones.some(p => p.phone && p.phone.toLowerCase().includes(searchTerm))) {
+                return true;
+            }
+        }
+
+        return false;
     });
 }
 
 /**
  * Validates customer data before creation/update
+ * Handles both FileMaker format and backend format
  * @param {Object} data - Customer data to validate
+ * @param {string} format - 'filemaker' or 'backend'
  * @returns {Object} Validation result { isValid, errors }
  */
-export function validateCustomerData(data) {
+export function validateCustomerData(data, format = 'filemaker') {
     const errors = [];
 
-    if (!data.Name?.trim()) {
-        errors.push('Customer name is required');
-    }
+    if (format === 'backend') {
+        // Backend validation rules (as per API contract)
+        if (!data.business_name?.trim()) {
+            errors.push('Business name is required');
+        }
 
-    if (data.Email && !isValidEmail(data.Email)) {
-        errors.push('Invalid email format');
-    }
+        if (data.business_name && data.business_name.length > 255) {
+            errors.push('Business name must be 255 characters or less');
+        }
 
-    if (data.Phone && !isValidPhone(data.Phone)) {
-        errors.push('Invalid phone format');
+        // Validate emails array
+        if (data.emails && Array.isArray(data.emails)) {
+            data.emails.forEach((emailObj, index) => {
+                if (emailObj.email && !isValidEmail(emailObj.email)) {
+                    errors.push(`Invalid email format at position ${index + 1}`);
+                }
+            });
+        }
+
+        // Validate phones array
+        if (data.phones && Array.isArray(data.phones)) {
+            data.phones.forEach((phoneObj, index) => {
+                if (phoneObj.phone && !isValidPhone(phoneObj.phone)) {
+                    errors.push(`Invalid phone format at position ${index + 1}`);
+                }
+            });
+        }
+    } else {
+        // FileMaker validation rules (legacy)
+        if (!data.Name?.trim()) {
+            errors.push('Customer name is required');
+        }
+
+        if (data.Email && !isValidEmail(data.Email)) {
+            errors.push('Invalid email format');
+        }
+
+        if (data.Phone && !isValidPhone(data.Phone)) {
+            errors.push('Invalid phone format');
+        }
     }
 
     return {
@@ -139,26 +376,14 @@ function formatAddress(customer) {
  * @returns {Object} Grouped customers { active, inactive }
  */
 export function groupCustomersByStatus(customers) {
+    if (!Array.isArray(customers)) {
+        return { active: [], inactive: [] };
+    }
     return customers.reduce((groups, customer) => {
         const key = customer.isActive ? 'active' : 'inactive';
         groups[key].push(customer);
         return groups;
     }, { active: [], inactive: [] });
-}
-
-/**
- * Calculates customer statistics
- * @param {Array} customers - Array of customer records
- * @returns {Object} Customer statistics
- */
-export function calculateCustomerStats(customers) {
-    const grouped = groupCustomersByStatus(customers);
-    return {
-        total: customers.length,
-        active: grouped.active.length,
-        inactive: grouped.inactive.length,
-        activePercentage: Math.round((grouped.active.length / customers.length) * 100) || 0
-    };
 }
 
 /**
