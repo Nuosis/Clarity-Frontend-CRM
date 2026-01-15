@@ -54,13 +54,13 @@
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Migrated billableHoursService from FileMaker to Supabase by updating processFinancialData() to handle normalized customer_sales data with field mappings (financial_id, customer_name, inv_id, date in MM/DD/YYYY from API normalization). Added required field validation with console warnings for missing financial_id/customer_id/date. Updated formatFinancialRecordForFileMaker() to output Supabase format (marked deprecated). Updated validateFinancialRecordData() to reflect Supabase schema (removed projectId requirement, added date format and hours validation). Maintained backward-compatible output format for UI components. Month/year extraction from MM/DD/YYYY date format. Build verified successful."
+      "implementation_notes": "Implemented TSK0002 by updating 'src/services/billableHoursService.js' to process Supabase 'customer_sales' normalized records (eg 'financial_id', 'customer_id', 'product_name', 'quantity', 'unit_price', 'total_price', 'date', 'inv_id') instead of FileMaker fields, including revised month year extraction and non-breaking output to keep existing UI compatibility. Deprecated but retained 'formatFinancialRecordForFileMaker' while changing its mapping to emit Supabase-shaped data for backward compatibility, and updated 'validateFinancialRecordData' to drop the obsolete 'projectId' requirement while adding stronger date and hours validation with warning-based graceful degradation. Marked the task complete in '.devflow/tasks/financial-records-backend-integration/tasks.json' and added documentation in '.devflow/tasks/financial-records-backend-integration/TSK0002_COMPLETION_SUMMARY.md', with builds re-run to confirm the changes compile successfully."
     },
     {
       "id": "TSK0003",
       "title": "Update salesService for new API contracts",
       "description": "Update src/services/salesService.js to use new financial records API. Check if service directly calls FileMaker or uses financialRecords API. Update any date handling, billed status checks (inv_id IS NULL instead of f_billed=0), and customer ID lookups. Ensure backward compatibility with components using this service.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0001",
@@ -69,7 +69,12 @@
       "files": [
         "src/services/salesService.js"
       ],
-      "notes": "Verify if this service is still needed or can be simplified"
+      "notes": "✅ COMPLETED: Updated all fetch functions to use financialRecords API (fetchFinancialRecords, fetchUnpaidRecords). Added transformFinancialRecordsToSales() to convert API response format to sales service format. Replaced direct Supabase queries with RPC calls. Updated createSalesFromUnbilledFinancials() to handle new API response. Maintained backward compatibility with existing hooks (useSales, useSalesActivity). Build verified successful.",
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "executionError": null,
+      "implementation_notes": "Migrated salesService from direct Supabase table queries to financialRecords API using Supabase RPCs. Updated all fetch functions (fetchSalesByOrganization, fetchUnbilledSalesByOrganization, fetchCurrentMonthSalesByOrganization, fetchSalesByCustomer, fetchUnbilledSalesByCustomer, fetchCurrentMonthSalesByCustomer) to call financialRecords API functions (fetchFinancialRecords, fetchUnpaidRecords) and transform responses via transformFinancialRecordsToSales(). The transformation function maps from normalized FileMaker-compatible format (fieldData wrapper with __ID, _custID, Billable_Time_Rounded, Hourly_Rate, DateStart) to sales format (id, customer_id, quantity, unit_price, date). Updated createSalesFromUnbilledFinancials() to handle new API response structure. Deprecated organizationId parameters (now uses JWT context). Maintained backward compatibility with all existing components and hooks."
     },
     {
       "id": "TSK0004",

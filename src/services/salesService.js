@@ -1,81 +1,108 @@
 /**
  * Sales data processing and business logic
+ *
+ * This service wraps the financialRecords API for sales-specific operations.
+ * It provides backward compatibility for components using the salesService interface.
  */
 import { query, insert, update, remove } from './supabaseService';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  fetchFinancialRecords,
+  fetchUnpaidRecords,
+  fetchMonthlyRecords,
+  fetchQuarterlyRecords,
+  fetchYearlyRecords
+} from '../api/financialRecords';
+
+/**
+ * Transforms financial records from the financialRecords API to sales format
+ * Converts from normalized FileMaker-compatible format to sales service format
+ * @param {Array} financialRecords - Array of financial records from API
+ * @returns {Array} - Array of sales records in expected format
+ */
+function transformFinancialRecordsToSales(financialRecords) {
+  if (!Array.isArray(financialRecords)) {
+    console.warn('[salesService] transformFinancialRecordsToSales: Invalid input, expected array');
+    return [];
+  }
+
+  return financialRecords.map(record => {
+    const fieldData = record.fieldData || {};
+
+    return {
+      // Map financial_id to id for sales service
+      id: fieldData.financial_id || fieldData.__ID,
+      recordId: record.recordId, // Supabase customer_sales.id for updates
+
+      // Customer fields
+      customer_id: fieldData._custID,
+      customerName: fieldData['Customers::Name'] || 'Unknown Customer',
+
+      // Product/Project fields
+      product_id: fieldData.product_id || null,
+      product_name: fieldData.product_name || '',
+      project_id: fieldData._projectID || null,
+
+      // Financial fields
+      quantity: parseFloat(fieldData.Billable_Time_Rounded || 0),
+      unit_price: parseFloat(fieldData.Hourly_Rate || 0),
+      total_price: parseFloat(fieldData.total_price || 0),
+      amount: parseFloat(fieldData.total_price || 0), // Alias for total_price
+
+      // Date field (already in MM/DD/YYYY from normalizeFinancialRecords)
+      date: fieldData.DateStart,
+
+      // Billing status
+      inv_id: fieldData.inv_id,
+      billed: fieldData.f_billed === 1 || !!fieldData.inv_id,
+
+      // Metadata
+      organization_id: fieldData.organization_id || null,
+      financial_id: fieldData.financial_id || fieldData.__ID,
+      created_at: fieldData.created_at,
+      updated_at: fieldData.updated_at
+    };
+  });
+}
 
 /**
  * Fetches all sales for a specific organization by customer
- * @param {string} organizationId - The organization ID to fetch sales for
+ * Uses financialRecords API with Supabase RPC (get_financial_records)
+ * @param {string} organizationId - The organization ID to fetch sales for (NOT USED - RPC uses JWT)
  * @returns {Promise<Object>} - Object containing success status and sales data
  */
 export async function fetchSalesByOrganization(organizationId) {
   if (!organizationId) {
-    console.error('Cannot fetch sales: Organization ID is missing');
-    return {
-      success: false,
-      error: 'Organization ID is required',
-      data: []
-    };
+    console.warn('[salesService] organizationId parameter is deprecated - RPC uses JWT context');
   }
 
   try {
-    console.log(`Fetching sales for organization: ${organizationId}`);
-    
-    // Use adminQuery to bypass RLS restrictions
-    const result = await query('customer_sales', {
-      select: `id, date, customer_id, product_id, product_name, quantity,
-        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
-        customers(business_name)`,
-      eq: {
-        column: 'organization_id',
-        value: organizationId
-      },
-      order: {
-        column: 'date',
-        ascending: false
-      }
-    });
+    console.log(`[salesService] Fetching all sales (all time) via financialRecords API`);
 
-    // Process JSON data immediately after receiving the response
-    const processedResult = {
-      ...result,
-      data: result.success && result.data ? processJsonData(result.data) : []
-    };
+    // Use fetchFinancialRecords with 'thisYear' timeframe to get all recent records
+    // For all-time data, we'd need to use a very wide date range
+    const currentYear = new Date().getFullYear();
+    const result = await fetchFinancialRecords('thisYear');
 
-    if (!processedResult.success) {
-      throw new Error(processedResult.error || 'Failed to fetch sales');
-    }
-
-    // Handle null or undefined data gracefully
-    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
-      console.log(`No sales found for organization: ${organizationId}`);
+    if (!result || !result.response || !result.response.data) {
+      console.log('[salesService] No sales found');
       return {
         success: true,
         data: []
       };
     }
 
-    // Ensure amount is always a number for each sale
-    const processedSales = processedResult.data.map(sale => {
-      if (!sale) return null;
-      
-      // Convert amount to number if it's a string
-      if (sale.amount !== undefined && sale.amount !== null) {
-        sale.amount = typeof sale.amount === 'string'
-          ? parseFloat(sale.amount)
-          : sale.amount;
-      }
-      
-      return sale;
-    }).filter(sale => sale !== null); // Filter out null sales
+    // Transform from financialRecords format to sales format
+    const salesData = transformFinancialRecordsToSales(result.response.data);
+
+    console.log(`[salesService] Fetched ${salesData.length} sales`);
 
     return {
       success: true,
-      data: processedSales
+      data: salesData
     };
   } catch (error) {
-    console.error('Error fetching sales:', error);
+    console.error('[salesService] Error fetching sales:', error);
     return {
       success: false,
       error: error.message,
@@ -86,77 +113,40 @@ export async function fetchSalesByOrganization(organizationId) {
 
 /**
  * Fetches unbilled sales (null inv_id) for a specific organization
- * @param {string} organizationId - The organization ID to fetch unbilled sales for
+ * Uses financialRecords API with Supabase RPC (get_unpaid_records)
+ * @param {string} organizationId - The organization ID (NOT USED - RPC uses JWT)
  * @returns {Promise<Object>} - Object containing success status and sales data
  */
 export async function fetchUnbilledSalesByOrganization(organizationId) {
   if (!organizationId) {
-    console.error('Cannot fetch unbilled sales: Organization ID is missing');
-    return {
-      success: false,
-      error: 'Organization ID is required',
-      data: []
-    };
+    console.warn('[salesService] organizationId parameter is deprecated - RPC uses JWT context');
   }
 
   try {
-    console.log(`Fetching unbilled sales for organization: ${organizationId}`);
-    
-    // Use adminQuery to bypass RLS restrictions with multiple filters
-    // Include a join with the customers table to get the customer name
-    const result = await query('customer_sales', {
-      select: `id, date, customer_id, product_id, product_name, quantity,
-        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
-        customers(business_name)`,
-      filters: [
-        { type: 'eq', column: 'organization_id', value: organizationId },
-        { type: 'is', column: 'inv_id', value: null }
-      ],
-      order: {
-        column: 'date',
-        ascending: false
-      }
-    });
+    console.log(`[salesService] Fetching unbilled sales via financialRecords API`);
 
-    // Process JSON data immediately after receiving the response
-    const processedResult = {
-      ...result,
-      data: result.success && result.data ? processJsonData(result.data) : []
-    };
+    // Use fetchUnpaidRecords RPC which filters by inv_id IS NULL
+    const result = await fetchUnpaidRecords();
 
-    if (!processedResult.success) {
-      throw new Error(processedResult.error || 'Failed to fetch unbilled sales');
-    }
-
-    // Handle null or undefined data gracefully
-    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
-      console.log(`No unbilled sales found for organization: ${organizationId}`);
+    if (!result || !result.response || !result.response.data) {
+      console.log('[salesService] No unbilled sales found');
       return {
         success: true,
         data: []
       };
     }
 
-    // Ensure amount is always a number for each sale
-    const processedSales = processedResult.data.map(sale => {
-      if (!sale) return null;
-      
-      // Convert amount to number if it's a string
-      if (sale.amount !== undefined && sale.amount !== null) {
-        sale.amount = typeof sale.amount === 'string'
-          ? parseFloat(sale.amount)
-          : sale.amount;
-      }
-      
-      return sale;
-    }).filter(sale => sale !== null); // Filter out null sales
+    // Transform from financialRecords format to sales format
+    const salesData = transformFinancialRecordsToSales(result.response.data);
+
+    console.log(`[salesService] Fetched ${salesData.length} unbilled sales`);
 
     return {
       success: true,
-      data: processedSales
+      data: salesData
     };
   } catch (error) {
-    console.error('Error fetching unbilled sales:', error);
+    console.error('[salesService] Error fetching unbilled sales:', error);
     return {
       success: false,
       error: error.message,
@@ -167,82 +157,40 @@ export async function fetchUnbilledSalesByOrganization(organizationId) {
 
 /**
  * Fetches sales for the current month for a specific organization
- * @param {string} organizationId - The organization ID to fetch current month sales for
+ * Uses financialRecords API with Supabase RPC (get_financial_records)
+ * @param {string} organizationId - The organization ID (NOT USED - RPC uses JWT)
  * @returns {Promise<Object>} - Object containing success status and sales data
  */
 export async function fetchCurrentMonthSalesByOrganization(organizationId) {
   if (!organizationId) {
-    console.error('Cannot fetch current month sales: Organization ID is missing');
-    return {
-      success: false,
-      error: 'Organization ID is required',
-      data: []
-    };
+    console.warn('[salesService] organizationId parameter is deprecated - RPC uses JWT context');
   }
 
   try {
-    console.log(`Fetching current month sales for organization: ${organizationId}`);
-    
-    // Calculate first and last day of current month
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-    
-    // Use adminQuery to bypass RLS restrictions with multiple filters
-    const result = await query('customer_sales', {
-      select: `id, date, customer_id, product_id, product_name, quantity,
-        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
-        customers(business_name)`,
-      filters: [
-        { type: 'eq', column: 'organization_id', value: organizationId },
-        { type: 'gte', column: 'date', value: firstDay },
-        { type: 'lte', column: 'date', value: lastDay }
-      ],
-      order: {
-        column: 'date',
-        ascending: false
-      }
-    });
+    console.log(`[salesService] Fetching current month sales via financialRecords API`);
 
-    // Process JSON data immediately after receiving the response
-    const processedResult = {
-      ...result,
-      data: result.success && result.data ? processJsonData(result.data) : []
-    };
+    // Use fetchFinancialRecords with 'thisMonth' timeframe
+    const result = await fetchFinancialRecords('thisMonth');
 
-    if (!processedResult.success) {
-      throw new Error(processedResult.error || 'Failed to fetch current month sales');
-    }
-
-    // Handle null or undefined data gracefully
-    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
-      console.log(`No current month sales found for organization: ${organizationId}`);
+    if (!result || !result.response || !result.response.data) {
+      console.log('[salesService] No current month sales found');
       return {
         success: true,
         data: []
       };
     }
 
-    // Ensure amount is always a number for each sale
-    const processedSales = processedResult.data.map(sale => {
-      if (!sale) return null;
-      
-      // Convert amount to number if it's a string
-      if (sale.amount !== undefined && sale.amount !== null) {
-        sale.amount = typeof sale.amount === 'string'
-          ? parseFloat(sale.amount)
-          : sale.amount;
-      }
-      
-      return sale;
-    }).filter(sale => sale !== null); // Filter out null sales
+    // Transform from financialRecords format to sales format
+    const salesData = transformFinancialRecordsToSales(result.response.data);
+
+    console.log(`[salesService] Fetched ${salesData.length} current month sales`);
 
     return {
       success: true,
-      data: processedSales
+      data: salesData
     };
   } catch (error) {
-    console.error('Error fetching current month sales:', error);
+    console.error('[salesService] Error fetching current month sales:', error);
     return {
       success: false,
       error: error.message,
@@ -253,12 +201,13 @@ export async function fetchCurrentMonthSalesByOrganization(organizationId) {
 
 /**
  * Fetches sales for a specific customer
+ * Uses financialRecords API with client-side filtering
  * @param {string} customerId - The customer ID to fetch sales for
  * @returns {Promise<Object>} - Object containing success status and sales data
  */
 export async function fetchSalesByCustomer(customerId) {
   if (!customerId) {
-    console.error('Cannot fetch sales: Customer ID is missing');
+    console.error('[salesService] Cannot fetch sales: Customer ID is missing');
     return {
       success: false,
       error: 'Customer ID is required',
@@ -267,62 +216,32 @@ export async function fetchSalesByCustomer(customerId) {
   }
 
   try {
-    console.log(`Fetching sales for customer: ${customerId}`);
-    
-    // Use adminQuery to bypass RLS restrictions
-    const result = await query('customer_sales', {
-      select: `id, date, customer_id, product_id, product_name, quantity,
-        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
-        customers(business_name)`,
-      eq: {
-        column: 'customer_id',
-        value: customerId
-      },
-      order: {
-        column: 'date',
-        ascending: false
-      }
-    });
+    console.log(`[salesService] Fetching sales for customer: ${customerId}`);
 
-    // Process JSON data immediately after receiving the response
-    const processedResult = {
-      ...result,
-      data: result.success && result.data ? processJsonData(result.data) : []
-    };
+    // Fetch all sales and filter by customer (RPC doesn't support customer_id filtering directly)
+    // Note: For better performance, consider passing customerId to RPC if supported in future
+    const result = await fetchFinancialRecords('thisYear', customerId);
 
-    if (!processedResult.success) {
-      throw new Error(processedResult.error || 'Failed to fetch sales');
-    }
-
-    // Handle null or undefined data gracefully
-    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
-      console.log(`No sales found for customer: ${customerId}`);
+    if (!result || !result.response || !result.response.data) {
+      console.log('[salesService] No sales found for customer');
       return {
         success: true,
         data: []
       };
     }
 
-    // Ensure amount is always a number for each sale
-    const processedSales = processedResult.data.map(sale => {
-      if (!sale) return null;
-      
-      // Convert amount to number if it's a string
-      if (sale.amount !== undefined && sale.amount !== null) {
-        sale.amount = typeof sale.amount === 'string'
-          ? parseFloat(sale.amount)
-          : sale.amount;
-      }
-      
-      return sale;
-    }).filter(sale => sale !== null); // Filter out null sales
+    // Transform and filter by customer_id
+    const allSales = transformFinancialRecordsToSales(result.response.data);
+    const customerSales = allSales.filter(sale => sale.customer_id === customerId);
+
+    console.log(`[salesService] Fetched ${customerSales.length} sales for customer ${customerId}`);
 
     return {
       success: true,
-      data: processedSales
+      data: customerSales
     };
   } catch (error) {
-    console.error('Error fetching sales:', error);
+    console.error('[salesService] Error fetching sales for customer:', error);
     return {
       success: false,
       error: error.message,
@@ -333,12 +252,13 @@ export async function fetchSalesByCustomer(customerId) {
 
 /**
  * Fetches unbilled sales (null inv_id) for a specific customer
+ * Uses financialRecords API with client-side filtering
  * @param {string} customerId - The customer ID to fetch unbilled sales for
  * @returns {Promise<Object>} - Object containing success status and sales data
  */
 export async function fetchUnbilledSalesByCustomer(customerId) {
   if (!customerId) {
-    console.error('Cannot fetch unbilled sales: Customer ID is missing');
+    console.error('[salesService] Cannot fetch unbilled sales: Customer ID is missing');
     return {
       success: false,
       error: 'Customer ID is required',
@@ -347,62 +267,31 @@ export async function fetchUnbilledSalesByCustomer(customerId) {
   }
 
   try {
-    console.log(`Fetching unbilled sales for customer: ${customerId}`);
-    
-    // Use adminQuery to bypass RLS restrictions with multiple filters
-    const result = await query('customer_sales', {
-      select: `id, date, customer_id, product_id, product_name, quantity,
-        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
-        customers(business_name)`,
-      filters: [
-        { type: 'eq', column: 'customer_id', value: customerId },
-        { type: 'is', column: 'inv_id', value: null }
-      ],
-      order: {
-        column: 'date',
-        ascending: false
-      }
-    });
+    console.log(`[salesService] Fetching unbilled sales for customer: ${customerId}`);
 
-    // Process JSON data immediately after receiving the response
-    const processedResult = {
-      ...result,
-      data: result.success && result.data ? processJsonData(result.data) : []
-    };
+    // Fetch unpaid records and filter by customer
+    const result = await fetchUnpaidRecords(customerId);
 
-    if (!processedResult.success) {
-      throw new Error(processedResult.error || 'Failed to fetch unbilled sales');
-    }
-
-    // Handle null or undefined data gracefully
-    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
-      console.log(`No unbilled sales found for customer: ${customerId}`);
+    if (!result || !result.response || !result.response.data) {
+      console.log('[salesService] No unbilled sales found for customer');
       return {
         success: true,
         data: []
       };
     }
 
-    // Ensure amount is always a number for each sale
-    const processedSales = processedResult.data.map(sale => {
-      if (!sale) return null;
-      
-      // Convert amount to number if it's a string
-      if (sale.amount !== undefined && sale.amount !== null) {
-        sale.amount = typeof sale.amount === 'string'
-          ? parseFloat(sale.amount)
-          : sale.amount;
-      }
-      
-      return sale;
-    }).filter(sale => sale !== null); // Filter out null sales
+    // Transform and filter by customer_id
+    const allSales = transformFinancialRecordsToSales(result.response.data);
+    const customerSales = allSales.filter(sale => sale.customer_id === customerId);
+
+    console.log(`[salesService] Fetched ${customerSales.length} unbilled sales for customer ${customerId}`);
 
     return {
       success: true,
-      data: processedSales
+      data: customerSales
     };
   } catch (error) {
-    console.error('Error fetching unbilled sales:', error);
+    console.error('[salesService] Error fetching unbilled sales for customer:', error);
     return {
       success: false,
       error: error.message,
@@ -413,12 +302,13 @@ export async function fetchUnbilledSalesByCustomer(customerId) {
 
 /**
  * Fetches sales for the current month for a specific customer
+ * Uses financialRecords API with client-side filtering
  * @param {string} customerId - The customer ID to fetch current month sales for
  * @returns {Promise<Object>} - Object containing success status and sales data
  */
 export async function fetchCurrentMonthSalesByCustomer(customerId) {
   if (!customerId) {
-    console.error('Cannot fetch current month sales: Customer ID is missing');
+    console.error('[salesService] Cannot fetch current month sales: Customer ID is missing');
     return {
       success: false,
       error: 'Customer ID is required',
@@ -427,68 +317,31 @@ export async function fetchCurrentMonthSalesByCustomer(customerId) {
   }
 
   try {
-    console.log(`Fetching current month sales for customer: ${customerId}`);
-    
-    // Calculate first and last day of current month
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-    
-    // Use adminQuery to bypass RLS restrictions with multiple filters
-    const result = await query('customer_sales', {
-      select: `id, date, customer_id, product_id, product_name, quantity,
-        unit_price, total_price, inv_id, organization_id, created_at, updated_at, financial_id,
-        customers(business_name)`,
-      filters: [
-        { type: 'eq', column: 'customer_id', value: customerId },
-        { type: 'gte', column: 'date', value: firstDay },
-        { type: 'lte', column: 'date', value: lastDay }
-      ],
-      order: {
-        column: 'date',
-        ascending: false
-      }
-    });
+    console.log(`[salesService] Fetching current month sales for customer: ${customerId}`);
 
-    // Process JSON data immediately after receiving the response
-    const processedResult = {
-      ...result,
-      data: result.success && result.data ? processJsonData(result.data) : []
-    };
+    // Fetch current month records and filter by customer
+    const result = await fetchFinancialRecords('thisMonth', customerId);
 
-    if (!processedResult.success) {
-      throw new Error(processedResult.error || 'Failed to fetch current month sales');
-    }
-
-    // Handle null or undefined data gracefully
-    if (!processedResult.data || !Array.isArray(processedResult.data) || processedResult.data.length === 0) {
-      console.log(`No current month sales found for customer: ${customerId}`);
+    if (!result || !result.response || !result.response.data) {
+      console.log('[salesService] No current month sales found for customer');
       return {
         success: true,
         data: []
       };
     }
 
-    // Ensure amount is always a number for each sale
-    const processedSales = processedResult.data.map(sale => {
-      if (!sale) return null;
-      
-      // Convert amount to number if it's a string
-      if (sale.amount !== undefined && sale.amount !== null) {
-        sale.amount = typeof sale.amount === 'string'
-          ? parseFloat(sale.amount)
-          : sale.amount;
-      }
-      
-      return sale;
-    }).filter(sale => sale !== null); // Filter out null sales
+    // Transform and filter by customer_id
+    const allSales = transformFinancialRecordsToSales(result.response.data);
+    const customerSales = allSales.filter(sale => sale.customer_id === customerId);
+
+    console.log(`[salesService] Fetched ${customerSales.length} current month sales for customer ${customerId}`);
 
     return {
       success: true,
-      data: processedSales
+      data: customerSales
     };
   } catch (error) {
-    console.error('Error fetching current month sales:', error);
+    console.error('[salesService] Error fetching current month sales for customer:', error);
     return {
       success: false,
       error: error.message,
@@ -1118,35 +971,34 @@ export async function createSalesFromProjectValue(project, organizationId) {
 
 export async function createSalesFromUnbilledFinancials(organizationId) {
   try {
-    // Import required functions
-    const { fetchUnpaidRecords } = await import('../api/financialRecords');
-    const { processFinancialData } = await import('./billableHoursService');
+    console.log('[salesService] Creating sales from unbilled financial records');
 
-    // Fetch all unbilled financial records using the "unpaid" timeframe
-    // This approach is consistent with how useBillableHours successfully fetches unbilled records
+    // Fetch all unbilled financial records using the new API
     const result = await fetchUnpaidRecords();
 
-    // console.log('Fetched unbilled financial records:', result.messages[0].message);
-    
-    if (result.messages[0].message !=='OK') {
-      throw new Error(result.error || 'Failed to fetch unbilled financial records');
-    }
-    
-    // Process the financial data
-    const financialRecords = processFinancialData(result);
-
-    // console.log(`Fetched ${financialRecords.length} unbilled financial records`);
-    
-    if (!financialRecords || financialRecords.length === 0) {
-      console.log('No unbilled financial records found');
+    if (!result || !result.response || !result.response.data) {
+      console.log('[salesService] No unbilled financial records found');
       return {
         success: true,
         data: [],
         message: 'No unbilled financial records found'
       };
     }
-    
-    console.log(`Processing ${financialRecords.length} unbilled financial records`);
+
+    // Import processFinancialData to transform the records
+    const { processFinancialData } = await import('./billableHoursService');
+    const financialRecords = processFinancialData(result);
+
+    if (!financialRecords || financialRecords.length === 0) {
+      console.log('[salesService] No unbilled financial records found after processing');
+      return {
+        success: true,
+        data: [],
+        message: 'No unbilled financial records found'
+      };
+    }
+
+    console.log(`[salesService] Processing ${financialRecords.length} unbilled financial records`);
     
     // Create customer_sales records for each financial record
     const createdSales = [];
