@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { fetchFinancialRecordByUUID, bulkUpdateFinancialRecordsBilledStatus } from '../../api/financialRecords';
-import { processFinancialData } from '../../services/billableHoursService';
+import { bulkUpdateFinancialRecordsBilledStatus } from '../../api/financialRecords';
 import RecordModal from './RecordModal';
 
 // Component load verification
@@ -82,36 +81,38 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
     setBulkUpdateSuccess(null);
 
     try {
-      // Extract record IDs that need to be updated
+      // Extract Supabase customer_sales.id values for bulk update
+      // The bulkUpdateFinancialRecordsBilledStatus API expects customer_sales.id (not financial_id)
       const recordIds = uninvoicedRecords
-        .map(record => record.recordId || record.id)
+        .map(record => record.id || record.recordId)
         .filter(id => id); // Filter out any undefined/null IDs
 
       if (recordIds.length === 0) {
         throw new Error('No valid record IDs found for bulk update');
       }
 
-      console.log(`🔄 BULK UPDATE - Starting bulk update for ${recordIds.length} records:`, recordIds);
+      console.log('[RecordDetailsModal] Starting bulk update for', recordIds.length, 'records:', recordIds);
 
-      // Call the bulk update API
+      // Call the bulk update API (uses mark_records_billed RPC)
       const result = await bulkUpdateFinancialRecordsBilledStatus(recordIds, 1);
 
-      console.log('🔄 BULK UPDATE - Result:', result);
+      console.log('[RecordDetailsModal] Bulk update result:', result);
 
       if (result.success) {
         // Update the local state to reflect the changes
+        // Set inv_id to 'BILLED' (not 1) to match the RPC behavior
         setEnrichedRecords(prevRecords =>
           prevRecords.map(record => {
-            const recordId = record.recordId || record.id;
+            const recordId = record.id || record.recordId;
             if (recordIds.includes(recordId)) {
-              return { ...record, inv_id: 1, f_billed: 1 };
+              return { ...record, inv_id: 'BILLED' };
             }
             return record;
           })
         );
 
         setBulkUpdateSuccess(`Successfully marked ${result.successCount} records as invoiced`);
-        
+
         // Call the parent's onEditRecord to refresh data if needed
         if (onEditRecord && typeof onEditRecord === 'function') {
           // This will trigger a refresh of the parent component's data
@@ -121,7 +122,7 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
         throw new Error(`Bulk update partially failed: ${result.errorCount} errors out of ${result.totalRecords} records`);
       }
     } catch (error) {
-      console.error('🔄 BULK UPDATE - Error:', error);
+      console.error('[RecordDetailsModal] Bulk update error:', error);
       setBulkUpdateError(error.message || 'Failed to update records');
     } finally {
       setBulkUpdateLoading(false);
@@ -148,70 +149,50 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
       setError(null);
 
       try {
-        const completeRecords = await Promise.all(
-          records.map(async (record) => {
-            try {
-              // Use the financial_id or id to fetch complete record
-              const recordId = record.financial_id || record.id;
-              if (!recordId) {
-                console.warn('No financial_id or id found for record:', record);
-                return record;
-              }
+        // For Supabase records, we already have complete data from get_financial_records RPC
+        // The records are already enriched with customer data via JOIN
+        // We don't need to fetch individual records - just ensure field mappings are correct
+        const enrichedData = records.map((record) => {
+          console.log('[RecordDetailsModal] Processing record:', record);
 
-              const completeRecord = await fetchFinancialRecordByUUID(recordId);
-              
-              // LOG: Raw response from fetchFinancialRecordByUUID
-              console.log(`🔍 ENRICHMENT DEBUG - Raw API response for record ${recordId}:`,
-                JSON.stringify(completeRecord, null, 2));
-              
-              // CRITICAL FIX: Parse JSON string if needed
-              let parsedRecord = completeRecord;
-              if (typeof completeRecord === 'string') {
-                try {
-                  parsedRecord = JSON.parse(completeRecord);
-                  console.log(`🔍 ENRICHMENT DEBUG - Parsed JSON response for ${recordId}:`,
-                    JSON.stringify(parsedRecord, null, 2));
-                } catch (error) {
-                  console.error(`🔍 ENRICHMENT DEBUG - Failed to parse JSON for ${recordId}:`, error);
-                  return record; // Return original record if parsing fails
-                }
-              }
-              
-              console.log(`🔍 ENRICHMENT DEBUG - Data structure for processing ${recordId}:`,
-                JSON.stringify(parsedRecord, null, 2));
-              
-              // Process the complete record to ensure proper field mapping
-              const processedRecords = processFinancialData(parsedRecord);
-              const processedRecord = processedRecords[0];
-              
-              // LOG: Processed record after processFinancialData
-              console.log(`🔍 ENRICHMENT DEBUG - Processed record for ${recordId}:`,
-                JSON.stringify(processedRecord, null, 2));
+          // Ensure all required fields are present with proper mapping
+          return {
+            // Supabase customer_sales fields
+            id: record.id || record.recordId, // Supabase customer_sales.id
+            recordId: record.id || record.recordId, // For backwards compatibility
+            financial_id: record.financial_id,
+            customer_id: record.customer_id,
+            customer_name: record.customers?.business_name || record.customer_name || 'Unknown Customer',
+            product_id: record.product_id,
+            product_name: record.product_name || '',
+            quantity: record.quantity || 0,
+            unit_price: record.unit_price || 0,
+            total_price: record.total_price || 0,
+            date: record.date, // YYYY-MM-DD from Supabase
+            inv_id: record.inv_id, // null = unbilled, non-null = billed
+            organization_id: record.organization_id,
+            created_at: record.created_at,
+            updated_at: record.updated_at,
 
-              // Merge the complete data with the original record
-              const mergedRecord = {
-                ...record,
-                ...processedRecord,
-                // Ensure we preserve the original record structure
-                taskName: processedRecord.taskName || record.taskName,
-                workPerformed: processedRecord.workPerformed || record.workPerformed
-              };
-              
-              // LOG: Final merged record
-              console.log(`🔍 ENRICHMENT DEBUG - Final merged record for ${recordId}:`,
-                JSON.stringify(mergedRecord, null, 2));
-              
-              return mergedRecord;
-            } catch (recordError) {
-              console.error(`Failed to fetch complete data for record ${record.financial_id || record.id}:`, recordError);
-              return record; // Return original record if fetch fails
-            }
-          })
-        );
+            // Display aliases (for backward compatibility with UI)
+            hours: record.quantity || record.hours || 0,
+            rate: record.unit_price || record.rate || 0,
+            amount: record.total_price || record.amount || 0,
 
-        setEnrichedRecords(completeRecords);
+            // Task/work fields - not in Supabase customer_sales schema
+            // These fields are not available in the current schema
+            taskName: record.taskName || record.task_name || null,
+            workPerformed: record.workPerformed || record.work_performed || record.description || '',
+
+            // Preserve customers relation
+            customers: record.customers || null
+          };
+        });
+
+        console.log('[RecordDetailsModal] Enriched records:', enrichedData);
+        setEnrichedRecords(enrichedData);
       } catch (fetchError) {
-        console.error('Error fetching complete records:', fetchError);
+        console.error('[RecordDetailsModal] Error enriching records:', fetchError);
         setError('Failed to load complete record details');
         setEnrichedRecords(records); // Fallback to original records
       } finally {
@@ -490,23 +471,23 @@ function RecordDetailsModal({ records, groupTitle, onClose, onEditRecord, darkMo
                         {formatDate(record.date)}
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        <div className="max-w-xs truncate" title={record.taskName || record.task_name || 'N/A'}>
-                          {record.taskName || record.task_name || 'N/A'}
+                        <div className="max-w-xs truncate" title={record.taskName || 'N/A'}>
+                          {record.taskName || 'N/A'}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        <div className="max-w-xs truncate" title={record.workPerformed || record.work_performed || record.description || 'N/A'}>
-                          {record.workPerformed || record.work_performed || record.description || 'N/A'}
+                        <div className="max-w-xs truncate" title={record.workPerformed || record.product_name || 'N/A'}>
+                          {record.workPerformed || record.product_name || 'N/A'}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
-                        {formatQuantity(record.quantity || record.hours || 0)}
+                        {formatQuantity(record.quantity || 0)}
                       </td>
                       <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
-                        {formatCurrency(record.unit_price || record.rate || 0)}
+                        {formatCurrency(record.unit_price || 0)}
                       </td>
                       <td className="px-6 py-4 text-sm text-right whitespace-nowrap font-medium">
-                        {formatCurrency(record.total_price || record.amount || 0)}
+                        {formatCurrency(record.total_price || 0)}
                       </td>
                       <td className="px-6 py-4 text-sm text-center whitespace-nowrap">
                         <span className={`

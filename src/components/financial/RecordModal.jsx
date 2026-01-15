@@ -34,32 +34,42 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
   // Initialize form data when record changes
   useEffect(() => {
     if (record) {
-      console.log('[REACT_STATE_INVESTIGATION] Original record received in RecordModal:', JSON.stringify(record, null, 2));
-      console.log('[REACT_STATE_INVESTIGATION] Original record.inv_id:', record.inv_id);
-      console.log('[REACT_STATE_INVESTIGATION] typeof record.inv_id:', typeof record.inv_id);
-      
+      console.log('[RecordModal] Original record received:', JSON.stringify(record, null, 2));
+
+      // Parse date: Supabase returns YYYY-MM-DD, need to convert for input[type="date"]
+      let dateValue = '';
+      if (record.date) {
+        // Handle both YYYY-MM-DD and MM/DD/YYYY formats
+        if (record.date.includes('-')) {
+          dateValue = record.date; // Already YYYY-MM-DD
+        } else if (record.date.includes('/')) {
+          // Convert MM/DD/YYYY to YYYY-MM-DD
+          const [month, day, year] = record.date.split('/');
+          dateValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+      }
+
       const newFormData = {
-        id: record.id || '',
+        id: record.id || record.recordId || '', // Supabase customer_sales.id
         customer_id: record.customer_id || '',
-        customer_name: record.customers?.business_name || '',
+        // Supabase join provides customers.business_name via customers relation
+        customer_name: record.customers?.business_name || record.customer_name || '',
         project_id: record.project_id || '',
-        project_name: record.project_name || '',
+        project_name: record.project_name || record.product_name || '', // Use product_name as fallback
         product_id: record.product_id || '',
         product_name: record.product_name || '',
         quantity: record.quantity || 1,
         unit_price: record.unit_price || 0,
         total_price: record.total_price || 0,
-        date: record.date ? new Date(record.date).toISOString().split('T')[0] : '',
-        inv_id: record.inv_id,
+        date: dateValue,
+        inv_id: record.inv_id, // null = unbilled, non-null = billed
         // Include immutable metadata fields
         organization_id: record.organization_id || '',
         financial_id: record.financial_id || ''
       };
-      
-      console.log('[REACT_STATE_INVESTIGATION] New formData being set:', JSON.stringify(newFormData, null, 2));
-      console.log('[REACT_STATE_INVESTIGATION] New formData.inv_id:', newFormData.inv_id);
-      console.log('[REACT_STATE_INVESTIGATION] typeof newFormData.inv_id:', typeof newFormData.inv_id);
-      
+
+      console.log('[RecordModal] Initialized form data:', JSON.stringify(newFormData, null, 2));
+
       setFormData(newFormData);
     }
   }, [record]);
@@ -76,29 +86,32 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
   // Handle form submission with targeted PATCH update
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate form data
     const validation = validateSaleData(formData);
     if (!validation.isValid) {
       setErrors(validation.errors);
       return;
     }
-    
+
     setIsSaving(true);
     setErrors([]);
-    
+
     try {
+      // Convert date from YYYY-MM-DD (form input) to YYYY-MM-DD (Supabase format) - already compatible
+      const supabaseDate = formData.date; // No conversion needed, both use YYYY-MM-DD
+
       // Create the actual PATCH payload (only mutable fields) using current form data
       const patchPayload = {
-        id: formData.id,
+        id: formData.id, // Supabase customer_sales.id
         product_name: formData.product_name,
         quantity: parseFloat(formData.quantity),
         unit_price: parseFloat(formData.unit_price),
         total_price: parseFloat(formData.quantity) * parseFloat(formData.unit_price),
-        date: formData.date,
-        inv_id: formData.inv_id
+        date: supabaseDate, // YYYY-MM-DD format for Supabase
+        inv_id: formData.inv_id // null = unbilled, non-null = billed
       };
-      
+
       // Create targeted update payload with current form data + preserved immutable fields
       const targetedUpdate = {
         ...patchPayload, // Use current form data (including updated inv_id)
@@ -110,11 +123,14 @@ function RecordModal({ record, onClose, onSave, darkMode = false, limitedEdit = 
         updated_at: record.updated_at,
         customers: record.customers
       };
-      
+
+      console.log('[RecordModal] Saving record with PATCH payload:', patchPayload);
+
       // Pass both the full record (for UI state) and patch payload (for API)
       await onSave(targetedUpdate, patchPayload);
       onClose();
     } catch (error) {
+      console.error('[RecordModal] Save error:', error);
       setErrors([error.message || 'Failed to save record']);
     } finally {
       setIsSaving(false);
