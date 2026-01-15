@@ -1,4 +1,55 @@
-import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
+import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layouts, Actions, generateBackendAuthHeader } from './fileMaker';
+import axios from 'axios';
+import { backendConfig } from '../config';
+
+// Feature flag for backend API (set to true to use new backend endpoints)
+const USE_BACKEND_API = true;
+
+/**
+ * Handle API errors with proper formatting
+ * @param {Error} error - The error object
+ * @param {string} operation - The operation that failed
+ * @throws {Error} Formatted error
+ */
+function handleApiError(error, operation) {
+    console.error(`[Tasks API] ${operation} failed:`, error);
+
+    let errorMessage = `${operation} failed`;
+
+    if (error.response?.data) {
+        // Handle validation errors (array format)
+        if (Array.isArray(error.response.data.detail)) {
+            const validationErrors = error.response.data.detail.map(err =>
+                `${err.loc?.join('.') || 'field'}: ${err.msg}`
+            ).join(', ');
+            errorMessage = `Validation error: ${validationErrors}`;
+        }
+        // Handle string detail
+        else if (typeof error.response.data.detail === 'string') {
+            errorMessage = error.response.data.detail;
+        }
+        // Handle other detail formats
+        else if (error.response.data.detail) {
+            errorMessage = JSON.stringify(error.response.data.detail);
+        }
+        // Handle message field
+        else if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+        }
+        // Handle error field
+        else if (error.response.data.error) {
+            errorMessage = error.response.data.error;
+        }
+        // Handle string response
+        else if (typeof error.response.data === 'string') {
+            errorMessage = error.response.data;
+        }
+    } else if (error.message) {
+        errorMessage = error.message;
+    }
+
+    throw new Error(errorMessage);
+}
 
 /**
  * Fetches tasks for a project
@@ -7,14 +58,14 @@ import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layou
  */
 export async function fetchTasks(projectId, query) {
     validateParams({ projectId }, ['projectId','query']);
-    
+
     return handleFileMakerOperation(async () => {
         const params = {
             layout: Layouts.TASKS,
             action: Actions.READ,
             query
         };
-        
+
         return await fetchDataFromFileMaker(params);
     });
 }
@@ -26,14 +77,35 @@ export async function fetchTasks(projectId, query) {
  */
 export async function fetchTasksForProject(projectId) {
     validateParams({ projectId }, ['projectId']);
-    
+
+    if (USE_BACKEND_API) {
+        try {
+            console.log('[Tasks API] Fetching tasks for project:', projectId);
+
+            const authHeader = await generateBackendAuthHeader('');
+            const response = await axios.get(`${backendConfig.baseUrl}/tasks`, {
+                params: { project_id: projectId },
+                headers: {
+                    'Authorization': authHeader,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('[Tasks API] Tasks fetched successfully:', response.data);
+            return response.data;
+        } catch (error) {
+            handleApiError(error, 'Fetch tasks for project');
+        }
+    }
+
+    // Fallback to FileMaker
     return handleFileMakerOperation(async () => {
         const params = {
             layout: Layouts.TASKS,
             action: Actions.READ,
             query: [{ "_projectID": projectId }]
         };
-        
+
         return await fetchDataFromFileMaker(params);
     });
 }
@@ -45,17 +117,38 @@ export async function fetchTasksForProject(projectId) {
  */
 export async function createTask(data) {
     validateParams({ data }, ['data']);
-    
+
+    if (USE_BACKEND_API) {
+        try {
+            console.log('[Tasks API] Creating task:', data);
+
+            const payload = JSON.stringify(data);
+            const authHeader = await generateBackendAuthHeader(payload);
+            const response = await axios.post(`${backendConfig.baseUrl}/tasks`, data, {
+                headers: {
+                    'Authorization': authHeader,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('[Tasks API] Task created successfully:', response.data);
+            return response.data;
+        } catch (error) {
+            handleApiError(error, 'Create task');
+        }
+    }
+
+    // Fallback to FileMaker
     return handleFileMakerOperation(async () => {
         const params = {
             layout: Layouts.TASKS,
             action: Actions.CREATE,
             fieldData: data
         };
-        
+
         // Wait for the FileMaker operation to complete
         const result = await fetchDataFromFileMaker(params);
-        
+
         // For CREATE operations, FileMaker returns recordId instead of data
         if (params.action === Actions.CREATE) {
             if (!result?.response?.recordId) {
@@ -64,7 +157,7 @@ export async function createTask(data) {
         } else if (!result?.response?.data) {
             throw new Error('Invalid response from FileMaker');
         }
-        
+
         return result;
     });
 }
@@ -77,7 +170,28 @@ export async function createTask(data) {
  */
 export async function updateTask(taskId, data) {
     validateParams({ taskId, data }, ['taskId', 'data']);
-    
+
+    if (USE_BACKEND_API) {
+        try {
+            console.log('[Tasks API] Updating task:', taskId, data);
+
+            const payload = JSON.stringify(data);
+            const authHeader = await generateBackendAuthHeader(payload);
+            const response = await axios.patch(`${backendConfig.baseUrl}/tasks/${taskId}`, data, {
+                headers: {
+                    'Authorization': authHeader,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('[Tasks API] Task updated successfully:', response.data);
+            return response.data;
+        } catch (error) {
+            handleApiError(error, 'Update task');
+        }
+    }
+
+    // Fallback to FileMaker
     return handleFileMakerOperation(async () => {
         const params = {
             layout: Layouts.TASKS,
@@ -85,7 +199,7 @@ export async function updateTask(taskId, data) {
             recordId: taskId,
             fieldData: data
         };
-        
+
         return await fetchDataFromFileMaker(params);
     });
 }
@@ -98,7 +212,27 @@ export async function updateTask(taskId, data) {
  */
 export async function updateTaskStatus(taskId, completed) {
     validateParams({ taskId }, ['taskId']);
-    
+
+    if (USE_BACKEND_API) {
+        try {
+            console.log('[Tasks API] Updating task status:', taskId, completed);
+
+            const authHeader = await generateBackendAuthHeader('');
+            const response = await axios.post(`${backendConfig.baseUrl}/tasks/${taskId}/toggle-completion`, null, {
+                headers: {
+                    'Authorization': authHeader,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('[Tasks API] Task status updated successfully:', response.data);
+            return response.data;
+        } catch (error) {
+            handleApiError(error, 'Update task status');
+        }
+    }
+
+    // Fallback to FileMaker
     return handleFileMakerOperation(async () => {
         const params = {
             layout: Layouts.TASKS,
@@ -108,7 +242,46 @@ export async function updateTaskStatus(taskId, completed) {
                 f_completed: completed ? 1 : 0
             }
         };
-        
+
+        return await fetchDataFromFileMaker(params);
+    });
+}
+
+/**
+ * Deletes a task
+ * @param {string} taskId - The task ID
+ * @returns {Promise<Object>} Deletion confirmation
+ */
+export async function deleteTask(taskId) {
+    validateParams({ taskId }, ['taskId']);
+
+    if (USE_BACKEND_API) {
+        try {
+            console.log('[Tasks API] Deleting task:', taskId);
+
+            const authHeader = await generateBackendAuthHeader('');
+            const response = await axios.delete(`${backendConfig.baseUrl}/tasks/${taskId}`, {
+                headers: {
+                    'Authorization': authHeader,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('[Tasks API] Task deleted successfully:', response.data);
+            return response.data;
+        } catch (error) {
+            handleApiError(error, 'Delete task');
+        }
+    }
+
+    // Fallback to FileMaker
+    return handleFileMakerOperation(async () => {
+        const params = {
+            layout: Layouts.TASKS,
+            action: Actions.DELETE,
+            recordId: taskId
+        };
+
         return await fetchDataFromFileMaker(params);
     });
 }
