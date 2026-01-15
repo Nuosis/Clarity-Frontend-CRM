@@ -23,24 +23,30 @@
       "id": "TSK0001",
       "title": "Audit current task component usage",
       "description": "Find all components that use tasks, timers, and related functionality. Identify which files need updates for the new API integration. Document current data flow and state management patterns.",
-      "status": "completed",
+      "status": "done",
       "priority": "high",
       "dependencies": [],
       "completed_at": "2026-01-15T05:31:00.000Z",
       "deliverables": [
         ".devflow/tasks/tasks-backend-integration/AUDIT_COMPONENT_USAGE.md"
       ],
-      "notes": "Comprehensive audit completed covering 25+ files across components, hooks, services, and API layers. Documented current FileMaker-centric implementation, identified all integration points, estimated 85-125 hours of development effort for full backend migration. Created detailed file-by-file analysis with field mappings, data flow diagrams, risk assessment, and recommended backend API specification."
+      "notes": "Comprehensive audit completed covering 25+ files across components, hooks, services, and API layers. Documented current FileMaker-centric implementation, identified all integration points, estimated 85-125 hours of development effort for full backend migration. Created detailed file-by-file analysis with field mappings, data flow diagrams, risk assessment, and recommended backend API specification.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Completed a comprehensive audit of task component usage to prepare for the new backend API integration and documented the findings in '.devflow/tasks/tasks-backend-integration/AUDIT_COMPONENT_USAGE.md'. The audit identifies key integration points across components, hooks, services, and the FileMaker bridge layer, highlighting that 'useTask.js' is the primary routing hook and that 'taskService.js', 'salesService.js', and 'tasks.js' will require the largest refactors or a full rewrite. Important decisions and guidance were captured, including a proposed target backend data flow and endpoint specification, plus a migration strategy recommending dual-write with feature flags and a rollback plan. Task status was updated to complete and the build was verified to compile successfully via 'npm run build'."
     },
     {
       "id": "TSK0002",
       "title": "Create API request/response mappers",
       "description": "Create mapper functions to transform between FileMaker data shapes and new backend API shapes. Handle ID conversions (recordId/__ID → UUID), field name changes, type conversions (string booleans → real booleans), and timestamp formats.",
-      "status": "queued",
+      "status": "in_progress",
       "priority": "high",
       "dependencies": [
         "TSK0001"
-      ]
+      ],
+      "executionPid": 50280,
+      "sessionId": "3183d495-290e-4ae2-bcfd-0eb412b22409"
     },
     {
       "id": "TSK0003",
