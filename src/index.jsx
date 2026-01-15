@@ -48,11 +48,13 @@ function AppContent() {
 
     const {
         customers,
+        pagination,
         error: customerError,
         handleCustomerSelect,
         handleCustomerStatusToggle,
         handleCustomerDelete,
-        loadCustomers
+        loadCustomers,
+        setPagination
     } = useCustomer();
 
     // Use the TeamContext instead of calling useTeam directly
@@ -440,6 +442,22 @@ function AppContent() {
         setSelectedProject(null);
     }, [clearSelectedProject, setSelectedProject]);
 
+    // Pagination handlers for customer list
+    const handleCustomerPageChange = useCallback(async (newOffset) => {
+        await loadCustomers({
+            limit: pagination.limit,
+            offset: newOffset
+        });
+    }, [loadCustomers, pagination.limit]);
+
+    const handleCustomerLimitChange = useCallback(async (newLimit) => {
+        // When limit changes, reset to first page
+        await loadCustomers({
+            limit: newLimit,
+            offset: 0
+        });
+    }, [loadCustomers]);
+
     // Combine all handlers
     const handlers = useMemo(() => ({
         onCustomerSelect,
@@ -461,7 +479,10 @@ function AppContent() {
         handleTimerAdjust,
         customers, // Add customers for marketing functionality
         selectedMarketingDomain,
-        onMarketingDomainSelect: handleMarketingDomainSelect
+        onMarketingDomainSelect: handleMarketingDomainSelect,
+        pagination, // Add pagination metadata
+        onCustomerPageChange: handleCustomerPageChange,
+        onCustomerLimitChange: handleCustomerLimitChange
     }), [
         onCustomerSelect,
         onProjectSelect,
@@ -482,7 +503,10 @@ function AppContent() {
         handleTimerAdjust,
         customers, // Add customers dependency
         selectedMarketingDomain,
-        handleMarketingDomainSelect
+        handleMarketingDomainSelect,
+        pagination,
+        handleCustomerPageChange,
+        handleCustomerLimitChange
     ]);
 
     // Show SignIn component if not authenticated
@@ -574,6 +598,10 @@ function AppContent() {
                     } : null}
                     selectedMarketingDomain={selectedMarketingDomain}
                     onMarketingDomainSelect={handleMarketingDomainSelect}
+                    pagination={pagination}
+                    onCustomerPageChange={handlers.onCustomerPageChange}
+                    onCustomerLimitChange={handlers.onCustomerLimitChange}
+                    customersLoading={appState.loading}
                 />
                 <MainContent
                     darkMode={darkMode}

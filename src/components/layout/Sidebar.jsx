@@ -9,6 +9,7 @@ import { useMarketingContext } from '../../context/MarketingContext';
 import CustomerForm from '../customers/CustomerForm';
 import ProspectForm from '../customers/ProspectForm';
 import TeamForm from '../teams/TeamForm';
+import PaginationControls from '../common/PaginationControls';
 
 // Feature flags
 const SHOW_FM_API = import.meta.env.VITE_SHOW_FM_API === 'true';
@@ -421,7 +422,11 @@ function Sidebar({
     prospectsLoading = false,
     onProspectSelect,
     onProspectStatusToggle,
-    onProspectDelete
+    onProspectDelete,
+    pagination = { total: 0, limit: 50, offset: 0, has_more: false },
+    onCustomerPageChange = () => {},
+    onCustomerLimitChange = () => {},
+    customersLoading = false
 }) {
     const { darkMode } = useTheme();
     const { projects, projectRecords } = useProject();
@@ -829,7 +834,18 @@ function Sidebar({
                     </>
                 )}
             </div>
-            
+
+            {/* Pagination Controls - Only show for customer mode */}
+            {sidebarMode === 'customer' && (
+                <PaginationControls
+                    pagination={pagination}
+                    onPageChange={onCustomerPageChange}
+                    onLimitChange={onCustomerLimitChange}
+                    darkMode={darkMode}
+                    loading={customersLoading}
+                />
+            )}
+
             {/* Form Modals */}
             {showCustomerForm && (
                 <CustomerForm
@@ -908,7 +924,16 @@ Sidebar.propTypes = {
     prospectsLoading: PropTypes.bool,
     onProspectSelect: PropTypes.func,
     onProspectStatusToggle: PropTypes.func,
-    onProspectDelete: PropTypes.func
+    onProspectDelete: PropTypes.func,
+    pagination: PropTypes.shape({
+        total: PropTypes.number.isRequired,
+        limit: PropTypes.number.isRequired,
+        offset: PropTypes.number.isRequired,
+        has_more: PropTypes.bool
+    }),
+    onCustomerPageChange: PropTypes.func,
+    onCustomerLimitChange: PropTypes.func,
+    customersLoading: PropTypes.bool
 };
 
 export default React.memo(Sidebar);
