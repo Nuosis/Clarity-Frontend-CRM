@@ -463,6 +463,99 @@ Web App Environment:
 - ✅ Comprehensive error handling
 - ✅ Unit & integration tests (96%+ coverage)
 
+## Notes Architecture
+
+**Status**: ✅ Fully Implemented (Backend API Integration Complete)
+
+The Notes feature has been fully migrated to the backend API, removing all FileMaker dependencies:
+
+### Architecture
+- **Backend API Only**: All note operations use `/api/projects/{id}/notes`, `/api/tasks/{id}/notes`, `/api/customers/{id}/notes` endpoints
+- **No FileMaker Support**: Legacy FileMaker code paths have been removed (as of TSK0013)
+- **Data Transformation**: Bidirectional conversion between backend snake_case and frontend camelCase
+- **Organization Scoping**: All operations scoped to user's organization via JWT + RLS
+- **Multi-Entity Support**: Notes can be attached to projects, tasks, or customers
+
+### Data Model
+**Backend API** (snake_case):
+- `notes` table with explicit foreign keys: `project_id`, `customer_id`, `task_id`
+- Fields: `note` (content), `type`, `created_at`, `updated_at`, `created_by`, `updated_by`, `organization_id`
+- Constraint: Exactly ONE parent FK must be non-null (enforced by check constraint)
+
+**Frontend** (camelCase + legacy support):
+- Transformed to: `content`, `type`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy`, `organizationId`
+- Legacy `fieldData` wrapper included for backward compatibility with existing components
+
+### Key Features
+- ✅ Full CRUD operations (create, read, update, delete)
+- ✅ Multi-entity support (projects, tasks, customers)
+- ✅ Pagination support with "Load More" UI
+- ✅ Inline editing with hover-revealed controls
+- ✅ Confirmation dialogs for deletion
+- ✅ Organization-scoped security via RLS
+- ✅ Automatic user tracking (created_by/updated_by from JWT)
+- ✅ Dark mode support
+- ✅ Comprehensive error handling
+
+### Implementation Details
+**API Layer**: `src/api/notes.js`
+- `createNote()`: POST to parent entity endpoint
+- `fetchNotesByProject()`, `fetchNotesByTask()`, `fetchNotesByCustomer()`: GET with pagination
+- `updateNote()`: PATCH note content/type
+- `deleteNote()`: DELETE note by ID
+
+**Services**: `src/services/noteService.js`
+- `createNewNote()`: Multi-entity creation with dual-signature support (backward compatible)
+- `transformBackendNote()`: snake_case → camelCase transformation
+- `fetchNotesByProject/Task/Customer()`: Fetch and transform notes
+
+**Hooks**: `src/hooks/useNote.js`
+- `handleNoteCreate()`: Create note with entity type routing
+- `handleFetchNotes()`: Fetch with per-entity pagination state
+- `handleNoteUpdate()`: Update note content
+- `handleNoteDelete()`: Delete with confirmation
+- `getPagination()`, `updatePagination()`: Per-entity pagination management
+
+**Components**:
+- `ProjectNotesTab.jsx`: Full-featured notes UI with inline editing, pagination
+- `TaskList.jsx` / `TaskItem.jsx`: Compact notes display in task view
+
+### Data Flow
+```
+Component (ProjectNotesTab/TaskList)
+  ↓
+Hook (useNote.js)
+  ↓ handleNoteCreate/Fetch/Update/Delete
+Service (noteService.js)
+  ↓ createNewNote/fetchNotesByX/transformBackendNote
+API Client (notes.js)
+  ↓ createNote/fetchNotesByX/updateNote/deleteNote
+Backend API
+  ↓ POST/GET/PATCH/DELETE with HMAC auth
+Supabase Database (notes table)
+```
+
+### Authentication
+- **HMAC Authentication**: All requests use HMAC-SHA256 via `dataService.generateBackendAuthHeader()`
+- **Organization Header**: `X-Organization-ID` from JWT claims (automatic via dataService interceptor)
+- **User Tracking**: `created_by` and `updated_by` extracted from JWT by backend
+
+### Pagination
+- Per-entity pagination state managed in `useNote` hook
+- Format: `paginationByEntity['project-{id}']` → `{ limit, offset, hasMore, total }`
+- "Load More" buttons appear when `hasMore === true`
+- Default: 50 notes per page
+
+### Migration Status
+- ✅ Phase 1: API client layer (notes.js) - Backend API only
+- ✅ Phase 2: Service layer (noteService.js) - Data transformations
+- ✅ Phase 3: Hook layer (useNote.js) - State management with pagination
+- ✅ Phase 4: Component updates - ProjectNotesTab and TaskList
+- ✅ Phase 5: FileMaker removal - All legacy code removed
+- ✅ Phase 6: Documentation - Complete
+
+**Detailed Documentation**: See `docs/NOTES_BACKEND_INTEGRATION.md`
+
 ## Development Guidelines
 
 ### File Organization Rules
@@ -549,22 +642,34 @@ Required variables in `.env`:
    - **Customers**: Dual-environment (FileMaker + Backend API) - use environment-aware API client
    - **Prospects**: Supabase-only - direct Supabase calls
 6. **Teams Architecture**: Teams are Supabase-backed, NOT FileMaker-backed - do not attempt to use FileMaker bridge for teams
-7. **Organization Scoping**: All backend API operations require organization_id in JWT claims
+7. **Notes Architecture**: Notes are Backend API ONLY - NO FileMaker support
+   - Do not add FileMaker code paths to notes functionality
+   - Use explicit foreign keys (`project_id`, `customer_id`, `task_id`), not polymorphic entity references
+   - Backend field is `note`, frontend transforms to `content`
+   - Always use `transformBackendNote()` for data transformation
+8. **Organization Scoping**: All backend API operations require organization_id in JWT claims
    - Missing org ID will cause "MISSING_ORG_ID" errors
    - Check `env.authentication.user.supabaseOrgID` exists before backend calls
-8. **Customer Data Transformation**:
+9. **Customer Data Transformation**:
    - Backend uses relational model (nested emails/phones/addresses)
    - FileMaker uses flat model (single Email, Phone fields)
    - Always use transformation utilities (`transformFileMakerToBackend`, `transformBackendToFileMaker`)
    - Never manually convert - use provided utilities
-9. **Primary Contact Flags**:
+10. **Notes Data Transformation**:
+   - Backend uses snake_case (`note`, `created_at`, `created_by`)
+   - Frontend uses camelCase (`content`, `createdAt`, `createdBy`)
+   - Always use `transformBackendNote()` in `noteService.js`
+   - Components receive transformed data - never access raw backend format
+11. **Primary Contact Flags**:
    - Exactly one email/phone/address must be marked `is_primary: true`
    - Use `ensureSinglePrimary()` utility to enforce
-10. **Authentication**: Backend requests require HMAC, Supabase requests use JWT
-11. **Loading States**: Use `loadingStateManager` for global loading feedback
-12. **State Updates**: Complex state updates should use `setTimeout(..., 0)` to avoid React render issues
-13. **Customer Pagination**: Only works in web app environment - FileMaker returns all records
-14. **Customer Search**: Web app uses `/api/customers/search` - FileMaker falls back to client-side filter
+12. **Authentication**: Backend requests require HMAC, Supabase requests use JWT
+13. **Loading States**: Use `loadingStateManager` for global loading feedback
+14. **State Updates**: Complex state updates should use `setTimeout(..., 0)` to avoid React render issues
+15. **Customer Pagination**: Only works in web app environment - FileMaker returns all records
+16. **Customer Search**: Web app uses `/api/customers/search` - FileMaker falls back to client-side filter
+17. **Notes Pagination**: Per-entity pagination state (not global) - use `getPagination(entityType, entityId)`
+18. **Multi-Entity Notes**: Exactly ONE parent FK (project_id OR customer_id OR task_id) - enforced by check constraint
 
 ## Documentation Resources
 
@@ -579,6 +684,7 @@ Required variables in `.env`:
 - `docs/CUSTOMERS_BACKEND_API.md`: Customer API client reference
 - `docs/CUSTOMER_SERVICE_API.md`: Customer service layer reference
 - `docs/CUSTOMER_FORM_USAGE.md`: CustomerForm component guide
+- **`docs/NOTES_BACKEND_INTEGRATION.md`**: Complete notes backend API integration guide
 - `requirements/customers/`: Customer migration requirements and specifications
   - `README.md`: Overview and current status
   - `data-model-mapping.md`: FileMaker ↔ Backend field mappings
