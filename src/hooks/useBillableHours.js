@@ -3,11 +3,13 @@ import { fetchFinancialRecords } from '../api/financialRecords';
 import * as financialService from '../services/billableHoursService';
 
 /**
- * Custom hook for managing billable hours data
- * @param {string} initialTimeframe - The timeframe to fetch ("thisMonth", "unpaid", "lastMonth", "thisQuarter", "thisYear")
+ * Custom hook for managing billable hours data from Supabase customer_sales table
+ * Uses Supabase get_financial_records RPC to fetch records with organization scoping
+ *
+ * @param {string} initialTimeframe - The timeframe to fetch ("today", "thisWeek", "thisMonth", "unpaid", "lastMonth", "thisQuarter", "thisYear")
  * @param {Object} options - Optional configuration options
- * @param {string} options.customerId - Initial customer ID to filter by
- * @param {string} options.projectId - Initial project ID to filter by
+ * @param {string} options.customerId - Initial customer ID to filter by (client-side filtering)
+ * @param {string} options.projectId - Initial project ID to filter by (client-side filtering, not in Supabase schema)
  * @param {boolean} options.autoLoad - Whether to load data automatically (default: true)
  * @returns {Object} Billable hours data and methods
  */
@@ -40,27 +42,28 @@ export function useBillableHours(initialTimeframe = "thisMonth", options = {}) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      console.log(`Fetching financial records for timeframe: ${timeframe}`);
-      
+      console.log(`[useBillableHours] Fetching financial records for timeframe: ${timeframe}`);
+
       // Fetch all records for the timeframe without customer or project filter
+      // Uses Supabase get_financial_records RPC via fetchFinancialRecords()
       const data = await fetchFinancialRecords(timeframe);
-      
-      console.log("Raw FileMaker response structure:",
+
+      console.log("[useBillableHours] Supabase RPC response structure:",
         JSON.stringify({
           hasResponse: !!data?.response,
           dataCount: data?.response?.data?.length || 0,
           dataInfo: data?.response?.dataInfo
         }, null, 2)
       );
-      
-      // Process the raw data using the service
+
+      // Process the raw data using the service (handles Supabase customer_sales schema)
       const processedData = financialService.processFinancialData(data);
-      console.log(`Processed ${processedData.length} records`);
-      
+      console.log(`[useBillableHours] Processed ${processedData.length} records`);
+
       if (processedData.length > 0) {
-        console.log("First processed record sample:", JSON.stringify(processedData[0], null, 2));
+        console.log("[useBillableHours] First processed record sample:", JSON.stringify(processedData[0], null, 2));
       }
-      
+
       // Apply sorting
       let sortedData = processedData;
       if (sortConfig.field === 'date') {
@@ -68,17 +71,17 @@ export function useBillableHours(initialTimeframe = "thisMonth", options = {}) {
       } else if (sortConfig.field === 'amount') {
         sortedData = financialService.sortRecordsByAmount(processedData, sortConfig.direction);
       }
-      
-      setRecords(data); // Store raw data
+
+      setRecords(data); // Store raw data (normalized Supabase response)
       setProcessedRecords(sortedData); // Store all processed data
       setError(null);
     } catch (err) {
-      console.error('Error fetching financial records:', err);
+      console.error('[useBillableHours] Error fetching financial records:', err);
       setError(err.message || 'Failed to fetch financial records');
     } finally {
       setLoading(false);
     }
-  }, [timeframe, sortConfig]); // Remove selectedCustomerId and selectedProjectId dependencies
+  }, [timeframe, sortConfig]);
 
   // Fetch records when timeframe changes
   useEffect(() => {
@@ -162,26 +165,33 @@ export function useBillableHours(initialTimeframe = "thisMonth", options = {}) {
 
   /**
    * Saves changes to a record and refreshes data
+   * NOTE: Record update functionality is not currently implemented in the Supabase API.
+   * This function exists for future implementation. Currently only billed status updates
+   * are supported via updateBilledStatus() which uses mark_records_billed RPC.
    * @param {Object} updatedRecord - The updated record data
    */
   const saveRecord = useCallback(async (updatedRecord) => {
     try {
-      // Format record for FileMaker
+      // Format record for Supabase (backward compatibility wrapper)
       const formattedRecord = financialService.formatFinancialRecordForFileMaker(updatedRecord);
-      
-      // TODO: Implement API call to update record
-      // This would typically call an API function like updateFinancialRecord
-      
-      // Close modal and refresh data
+
+      console.warn('[useBillableHours] saveRecord() called but record updates are not implemented in API');
+      console.warn('[useBillableHours] Use updateBilledStatus() for billed status changes');
+
+      // Close modal without saving
       closeEditModal();
-      await fetchData();
-      
-      return true;
+
+      // Don't refresh data since no changes were made
+      // await fetchData();
+
+      setError('Record updates are not currently supported. Use billing controls to mark records as billed.');
+      return false;
     } catch (err) {
+      console.error('[useBillableHours] Error in saveRecord:', err);
       setError(err.message || 'Failed to save record');
       return false;
     }
-  }, [closeEditModal, fetchData]);
+  }, [closeEditModal]);
 
   /**
    * Updates the sort configuration

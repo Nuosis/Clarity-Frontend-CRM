@@ -23,3 +23,18 @@ export {
   generateReportFromAppData,
   generateReportFromFinancialRecords
 } from './pdfReportExample';
+
+// Export date utility functions
+export {
+  parseDate,
+  formatDate,
+  formatDateCanadian,
+  formatDateUS,
+  formatYearMonth,
+  formatMonthYear,
+  convertFileMakerToSupabase,
+  convertSupabaseToFileMaker,
+  isValidDate,
+  isValidFileMakerDate,
+  isValidSupabaseDate
+} from './dateUtils';

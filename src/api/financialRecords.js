@@ -16,6 +16,7 @@
 
 import { getSupabaseClient } from '../services/supabaseService';
 import { getOrganizationId, hasOrganizationContext } from '../services/dataService';
+import { convertSupabaseToFileMaker, convertFileMakerToSupabase } from '../utils/dateUtils';
 
 /**
  * Helper function to validate required parameters
@@ -47,27 +48,9 @@ function getRequiredOrganizationId() {
     return orgId;
 }
 
-/**
- * Helper function to convert YYYY-MM-DD to MM/DD/YYYY format (for backward compatibility)
- * @param {string} dateString - Date in YYYY-MM-DD format
- * @returns {string} Date in MM/DD/YYYY format
- */
-function convertToDisplayDate(dateString) {
-    if (!dateString) return null;
-    const [year, month, day] = dateString.split('-');
-    return `${month}/${day}/${year}`;
-}
-
-/**
- * Helper function to convert MM/DD/YYYY to YYYY-MM-DD format
- * @param {string} dateString - Date in MM/DD/YYYY format
- * @returns {string} Date in YYYY-MM-DD format
- */
-function convertToISODate(dateString) {
-    if (!dateString) return null;
-    const [month, day, year] = dateString.split('/');
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-}
+// Date conversion functions are now imported from dateUtils
+// convertSupabaseToFileMaker: YYYY-MM-DD → MM/DD/YYYY
+// convertFileMakerToSupabase: MM/DD/YYYY → YYYY-MM-DD
 
 /**
  * Helper function to get current date information
@@ -134,7 +117,7 @@ function normalizeFinancialRecords(records) {
             __ID: record.financial_id, // Map financial_id to __ID for backward compatibility
             _custID: record.customer_id,
             _projectID: null, // Supabase schema doesn't have project_id
-            DateStart: convertToDisplayDate(record.date), // Convert YYYY-MM-DD to MM/DD/YYYY
+            DateStart: convertSupabaseToFileMaker(record.date), // Convert YYYY-MM-DD to MM/DD/YYYY
             Billable_Time_Rounded: record.quantity,
             Hourly_Rate: record.unit_price,
             'Customers::Name': record.customer_name,

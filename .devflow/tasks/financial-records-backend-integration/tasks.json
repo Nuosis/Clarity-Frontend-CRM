@@ -183,7 +183,7 @@
       "id": "TSK0009",
       "title": "Update RecordModal and RecordDetailsModal for Supabase",
       "description": "Review and update src/components/financial/RecordModal.jsx and RecordDetailsModal.jsx. Ensure field mappings are correct for Supabase schema. Update any edit/update flows to use new API. Test modal display with real Supabase records.",
-      "status": "in_progress",
+      "status": "done",
       "priority": "low",
       "dependencies": [
         "TSK0001",
@@ -194,14 +194,16 @@
         "src/components/financial/RecordDetailsModal.jsx"
       ],
       "notes": "These are detail views - lower priority but should be validated",
-      "executionPid": 83622,
-      "sessionId": "0a64112a-a67a-41bd-9543-adbc206574ca"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented Supabase-compatible updates for the sales modals by fixing field mappings and ID usage in 'RecordModal.jsx' and 'RecordDetailsModal.jsx' to align with 'customer_sales' (using 'record.id' as the primary identifier, 'customers.business_name' for customer display, and 'inv_id' semantics with 'BILLED'). Refactored 'RecordDetailsModal.jsx' to remove the incorrect enrichment path that called 'fetchFinancialRecordByUUID' (which expected 'financial_id'), instead relying on the complete data returned from the RPC and updating bulk invoice actions to target the correct IDs. Improved date handling and update payload construction in 'RecordModal.jsx', and cleaned up unused imports plus added clearer component-scoped logging and error handling. Verified changes by running a successful build and adding a test to validate behavior with Supabase-shaped records."
     },
     {
       "id": "TSK0010",
       "title": "Update useBillableHours hook for new API",
       "description": "Review src/hooks/useBillableHours.js and update for new financial records API. Ensure hook works with Supabase data shapes. Update any data fetching, filtering, or aggregation logic. Test hook usage in components.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0001",
@@ -210,20 +212,32 @@
       "files": [
         "src/hooks/useBillableHours.js"
       ],
-      "notes": "Check if this hook is actively used - may need refactoring"
+      "notes": "✅ COMPLETED: Updated documentation to reflect Supabase data source. Improved logging with Supabase-specific messages and [useBillableHours] prefix. Updated saveRecord() function to document that record updates are not implemented (only billed status updates via updateBilledStatus()). Hook was already compatible with new API - only needed documentation and logging updates. Build verified successful. Hook not actively used in production but remains functional for future features.",
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "executionError": null,
+      "implementation_notes": "Updated useBillableHours hook for Supabase compatibility by revising JSDoc to clarify data source (Supabase customer_sales via get_financial_records RPC), updating all console logs to use [useBillableHours] prefix and reference Supabase instead of FileMaker, and documenting the saveRecord() function as unsupported (record updates not in API, only billed status changes via mark_records_billed). Key finding: hook was already fully compatible since it uses updated API client (TSK0001) and service layer (TSK0002) - changes were documentation and logging only. Verified build successful and added completion summary in TSK0010_COMPLETION_SUMMARY.md documenting data flow, hook usage analysis, and known limitations."
     },
     {
       "id": "TSK0011",
       "title": "Add date format conversion utilities",
       "description": "Create or update date utility functions to handle conversions between FileMaker format (MM/DD/YYYY) and Supabase format (YYYY-MM-DD). Add validation and error handling. Use in API client and service layers. Consider using date-fns library for robust parsing.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [],
       "files": [
         "src/utils/dateUtils.js",
-        "src/api/financialRecords.js"
+        "src/api/financialRecords.js",
+        "src/utils/index.js",
+        "docs/DATE_UTILITIES.md"
       ],
-      "notes": "Date format mismatches are a common source of bugs - handle properly"
+      "notes": "✅ COMPLETED: Installed date-fns library. Created comprehensive date conversion utilities with convertFileMakerToSupabase() and convertSupabaseToFileMaker(). Updated parseDate() to use date-fns for robust parsing. Added validation functions isValidFileMakerDate() and isValidSupabaseDate(). Fixed bug in formatDateCanadian() (was DD/MM/YYYY, now MM/DD/YYYY). Replaced inline conversion functions in financialRecords.js with centralized utilities. All functions include error handling and validation. Created comprehensive test suite - all tests pass. Build verified successful. Documentation created at docs/DATE_UTILITIES.md.",
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "executionError": null,
+      "implementation_notes": "Implemented comprehensive date format conversion utilities by installing date-fns library and updating src/utils/dateUtils.js with robust conversion functions (convertFileMakerToSupabase, convertSupabaseToFileMaker), validation functions (isValidFileMakerDate, isValidSupabaseDate), and enhanced parsing/formatting functions using date-fns (parse, format, parseISO, isValid). Replaced inline date conversion functions in src/api/financialRecords.js with imports from dateUtils, maintaining backward compatibility with existing code. Fixed critical bug where formatDateCanadian() was using DD/MM/YYYY instead of MM/DD/YYYY format. Created comprehensive test suite demonstrating all conversion scenarios including round-trip conversions, invalid date handling, and edge cases - all tests pass. Added exports to src/utils/index.js for easy importing. Created detailed documentation at docs/DATE_UTILITIES.md covering all functions, usage examples, error handling, testing, and best practices. Build verified successful with no compilation errors."
     },
     {
       "id": "TSK0012",

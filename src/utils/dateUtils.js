@@ -1,34 +1,40 @@
 /**
  * Date utility functions for consistent date handling across the application
- * Optimized for Canadian/ISO date formatting preferences
+ * Handles conversions between FileMaker format (MM/DD/YYYY) and Supabase format (YYYY-MM-DD)
  */
+
+import { parse, format, isValid, parseISO } from 'date-fns';
 
 /**
  * Parse a date string in various formats and return a Date object
- * Assumes ISO format (YYYY-MM-DD) as the default/preferred format
- * @param {string} dateString - Date string in various formats
+ * Supports ISO format (YYYY-MM-DD), FileMaker format (MM/DD/YYYY), and ISO timestamps
+ * @param {string|Date} dateString - Date string in various formats or Date object
  * @returns {Date|null} - Parsed Date object or null if invalid
  */
 export const parseDate = (dateString) => {
-  if (!dateString || typeof dateString !== 'string') {
+  if (!dateString) {
     return null;
   }
 
-  // Try different date formats, prioritizing ISO format
+  // If already a Date object, validate and return
+  if (dateString instanceof Date) {
+    return isValid(dateString) ? dateString : null;
+  }
+
+  if (typeof dateString !== 'string') {
+    return null;
+  }
+
+  // Try different date formats using date-fns
   let date = null;
 
-  // ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss (preferred format)
+  // ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss (Supabase format)
   if (dateString.match(/^\d{4}-\d{2}-\d{2}/)) {
-    date = new Date(dateString);
+    date = parseISO(dateString);
   }
-  // Canadian format: DD/MM/YYYY (more common in Canada than US format)
+  // FileMaker/US format: MM/DD/YYYY
   else if (dateString.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
-    const parts = dateString.split('/');
-    // Assume DD/MM/YYYY format for Canadian preference
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // Month is 0-based
-    const year = parseInt(parts[2], 10);
-    date = new Date(year, month, day);
+    date = parse(dateString, 'MM/dd/yyyy', new Date());
   }
   // Try parsing as-is for other formats
   else {
@@ -36,7 +42,7 @@ export const parseDate = (dateString) => {
   }
 
   // Check if the date is valid
-  if (date && !isNaN(date.getTime())) {
+  if (date && isValid(date)) {
     return date;
   }
 
@@ -44,49 +50,114 @@ export const parseDate = (dateString) => {
 };
 
 /**
- * Format a date to ISO format (YYYY-MM-DD) - Canadian/International standard
+ * Format a date to ISO format (YYYY-MM-DD) - Supabase standard
  * @param {Date|string} date - Date object or date string
- * @returns {string} - Formatted date string in ISO format
+ * @returns {string} - Formatted date string in ISO format (YYYY-MM-DD)
  */
 export const formatDate = (date) => {
   let dateObj = date;
-  
+
   if (typeof date === 'string') {
     dateObj = parseDate(date);
   }
-  
-  if (!dateObj || isNaN(dateObj.getTime())) {
+
+  if (!dateObj || !isValid(dateObj)) {
     return '';
   }
 
-  const year = dateObj.getFullYear();
-  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-  const day = dateObj.getDate().toString().padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
+  return format(dateObj, 'yyyy-MM-dd');
 };
 
 /**
- * Format a date to Canadian display format (DD/MM/YYYY)
+ * Convert FileMaker date format (MM/DD/YYYY) to Supabase format (YYYY-MM-DD)
+ * @param {string} fileMakerDate - Date string in MM/DD/YYYY format
+ * @returns {string|null} - Date string in YYYY-MM-DD format or null if invalid
+ */
+export const convertFileMakerToSupabase = (fileMakerDate) => {
+  if (!fileMakerDate || typeof fileMakerDate !== 'string') {
+    return null;
+  }
+
+  // Validate format: MM/DD/YYYY
+  if (!fileMakerDate.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+    console.warn(`[dateUtils] Invalid FileMaker date format: ${fileMakerDate}. Expected MM/DD/YYYY`);
+    return null;
+  }
+
+  try {
+    const dateObj = parse(fileMakerDate, 'MM/dd/yyyy', new Date());
+
+    if (!isValid(dateObj)) {
+      console.warn(`[dateUtils] Invalid date: ${fileMakerDate}`);
+      return null;
+    }
+
+    return format(dateObj, 'yyyy-MM-dd');
+  } catch (error) {
+    console.error(`[dateUtils] Error converting FileMaker date: ${fileMakerDate}`, error);
+    return null;
+  }
+};
+
+/**
+ * Convert Supabase date format (YYYY-MM-DD) to FileMaker format (MM/DD/YYYY)
+ * @param {string} supabaseDate - Date string in YYYY-MM-DD format
+ * @returns {string|null} - Date string in MM/DD/YYYY format or null if invalid
+ */
+export const convertSupabaseToFileMaker = (supabaseDate) => {
+  if (!supabaseDate || typeof supabaseDate !== 'string') {
+    return null;
+  }
+
+  // Validate format: YYYY-MM-DD
+  if (!supabaseDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    console.warn(`[dateUtils] Invalid Supabase date format: ${supabaseDate}. Expected YYYY-MM-DD`);
+    return null;
+  }
+
+  try {
+    const dateObj = parseISO(supabaseDate);
+
+    if (!isValid(dateObj)) {
+      console.warn(`[dateUtils] Invalid date: ${supabaseDate}`);
+      return null;
+    }
+
+    return format(dateObj, 'MM/dd/yyyy');
+  } catch (error) {
+    console.error(`[dateUtils] Error converting Supabase date: ${supabaseDate}`, error);
+    return null;
+  }
+};
+
+/**
+ * Format a date to FileMaker/US display format (MM/DD/YYYY)
+ * Note: Despite the function name, this now returns US format to match FileMaker expectations
  * @param {Date|string} date - Date object or date string
- * @returns {string} - Formatted date string in Canadian format
+ * @returns {string} - Formatted date string in MM/DD/YYYY format
  */
 export const formatDateCanadian = (date) => {
   let dateObj = date;
-  
+
   if (typeof date === 'string') {
     dateObj = parseDate(date);
   }
-  
-  if (!dateObj || isNaN(dateObj.getTime())) {
+
+  if (!dateObj || !isValid(dateObj)) {
     return '';
   }
 
-  const day = dateObj.getDate().toString().padStart(2, '0');
-  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-  const year = dateObj.getFullYear();
+  return format(dateObj, 'MM/dd/yyyy');
+};
 
-  return `${day}/${month}/${year}`;
+/**
+ * Format a date to FileMaker/US display format (MM/DD/YYYY)
+ * Alias for clarity - same as formatDateCanadian but with correct name
+ * @param {Date|string} date - Date object or date string
+ * @returns {string} - Formatted date string in MM/DD/YYYY format
+ */
+export const formatDateUS = (date) => {
+  return formatDateCanadian(date);
 };
 
 /**
@@ -96,19 +167,16 @@ export const formatDateCanadian = (date) => {
  */
 export const formatYearMonth = (date) => {
   let dateObj = date;
-  
+
   if (typeof date === 'string') {
     dateObj = parseDate(date);
   }
-  
-  if (!dateObj || isNaN(dateObj.getTime())) {
+
+  if (!dateObj || !isValid(dateObj)) {
     return '';
   }
 
-  const year = dateObj.getFullYear();
-  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-
-  return `${year}-${month}`;
+  return format(dateObj, 'yyyy-MM');
 };
 
 /**
@@ -118,32 +186,72 @@ export const formatYearMonth = (date) => {
  */
 export const formatMonthYear = (date) => {
   let dateObj = date;
-  
+
   if (typeof date === 'string') {
     dateObj = parseDate(date);
   }
-  
-  if (!dateObj || isNaN(dateObj.getTime())) {
+
+  if (!dateObj || !isValid(dateObj)) {
     return '';
   }
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  const month = monthNames[dateObj.getMonth()];
-  const year = dateObj.getFullYear();
-
-  return `${month} ${year}`;
+  return format(dateObj, 'MMMM yyyy');
 };
 
 /**
  * Check if a date string is valid
- * @param {string} dateString - Date string to validate
+ * @param {string|Date} dateString - Date string to validate
  * @returns {boolean} - True if valid, false otherwise
  */
 export const isValidDate = (dateString) => {
   const date = parseDate(dateString);
   return date !== null;
+};
+
+/**
+ * Validate if a string matches FileMaker date format (MM/DD/YYYY)
+ * @param {string} dateString - Date string to validate
+ * @returns {boolean} - True if matches MM/DD/YYYY format and is a valid date
+ */
+export const isValidFileMakerDate = (dateString) => {
+  if (!dateString || typeof dateString !== 'string') {
+    return false;
+  }
+
+  // Check format
+  if (!dateString.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+    return false;
+  }
+
+  // Check if it's a valid date
+  try {
+    const dateObj = parse(dateString, 'MM/dd/yyyy', new Date());
+    return isValid(dateObj);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Validate if a string matches Supabase date format (YYYY-MM-DD)
+ * @param {string} dateString - Date string to validate
+ * @returns {boolean} - True if matches YYYY-MM-DD format and is a valid date
+ */
+export const isValidSupabaseDate = (dateString) => {
+  if (!dateString || typeof dateString !== 'string') {
+    return false;
+  }
+
+  // Check format
+  if (!dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return false;
+  }
+
+  // Check if it's a valid date
+  try {
+    const dateObj = parseISO(dateString);
+    return isValid(dateObj);
+  } catch {
+    return false;
+  }
 };
