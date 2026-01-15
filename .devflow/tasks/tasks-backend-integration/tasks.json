@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-15T05:31:00.000Z",
+  "updated_at": "2026-01-15T06:30:00.000Z",
   "feature": {
     "name": "Tasks Backend Integration",
     "slug": "tasks-backend-integration",
@@ -79,7 +79,7 @@
         ".devflow/tasks/tasks-backend-integration/TIMER_ENDPOINTS_IMPLEMENTATION.md"
       ],
       "notes": "Implemented all timer endpoints in src/api/tasks.js with backend API integration and FileMaker fallback. Added startTaskTimer (POST /time-entries/start), stopTaskTimer (POST /time-entries/{id}/stop with atomic financial record creation), pauseTimer, resumeTimer, getActiveTimer (GET /time-entries/active), and updated fetchTaskTimers with advanced filtering. All endpoints use HMAC authentication, comprehensive error handling, and detailed logging. Backend handles idempotency, concurrency control (one active timer per staff), and atomic operations. Pause/resume only supported in backend mode. Build verified successfully.",
-      "implementation_notes": "Successfully implemented all 6 timer endpoints in 'src/api/tasks.js' with full backend API integration. Key features: (1) startTaskTimer uses POST /time-entries/start with idempotency via backend enforcement, (2) stopTaskTimer uses POST /time-entries/{id}/stop with atomic financial record creation (skips for fixed-price projects), (3) pauseTimer and resumeTimer (POST /time-entries/{id}/pause and /resume) only work in backend mode - FileMaker throws unsupported error, (4) getActiveTimer (GET /time-entries/active) fetches current active timer with graceful 404 handling, (5) fetchTaskTimers updated to support advanced filtering (project_id, customer_id, staff_id, status, date ranges, pagination). All endpoints use HMAC-SHA256 authentication via generateBackendAuthHeader(), maintain FileMaker fallback (except pause/resume), include comprehensive error handling with field-level validation messages, and add detailed logging with [Tasks API] prefix. Backend guarantees concurrency control (one active timer per staff), atomic stop+financial operations, and state validation. Verified build compiles successfully. Documented complete API contracts, error scenarios, data mappings, and migration strategy in TIMER_ENDPOINTS_IMPLEMENTATION.md.",
+      "implementation_notes": "Implemented full timer endpoint support in 'src/api/tasks.js' based on the OpenAPI time-entries spec, adding new functions for 'pauseTimer', 'resumeTimer', and 'getActiveTimer' and enhancing existing timer operations to match backend integration patterns with HMAC auth, validation, logging, and robust error handling (including graceful 404 to null for no active timer). Kept FileMaker fallback compatibility for all relevant operations while explicitly making pause and resume backend-only (FileMaker throws), and ensured filtering and pagination improvements for 'fetchTaskTimers' without breaking existing callers. Added documentation deliverables 'TIMER_ENDPOINTS_IMPLEMENTATION.md', 'TIMER_API_QUICK_REFERENCE.md', and 'TSK0004_VERIFICATION.md', verified build and exports, and updated task status in '.devflow/tasks/tasks-backend-integration/tasks.json' to done with completion metadata.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -88,12 +88,21 @@
       "id": "TSK0005",
       "title": "Update taskService.js business logic",
       "description": "Update service layer functions to use new API shapes and handle new business logic: timer idempotency, concurrency control (one active timer per staff), financial record generation on stop (with fixed-price detection), pause/resume accumulation, adjustment validations (6-minute increments).",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0003",
         "TSK0004"
-      ]
+      ],
+      "completed_at": "2026-01-15T06:30:00.000Z",
+      "deliverables": [
+        ".devflow/tasks/tasks-backend-integration/TSK0005_IMPLEMENTATION.md"
+      ],
+      "notes": "Updated taskService.js to handle new backend API shapes and implement timer business logic including idempotency, concurrency control, atomic financial record generation, pause/resume functionality, and 6-minute adjustment validation. Added new functions: pauseTimer, resumeTimer, getActiveTimer. Enhanced processTimerRecords and processTaskData to handle both backend (array) and FileMaker (object) response formats. Added comprehensive logging with [Task Service] prefix, user-friendly error messages, and helper functions for financial record extraction and timer statistics. Maintained FileMaker backward compatibility. Build verified successfully.",
+      "implementation_notes": "Successfully updated 'src/services/taskService.js' to integrate new backend timer business logic while maintaining FileMaker backward compatibility. Key changes include: (1) Enhanced startTimer() with concurrency control and active timer checking, (2) Enhanced stopTimer() with 6-minute adjustment validation and dual response handling for backend financial records and FileMaker legacy, (3) Added pauseTimer(), resumeTimer(), and getActiveTimer() functions with user-friendly error messages, (4) Updated processTimerRecords() and processTaskData() to handle both backend (array) and FileMaker (object) response formats, (5) Added validation functions for 6-minute increments (isValidTimerAdjustmentSeconds, roundToValidAdjustmentSeconds), (6) Added helper functions for financial record extraction (extractFinancialRecord, formatFinancialRecordForDisplay, calculateTimerStats), (7) Comprehensive logging throughout with '[Task Service]' prefix. All business requirements met: timer idempotency (one active per staff), concurrency control, atomic financial record generation with fixed-price detection, pause/resume accumulation, and adjustment validations. Build verified successfully with no errors.",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0006",

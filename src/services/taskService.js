@@ -7,7 +7,10 @@ import {
     updateTask as updateTaskAPI,
     updateTaskStatus as updateTaskStatusAPI,
     startTaskTimer as startTaskTimerAPI,
-    stopTaskTimer as stopTaskTimerAPI
+    stopTaskTimer as stopTaskTimerAPI,
+    pauseTimer as pauseTimerAPI,
+    resumeTimer as resumeTimerAPI,
+    getActiveTimer as getActiveTimerAPI
 } from '../api/tasks';
 import { fetchFinancialRecordByRecordId } from '../api/financialRecords';
 import { createSaleFromFinancialRecord } from './salesService';
@@ -48,86 +51,264 @@ export async function loadTaskDetails(taskId) {
 }
 
 /**
- * Starts a timer with validation
+ * Starts a timer with validation and concurrency control
+ * Checks for existing active timer before starting new one
  * @param {Object} task - Task to start timer for
+ * @param {string} staffId - Staff ID (optional, defaults to task._staffID)
  * @returns {Promise<Object>} Created timer record
+ * @throws {Error} If task is invalid or staff already has active timer
  */
-export async function startTimer(task) {
+export async function startTimer(task, staffId = null) {
     if (!task?.id) {
         throw new Error('Invalid task for timer');
     }
-    return await startTaskTimerAPI(task.id, task);
+
+    const effectiveStaffId = staffId || task._staffID || task.staff_id;
+    if (!effectiveStaffId) {
+        throw new Error('Staff ID is required to start timer');
+    }
+
+    console.log('[Task Service] Starting timer for task:', task.id, 'staff:', effectiveStaffId);
+
+    // Check for existing active timer (backend enforces this, but we check for better UX)
+    try {
+        const activeTimer = await getActiveTimerAPI(effectiveStaffId);
+        if (activeTimer) {
+            console.warn('[Task Service] Staff already has active timer:', activeTimer);
+            throw new Error('You already have an active timer running. Please stop or pause it before starting a new one.');
+        }
+    } catch (error) {
+        // If error is not about existing timer, log it but continue
+        // (backend will handle idempotency check)
+        if (!error.message.includes('active timer')) {
+            console.warn('[Task Service] Error checking active timer:', error);
+        } else {
+            throw error; // Re-throw if it's about existing timer
+        }
+    }
+
+    try {
+        const result = await startTaskTimerAPI(task.id, task);
+        console.log('[Task Service] Timer started successfully:', result);
+        return result;
+    } catch (error) {
+        console.error('[Task Service] Failed to start timer:', error);
+
+        // Handle concurrency error from backend
+        if (error.message.includes('already has an active timer') || error.message.includes('409')) {
+            throw new Error('You already have an active timer running. Please stop or pause it before starting a new one.');
+        }
+
+        throw error;
+    }
 }
 
 /**
  * Stops a timer with validation and adjustments
+ * Backend handles financial record creation atomically
+ * Fixed-price projects are detected automatically and no financial record is created
+ *
  * @param {Object} params - Timer stop parameters
- * @returns {Promise<Object>} Updated timer record
+ * @param {string} params.recordId - Timer entry ID (UUID for backend, recordId for FileMaker)
+ * @param {string} [params.description=''] - Work performed description
+ * @param {boolean} [params.saveImmediately=false] - Save without description
+ * @param {number} [params.totalPauseTime=0] - Total pause duration in seconds
+ * @param {number} [params.adjustment=0] - Manual adjustment in seconds
+ * @param {string} organizationId - Organization ID for legacy sales record sync
+ * @returns {Promise<Object>} Updated timer record with financial record if created
+ * @throws {Error} If timer record is invalid or stop operation fails
  */
 export async function stopTimer(params, organizationId = null) {
     if (!params?.recordId) {
         throw new Error('Invalid timer record');
     }
-    
-    // Stop the timer in FileMaker
-    const result = await stopTaskTimerAPI(
-        params.recordId,
-        params.description,
-        params.saveImmediately,
-        params.totalPauseTime + params.adjustment
-    );
-            
-    // console.log('Timer stop result:', result, params);
-    
-    // If the timer was successfully stopped, create a sales record in Supabase
-    if (result && result.response) {
-        try {
-            // Get the organization ID from the parameter or from the global state
-            const orgId = organizationId || (window.state?.user?.supabaseOrgID);
-            
-            if (!orgId) {
-                console.warn('No organization ID found, skipping sales record creation');
-                return result;
+
+    // Validate adjustment is in 6-minute increments
+    const adjustmentMinutes = (params.adjustment || 0) / 60;
+    if (adjustmentMinutes % 6 !== 0) {
+        throw new Error('Time adjustment must be in 6-minute (0.1 hour) increments');
+    }
+
+    console.log('[Task Service] Stopping timer:', params.recordId, {
+        description: params.description,
+        saveImmediately: params.saveImmediately,
+        totalPauseTime: params.totalPauseTime || 0,
+        adjustment: params.adjustment || 0
+    });
+
+    try {
+        // Stop the timer - backend handles financial record creation atomically
+        const result = await stopTaskTimerAPI(
+            params.recordId,
+            params.description,
+            params.saveImmediately,
+            (params.totalPauseTime || 0) + (params.adjustment || 0)
+        );
+
+        console.log('[Task Service] Timer stopped successfully:', result);
+
+        // Backend API returns structured response with time_entry and financial_record
+        if (result?.time_entry) {
+            console.log('[Task Service] Time entry:', result.time_entry);
+
+            if (result.financial_record) {
+                console.log('[Task Service] Financial record created:', result.financial_record);
+            } else {
+                console.log('[Task Service] No financial record created (likely fixed-price project)');
             }
 
-            // Declare financialId variable
-            let financialId;
+            // Return backend response as-is
+            return result;
+        }
+
+        // FileMaker legacy response handling
+        if (result && result.response) {
+            console.log('[Task Service] Processing FileMaker response');
 
             try {
-                console.log(`Fetching financial record by recordId: ${params.recordId}`);
-                const financialRecord = await fetchFinancialRecordByRecordId(params.recordId);
-                
-                if (financialRecord && financialRecord.response && financialRecord.response.data && financialRecord.response.data.length > 0) {
-                    financialId = financialRecord.response.data[0].fieldData.__ID;
-                    console.log(`Found financial ID from record lookup: ${financialId}`);
-                    
-                    // Check if this is a fixed-price project
-                    const fixedPrice = parseFloat(financialRecord.response.data[0].fieldData["customers_Projects::f_fixedPrice"] || 0);
-                    console.log(`Project fixed price value: ${fixedPrice}`);
-                    
-                    if (fixedPrice > 0) {
-                        console.log('Skipping sales record creation for fixed-price project');
-                        financialId = null; // Prevent sales record creation
-                    }
+                // Get the organization ID from the parameter or from the global state
+                const orgId = organizationId || (window.state?.user?.supabaseOrgID);
+
+                if (!orgId) {
+                    console.warn('[Task Service] No organization ID found, skipping sales record creation');
+                    return result;
                 }
-            } catch (fetchError) {
-                console.error('Error fetching financial record by recordId:', fetchError);
+
+                // Declare financialId variable
+                let financialId;
+
+                try {
+                    console.log(`[Task Service] Fetching financial record by recordId: ${params.recordId}`);
+                    const financialRecord = await fetchFinancialRecordByRecordId(params.recordId);
+
+                    if (financialRecord && financialRecord.response && financialRecord.response.data && financialRecord.response.data.length > 0) {
+                        financialId = financialRecord.response.data[0].fieldData.__ID;
+                        console.log(`[Task Service] Found financial ID from record lookup: ${financialId}`);
+
+                        // Check if this is a fixed-price project
+                        const fixedPrice = parseFloat(financialRecord.response.data[0].fieldData["customers_Projects::f_fixedPrice"] || 0);
+                        console.log(`[Task Service] Project fixed price value: ${fixedPrice}`);
+
+                        if (fixedPrice > 0) {
+                            console.log('[Task Service] Skipping sales record creation for fixed-price project');
+                            financialId = null; // Prevent sales record creation
+                        }
+                    }
+                } catch (fetchError) {
+                    console.error('[Task Service] Error fetching financial record by recordId:', fetchError);
+                }
+
+                if (financialId) {
+                    // Create a sales record in Supabase
+                    console.log(`[Task Service] Creating sales record for financial record ${financialId} with organization ID ${orgId}`);
+                    await createSaleFromFinancialRecord(financialId, orgId);
+                } else {
+                    console.warn('[Task Service] Could not find financial record ID or project is fixed-price');
+                }
+            } catch (error) {
+                console.error('[Task Service] Error creating sales record:', error);
+                // Don't throw the error, as we still want to return the timer stop result
             }
-            
-            if (financialId) {
-                // Create a sales record in Supabase
-                console.log(`Creating sales record for financial record ${financialId} with organization ID ${orgId}`);
-                await createSaleFromFinancialRecord(financialId, orgId);
-            } else {
-                console.warn('Could not find financial record ID in timer stop result or by recordId lookup, or project is fixed-price');
-            }
-        } catch (error) {
-            console.error('Error creating sales record:', error);
-            // Don't throw the error, as we still want to return the timer stop result
         }
+
+        return result;
+    } catch (error) {
+        console.error('[Task Service] Failed to stop timer:', error);
+        throw error;
     }
-    
-    return result;
+}
+
+/**
+ * Pauses an active timer
+ * Only supported in backend mode (not FileMaker)
+ *
+ * @param {string} entryId - Timer entry ID
+ * @returns {Promise<Object>} Updated timer record with paused status
+ * @throws {Error} If timer is not in active state or pause fails
+ */
+export async function pauseTimer(entryId) {
+    if (!entryId) {
+        throw new Error('Timer entry ID is required');
+    }
+
+    console.log('[Task Service] Pausing timer:', entryId);
+
+    try {
+        const result = await pauseTimerAPI(entryId);
+        console.log('[Task Service] Timer paused successfully:', result);
+        return result;
+    } catch (error) {
+        console.error('[Task Service] Failed to pause timer:', error);
+
+        // Provide user-friendly error messages
+        if (error.message.includes('must be active')) {
+            throw new Error('Timer must be active to pause. It may already be paused or completed.');
+        }
+        if (error.message.includes('not supported in FileMaker')) {
+            throw new Error('Pause/resume is only available in the web version, not in FileMaker.');
+        }
+
+        throw error;
+    }
+}
+
+/**
+ * Resumes a paused timer
+ * Only supported in backend mode (not FileMaker)
+ *
+ * @param {string} entryId - Timer entry ID
+ * @returns {Promise<Object>} Updated timer record with active status
+ * @throws {Error} If timer is not in paused state or resume fails
+ */
+export async function resumeTimer(entryId) {
+    if (!entryId) {
+        throw new Error('Timer entry ID is required');
+    }
+
+    console.log('[Task Service] Resuming timer:', entryId);
+
+    try {
+        const result = await resumeTimerAPI(entryId);
+        console.log('[Task Service] Timer resumed successfully:', result);
+        return result;
+    } catch (error) {
+        console.error('[Task Service] Failed to resume timer:', error);
+
+        // Provide user-friendly error messages
+        if (error.message.includes('must be paused')) {
+            throw new Error('Timer must be paused to resume. It may be active or already completed.');
+        }
+        if (error.message.includes('not supported in FileMaker')) {
+            throw new Error('Pause/resume is only available in the web version, not in FileMaker.');
+        }
+
+        throw error;
+    }
+}
+
+/**
+ * Gets the active timer for a staff member
+ * Useful for restoring timer state on app load
+ *
+ * @param {string} staffId - Staff member ID (optional, defaults to current user)
+ * @returns {Promise<Object|null>} Active timer record or null if no active timer
+ */
+export async function getActiveTimer(staffId = null) {
+    console.log('[Task Service] Getting active timer for staff:', staffId || 'current user');
+
+    try {
+        const result = await getActiveTimerAPI(staffId);
+        if (result) {
+            console.log('[Task Service] Found active timer:', result);
+        } else {
+            console.log('[Task Service] No active timer found');
+        }
+        return result;
+    } catch (error) {
+        console.error('[Task Service] Error getting active timer:', error);
+        // Return null on error (no active timer)
+        return null;
+    }
 }
 
 /**
@@ -135,20 +316,45 @@ export async function stopTimer(params, organizationId = null) {
  */
 
 /**
- * Processes raw task data from FileMaker
- * @param {Object} data - Raw task data
+ * Processes raw task data from backend API or FileMaker
+ * Handles both backend response (array of Task objects) and FileMaker response format
+ *
+ * @param {Array|Object} data - Raw task data (array from backend or FileMaker response object)
  * @returns {Array} Processed task records
  */
 export function processTaskData(data) {
-    //console.log('Processing task data:', data);
-    
+    console.log('[Task Service] Processing task data');
+
+    // Backend API returns array directly
+    if (Array.isArray(data)) {
+        console.log('[Task Service] Processing tasks from backend:', data.length);
+        return data.map(task => {
+            return {
+                id: task.id,
+                recordId: task.filemaker_record_id || task.id, // Use UUID as fallback
+                task: task.name || task.task,
+                type: task.type || 'General',
+                isCompleted: task.is_completed || false,
+                createdAt: task.created_at,
+                modifiedAt: task.updated_at,
+                _projectID: task.project_id,
+                _staffID: task.staff_id,
+                description: task.description,
+                dueDate: task.due_date,
+                priority: task.priority,
+                status: task.status
+            };
+        });
+    }
+
+    // FileMaker response handling
     if (!data?.response?.data) {
-        console.log('No data to process, returning empty array');
+        console.log('[Task Service] No data to process, returning empty array');
         return [];
     }
 
+    console.log('[Task Service] Processing tasks from FileMaker:', data.response.data.length);
     const processed = data.response.data.map(task => {
-        // console.log('Processing individual task:', task);
         return {
             id: task.fieldData.__ID,
             recordId: task.recordId,
@@ -161,40 +367,67 @@ export function processTaskData(data) {
             _staffID: task.fieldData._staffID
         };
     });
-    
-    //console.log('Processed tasks result:', processed);
+
+    console.log('[Task Service] Processed tasks:', processed.length);
     return processed;
 }
 
 /**
  * Processes timer records for a task
- * @param {Array} timerRecords - Raw timer records
+ * Handles both backend API response (array of TimeEntry objects) and FileMaker response
+ *
+ * @param {Array|Object} timerRecords - Raw timer records (array from backend or FileMaker response object)
  * @returns {Array} Processed timer records with duration calculations
  */
 export function processTimerRecords(timerRecords) {
+    // Backend API returns array directly
+    if (Array.isArray(timerRecords)) {
+        console.log('[Task Service] Processing timer records from backend:', timerRecords.length);
+        return timerRecords.map(record => {
+            return {
+                id: record.id,
+                recordId: record.filemaker_record_id || record.id, // Use UUID as fallback
+                startTime: record.start_time ? new Date(record.start_time) : null,
+                endTime: record.end_time ? new Date(record.end_time) : null,
+                description: record.description || '',
+                duration: record.duration_minutes ? parseFloat(record.duration_minutes) / 60 : 0, // Convert to hours
+                status: record.status || 'active',
+                pauseDuration: record.pause_duration_seconds || 0,
+                adjustmentSeconds: record.adjustment_seconds || 0,
+                isBillable: record.is_billable,
+                billableAmount: record.billable_amount,
+                hourlyRate: record.hourly_rate
+            };
+        });
+    }
+
+    // FileMaker response handling
     if (!timerRecords?.response?.data) {
         return [];
     }
 
-    console.log('Timer Records from FileMaker:', timerRecords?.response?.data);
+    console.log('[Task Service] Processing timer records from FileMaker:', timerRecords.response.data.length);
     return timerRecords.response.data.map(record => {
         // Convert time strings (e.g. "1:30:00 PM") to Date objects
-        // console.log(record)
         const startTimeStr = record.fieldData.startTime;
         const endTimeStr = record.fieldData.endTime;
-        
+
         // Create a Date object for today with the specified time
         const today = new Date();
         const startTime = startTimeStr ? new Date(today.toDateString() + ' ' + startTimeStr) : null;
         const endTime = endTimeStr ? new Date(today.toDateString() + ' ' + endTimeStr) : null;
-        
+
         return {
             id: record.fieldData.__ID,
             recordId: record.recordId,
             startTime,
             endTime,
             description: record.fieldData["Work Performed"] || '',
-            duration: record.fieldData.Billable_Time_Rounded
+            duration: record.fieldData.Billable_Time_Rounded,
+            status: endTimeStr ? 'completed' : 'active',
+            pauseDuration: 0, // FileMaker doesn't track pause
+            adjustmentSeconds: record.fieldData.TimeAdjust || 0,
+            isBillable: true // FileMaker assumes billable
         };
     });
 }
@@ -613,12 +846,48 @@ export function calculateTaskStats(tasks, timerRecords) {
 
 /**
  * Validates timer adjustment
+ * Business rule: Only allow adjustments in 6-minute (0.1 hour) increments
+ *
  * @param {number} minutes - Minutes to adjust
  * @returns {boolean} Whether the adjustment is valid
  */
 export function isValidTimerAdjustment(minutes) {
     // Only allow adjustments in 6-minute increments
     return minutes % 6 === 0;
+}
+
+/**
+ * Validates timer adjustment in seconds
+ * Business rule: Only allow adjustments in 360-second (6-minute / 0.1 hour) increments
+ *
+ * @param {number} seconds - Seconds to adjust
+ * @returns {boolean} Whether the adjustment is valid
+ */
+export function isValidTimerAdjustmentSeconds(seconds) {
+    // Only allow adjustments in 360-second (6-minute) increments
+    return seconds % 360 === 0;
+}
+
+/**
+ * Rounds adjustment to nearest valid increment
+ * Rounds to nearest 6-minute increment
+ *
+ * @param {number} minutes - Minutes to round
+ * @returns {number} Rounded minutes
+ */
+export function roundToValidAdjustment(minutes) {
+    return Math.round(minutes / 6) * 6;
+}
+
+/**
+ * Rounds adjustment in seconds to nearest valid increment
+ * Rounds to nearest 360-second (6-minute) increment
+ *
+ * @param {number} seconds - Seconds to round
+ * @returns {number} Rounded seconds
+ */
+export function roundToValidAdjustmentSeconds(seconds) {
+    return Math.round(seconds / 360) * 360;
 }
 
 /**
@@ -646,7 +915,7 @@ export function sortTasks(tasks) {
     if (!tasks?.length) {
         return [];
     }
-    
+
     return [...tasks].sort((a, b) => {
         // Active tasks first
         if (a.isCompleted !== b.isCompleted) {
@@ -655,4 +924,110 @@ export function sortTasks(tasks) {
         // Then by creation date (newest first)
         return new Date(b.createdAt) - new Date(a.createdAt);
     });
+}
+
+/**
+ * Extracts financial record from stop timer response
+ * Backend returns financial record when timer is stopped on billable project
+ *
+ * @param {Object} stopTimerResponse - Response from stopTaskTimer
+ * @returns {Object|null} Financial record or null if not created
+ */
+export function extractFinancialRecord(stopTimerResponse) {
+    if (!stopTimerResponse) {
+        return null;
+    }
+
+    // Backend API response structure
+    if (stopTimerResponse.financial_record) {
+        console.log('[Task Service] Extracted financial record from backend response');
+        return stopTimerResponse.financial_record;
+    }
+
+    // No financial record in response
+    return null;
+}
+
+/**
+ * Extracts time entry from stop timer response
+ *
+ * @param {Object} stopTimerResponse - Response from stopTaskTimer
+ * @returns {Object|null} Time entry or null
+ */
+export function extractTimeEntry(stopTimerResponse) {
+    if (!stopTimerResponse) {
+        return null;
+    }
+
+    // Backend API response structure
+    if (stopTimerResponse.time_entry) {
+        return stopTimerResponse.time_entry;
+    }
+
+    // FileMaker response structure
+    if (stopTimerResponse.response) {
+        return stopTimerResponse.response;
+    }
+
+    return null;
+}
+
+/**
+ * Formats financial record for display
+ *
+ * @param {Object} financialRecord - Financial record from backend
+ * @returns {Object} Formatted display data
+ */
+export function formatFinancialRecordForDisplay(financialRecord) {
+    if (!financialRecord) {
+        return null;
+    }
+
+    return {
+        id: financialRecord.id,
+        amount: parseFloat(financialRecord.amount || 0).toFixed(2),
+        hours: parseFloat(financialRecord.hours || 0).toFixed(2),
+        rate: parseFloat(financialRecord.rate || 0).toFixed(2),
+        date: financialRecord.date,
+        description: financialRecord.description,
+        status: financialRecord.status || 'unbilled',
+        isBillable: financialRecord.is_billable
+    };
+}
+
+/**
+ * Calculates timer statistics including pause time
+ *
+ * @param {Object} timeEntry - Time entry record
+ * @returns {Object} Timer statistics
+ */
+export function calculateTimerStats(timeEntry) {
+    if (!timeEntry) {
+        return {
+            totalSeconds: 0,
+            pauseSeconds: 0,
+            adjustmentSeconds: 0,
+            billableSeconds: 0,
+            billableMinutes: 0,
+            billableHours: 0
+        };
+    }
+
+    const startTime = timeEntry.start_time ? new Date(timeEntry.start_time) : null;
+    const endTime = timeEntry.end_time ? new Date(timeEntry.end_time) : new Date();
+    const totalSeconds = startTime ? Math.floor((endTime - startTime) / 1000) : 0;
+    const pauseSeconds = timeEntry.pause_duration_seconds || 0;
+    const adjustmentSeconds = timeEntry.adjustment_seconds || 0;
+    const billableSeconds = Math.max(0, totalSeconds - pauseSeconds + adjustmentSeconds);
+    const billableMinutes = Math.round(billableSeconds / 60);
+    const billableHours = billableMinutes / 60;
+
+    return {
+        totalSeconds,
+        pauseSeconds,
+        adjustmentSeconds,
+        billableSeconds,
+        billableMinutes,
+        billableHours: billableHours.toFixed(2)
+    };
 }
