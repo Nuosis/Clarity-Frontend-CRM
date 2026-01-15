@@ -5,13 +5,19 @@ import { downloadPdf } from '../../utils/pdfUtils';
 
 /**
  * Button component for generating PDF reports for projects
- * 
+ *
+ * NOTE: This component works with both FileMaker and backend API data structures.
+ * Project and customer IDs are normalized in the project data processing layer,
+ * so this component receives consistent ID values regardless of data source.
+ *
  * @param {Object} props - Component props
- * @param {string} props.customerId - Customer ID (optional)
- * @param {string} props.projectId - Project ID (optional)
+ * @param {string} props.customerId - Customer ID (works with both _custID and customer_id)
+ * @param {string} props.projectId - Project ID (works with both __ID/recordId and id)
  * @param {Array} props.financialRecords - Financial records data
  * @param {Function} props.onSuccess - Callback function when report is generated successfully
  * @param {Function} props.onError - Callback function when an error occurs
+ * @param {string} props.className - Additional CSS classes
+ * @param {ReactNode} props.children - Button content
  */
 function ProjectReportButton({
   customerId,

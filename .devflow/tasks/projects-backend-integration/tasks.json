@@ -171,17 +171,24 @@
       "id": "TSK0013",
       "title": "Update images, links, notes tab components",
       "description": "Update src/components/projects/ tab components for images, links, notes. Update data display and CRUD operations to use new endpoints. Ensure proper error handling. Check if links have dedicated endpoints or use shared links table. Update notes to use new polymorphic structure.",
-      "status": "in_progress",
+      "status": "done",
       "priority": "medium",
-      "executionPid": 39978,
-      "sessionId": "29894bf1-1a35-4dd3-a75e-5edd90bce05f"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented backend-API support for project links, notes, and images while preserving FileMaker compatibility by adding environment-aware API clients in 'src/api/links.js', 'src/api/notes.js', and new 'src/api/images.js', plus updating exports in 'src/api/index.js' (and resolving a duplicate export by removing 'fetchProjectNotes' from the notes export since it already exists in projects). Updated services and hooks ('src/services/linkService.js', 'src/services/noteService.js', 'src/hooks/useLink.js', 'src/hooks/useNote.js') to add fetch and delete flows with response normalization for polymorphic links and notes and project-scoped images. Refreshed UI components under 'src/components/projects/' by enhancing 'ProjectNotesTab.jsx' and 'ProjectLinksTab.jsx' PropTypes and dual-format rendering, and adding a new 'ProjectImagesTab.jsx' with grid display and modal viewing; key decision was to normalize both backend and legacy data shapes (e.g., 'content' vs 'fieldData.note', 'url' vs 'link') for backward-compatible rendering."
     },
     {
       "id": "TSK0014",
       "title": "Update related project displays in other features",
       "description": "Update project displays in other features: src/components/financial/ProjectList.jsx, src/components/financial/ProjectReportButton.jsx, src/components/proposals/ProjectProposalsTab.jsx. Ensure these components work with new project data structure. Update any project filtering or selection logic.",
-      "status": "queued",
-      "priority": "low"
+      "status": "done",
+      "priority": "low",
+      "completed_at": "2026-01-15T09:00:00Z",
+      "notes": "Updated all three components to support both FileMaker and backend API data structures. ProjectList.jsx: Added normalizeProject() helper to ensure both projectId/projectName and id/name are available. ProjectReportButton.jsx: Added documentation noting it works with both ID formats. ProjectProposalsTab.jsx: Updated documentation and PropTypes to reflect dual-format support (id/__ID, customer_id/_custID, name/projectName). All components now handle normalized project data regardless of source. Build verified successfully.",
+      "executionPid": null,
+      "sessionId": null,
+      "implementation_notes": "Implemented backward-compatible updates to project displays in financial and proposal features by adding data normalization and comprehensive documentation. Updated 'src/components/financial/ProjectList.jsx' to add a normalizeProject() helper that unifies FileMaker fields (projectId, projectName) with backend fields (id, name) so both are available regardless of source, plus added detailed documentation about aggregated financial data. Updated 'src/components/financial/ProjectReportButton.jsx' to document dual-format ID support (customerId works with both _custID and customer_id, projectId works with __ID/recordId and id). Updated 'src/components/proposals/ProjectProposalsTab.jsx' to add documentation about normalized project data and expanded PropTypes to include both schema variants (__ID, customer_id, name, projectName). Build verified successfully. Task marked complete in tasks.json."
     },
     {
       "id": "TSK0015",

@@ -3,8 +3,13 @@ import PropTypes from 'prop-types';
 
 /**
  * Project list component for displaying sales data by project
+ *
+ * NOTE: This component handles aggregated financial data grouped by project,
+ * not direct project entities. Data structure is normalized to work with both
+ * FileMaker (using projectId/projectName) and backend API (using id/name).
+ *
  * @param {Object} props - Component props
- * @param {Object} props.projects - Projects data grouped by project ID
+ * @param {Object} props.projects - Projects data grouped by project ID (aggregated financial data)
  * @param {string|null} props.selectedProjectId - Currently selected project ID
  * @param {function} props.onProjectSelect - Function to call when a project is selected
  * @param {function} props.onEditRecord - Function to call when a record is edited
@@ -22,8 +27,20 @@ function ProjectList({ projects, selectedProjectId = null, onProjectSelect, onEd
     direction: 'desc'
   });
 
-  // Convert projects object to array for sorting
-  const projectsArray = Object.values(projects);
+  // Normalize project data to handle both FileMaker and backend API formats
+  // Backend uses: id, name, customer_id
+  // FileMaker uses: projectId, projectName, _custID
+  const normalizeProject = (project) => ({
+    ...project,
+    // Ensure both field formats are available
+    projectId: project.projectId || project.id,
+    projectName: project.projectName || project.name,
+    id: project.id || project.projectId,
+    name: project.name || project.projectName
+  });
+
+  // Convert projects object to array for sorting and normalize
+  const projectsArray = Object.values(projects).map(normalizeProject);
 
   // Sort projects based on current sort configuration
   const sortedProjects = React.useMemo(() => {

@@ -127,8 +127,15 @@ ProposalCard.propTypes = {
 
 /**
  * Project Proposal Tab component - manages multiple proposals per project
+ *
+ * NOTE: This component works with normalized project data from both FileMaker and backend API.
+ * The projectService normalizes data so both id and _custID are available regardless of source.
+ * Backend uses: id, customer_id
+ * FileMaker uses: __ID, _custID
+ * Normalized data includes both for compatibility.
+ *
  * @param {Object} props - Component props
- * @param {Object} props.project - Project data
+ * @param {Object} props.project - Project data (normalized with id, __ID, customer_id, _custID)
  * @param {boolean} props.darkMode - Dark mode flag
  * @param {Object} props.localProject - Local project state
  * @param {Function} props.setLocalProject - Local project state setter
@@ -312,9 +319,16 @@ function ProjectProposalsTab({ project, darkMode, localProject}) {
 
 ProjectProposalsTab.propTypes = {
   project: PropTypes.shape({
+    // Project ID (normalized - both formats available)
     id: PropTypes.string.isRequired,
+    __ID: PropTypes.string, // FileMaker format
+    // Customer ID (normalized - both formats available)
     _custID: PropTypes.string.isRequired,
-    title: PropTypes.string
+    customer_id: PropTypes.string, // Backend format
+    // Other fields
+    title: PropTypes.string,
+    name: PropTypes.string,
+    projectName: PropTypes.string
   }).isRequired,
   darkMode: PropTypes.bool.isRequired,
   localProject: PropTypes.object,
