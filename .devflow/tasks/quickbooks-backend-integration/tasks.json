@@ -22,7 +22,7 @@
       "id": "TSK0001",
       "title": "Verify backend schema deployment",
       "description": "SSH into backend server and verify quickbooks_tokens and organization_quickbooks_config tables exist with expected schema. Verify customer_sales table has new columns (is_billed, quickbooks_invoice_id, quickbooks_synced_at, billed_at). Document any missing schema elements.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "dependencies": [],
       "acceptance_criteria": [
@@ -39,9 +39,11 @@
       "id": "TSK0002",
       "title": "Test backend QuickBooks endpoints",
       "description": "Test all new backend endpoints using cURL or API client. Verify /quickbooks/status, /quickbooks/unbilled-records, /quickbooks/invoices/from-records, /quickbooks/sync-invoices endpoints work correctly with HMAC authentication. Document request/response formats.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0001"],
+      "dependencies": [
+        "TSK0001"
+      ],
       "acceptance_criteria": [
         "GET /quickbooks/status returns connection status",
         "GET /quickbooks/unbilled-records returns financial records with is_billed=false",
@@ -56,9 +58,11 @@
       "id": "TSK0003",
       "title": "Update quickbooksApi.js with new endpoint functions",
       "description": "Add functions to src/api/quickbooksApi.js for new endpoints: getQuickBooksStatus(), getUnbilledRecords(), createInvoiceFromRecords(), syncInvoices(). Follow existing HMAC authentication pattern. Add JSDoc documentation.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0002"],
+      "dependencies": [
+        "TSK0002"
+      ],
       "acceptance_criteria": [
         "getQuickBooksStatus() function implemented and tested",
         "getUnbilledRecords(customerId) function implemented",
@@ -74,9 +78,11 @@
       "id": "TSK0004",
       "title": "Create QuickBooksConnectionPanel component",
       "description": "Create new UI component at src/components/financial/QuickBooksConnectionPanel.jsx for managing QuickBooks connection. Show connection status, connect/disconnect buttons, OAuth flow integration. Use getQuickBooksStatus() API function.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0003"],
+      "dependencies": [
+        "TSK0003"
+      ],
       "acceptance_criteria": [
         "Component shows connection status (connected/disconnected)",
         "Connect button initiates OAuth flow via backend",
@@ -93,9 +99,11 @@
       "id": "TSK0005",
       "title": "Create QuickBooksSyncPanel component",
       "description": "Create new UI component at src/components/financial/QuickBooksSyncPanel.jsx for triggering and monitoring financial record synchronization. Show sync progress, status, and errors. Use syncInvoices() API function.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0003"],
+      "dependencies": [
+        "TSK0003"
+      ],
       "acceptance_criteria": [
         "Component has Sync Now button to trigger sync",
         "Shows sync status (idle, in-progress, success, error)",
@@ -111,9 +119,12 @@
       "id": "TSK0006",
       "title": "Update CustomerSalesTable to use backend endpoints",
       "description": "Refactor src/components/financial/CustomerSalesTable.jsx to use new backend endpoints instead of FileMaker initializeQuickBooks(). Use getUnbilledRecords() and createInvoiceFromRecords() functions. Maintain existing UI but replace backend calls.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0003", "TSK0004"],
+      "dependencies": [
+        "TSK0003",
+        "TSK0004"
+      ],
       "acceptance_criteria": [
         "Replace initializeQuickBooks() calls with createInvoiceFromRecords()",
         "Fetch unbilled records using getUnbilledRecords()",
@@ -130,9 +141,12 @@
       "id": "TSK0007",
       "title": "Create QuickBooksConfigPanel component (admin only)",
       "description": "Create admin-only component at src/components/financial/QuickBooksConfigPanel.jsx for configuring organization-specific QuickBooks settings. Allow admins to configure tax codes, item IDs, invoice format. Read from organization_quickbooks_config table via backend API.",
-      "status": "pending",
+      "status": "queued",
       "priority": "low",
-      "dependencies": ["TSK0001", "TSK0003"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0003"
+      ],
       "acceptance_criteria": [
         "Component only accessible to admin users",
         "Form fields for tax codes (CAD, non-CAD)",
@@ -149,9 +163,15 @@
       "id": "TSK0008",
       "title": "Write integration and E2E tests",
       "description": "Create comprehensive tests for QuickBooks integration. Write integration tests for API client functions, component tests for UI panels, and E2E tests for complete workflows (OAuth, invoice creation, sync). Use Jest and React Testing Library.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0003", "TSK0004", "TSK0005", "TSK0006", "TSK0007"],
+      "dependencies": [
+        "TSK0003",
+        "TSK0004",
+        "TSK0005",
+        "TSK0006",
+        "TSK0007"
+      ],
       "acceptance_criteria": [
         "Integration tests for all API functions in quickbooksApi.js",
         "Component tests for QuickBooksConnectionPanel",

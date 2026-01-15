@@ -23,105 +23,105 @@
       "id": "TSK0001",
       "title": "Update API layer for core project operations",
       "description": "Replace FileMaker API calls in src/api/projects.js with backend REST endpoints. Implement: listByCustomer (GET /projects/customer/{customer_id}), getById (GET /projects/{project_id}), getWithDetails (GET /projects/{project_id}/detail), create (POST /projects), update (PUT /projects/{project_id}), delete (DELETE /projects/{project_id}), updateStatus (PATCH /projects/{project_id}/status). Use HMAC auth for all requests.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0002",
       "title": "Update API layer for objectives and steps",
       "description": "Add new API methods for objectives and steps in src/api/projects.js. Implement: listObjectives (GET /objectives/project/{project_id}), createObjective (POST /objectives), updateObjective (PUT /objectives/{objective_id}), deleteObjective (DELETE /objectives/{objective_id}), reorderObjectives (POST /objectives/projects/{project_id}/reorder). Add step CRUD operations if available.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0003",
       "title": "Update API layer for images, links, and notes",
       "description": "Add API methods for project images, links, and notes in src/api/projects.js. Implement: listImages (GET /projects/{project_id}/images), createImage (POST /projects/{project_id}/images), deleteImage (DELETE /projects/images/{image_id}), listNotes (GET /projects/{project_id}/notes), createNote (POST /projects/{project_id}/notes), updateNote (PATCH /projects/notes/{note_id}), deleteNote (DELETE /projects/notes/{note_id}). Check if links endpoints exist.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0004",
       "title": "Update service layer data transformations",
       "description": "Update src/services/projectService.js to transform data between frontend and backend schemas. Update processProjectData(), formatProjectForBackend() with field mappings: projectName→name, _custID→customer_id, value→budget, dateStart→start_date, dateEnd→target_end_date, f_fixedPrice→is_fixed_price, f_subscription→is_subscription. Map status values: Open→active, Closed→completed. Remove FileMaker-specific logic (recordId handling).",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0005",
       "title": "Update service layer for objectives, steps, images, links",
       "description": "Update transformation functions in src/services/projectService.js for related entities. Update processProjectObjectives(), processObjectiveSteps(), processProjectImages(), processProjectLinks() to handle new backend schema. Ensure proper nesting of objectives→steps. Remove _fkID polymorphic logic, use proper foreign keys.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0006",
       "title": "Update useProject hook - load operations",
       "description": "Update src/hooks/useProject.js load operations to use new API. Update loadProjects() to call listByCustomer API, loadProjectDetails() to use getWithDetails endpoint or parallel calls. Remove FileMaker-specific filtering logic. Handle new data structure with nested objectives, steps, images, links, notes.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0007",
       "title": "Update useProject hook - CRUD operations",
       "description": "Update src/hooks/useProject.js CRUD operations. Update handleProjectCreate(), handleProjectUpdate(), handleProjectDelete(), handleProjectStatusChange() to use new backend endpoints. Remove Supabase dual-write logic (was only in create anyway). Remove recordId usage. Update to use project.id for all operations.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0008",
       "title": "Update useProject hook - objectives and steps",
       "description": "Update src/hooks/useProject.js objective/step management. Update handleObjectiveCreate(), handleObjectiveUpdate(), handleObjectiveDelete() to use new API methods. Update step CRUD operations if needed. Remove FileMaker-specific delays (500ms race condition workaround).",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0009",
       "title": "Update useProject hook - business logic",
       "description": "Review and update business logic in src/hooks/useProject.js for fixed-price and subscription projects. Verify if sales generation logic should move to backend or stay in frontend. Update processProjectValue() calls. Ensure billable status updates work correctly. May need to coordinate with backend team on where business logic lives.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0010",
       "title": "Update ProjectDetails component",
       "description": "Update src/components/projects/ProjectDetails.jsx to work with new data structure. Update status toggle to use new backend response. Ensure all tabs receive correct data format. Update error handling and loading states. Test status changes, team assignments, all project operations.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0011",
       "title": "Update project list and creation components",
       "description": "Update src/components/projects/ProjectList.jsx, src/components/customers/ProjectCreationForm.jsx, src/components/customers/ProjectListing.jsx, src/components/customers/ProjectCard.jsx to use new data schema. Update field names, status values, display logic. Ensure create form sends correct data format to backend.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high"
     },
     {
       "id": "TSK0012",
       "title": "Update objectives tab component",
       "description": "Update src/components/projects/ProjectObjectivesTab.jsx to use new objectives API. Update create/edit/delete flows. Handle reordering if implemented. Ensure steps are properly nested and editable. Update completion tracking calculations if needed.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0013",
       "title": "Update images, links, notes tab components",
       "description": "Update src/components/projects/ tab components for images, links, notes. Update data display and CRUD operations to use new endpoints. Ensure proper error handling. Check if links have dedicated endpoints or use shared links table. Update notes to use new polymorphic structure.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     },
     {
       "id": "TSK0014",
       "title": "Update related project displays in other features",
       "description": "Update project displays in other features: src/components/financial/ProjectList.jsx, src/components/financial/ProjectReportButton.jsx, src/components/proposals/ProjectProposalsTab.jsx. Ensure these components work with new project data structure. Update any project filtering or selection logic.",
-      "status": "pending",
+      "status": "queued",
       "priority": "low"
     },
     {
       "id": "TSK0015",
       "title": "Update tests and fixtures",
       "description": "Find and update all project-related tests. Update test fixtures with new data structure (Supabase schema instead of FileMaker). Update API mocks to match new endpoints. Ensure all CRUD operations are tested. Add tests for new endpoints (objectives, images, notes). Verify business logic tests still pass.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium"
     }
   ]

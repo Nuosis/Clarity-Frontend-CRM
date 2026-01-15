@@ -21,7 +21,7 @@
       "id": "TSK0001",
       "title": "Verify backend links endpoints availability",
       "description": "Test that all required /links endpoints are accessible and working with HMAC auth",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "acceptance_criteria": [
         "GET /links?project_id={id} returns 200",
@@ -37,7 +37,7 @@
       "id": "TSK0002",
       "title": "Refactor src/api/links.js for backend API",
       "description": "Replace FileMaker calls with backend REST API calls, add full CRUD operations",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "acceptance_criteria": [
         "createLink() calls POST /links with correct schema",
@@ -50,13 +50,15 @@
       "files": [
         "src/api/links.js"
       ],
-      "dependencies": ["TSK0001"]
+      "dependencies": [
+        "TSK0001"
+      ]
     },
     {
       "id": "TSK0003",
       "title": "Update src/services/linkService.js schema mapping",
       "description": "Update service layer to handle backend LinkResponse format instead of FileMaker format",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "acceptance_criteria": [
         "processLinks() maps LinkResponse to frontend format",
@@ -68,13 +70,15 @@
       "files": [
         "src/services/linkService.js"
       ],
-      "dependencies": ["TSK0002"]
+      "dependencies": [
+        "TSK0002"
+      ]
     },
     {
       "id": "TSK0004",
       "title": "Update project and task link processing functions",
       "description": "Update processProjectLinks and processTaskLinks to work with new schema",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
       "acceptance_criteria": [
         "processProjectLinks() handles LinkResponse format",
@@ -87,13 +91,15 @@
         "src/services/projectService.js",
         "src/services/taskService.js"
       ],
-      "dependencies": ["TSK0003"]
+      "dependencies": [
+        "TSK0003"
+      ]
     },
     {
       "id": "TSK0005",
       "title": "Enhance useLink hook for full CRUD",
       "description": "Add update and delete operations to useLink hook, maintain create functionality",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "acceptance_criteria": [
         "handleLinkCreate() works with new API",
@@ -106,13 +112,15 @@
       "files": [
         "src/hooks/useLink.js"
       ],
-      "dependencies": ["TSK0003"]
+      "dependencies": [
+        "TSK0003"
+      ]
     },
     {
       "id": "TSK0006",
       "title": "Update ProjectLinksTab component",
       "description": "Update ProjectLinksTab to use new API and schema, maintain existing UX",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "acceptance_criteria": [
         "Links render correctly with new schema",
@@ -125,13 +133,15 @@
       "files": [
         "src/components/projects/ProjectLinksTab.jsx"
       ],
-      "dependencies": ["TSK0005"]
+      "dependencies": [
+        "TSK0005"
+      ]
     },
     {
       "id": "TSK0007",
       "title": "Update task link display and creation",
       "description": "Update task list components to work with new links API and schema",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
       "acceptance_criteria": [
         "Task links render correctly",
@@ -142,13 +152,15 @@
       "files": [
         "src/components/tasks/TaskList.jsx"
       ],
-      "dependencies": ["TSK0005"]
+      "dependencies": [
+        "TSK0005"
+      ]
     },
     {
       "id": "TSK0008",
       "title": "Add edit/delete UI for links (optional)",
       "description": "Add UI controls for editing and deleting links now that backend supports it",
-      "status": "pending",
+      "status": "queued",
       "priority": "low",
       "acceptance_criteria": [
         "Edit button on links opens edit modal/input",
@@ -161,13 +173,16 @@
         "src/components/projects/ProjectLinksTab.jsx",
         "src/components/tasks/TaskList.jsx"
       ],
-      "dependencies": ["TSK0006", "TSK0007"]
+      "dependencies": [
+        "TSK0006",
+        "TSK0007"
+      ]
     },
     {
       "id": "TSK0009",
       "title": "Update tests and fixtures",
       "description": "Update all link-related tests to use new backend schema and mocks",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
       "acceptance_criteria": [
         "API tests updated for backend format",
@@ -181,13 +196,17 @@
         "src/services/__tests__/linkService.test.js",
         "src/hooks/__tests__/useLink.test.js"
       ],
-      "dependencies": ["TSK0002", "TSK0003", "TSK0005"]
+      "dependencies": [
+        "TSK0002",
+        "TSK0003",
+        "TSK0005"
+      ]
     },
     {
       "id": "TSK0010",
       "title": "Integration testing and verification",
       "description": "Manual testing of all link operations in development environment",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "acceptance_criteria": [
         "Create link for project works end-to-end",
@@ -199,7 +218,10 @@
         "No FileMaker errors in console"
       ],
       "files": [],
-      "dependencies": ["TSK0006", "TSK0007"]
+      "dependencies": [
+        "TSK0006",
+        "TSK0007"
+      ]
     }
   ]
 }

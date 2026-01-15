@@ -24,7 +24,7 @@
       "id": "TSK0001",
       "title": "Update financialRecords API client to use Supabase RPCs",
       "description": "Replace all FileMaker API calls in src/api/financialRecords.js with Supabase RPC calls. Update fetchFinancialRecords(), fetchUnpaidRecords(), fetchMonthlyRecords(), fetchQuarterlyRecords(), fetchYearlyRecords() to use get_financial_records and get_unpaid_records RPCs. Replace updateFinancialRecordBilledStatus() and bulkUpdateFinancialRecordsBilledStatus() with mark_records_billed RPC. Maintain existing function signatures for backward compatibility. Add response normalization layer to match expected data shape.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "dependencies": [],
       "files": [
@@ -36,9 +36,11 @@
       "id": "TSK0002",
       "title": "Update billableHoursService for Supabase data shapes",
       "description": "Update src/services/billableHoursService.js processFinancialData() function to handle Supabase customer_sales schema instead of FileMaker devRecords layout. Update field mappings: financial_id (not __ID), customer_name (joined, not relationship), date (YYYY-MM-DD not MM/DD/YYYY), inv_id (not f_billed). Remove FileMaker-specific transformations. Add validation for required fields.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0001"],
+      "dependencies": [
+        "TSK0001"
+      ],
       "files": [
         "src/services/billableHoursService.js"
       ],
@@ -48,9 +50,12 @@
       "id": "TSK0003",
       "title": "Update salesService for new API contracts",
       "description": "Update src/services/salesService.js to use new financial records API. Check if service directly calls FileMaker or uses financialRecords API. Update any date handling, billed status checks (inv_id IS NULL instead of f_billed=0), and customer ID lookups. Ensure backward compatibility with components using this service.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0001", "TSK0002"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0002"
+      ],
       "files": [
         "src/services/salesService.js"
       ],
@@ -60,9 +65,12 @@
       "id": "TSK0004",
       "title": "Simplify or deprecate financialSyncService",
       "description": "Review src/services/financialSyncService.js and determine if dual-write sync logic is still needed now that Supabase is the primary source. If timer creates records directly in Supabase via create_financial_record RPC, the sync service may be obsolete. Either remove the service or simplify to one-way FileMaker → Supabase migration tool for historical data only.",
-      "status": "pending",
+      "status": "queued",
       "priority": "low",
-      "dependencies": ["TSK0001", "TSK0005"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0005"
+      ],
       "files": [
         "src/services/financialSyncService.js"
       ],
@@ -72,9 +80,11 @@
       "id": "TSK0005",
       "title": "Update timer record creation to use create_financial_record RPC",
       "description": "Find where timer stop creates financial records (likely in taskService or timer component). Replace FileMaker record creation with Supabase create_financial_record RPC call. Pass p_financial_id (UUID), p_organization_id, p_customer_id, p_product_name, p_quantity (billable hours), p_unit_price (rate), p_date. Ensure proper error handling and validation. Product name should follow format: CUSTOMERCAPS:ProjectFirstWord.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0001"],
+      "dependencies": [
+        "TSK0001"
+      ],
       "files": [
         "src/services/taskService.js",
         "src/components/tasks/TaskTimer.jsx"
@@ -85,9 +95,12 @@
       "id": "TSK0006",
       "title": "Update CustomerSalesTable component for new data shapes",
       "description": "Verify src/components/financial/CustomerSalesTable.jsx works with Supabase data. Check field references: use financial_id (not __ID), customer_name (not customers.business_name relation), inv_id (not f_billed). Update any date formatting. Test QuickBooks invoice generation flow - ensure updateFinancialRecordBilledStatus() call works with new mark_records_billed RPC.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0001", "TSK0002"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0002"
+      ],
       "files": [
         "src/components/financial/CustomerSalesTable.jsx"
       ],
@@ -97,9 +110,12 @@
       "id": "TSK0007",
       "title": "Update FinancialActivity component for Supabase data",
       "description": "Review and test src/components/financial/FinancialActivity.jsx with new data shapes. Update field mappings if component directly accesses record fields. Ensure date displays, totals, and filtering still work correctly. Test with real data from get_financial_records RPC.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0001", "TSK0002"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0002"
+      ],
       "files": [
         "src/components/financial/FinancialActivity.jsx"
       ],
@@ -109,9 +125,12 @@
       "id": "TSK0008",
       "title": "Update FinancialChart component for Supabase data",
       "description": "Update src/components/financial/FinancialChart.jsx to use new aggregation RPCs (get_monthly_summary, get_quarterly_summary, get_yearly_summary) if applicable. Verify chart data processing handles Supabase response format. Test chart rendering with real aggregated data.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0001", "TSK0002"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0002"
+      ],
       "files": [
         "src/components/financial/FinancialChart.jsx"
       ],
@@ -121,9 +140,12 @@
       "id": "TSK0009",
       "title": "Update RecordModal and RecordDetailsModal for Supabase",
       "description": "Review and update src/components/financial/RecordModal.jsx and RecordDetailsModal.jsx. Ensure field mappings are correct for Supabase schema. Update any edit/update flows to use new API. Test modal display with real Supabase records.",
-      "status": "pending",
+      "status": "queued",
       "priority": "low",
-      "dependencies": ["TSK0001", "TSK0002"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0002"
+      ],
       "files": [
         "src/components/financial/RecordModal.jsx",
         "src/components/financial/RecordDetailsModal.jsx"
@@ -134,9 +156,12 @@
       "id": "TSK0010",
       "title": "Update useBillableHours hook for new API",
       "description": "Review src/hooks/useBillableHours.js and update for new financial records API. Ensure hook works with Supabase data shapes. Update any data fetching, filtering, or aggregation logic. Test hook usage in components.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0001", "TSK0002"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0002"
+      ],
       "files": [
         "src/hooks/useBillableHours.js"
       ],
@@ -146,7 +171,7 @@
       "id": "TSK0011",
       "title": "Add date format conversion utilities",
       "description": "Create or update date utility functions to handle conversions between FileMaker format (MM/DD/YYYY) and Supabase format (YYYY-MM-DD). Add validation and error handling. Use in API client and service layers. Consider using date-fns library for robust parsing.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "dependencies": [],
       "files": [
@@ -159,9 +184,12 @@
       "id": "TSK0012",
       "title": "Update test fixtures for Supabase response format",
       "description": "Update all test files that use financial records fixtures. Replace FileMaker-shaped mock data with Supabase customer_sales shaped data. Update field names: financial_id, customer_name, inv_id, date format. Ensure tests pass with new data shapes.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0001", "TSK0002"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0002"
+      ],
       "files": [
         "src/__tests__/api/financialRecords.test.js",
         "src/__tests__/services/billableHoursService.test.js",
@@ -173,9 +201,13 @@
       "id": "TSK0013",
       "title": "Test QuickBooks invoice generation end-to-end",
       "description": "Manually test complete invoice generation flow: 1) Fetch unbilled records via get_unpaid_records, 2) Create QB invoice, 3) Mark records as billed via mark_records_billed RPC, 4) Verify inv_id is set correctly, 5) Verify records no longer appear in unbilled list. Test with real QuickBooks sandbox if available.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0001", "TSK0005", "TSK0006"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0005",
+        "TSK0006"
+      ],
       "files": [],
       "notes": "Critical business flow - must work correctly"
     },
@@ -183,9 +215,11 @@
       "id": "TSK0014",
       "title": "Verify organization_id scoping in all RPC calls",
       "description": "Audit all Supabase RPC calls to financial records to ensure organization_id is passed correctly. Check that user session includes organization_id. Test RLS isolation - user from org A should not see org B records. Add error handling if organization_id is missing.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0001"],
+      "dependencies": [
+        "TSK0001"
+      ],
       "files": [
         "src/api/financialRecords.js",
         "src/services/billableHoursService.js"
@@ -196,9 +230,22 @@
       "id": "TSK0015",
       "title": "Remove obsolete FileMaker code paths",
       "description": "After all tasks complete and testing passes, remove obsolete FileMaker-specific code: Remove FileMaker layout references in financialRecords.js, remove dual-write logic if no longer needed, clean up unused imports, update comments/documentation. Keep minimal backward compatibility shims if needed for gradual rollout.",
-      "status": "pending",
+      "status": "queued",
       "priority": "low",
-      "dependencies": ["TSK0001", "TSK0002", "TSK0003", "TSK0004", "TSK0005", "TSK0006", "TSK0007", "TSK0008", "TSK0009", "TSK0010", "TSK0013", "TSK0014"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0002",
+        "TSK0003",
+        "TSK0004",
+        "TSK0005",
+        "TSK0006",
+        "TSK0007",
+        "TSK0008",
+        "TSK0009",
+        "TSK0010",
+        "TSK0013",
+        "TSK0014"
+      ],
       "files": [
         "src/api/financialRecords.js",
         "src/services/financialSyncService.js"

@@ -25,7 +25,7 @@
       "id": "TSK0001",
       "title": "Create backend API client for customer endpoints",
       "description": "Create a new API client module that calls the new backend customer endpoints (/api/customers/*) with proper authentication, organization scoping, and error handling. This should be separate from the FileMaker client initially.",
-      "status": "pending",
+      "status": "in_progress",
       "priority": "high",
       "dependencies": [],
       "files_to_modify": [
@@ -40,15 +40,19 @@
         "Organization ID is included in request context",
         "Proper error handling with meaningful error messages",
         "Request/response logging for debugging"
-      ]
+      ],
+      "executionPid": 2382,
+      "sessionId": "aac0d0b1-a98a-45d8-b53c-5a04059292c3"
     },
     {
       "id": "TSK0002",
       "title": "Implement environment-aware routing in API layer",
       "description": "Update the customer API module to detect the current environment (FileMaker vs Web App) and route requests to the appropriate backend (fm-gofer bridge vs Backend API). Use the existing environment detection from dataService.js.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0001"],
+      "dependencies": [
+        "TSK0001"
+      ],
       "files_to_modify": [
         "src/api/customers.js",
         "src/services/dataService.js"
@@ -65,7 +69,7 @@
       "id": "TSK0003",
       "title": "Create data transformation utilities for backend schema",
       "description": "Create utility functions to transform between FileMaker flat data model and backend relational data model. Handle nested emails, phones, and addresses. Support bidirectional transformation.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
       "dependencies": [],
       "files_to_modify": [
@@ -85,9 +89,11 @@
       "id": "TSK0004",
       "title": "Update customerService to process backend responses",
       "description": "Update customerService.js to handle the new backend response format with nested relationships. Add functions to process emails, phones, and addresses arrays. Ensure existing FileMaker processing continues to work.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0003"],
+      "dependencies": [
+        "TSK0003"
+      ],
       "files_to_modify": [
         "src/services/customerService.js"
       ],
@@ -105,9 +111,12 @@
       "id": "TSK0005",
       "title": "Update useCustomer hook for backend API",
       "description": "Update the useCustomer hook to call the new API endpoints and handle the new response format. Support pagination, search, and nested data. Maintain state management patterns.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0002", "TSK0004"],
+      "dependencies": [
+        "TSK0002",
+        "TSK0004"
+      ],
       "files_to_modify": [
         "src/hooks/useCustomer.js"
       ],
@@ -127,9 +136,11 @@
       "id": "TSK0006",
       "title": "Add search functionality to useCustomer hook",
       "description": "Implement customer search using the new /api/customers/search endpoint. Support real-time search with debouncing. Handle search results state.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0005"],
+      "dependencies": [
+        "TSK0005"
+      ],
       "files_to_modify": [
         "src/hooks/useCustomer.js"
       ],
@@ -147,9 +158,11 @@
       "id": "TSK0007",
       "title": "Update CustomerDetails to display nested data",
       "description": "Update CustomerDetails component to display nested emails, phones, and addresses from the new backend data model. Show primary contact info prominently and provide access to additional contacts.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0005"],
+      "dependencies": [
+        "TSK0005"
+      ],
       "files_to_modify": [
         "src/components/customers/CustomerDetails.jsx",
         "src/components/customers/CustomerHeader.jsx"
@@ -171,9 +184,11 @@
       "id": "TSK0008",
       "title": "Update CustomerForm for new fields and nested data",
       "description": "Update CustomerForm component to support creating/editing customers with the new data model. Support adding multiple emails, phones, and addresses. Handle customer type and business_name fields.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0005"],
+      "dependencies": [
+        "TSK0005"
+      ],
       "files_to_modify": [
         "src/components/customers/CustomerForm.jsx"
       ],
@@ -194,9 +209,11 @@
       "id": "TSK0009",
       "title": "Add organization context to customer operations",
       "description": "Ensure all customer operations include organization_id from the authenticated user context. Update AppStateContext to provide organization info. Handle organization scoping in API calls.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0001"],
+      "dependencies": [
+        "TSK0001"
+      ],
       "files_to_modify": [
         "src/context/AppStateContext.jsx",
         "src/api/customers.js"
@@ -214,9 +231,12 @@
       "id": "TSK0010",
       "title": "Implement comprehensive error handling",
       "description": "Add comprehensive error handling for all customer API operations. Handle authentication failures, validation errors, network errors, and organization scoping errors. Provide user-friendly error messages.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0002", "TSK0005"],
+      "dependencies": [
+        "TSK0002",
+        "TSK0005"
+      ],
       "files_to_modify": [
         "src/api/customers.js",
         "src/hooks/useCustomer.js",
@@ -237,9 +257,11 @@
       "id": "TSK0011",
       "title": "Add pagination support to customer list",
       "description": "Implement pagination for customer list using the backend API's limit/offset parameters. Add UI controls for page navigation. Handle large customer datasets efficiently.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0005"],
+      "dependencies": [
+        "TSK0005"
+      ],
       "files_to_modify": [
         "src/hooks/useCustomer.js",
         "src/components/customers/CustomerDetails.jsx"
@@ -259,9 +281,12 @@
       "id": "TSK0012",
       "title": "Write unit tests for customer data transformations",
       "description": "Write comprehensive unit tests for all data transformation functions between FileMaker and backend formats. Test edge cases, null handling, and nested data processing.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0003", "TSK0004"],
+      "dependencies": [
+        "TSK0003",
+        "TSK0004"
+      ],
       "files_to_modify": [
         "src/services/customerService.test.js"
       ],
@@ -280,9 +305,12 @@
       "id": "TSK0013",
       "title": "Write integration tests for API client",
       "description": "Write integration tests for the customer API client. Mock backend responses and test all CRUD operations. Verify authentication headers, organization scoping, and error handling.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
-      "dependencies": ["TSK0001", "TSK0002"],
+      "dependencies": [
+        "TSK0001",
+        "TSK0002"
+      ],
       "files_to_modify": [
         "src/api/customers.test.js"
       ],
@@ -301,9 +329,11 @@
       "id": "TSK0014",
       "title": "Update documentation for customer API integration",
       "description": "Update CLAUDE.md and create customer-specific documentation explaining the new backend integration, data model, and migration strategy. Document the dual-environment architecture.",
-      "status": "pending",
+      "status": "queued",
       "priority": "low",
-      "dependencies": ["TSK0013"],
+      "dependencies": [
+        "TSK0013"
+      ],
       "files_to_modify": [
         "CLAUDE.md",
         "docs/CUSTOMER_API_INTEGRATION.md"
@@ -323,9 +353,14 @@
       "id": "TSK0015",
       "title": "Perform end-to-end testing in both environments",
       "description": "Thoroughly test customer management workflows in both FileMaker and web app environments. Verify data consistency, error handling, and UI responsiveness. Test all CRUD operations.",
-      "status": "pending",
+      "status": "queued",
       "priority": "high",
-      "dependencies": ["TSK0007", "TSK0008", "TSK0010", "TSK0011"],
+      "dependencies": [
+        "TSK0007",
+        "TSK0008",
+        "TSK0010",
+        "TSK0011"
+      ],
       "files_to_modify": [],
       "acceptance_criteria": [
         "Test customer list loading in both environments",
