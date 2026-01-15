@@ -138,7 +138,7 @@
         ".devflow/tasks/tasks-backend-integration/TSK0007_IMPLEMENTATION.md"
       ],
       "notes": "Updated TaskList component to use new backend data shapes (title, project_id, is_completed) while maintaining backward compatibility with FileMaker fields (task, _projectID, f_completed). Enhanced processTaskData in taskService.js to populate both field sets. Updated task creation to use new schema with proper type conversions. Verified task grouping (active vs completed) works correctly. Build successful with no errors. No pagination/filtering/sorting UI implemented (backend supports it, but out of scope for this task - UI enhancements deferred to future tasks).",
-      "implementation_notes": "Implemented dual field support in TaskList component and taskService.js to handle both new backend API data shapes and legacy FileMaker formats. Updated TaskList.jsx to display 'task.title || task.task', modified task creation to send both new (project_id, staff_id, title, priority=3) and legacy (_projectID, _staffID, taskName, priority='active') field names, and enhanced PropTypes to include both title and task fields. Modified taskService.processTaskData() to map backend responses to include both 'task' and 'title' fields populated from task.title/task.name, plus support for task_type, description, dueDate, priority, and status fields. Updated FileMaker processing to also include 'title' field for consistency. Verified task grouping by completion status (groupTasksByStatus) works correctly with isCompleted boolean. Build verification passed (npm run build: 2.07s, 1,986.76 kB bundle). Created comprehensive documentation in TSK0007_IMPLEMENTATION.md covering all changes, data flows, backward compatibility, and future enhancement recommendations. Note: Pagination, search filtering, and user-controlled sorting are NOT implemented - tasks are loaded all at once. Backend supports these features via query parameters but UI implementation is out of scope for this task.",
+      "implementation_notes": "Implemented updates to task list UI and data normalization to support the new backend task schema while preserving FileMaker compatibility, including updating TaskList display and creation logic to use 'title', 'project_id', and 'staff_id' with fallback to legacy fields. Key changes were made in 'src/components/tasks/TaskList.jsx' (field usage, PropTypes, create payload) and 'src/services/taskService.js' (fixing 'processTaskData' to populate both 'title' and 'task', and aligning FileMaker processing for consistent internal shape). Verified grouping by completion status and existing sorting behavior continued to work via the normalized 'isCompleted' field, and confirmed builds succeeded with only pre-existing unrelated warnings. Documented the work and marked completion by updating 'tasks.json' and adding 'TSK0007_IMPLEMENTATION.md', 'TSK0007_QUICK_REFERENCE.md', and 'TSK0007_VERIFICATION.md', while explicitly deciding not to implement pagination, filtering, or extended sorting UI in this task scope.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -147,12 +147,21 @@
       "id": "TSK0008",
       "title": "Update task detail components",
       "description": "Update task detail views to display new fields and handle new data shapes. Update timer display to show pause/resume state. Add better error messages for timer concurrency conflicts.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0005",
         "TSK0001"
-      ]
+      ],
+      "completed_at": "2026-01-15T07:00:00.000Z",
+      "deliverables": [
+        ".devflow/tasks/tasks-backend-integration/TSK0008_IMPLEMENTATION.md"
+      ],
+      "notes": "Updated TaskTimer component to display new backend timer fields (status, pause_duration_seconds, adjustment_seconds) with visual indicators (RUNNING/PAUSED). Enhanced useTask hook to integrate pause/resume backend APIs with graceful FileMaker fallback. Added user-friendly error messages for timer concurrency conflicts. Updated TaskList to show active/paused timer status. All changes maintain backward compatibility with FileMaker. Build verified successfully.",
+      "implementation_notes": "Implemented comprehensive updates to task detail components for backend timer integration. Updated TaskTimer.jsx to handle dual field names (backend vs FileMaker), display timer status visually (green RUNNING, yellow PAUSED), and support new fields like status, pause_duration_seconds, and adjustment_seconds. Enhanced useTask.js hook to call backend pauseTimer/resumeTimer APIs with automatic fallback to local state for FileMaker mode, added concurrency error detection with user-friendly messages, and populate both new and legacy timer fields. Updated TaskList.jsx to show active/paused indicators with semantic colors. All components maintain full backward compatibility. Build verified with no errors.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0009",

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 
 // Memoized timer display component
-const TimerDisplay = React.memo(function TimerDisplay({ time, adjustedTime, isPaused, darkMode }) {
+const TimerDisplay = React.memo(function TimerDisplay({ time, adjustedTime, isPaused, status, darkMode }) {
     const formattedTime = useMemo(() => {
         const formatSeconds = (seconds) => {
             const hours = Math.floor(seconds / 3600);
@@ -18,6 +18,17 @@ const TimerDisplay = React.memo(function TimerDisplay({ time, adjustedTime, isPa
         };
     }, [time, adjustedTime]);
 
+    // Determine status display
+    const statusDisplay = useMemo(() => {
+        if (status === 'paused' || isPaused) {
+            return { text: 'PAUSED', color: 'text-yellow-500' };
+        }
+        if (status === 'active') {
+            return { text: 'RUNNING', color: 'text-green-500' };
+        }
+        return null;
+    }, [status, isPaused]);
+
     return (
         <div className="text-center">
             <div className="text-3xl font-mono font-bold mb-1">
@@ -28,9 +39,9 @@ const TimerDisplay = React.memo(function TimerDisplay({ time, adjustedTime, isPa
                     (Total: {formattedTime.elapsed})
                 </div>
             )}
-            {isPaused && (
-                <div className="text-yellow-500 font-semibold mt-1">
-                    PAUSED
+            {statusDisplay && (
+                <div className={`${statusDisplay.color} font-semibold mt-1`}>
+                    {statusDisplay.text}
                 </div>
             )}
         </div>
@@ -41,6 +52,7 @@ TimerDisplay.propTypes = {
     time: PropTypes.number.isRequired,
     adjustedTime: PropTypes.number.isRequired,
     isPaused: PropTypes.bool.isRequired,
+    status: PropTypes.string,
     darkMode: PropTypes.bool.isRequired
 };
 
@@ -123,9 +135,14 @@ function TaskTimer({
     useEffect(() => {
         if (timer?.recordId) {
             setIsRunning(true);
-            setIsPaused(timer.isPaused);
-            if (timer.startTime) {
-                const start = new Date(timer.startTime);
+            // Handle both legacy isPaused and new status field
+            const paused = timer.status === 'paused' || timer.isPaused;
+            setIsPaused(paused);
+
+            // Calculate initial elapsed time from start_time or startTime
+            const startTimeField = timer.start_time || timer.startTime || timer.TimeStart;
+            if (startTimeField) {
+                const start = new Date(startTimeField);
                 const initialElapsed = Math.round((new Date() - start) / 1000);
                 setElapsedTime(initialElapsed);
             }
@@ -161,7 +178,11 @@ function TaskTimer({
     // Calculate adjusted time including pauses and manual adjustments
     useEffect(() => {
         if (timer) {
-            const totalAdjustment = (timer.totalPauseTime || 0) + (timer.adjustment || 0);
+            // Support both backend fields (pause_duration_seconds, adjustment_seconds)
+            // and legacy FileMaker fields (totalPauseTime, adjustment)
+            const pauseTime = timer.pause_duration_seconds || timer.totalPauseTime || 0;
+            const adjustmentTime = timer.adjustment_seconds || timer.adjustment || 0;
+            const totalAdjustment = pauseTime - adjustmentTime; // Pause reduces time, adjustment adds it
             setAdjustedTime(Math.max(0, elapsedTime - totalAdjustment));
         } else {
             setAdjustedTime(0);
@@ -236,10 +257,11 @@ function TaskTimer({
                     time={elapsedTime}
                     adjustedTime={adjustedTime}
                     isPaused={isPaused}
+                    status={timer?.status}
                     darkMode={darkMode}
                 />
                 <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {task.task}
+                    {task.task || task.title}
                 </div>
             </div>
 
@@ -331,18 +353,25 @@ function TaskTimer({
 TaskTimer.propTypes = {
     task: PropTypes.shape({
         id: PropTypes.string.isRequired,
-        task: PropTypes.string.isRequired,
+        task: PropTypes.string,
+        title: PropTypes.string,
         type: PropTypes.string,
         description: PropTypes.string,
         isCompleted: PropTypes.bool.isRequired
     }).isRequired,
     timer: PropTypes.shape({
         recordId: PropTypes.string,
+        id: PropTypes.string,
         TimeStart: PropTypes.string,
+        startTime: PropTypes.string,
+        start_time: PropTypes.string,
+        status: PropTypes.string,
         isPaused: PropTypes.bool,
         adjustment: PropTypes.number,
+        adjustment_seconds: PropTypes.number,
         pauseStartTime: PropTypes.instanceOf(Date),
-        totalPauseTime: PropTypes.number
+        totalPauseTime: PropTypes.number,
+        pause_duration_seconds: PropTypes.number
     }),
     onStart: PropTypes.func.isRequired,
     onPause: PropTypes.func.isRequired,

@@ -156,10 +156,20 @@ const TaskItem = React.memo(function TaskItem({
                             {timerRecords?.length > 0 && (
                                 <>
                                     <div className={`
-                                        text-sm
+                                        text-sm space-y-1
                                         ${darkMode ? 'text-gray-400' : 'text-gray-600'}
                                     `}>
-                                        <span className="font-medium">Total Time:</span> {formatDuration(timerRecords.reduce((total, record) => total + ((record.duration || 0) * 60), 0))}
+                                        <div>
+                                            <span className="font-medium">Total Time:</span> {formatDuration(timerRecords.reduce((total, record) => total + ((record.duration || 0) * 60), 0))}
+                                        </div>
+                                        {timerRecords.some(r => r.status === 'active' || r.status === 'paused') && (
+                                            <div className={`
+                                                font-medium
+                                                ${timerRecords.some(r => r.status === 'active') ? 'text-green-500' : 'text-yellow-500'}
+                                            `}>
+                                                {timerRecords.some(r => r.status === 'active') ? '● Timer Running' : '⏸ Timer Paused'}
+                                            </div>
+                                        )}
                                     </div>
                                 </>
                             )}

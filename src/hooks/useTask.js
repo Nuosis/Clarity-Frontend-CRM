@@ -8,6 +8,9 @@ import {
     updateTaskCompletionStatus,
     startTimer,
     stopTimer,
+    pauseTimer,
+    resumeTimer,
+    getActiveTimer,
     groupTasksByStatus,
     calculateTaskStats
 } from '../services/taskService';
@@ -205,32 +208,49 @@ export function useTask(projectId = null) {
         try {
             const taskToUse = task || selectedTask;
             const result = await startTimer(taskToUse);
-            //console.log("handleTimerStart result: ",result)
-            const resultCode = result.messages[0].code;
+            console.log('[useTask] handleTimerStart result:', result);
 
-            
-            if (result && resultCode === '0') {
+            // Handle both backend API response and FileMaker response
+            if (result?.id || (result?.messages && result.messages[0]?.code === '0')) {
+                // Backend API response has id directly, FileMaker has messages array
+                const timerId = result.id || result.response?.recordId;
+                const startTime = result.start_time || new Date().toISOString();
+
                 const newTimer = {
+                    id: result.id,
                     recordId: result.response?.recordId || null,
+                    start_time: startTime,
+                    startTime: startTime,
                     TimeStart: new Date().toLocaleTimeString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
                         second: '2-digit',
                         hour12: false
                     }),
+                    status: result.status || 'active',
                     isPaused: false,
                     pauseStartTime: null,
                     totalPauseTime: 0,
-                    adjustment: 0
+                    pause_duration_seconds: 0,
+                    adjustment: 0,
+                    adjustment_seconds: 0
                 };
                 setTimer(newTimer);
                 localStorage.setItem('activeTimer', JSON.stringify(newTimer));
             } else {
-                throw new Error(`Failed to start timer: ${result.messages[0].message}`);
+                const errorMsg = result?.messages?.[0]?.message || 'Failed to start timer';
+                throw new Error(errorMsg);
             }
         } catch (err) {
-            showError(err.message);
-            console.error('Error starting timer:', err);
+            // Provide better error messages for concurrency conflicts
+            if (err.message.includes('already has an active timer') ||
+                err.message.includes('concurrent timer') ||
+                err.message.includes('409')) {
+                showError('You already have an active timer running. Please stop or pause it before starting a new one.');
+            } else {
+                showError(err.message);
+            }
+            console.error('[useTask] Error starting timer:', err);
         }
     }, [selectedTask, showError]);
 
@@ -276,28 +296,74 @@ export function useTask(projectId = null) {
         }
     }, [timer, selectedTask, showError]);
 
-    const handleTimerPause = useCallback(() => {
-        if (!timer?.recordId) {
+    const handleTimerPause = useCallback(async () => {
+        if (!timer?.recordId && !timer?.id) {
             showError('No active timer');
             return;
         }
 
-        setTimer(prev => {
-            const newTimer = prev.isPaused
-                ? {
-                    ...prev,
-                    isPaused: false,
-                    pauseStartTime: null,
-                    totalPauseTime: prev.totalPauseTime + ((new Date() - prev.pauseStartTime) / 1000)
-                }
-                : {
-                    ...prev,
-                    isPaused: true,
-                    pauseStartTime: new Date()
-                };
-            localStorage.setItem('activeTimer', JSON.stringify(newTimer));
-            return newTimer;
-        });
+        try {
+            const timerId = timer.id || timer.recordId;
+
+            // Determine if we need to pause or resume based on current state
+            const shouldPause = timer.status === 'active' || !timer.isPaused;
+
+            if (shouldPause) {
+                // Pause the timer via backend API
+                const result = await pauseTimer(timerId);
+                console.log('[useTask] Timer paused:', result);
+
+                setTimer(prev => {
+                    const newTimer = {
+                        ...prev,
+                        isPaused: true,
+                        status: 'paused',
+                        pauseStartTime: new Date()
+                    };
+                    localStorage.setItem('activeTimer', JSON.stringify(newTimer));
+                    return newTimer;
+                });
+            } else {
+                // Resume the timer via backend API
+                const result = await resumeTimer(timerId);
+                console.log('[useTask] Timer resumed:', result);
+
+                setTimer(prev => {
+                    const pauseDuration = prev.pauseStartTime
+                        ? (new Date() - prev.pauseStartTime) / 1000
+                        : 0;
+                    const newTimer = {
+                        ...prev,
+                        isPaused: false,
+                        status: 'active',
+                        pauseStartTime: null,
+                        totalPauseTime: (prev.totalPauseTime || 0) + pauseDuration
+                    };
+                    localStorage.setItem('activeTimer', JSON.stringify(newTimer));
+                    return newTimer;
+                });
+            }
+        } catch (err) {
+            // Handle errors gracefully - fallback to local state for FileMaker mode
+            console.warn('[useTask] Pause/resume not supported, using local state:', err.message);
+
+            setTimer(prev => {
+                const newTimer = prev.isPaused
+                    ? {
+                        ...prev,
+                        isPaused: false,
+                        pauseStartTime: null,
+                        totalPauseTime: prev.totalPauseTime + ((new Date() - prev.pauseStartTime) / 1000)
+                    }
+                    : {
+                        ...prev,
+                        isPaused: true,
+                        pauseStartTime: new Date()
+                    };
+                localStorage.setItem('activeTimer', JSON.stringify(newTimer));
+                return newTimer;
+            });
+        }
     }, [timer, showError]);
 
     const handleTimerAdjust = useCallback((minutes) => {
