@@ -274,7 +274,7 @@
         ".devflow/tasks/tasks-backend-integration/TSK0013_TESTS_SUMMARY.md"
       ],
       "notes": "Created comprehensive unit tests for src/api/tasks.js covering all new endpoints (pause/resume/getActiveTimer/fetchTaskTimers), HMAC authentication for all request types, extensive error handling (10+ scenarios), request/response mapping, and console logging. Total of 45 tests all passing. Updated babel.config.js to enable module transformation for Jest (removed modules: false). Build verified successfully with no compilation errors.",
-      "implementation_notes": "Implemented comprehensive unit tests for the tasks API layer by creating 'src/__tests__/tasksApi.test.js' with 45 test cases organized into 7 major test suites covering HMAC authentication (4 tests for GET/POST/PATCH/DELETE), task CRUD operations (9 tests), timer operations (17 tests including new pause/resume/getActiveTimer/fetchTaskTimers endpoints), error handling (10 tests covering validation errors, string details, message/error fields, network errors, 404 handling), request/response mapping (3 tests), console logging (2 tests), and FileMaker fallback verification (1 test). Fixed babel.config.js to enable Jest module transformation by removing 'modules: false' from preset-env config, allowing ES6 imports to work correctly in tests. All 45 tests pass successfully, and the project builds without errors. Created comprehensive documentation in TSK0013_TESTS_SUMMARY.md detailing test coverage, key features tested, configuration changes, and completion checklist. Updated tasks.json with completion status, timestamps, deliverables, and detailed notes.",
+      "implementation_notes": "Implemented comprehensive Jest unit tests for the real API module in 'src/api/tasks.js' by adding 'src/__tests__/tasksApi.test.js' with 45 cases covering new timer endpoints (pause, resume, getActiveTimer with 404 returning null, fetchTaskTimers), HMAC auth header construction across methods, error handling formats, and request response mapping. Fixed the test environment by updating 'babel.config.js' to allow ES module transformation (removing 'modules: false' from preset-env) so Jest could run the new tests. Added supporting documentation in '.devflow/tasks/tasks-backend-integration' (TSK0013_TESTS_SUMMARY.md, TSK0013_QUICK_REFERENCE.md, TSK0013_VERIFICATION.md) and marked completion in '.devflow/tasks/tasks-backend-integration/tasks.json'. Verified all tests passing and build success as a final validation step.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -283,12 +283,13 @@
       "id": "TSK0014",
       "title": "Update unit tests for service layer",
       "description": "Update tests for src/services/taskService.js to cover new business logic. Add tests for timer idempotency. Add tests for concurrency control. Add tests for financial record generation. Add tests for pause/resume calculations. Add tests for adjustment validations.",
-      "status": "queued",
+      "status": "completed",
       "priority": "medium",
       "dependencies": [
         "TSK0005",
         "TSK0012"
-      ]
+      ],
+      "completedAt": "2026-01-15T14:46:05Z"
     },
     {
       "id": "TSK0015",
