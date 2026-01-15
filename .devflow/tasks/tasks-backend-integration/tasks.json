@@ -180,7 +180,7 @@
         ".devflow/tasks/tasks-backend-integration/TSK0009_QUICK_REFERENCE.md"
       ],
       "notes": "Created comprehensive TaskForm component with full backend schema support, field-level validation, and error display. Updated TaskList to use new TaskForm. Supports both create and edit modes. Maintains backward compatibility with FileMaker. Build verified successfully.",
-      "implementation_notes": "Implemented a comprehensive, reusable TaskForm component (src/components/tasks/TaskForm.jsx) that supports all backend schema fields (title, priority, status, task_type, notes, estimated_hours, due_date) with field-level validation, error display, and user-friendly messaging. The form handles both create and edit modes, parses backend validation errors in FastAPI format, and maintains backward compatibility by sending both new backend and legacy FileMaker field names. Updated TaskList.jsx to use TaskForm instead of simple TextInput, added customer_id resolution from multiple sources (props, selectedProject.customer_id, selectedProject._custID), and implemented proper state management for create/edit flows. Enhanced UX with loading states, field-specific error messages, helpful input descriptions, and accessibility features. Build verified successfully with no compilation errors.",
+      "implementation_notes": "Implemented a new reusable task form component at 'src/components/tasks/TaskForm.jsx' that supports the full backend schema (title, priority, status, task_type, notes, estimated_hours, due_date), includes create and edit modes, performs client-side validation aligned with backend rules, and parses FastAPI-style validation errors for field-level messaging while remaining backward compatible by sending legacy field names. Updated 'src/components/tasks/TaskList.jsx' to replace the inline TextInput flow with TaskForm, add customer_id resolution (from props or selectedProject), wire create and edit handlers with improved error state management, and refresh PropTypes. Added supporting docs ('TSK0009_IMPLEMENTATION.md', 'TSK0009_QUICK_REFERENCE.md', 'TSK0009_VERIFICATION.md') and marked completion in 'tasks.json', with builds verified successfully as the final validation step.",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -189,12 +189,14 @@
       "id": "TSK0010",
       "title": "Update timer UI components",
       "description": "Update timer components to support pause/resume functionality. Add UI for adjustment in 6-minute increments. Display active timer state on app load. Handle timer concurrency errors gracefully (show existing active timer).",
-      "status": "queued",
+      "status": "in_progress",
       "priority": "high",
       "dependencies": [
         "TSK0004",
         "TSK0001"
-      ]
+      ],
+      "executionPid": 60263,
+      "sessionId": "ff1cea5e-353b-4aa3-a198-e0ca76bd7d6c"
     },
     {
       "id": "TSK0011",

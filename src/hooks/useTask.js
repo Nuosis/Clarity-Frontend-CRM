@@ -49,6 +49,52 @@ export function useTask(projectId = null) {
 
     const { showError } = useSnackBar();
 
+    // Restore active timer on mount
+    useEffect(() => {
+        const restoreActiveTimer = async () => {
+            try {
+                console.log('[useTask] Checking for active timer on mount');
+                const activeTimer = await getActiveTimer();
+
+                if (activeTimer) {
+                    console.log('[useTask] Found active timer:', activeTimer);
+
+                    // Restore timer state
+                    const restoredTimer = {
+                        id: activeTimer.id,
+                        recordId: activeTimer.filemaker_record_id || activeTimer.id,
+                        start_time: activeTimer.start_time,
+                        startTime: activeTimer.start_time,
+                        TimeStart: new Date(activeTimer.start_time).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        }),
+                        status: activeTimer.status || 'active',
+                        isPaused: activeTimer.status === 'paused',
+                        pauseStartTime: activeTimer.status === 'paused' ? new Date() : null,
+                        totalPauseTime: activeTimer.pause_duration_seconds || 0,
+                        pause_duration_seconds: activeTimer.pause_duration_seconds || 0,
+                        adjustment: activeTimer.adjustment_seconds || 0,
+                        adjustment_seconds: activeTimer.adjustment_seconds || 0,
+                        task_id: activeTimer.task_id
+                    };
+
+                    setTimer(restoredTimer);
+                    localStorage.setItem('activeTimer', JSON.stringify(restoredTimer));
+
+                    console.log('[useTask] Active timer restored:', restoredTimer);
+                }
+            } catch (err) {
+                console.error('[useTask] Error restoring active timer:', err);
+                // Don't show error to user - just log it
+            }
+        };
+
+        restoreActiveTimer();
+    }, []); // Run once on mount
+
     // Load tasks when projectId changes
     useEffect(() => {
         if (projectId) {
@@ -246,7 +292,48 @@ export function useTask(projectId = null) {
             if (err.message.includes('already has an active timer') ||
                 err.message.includes('concurrent timer') ||
                 err.message.includes('409')) {
-                showError('You already have an active timer running. Please stop or pause it before starting a new one.');
+
+                // Try to fetch and restore the existing active timer
+                try {
+                    console.log('[useTask] Fetching existing active timer after conflict');
+                    const existingTimer = await getActiveTimer();
+
+                    if (existingTimer) {
+                        console.log('[useTask] Found existing active timer:', existingTimer);
+
+                        // Restore the existing timer state
+                        const restoredTimer = {
+                            id: existingTimer.id,
+                            recordId: existingTimer.filemaker_record_id || existingTimer.id,
+                            start_time: existingTimer.start_time,
+                            startTime: existingTimer.start_time,
+                            TimeStart: new Date(existingTimer.start_time).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            }),
+                            status: existingTimer.status || 'active',
+                            isPaused: existingTimer.status === 'paused',
+                            pauseStartTime: existingTimer.status === 'paused' ? new Date() : null,
+                            totalPauseTime: existingTimer.pause_duration_seconds || 0,
+                            pause_duration_seconds: existingTimer.pause_duration_seconds || 0,
+                            adjustment: existingTimer.adjustment_seconds || 0,
+                            adjustment_seconds: existingTimer.adjustment_seconds || 0,
+                            task_id: existingTimer.task_id
+                        };
+
+                        setTimer(restoredTimer);
+                        localStorage.setItem('activeTimer', JSON.stringify(restoredTimer));
+
+                        showError('You already have an active timer running. The existing timer has been restored.');
+                    } else {
+                        showError('You already have an active timer running. Please stop or pause it before starting a new one.');
+                    }
+                } catch (fetchErr) {
+                    console.error('[useTask] Error fetching existing timer:', fetchErr);
+                    showError('You already have an active timer running. Please stop or pause it before starting a new one.');
+                }
             } else {
                 showError(err.message);
             }

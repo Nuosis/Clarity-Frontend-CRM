@@ -80,7 +80,7 @@ const TimerControls = React.memo(function TimerControls({
                     {isPaused ? (
                         <button
                             onClick={onResume}
-                            className="px-4 py-2 bg-bg-[#004967] text-white rounded-md hover:bg-blue-700"
+                            className="px-4 py-2 bg-[#004967] text-white rounded-md hover:bg-blue-700"
                         >
                             Resume
                         </button>
@@ -216,7 +216,7 @@ function TaskTimer({
 
     const handleResume = useCallback(() => {
         setIsPaused(false);
-        onPause();
+        onPause(); // This actually calls the pause/resume handler which toggles state
     }, [onPause]);
 
     const handleStop = useCallback((saveImmediately = false) => {
@@ -276,31 +276,38 @@ function TaskTimer({
                 onStop={() => handleStop()}
             />
 
-            {/* Time Adjustment */}
+            {/* Time Adjustment Controls */}
             {isRunning && (
-                <div className="flex justify-center space-x-2 mb-4">
-                    <button
-                        onClick={() => handleAdjustTime(-6)}
-                        className={`
-                            px-3 py-1 rounded-md text-sm
-                            ${darkMode 
-                                ? 'bg-gray-700 hover:bg-gray-600' 
-                                : 'bg-gray-200 hover:bg-gray-300'}
-                        `}
-                    >
-                        -6 min
-                    </button>
-                    <button
-                        onClick={() => handleAdjustTime(6)}
-                        className={`
-                            px-3 py-1 rounded-md text-sm
-                            ${darkMode 
-                                ? 'bg-gray-700 hover:bg-gray-600' 
-                                : 'bg-gray-200 hover:bg-gray-300'}
-                        `}
-                    >
-                        +6 min
-                    </button>
+                <div className="mb-4">
+                    <div className={`text-xs text-center mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Adjust time (6-minute increments)
+                    </div>
+                    <div className="flex justify-center space-x-2">
+                        <button
+                            onClick={() => handleAdjustTime(-6)}
+                            className={`
+                                px-3 py-1 rounded-md text-sm font-medium
+                                ${darkMode
+                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}
+                            `}
+                            title="Subtract 6 minutes (0.1 hour)"
+                        >
+                            -6 min
+                        </button>
+                        <button
+                            onClick={() => handleAdjustTime(6)}
+                            className={`
+                                px-3 py-1 rounded-md text-sm font-medium
+                                ${darkMode
+                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}
+                            `}
+                            title="Add 6 minutes (0.1 hour)"
+                        >
+                            +6 min
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -338,7 +345,7 @@ function TaskTimer({
                             </button>
                             <button
                                 onClick={handleStopConfirm}
-                                className="px-4 py-2 bg-bg-[#004967] text-white rounded-md hover:bg-blue-700"
+                                className="px-4 py-2 bg-[#004967] text-white rounded-md hover:bg-blue-700"
                             >
                                 Save & Stop
                             </button>
