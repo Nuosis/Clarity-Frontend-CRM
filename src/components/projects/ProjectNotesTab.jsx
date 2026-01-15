@@ -45,17 +45,32 @@ function ProjectNotesTab({ project, darkMode }) {
       )}
       {project.notes?.length > 0 ? (
         <div className="space-y-4">
-          {project.notes.map(note => (
-            <div
-              key={note.fieldData.__ID}
-              className={`
-                p-4 rounded-lg border
-                ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
-              `}
-            >
-              <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{note.fieldData.note}</p>
-            </div>
-          ))}
+          {project.notes.map(note => {
+            // Support both backend API format and FileMaker format
+            const noteId = note.id || note.fieldData?.__ID;
+            const noteContent = note.content || note.fieldData?.note;
+            const noteAuthor = note.author;
+            const noteCreatedAt = note.createdAt || note.created_at;
+
+            return (
+              <div
+                key={noteId}
+                className={`
+                  p-4 rounded-lg border
+                  ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+                `}
+              >
+                <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{noteContent}</p>
+                {(noteAuthor || noteCreatedAt) && (
+                  <div className={`mt-2 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {noteAuthor && <span>By {noteAuthor}</span>}
+                    {noteAuthor && noteCreatedAt && <span> • </span>}
+                    {noteCreatedAt && <span>{new Date(noteCreatedAt).toLocaleDateString()}</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -68,11 +83,19 @@ function ProjectNotesTab({ project, darkMode }) {
 
 ProjectNotesTab.propTypes = {
   project: PropTypes.shape({
-    recordId: PropTypes.string.isRequired,
+    id: PropTypes.string.isRequired,
+    recordId: PropTypes.string, // Legacy FileMaker support
     notes: PropTypes.arrayOf(PropTypes.shape({
+      // Backend API format
+      id: PropTypes.string,
+      content: PropTypes.string,
+      author: PropTypes.string,
+      createdAt: PropTypes.string,
+      created_at: PropTypes.string,
+      // FileMaker format
       fieldData: PropTypes.shape({
-        __ID: PropTypes.string.isRequired,
-        note: PropTypes.string.isRequired
+        __ID: PropTypes.string,
+        note: PropTypes.string
       })
     }))
   }).isRequired,

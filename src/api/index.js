@@ -91,6 +91,19 @@ export {
     fetchTaskLinks
 } from './tasks';
 
+// Link operations
+export {
+    createLink,
+    fetchLinks,
+    deleteLink
+} from './links';
+
+// Note operations
+export {
+    createNote,
+    deleteNote
+} from './notes';
+
 // Financial record operations
 export {
     fetchFinancialRecords,

@@ -1,14 +1,16 @@
-import { createLink } from '../api/links';
+import { createLink, fetchLinks, deleteLink } from '../api/links';
+import { getEnvironmentContext, ENVIRONMENT_TYPES } from './dataService';
 
 /**
- * Creates a new link for a task
- * @param {string} taskId - The task ID
+ * Creates a new link
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * @param {string} fkId - Foreign key ID (project, task, customer, etc.)
  * @param {string} link - The link URL
  * @returns {Promise<Object>} Created link record
  */
 export async function createNewLink(fkId, link) {
     if (!fkId || !link?.trim()) {
-        throw new Error('Task ID and link URL are required');
+        throw new Error('ID and link URL are required');
     }
 
     // Basic URL validation
@@ -19,9 +21,54 @@ export async function createNewLink(fkId, link) {
     }
 
     return await createLink({
-        fkId,
-        link: link.trim()
+        project_id: fkId, // Assume project by default
+        fkId, // Legacy FileMaker support
+        link: link.trim(),
+        url: link.trim() // Support both 'link' and 'url' parameters
     });
+}
+
+/**
+ * Fetch links for a project
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * @param {string} projectId - The project ID
+ * @returns {Promise<Array>} Array of links
+ */
+export async function fetchLinksByProject(projectId) {
+    if (!projectId) {
+        throw new Error('Project ID is required');
+    }
+
+    const result = await fetchLinks({ project_id: projectId });
+    const env = getEnvironmentContext();
+
+    // Process based on environment
+    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+        return processLinks(result);
+    } else {
+        // Backend API returns array directly
+        return Array.isArray(result) ? result.map(link => ({
+            id: link.id,
+            url: link.link,
+            title: link.title || new URL(link.link).hostname,
+            createdAt: link.created_at,
+            updatedAt: link.updated_at
+        })) : [];
+    }
+}
+
+/**
+ * Delete a link by ID
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * @param {string} linkId - The link ID
+ * @returns {Promise<Object>} Deletion result
+ */
+export async function deleteLinkById(linkId) {
+    if (!linkId) {
+        throw new Error('Link ID is required');
+    }
+
+    return await deleteLink(linkId);
 }
 
 /**

@@ -162,7 +162,7 @@
       "priority": "medium",
       "completed_at": "2026-01-15T08:00:00Z",
       "notes": "Implemented full CRUD operations for objectives and steps. Added inline editing for objectives and steps with keyboard shortcuts (Enter to save, Escape to cancel). Added step creation UI with Add Step button per objective. Added completion checkboxes for steps with toggle functionality. Added delete confirmations for objectives and steps. Updated handlers in useProject hook (handleStepCreate, handleStepUpdate, handleStepDelete, handleStepToggle). Added step API functions to projects.js (createStep, updateStep, deleteStep, toggleStepCompleted, reorderSteps). Exported step functions from api/index.js. Updated MainContent to pass all handlers to ProjectDetails. Updated ProjectDetails to pass handlers to ProjectObjectivesTab. Build verified successfully.",
-      "implementation_notes": "Implemented comprehensive CRUD UI for objectives and steps in ProjectObjectivesTab by adding inline editing, step management, and completion tracking with full backend integration. Added step API functions (createStep, updateStep, deleteStep, toggleStepCompleted, reorderSteps) to 'src/api/projects.js' with environment-aware routing and HMAC authentication. Updated 'src/hooks/useProject.js' to add step handlers (handleStepCreate, handleStepUpdate, handleStepDelete, handleStepToggle) with proper local state updates and bidirectional field mapping. Enhanced 'src/components/projects/ProjectObjectivesTab.jsx' with inline editing for objectives, add/edit/delete UI for steps, completion checkboxes, keyboard shortcuts, and delete confirmations. Updated component prop chain through MainContent→ProjectDetails→ProjectObjectivesTab. Exported step functions from 'src/api/index.js'. Build verified successfully. Task marked complete in tasks.json.",
+      "implementation_notes": "Implemented full objectives and steps CRUD in the objectives tab by adding step API utilities in 'src/api/projects.js' (create, update, delete, toggle completed, reorder) and exporting them via 'src/api/index.js'. Extended 'src/hooks/useProject.js' to include new step handlers with environment-aware routing and backend vs FileMaker field mapping, then rewired the prop chain through 'MainContent.jsx' and 'ProjectDetails.jsx' (including PropTypes) into 'ProjectObjectivesTab.jsx'. Reworked 'ProjectObjectivesTab.jsx' UI to support inline editing, step add edit toggle, delete confirmations, and completion tracking while preserving dark mode and keyboard shortcuts, and confirmed the build succeeds; task status and docs were updated in 'tasks.json' plus 'TSK0012_COMPLETION_SUMMARY.md' and 'TSK0012_CHANGES.md'.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -171,8 +171,10 @@
       "id": "TSK0013",
       "title": "Update images, links, notes tab components",
       "description": "Update src/components/projects/ tab components for images, links, notes. Update data display and CRUD operations to use new endpoints. Ensure proper error handling. Check if links have dedicated endpoints or use shared links table. Update notes to use new polymorphic structure.",
-      "status": "queued",
-      "priority": "medium"
+      "status": "in_progress",
+      "priority": "medium",
+      "executionPid": 39978,
+      "sessionId": "29894bf1-1a35-4dd3-a75e-5edd90bce05f"
     },
     {
       "id": "TSK0014",

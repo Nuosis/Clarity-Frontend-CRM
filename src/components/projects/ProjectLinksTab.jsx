@@ -255,10 +255,12 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
 
 ProjectLinksTab.propTypes = {
   project: PropTypes.shape({
-    __ID: PropTypes.string.isRequired,
+    __ID: PropTypes.string, // Legacy FileMaker support
+    id: PropTypes.string,  // Backend API format
     links: PropTypes.arrayOf(PropTypes.shape({
       id: PropTypes.string.isRequired,
-      url: PropTypes.string.isRequired,
+      url: PropTypes.string, // Backend API format (link field)
+      link: PropTypes.string, // Backend API field name
       title: PropTypes.string
     }))
   }).isRequired,
