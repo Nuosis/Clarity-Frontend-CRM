@@ -45,7 +45,7 @@
       "id": "TSK0003",
       "title": "Update API layer for images, links, and notes",
       "description": "Add API methods for project images, links, and notes in src/api/projects.js. Implement: listImages (GET /projects/{project_id}/images), createImage (POST /projects/{project_id}/images), deleteImage (DELETE /projects/images/{image_id}), listNotes (GET /projects/{project_id}/notes), createNote (POST /projects/{project_id}/notes), updateNote (PATCH /projects/notes/{note_id}), deleteNote (DELETE /projects/notes/{note_id}). Check if links endpoints exist.",
-      "status": "complete",
+      "status": "done",
       "priority": "medium",
       "completed_at": "2026-01-15T00:00:00Z",
       "notes": "Implemented full CRUD for images and notes. Links endpoints not found in backend API - will use legacy FileMaker method or may need backend team to add links endpoints."

@@ -145,18 +145,23 @@
       "id": "TSK0007",
       "title": "Update FinancialActivity component for Supabase data",
       "description": "Review and test src/components/financial/FinancialActivity.jsx with new data shapes. Update field mappings if component directly accesses record fields. Ensure date displays, totals, and filtering still work correctly. Test with real data from get_financial_records RPC.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0001",
         "TSK0002"
       ],
       "files": [
-        "src/components/financial/FinancialActivity.jsx"
+        "src/components/financial/FinancialActivity.jsx",
+        "src/hooks/useSalesActivity.js",
+        "FINANCIAL_ACTIVITY_UPDATE_SUMMARY.md"
       ],
-      "notes": "Displays financial summary - validate aggregations",
-      "executionError": "Process exited with code 1",
-      "executionPid": null
+      "notes": "✅ COMPLETED: Updated useSalesActivity hook to handle both MM/DD/YYYY (FileMaker) and YYYY-MM-DD (Supabase) date formats. Added normalizeDateToISO() helper function to convert dates to ISO format for consistent filtering. Updated customer name field access to use camelCase 'customerName' (from salesService) with fallback to snake_case for backward compatibility. Updated all date-dependent functions: filterRecordsByTimeframe(), prepareChartData(), calculateMonthlyTotals(), and parseRecordDate(). FinancialActivity component requires no changes - works correctly with updated hook. Build verified successful.",
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "executionError": null,
+      "implementation_notes": "Implemented Supabase data shape compatibility for FinancialActivity by updating the useSalesActivity hook to normalize date formats (adding normalizeDateToISO to convert MM/DD/YYYY or YYYY-MM-DD to ISO before comparisons) and fixing customer name field access to use camelCase 'customerName' with snake_case fallback. Updated all date-handling functions (filterRecordsByTimeframe, prepareChartData, calculateMonthlyTotals, parseRecordDate) to ensure both legacy and Supabase formats work without breaking. The FinancialActivity component required no changes and continues to work properly. Build verified successfully, and documentation added to FINANCIAL_ACTIVITY_UPDATE_SUMMARY.md."
     },
     {
       "id": "TSK0008",
