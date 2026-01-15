@@ -674,21 +674,17 @@ export async function fetchActiveProjectTasks(projectId) {
 
 /**
  * Fetches notes for a task
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
  * @param {string} taskId - The task ID
+ * @param {Object} options - Query options (limit, offset)
  * @returns {Promise<Array>} Array of task notes
  */
-export async function fetchTaskNotes(taskId) {
+export async function fetchTaskNotes(taskId, options = {}) {
     validateParams({ taskId }, ['taskId']);
-    
-    return handleFileMakerOperation(async () => {
-        const params = {
-            layout: Layouts.NOTES,
-            action: Actions.READ,
-            query: [{ "_fkID": taskId }]
-        };
-        
-        return await fetchDataFromFileMaker(params);
-    });
+
+    // Use the notes.js API client which is environment-aware
+    const { fetchNotesByTask } = await import('./notes');
+    return await fetchNotesByTask(taskId, options);
 }
 
 /**

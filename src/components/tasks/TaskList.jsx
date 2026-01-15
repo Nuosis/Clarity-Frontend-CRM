@@ -403,8 +403,9 @@ function TaskList({
     // Memoized handlers
     const handleCreateNote = useCallback(async (fkId, noteContent) => {
         try {
-            console.log("new note called ... ",{fkId, noteContent})
-            const result = await handleNoteCreate(fkId, noteContent);
+            console.log("new note called for task ... ",{fkId, noteContent})
+            // Use new signature with explicit 'task' entity type
+            const result = await handleNoteCreate('task', fkId, noteContent, 'general');
             if (result) {
                 await handleTaskSelect(fkId);
             }

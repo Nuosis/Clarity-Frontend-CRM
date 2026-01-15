@@ -498,10 +498,17 @@ export function processTimerRecords(timerRecords) {
 
 /**
  * Processes notes for a task
- * @param {Object} data - Raw notes data
+ * Environment-aware: Handles both backend API and FileMaker responses
+ * @param {Object|Array} data - Raw notes data (Array from backend, Object from FileMaker)
  * @returns {Array} Processed notes
  */
 export function processTaskNotes(data) {
+    // Backend API returns array directly (already transformed by noteService)
+    if (Array.isArray(data)) {
+        return data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    // FileMaker returns nested object structure
     if (!data?.response?.data) {
         return [];
     }
