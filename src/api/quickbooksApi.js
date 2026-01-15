@@ -553,6 +553,146 @@ export const sendQBOInvoiceEmail = async (invoiceId, sendToEmail = null) => {
   return await makeRequest(endpoint, 'POST');
 };
 
+/**
+ * Connection & Status Operations
+ */
+
+/**
+ * Get QuickBooks connection status for the organization
+ *
+ * Checks whether QuickBooks is connected, returns realm ID, and token expiration status.
+ * This endpoint does NOT require user roles and works with HMAC authentication.
+ *
+ * @param {string} organizationId - The organization UUID
+ * @returns {Promise<Object>} Connection status information
+ * @returns {boolean} return.success - Whether the request succeeded
+ * @returns {Object} return.data - Status data
+ * @returns {boolean} return.data.connected - Whether QuickBooks is connected
+ * @returns {string} return.data.realm_id - QuickBooks company ID
+ * @returns {string} return.data.expires_at - ISO datetime when token expires
+ * @returns {boolean} return.data.is_expired - Whether the token has expired
+ *
+ * @throws {Error} If organization_id is missing or authentication fails
+ *
+ * @example
+ * const status = await getQuickBooksStatus('9816c057-b5d3-43a2-848f-99365ee6255e');
+ * console.log('Connected:', status.data.connected);
+ * console.log('Expires:', status.data.expires_at);
+ */
+export const getQuickBooksStatus = async (organizationId) => {
+  if (!organizationId) {
+    throw new Error('Organization ID is required for getQuickBooksStatus');
+  }
+  const endpoint = `/status?organization_id=${encodeURIComponent(organizationId)}`;
+  return await makeRequest(endpoint);
+};
+
+/**
+ * Billing & Invoice Operations
+ */
+
+/**
+ * Fetch unbilled customer sales records
+ *
+ * Returns sales records that have not been invoiced yet (inv_id IS NULL).
+ * Requires user roles: admin, billing, or owner (not available via HMAC).
+ *
+ * @param {Object} [params={}] - Query parameters for filtering and pagination
+ * @param {string} [params.customer_id] - Filter by specific customer UUID
+ * @param {string} [params.date_from] - Filter records on/after this date (YYYY-MM-DD)
+ * @param {string} [params.date_to] - Filter records on/before this date (YYYY-MM-DD)
+ * @param {number} [params.limit=100] - Max records to return (max: 1000)
+ * @param {number} [params.offset=0] - Records to skip for pagination
+ * @returns {Promise<Object>} Unbilled records with pagination
+ * @returns {boolean} return.success - Whether the request succeeded
+ * @returns {Object} return.data - Response data
+ * @returns {Array<Object>} return.data.records - Array of unbilled records
+ * @returns {Object} return.data.pagination - Pagination metadata
+ *
+ * @throws {Error} If authentication fails or user lacks required role
+ *
+ * @example
+ * const result = await getUnbilledRecords({
+ *   date_from: '2025-01-01',
+ *   limit: 50,
+ *   offset: 0
+ * });
+ * console.log(`Found ${result.data.records.length} unbilled records`);
+ */
+export const getUnbilledRecords = async (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  const endpoint = queryString ? `/unbilled-records?${queryString}` : '/unbilled-records';
+  return await makeRequest(endpoint);
+};
+
+/**
+ * Create QuickBooks invoice from sales records
+ *
+ * Creates an invoice in QuickBooks from specified sales records and marks them as billed.
+ * Requires user roles: admin, billing, or owner (not available via HMAC).
+ *
+ * @param {Object} data - Invoice creation data
+ * @param {Array<string>} data.record_ids - Array of sales record UUIDs to include
+ * @param {string} data.customer_qb_id - QuickBooks customer ID
+ * @param {boolean} [data.send_email=false] - Whether to email invoice to customer
+ * @param {string} [data.due_date] - Invoice due date (YYYY-MM-DD)
+ * @returns {Promise<Object>} Created invoice information
+ * @returns {boolean} return.success - Whether the request succeeded
+ * @returns {Object} return.data - Invoice data
+ * @returns {string} return.data.invoice_id - QuickBooks invoice ID
+ * @returns {string} return.data.invoice_number - Invoice number (e.g., "INV-1001")
+ * @returns {number} return.data.total_amount - Total invoice amount
+ * @returns {number} return.data.records_billed - Count of records included
+ * @returns {string} return.data.qb_invoice_url - Direct link to invoice in QuickBooks
+ *
+ * @throws {Error} If authentication fails, user lacks role, or records not found
+ *
+ * @example
+ * const invoice = await createInvoiceFromRecords({
+ *   record_ids: ['uuid1', 'uuid2', 'uuid3'],
+ *   customer_qb_id: '123',
+ *   send_email: true,
+ *   due_date: '2025-02-15'
+ * });
+ * console.log('Invoice created:', invoice.data.invoice_number);
+ */
+export const createInvoiceFromRecords = async (data) => {
+  return await makeRequest('/invoices/from-records', 'POST', data);
+};
+
+/**
+ * Sync invoices from QuickBooks to local database
+ *
+ * Fetches invoices from QuickBooks within a date range and updates local database.
+ * Supports incremental sync (only new/updated) or full sync (all data).
+ * Requires user roles: admin, billing, or owner (not available via HMAC).
+ *
+ * @param {Object} data - Sync parameters
+ * @param {string} data.start_date - Sync invoices from this date (YYYY-MM-DD, required)
+ * @param {string} data.end_date - Sync invoices up to this date (YYYY-MM-DD, required)
+ * @param {boolean} [data.full_sync=false] - If true, sync all data; if false, only new/updated
+ * @returns {Promise<Object>} Sync results
+ * @returns {boolean} return.success - Whether the request succeeded
+ * @returns {Object} return.data - Sync data
+ * @returns {number} return.data.invoices_synced - Total invoices synced
+ * @returns {number} return.data.new_invoices - Count of new invoices
+ * @returns {number} return.data.updated_invoices - Count of updated invoices
+ * @returns {string} return.data.sync_timestamp - ISO datetime of sync completion
+ *
+ * @throws {Error} If authentication fails, user lacks role, or date range invalid
+ *
+ * @example
+ * const result = await syncInvoices({
+ *   start_date: '2025-01-01',
+ *   end_date: '2025-01-15',
+ *   full_sync: false
+ * });
+ * console.log(`Synced ${result.data.invoices_synced} invoices`);
+ */
+export const syncInvoices = async (data) => {
+  return await makeRequest('/sync-invoices', 'POST', data);
+};
+
 // Default export with all functions for backward compatibility
 export default {
   // Authorization
@@ -560,51 +700,60 @@ export default {
   handleQBOOAuthCallback,
   refreshQBOToken,
   validateQBOCredentials,
-  
+
   // Company
   getQBOCompanyInfo,
-  
+
+  // Connection & Status
+  getQuickBooksStatus,
+
   // Customers
   listQBOCustomers,
   getQBOCustomer,
   createQBOCustomer,
   updateQBOCustomer,
   deleteQBOCustomer,
-  
+  searchQBOCustomers,
+
   // Invoices
   listQBOInvoices,
   getQBOInvoice,
   createQBOInvoice,
   updateQBOInvoice,
   deleteQBOInvoice,
-  
+  sendQBOInvoiceEmail,
+
+  // Billing & Invoice Operations
+  getUnbilledRecords,
+  createInvoiceFromRecords,
+  syncInvoices,
+
   // Bills
   listQBOBills,
   getQBOBill,
   createQBOBill,
   updateQBOBill,
   deleteQBOBill,
-  
+
   // Items
   listQBOItems,
-  
+
   // Vendors
   listQBOVendors,
-  
+
   // Query
   executeQBOQuery,
-  
+
   // Webhooks
   getQBOWebhookStats,
   listQBOWebhookEvents,
   testQBOWebhook,
   clearQBOWebhookEvents,
-  
+
   // Legacy compatibility (deprecated)
   listQBOCustomerByName,
   getQBOInvoiceByQuery,
   getQBOItem,
   listQBOAccounts,
-  getQBOAccount,
-  sendQBOInvoiceEmail
+  getQBOAccount
 };

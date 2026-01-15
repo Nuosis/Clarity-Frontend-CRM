@@ -145,7 +145,7 @@
       "id": "TSK0007",
       "title": "Update FinancialActivity component for Supabase data",
       "description": "Review and test src/components/financial/FinancialActivity.jsx with new data shapes. Update field mappings if component directly accesses record fields. Ensure date displays, totals, and filtering still work correctly. Test with real data from get_financial_records RPC.",
-      "status": "pending",
+      "status": "queued",
       "priority": "medium",
       "dependencies": [
         "TSK0001",

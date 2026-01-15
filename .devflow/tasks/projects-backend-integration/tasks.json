@@ -36,7 +36,7 @@
       "id": "TSK0002",
       "title": "Update API layer for objectives and steps",
       "description": "Add new API methods for objectives and steps in src/api/projects.js. Implement: listObjectives (GET /objectives/project/{project_id}), createObjective (POST /objectives), updateObjective (PUT /objectives/{objective_id}), deleteObjective (DELETE /objectives/{objective_id}), reorderObjectives (POST /objectives/projects/{project_id}/reorder). Add step CRUD operations if available.",
-      "status": "complete",
+      "status": "done",
       "priority": "high",
       "completed_at": "2026-01-15T00:00:00Z",
       "notes": "Implemented all objective CRUD operations plus reordering and completion toggle. Step operations available via objectives endpoint (backend returns nested steps)."
