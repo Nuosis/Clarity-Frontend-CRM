@@ -51,8 +51,23 @@ export {
     fetchProjectsForCustomers,
     fetchProjectNotes,
     deleteProject,
+    fetchProjectWithDetails,
+    // Objectives
+    fetchProjectObjectives,
     createObjective,
-    fetchProjectWithDetails
+    updateObjective,
+    deleteObjective,
+    reorderObjectives,
+    toggleObjectiveCompleted,
+    // Images
+    fetchProjectImages,
+    createProjectImage,
+    updateProjectImage,
+    deleteProjectImage,
+    // Notes
+    createProjectNote,
+    updateProjectNote,
+    deleteProjectNote
 } from './projects';
 
 // Task operations

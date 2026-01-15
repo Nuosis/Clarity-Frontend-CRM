@@ -97,7 +97,7 @@
       "priority": "high",
       "completed_at": "2026-01-15T03:00:00Z",
       "notes": "Updated all CRUD operations in useProject hook to be environment-aware. Removed Supabase dual-write logic from handleProjectCreate(). Updated all operations to use project.id in webapp and recordId in FileMaker. Operations now route to backend API in webapp and FileMaker in legacy. Also updated handleProjectTeamChange() for consistency. Build verified successfully.",
-      "implementation_notes": "Implemented environment-aware CRUD operations in useProject hook by updating handleProjectCreate (removed Supabase dual-write, added environment detection, uses formatProjectForBackend in webapp), handleProjectUpdate (uses project.id for webapp, recordId for FileMaker), handleProjectStatusChange (finds project by both id and recordId for compatibility), handleProjectDelete (uses appropriate ID based on environment), and handleProjectTeamChange (uses team_id for backend, _teamID for FileMaker). All operations now properly detect environment via getEnvironmentContext() and route to correct endpoints. Business logic for fixed-price and subscription projects preserved. Build compiles successfully.",
+      "implementation_notes": "Implemented updates to 'src/hooks/useProject.js' to migrate all project CRUD handlers to the environment-aware backend API, removing the Supabase dual-write block, de-emphasizing 'recordId', and standardizing on 'project.id' with smart fallbacks for legacy FileMaker compatibility. Updated 'handleProjectCreate', 'handleProjectUpdate', 'handleProjectStatusChange', 'handleProjectDelete', and also aligned 'handleProjectTeamChange' to use environment-specific formatting and field names (eg 'team_id' vs '_teamID') while preserving fixed-price and subscription business logic. Marked TSK0007 complete in '.devflow/tasks/projects-backend-integration/tasks.json' and added documentation in '.devflow/tasks/projects-backend-integration/TSK0007_COMPLETION_SUMMARY.md' after confirming the build compiles cleanly aside from pre-existing warnings.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -106,8 +106,14 @@
       "id": "TSK0008",
       "title": "Update useProject hook - objectives and steps",
       "description": "Update src/hooks/useProject.js objective/step management. Update handleObjectiveCreate(), handleObjectiveUpdate(), handleObjectiveDelete() to use new API methods. Update step CRUD operations if needed. Remove FileMaker-specific delays (500ms race condition workaround).",
-      "status": "queued",
-      "priority": "medium"
+      "status": "done",
+      "priority": "medium",
+      "completed_at": "2026-01-15T04:00:00Z",
+      "notes": "Updated all objective CRUD handlers to be environment-aware. Removed 500ms FileMaker race condition delay from handleObjectiveCreate(). Added handleObjectiveUpdate() and handleObjectiveDelete() handlers with proper local state updates. Backend handles step operations automatically via nested objectives. Exported new handlers from useProject hook. Updated API index exports. Build verified successfully.",
+      "implementation_notes": "Implemented environment-aware objective management in useProject hook by updating handleObjectiveCreate() to remove the 500ms FileMaker workaround delay and format data for both backend (project_id, objective, completed) and FileMaker (_projectID, projectObjective, f_completed) environments. Added handleObjectiveUpdate() with bidirectional field transformations between frontend and backend schemas, including proper boolean conversions and local state updates for both selectedProject and projects array. Added handleObjectiveDelete() with automatic cascade handling (backend deletes steps, FileMaker may need manual cleanup). Updated src/api/index.js to export the new objective methods (updateObjective, deleteObjective, reorderObjectives, toggleObjectiveCompleted) plus image and note methods. Steps are handled automatically by backend via nested objectives structure - no separate step CRUD needed in hook. All handlers properly detect environment via getEnvironmentContext() and route to appropriate API. Build verified successfully with only pre-existing proposal warnings.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0009",

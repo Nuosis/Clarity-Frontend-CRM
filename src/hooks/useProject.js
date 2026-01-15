@@ -9,8 +9,10 @@ import {
     fetchProjectsForCustomers,
     fetchProjectNotes,
     deleteProject,
+    fetchProjectWithDetails,
     createObjective,
-    fetchProjectWithDetails
+    updateObjective,
+    deleteObjective
 } from '../api';
 import { useProjectRecords } from '../context/ProjectContext';
 import { useSnackBar } from '../context/SnackBarContext';
@@ -550,31 +552,39 @@ export function useProject(customerId = null) {
 
     /**
      * Creates a new objective for a project
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
      */
     const handleObjectiveCreate = useCallback(async (projectId, objectiveText) => {
         try {
             setLoading(true);
             setError(null);
-            
-            // Prepare objective data for FileMaker (including the newly added fields)
-            const objectiveData = {
-                _projectID: projectId,
-                projectObjective: objectiveText,
-                status: "Open", // Default status
-                f_completed: 0 // Default to not completed (0 = false, 1 = true)
-            };
-            
-            // Create the objective in FileMaker
+
+            const env = getEnvironmentContext();
+
+            // Prepare objective data based on environment
+            const objectiveData = env.type === ENVIRONMENT_TYPES.WEBAPP
+                ? {
+                    project_id: projectId,
+                    objective: objectiveText,
+                    status: "Open",
+                    completed: false
+                }
+                : {
+                    _projectID: projectId,
+                    projectObjective: objectiveText,
+                    status: "Open",
+                    f_completed: 0
+                };
+
+            // Create the objective via environment-aware API
             const result = await createObjective(objectiveData);
-            
-            // Add a small delay to avoid race condition with FileMaker
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             // Reload project details to get the updated objectives
+            // No delay needed - backend is atomic
             if (selectedProject && selectedProject.id === projectId) {
                 await loadProjectDetails(projectId);
             }
-            
+
             return result;
         } catch (err) {
             setError(err.message);
@@ -585,6 +595,112 @@ export function useProject(customerId = null) {
         }
     }, [selectedProject, loadProjectDetails]);
 
+    /**
+     * Updates an existing objective
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     */
+    const handleObjectiveUpdate = useCallback(async (objectiveId, updateData) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const env = getEnvironmentContext();
+
+            // Format data based on environment
+            const formattedData = env.type === ENVIRONMENT_TYPES.WEBAPP
+                ? {
+                    objective: updateData.objective || updateData.projectObjective,
+                    status: updateData.status,
+                    completed: updateData.completed !== undefined
+                        ? updateData.completed
+                        : (updateData.f_completed === 1 || updateData.f_completed === "1")
+                }
+                : {
+                    projectObjective: updateData.projectObjective || updateData.objective,
+                    status: updateData.status,
+                    f_completed: updateData.f_completed !== undefined
+                        ? updateData.f_completed
+                        : (updateData.completed ? 1 : 0)
+                };
+
+            // Update via environment-aware API
+            const result = await updateObjective(objectiveId, formattedData);
+
+            // Update local state
+            if (selectedProject) {
+                const updatedObjectives = selectedProject.objectives.map(obj =>
+                    obj.id === objectiveId
+                        ? { ...obj, ...formattedData }
+                        : obj
+                );
+
+                setSelectedProject(prev => ({
+                    ...prev,
+                    objectives: updatedObjectives
+                }));
+
+                setProjects(prevProjects =>
+                    prevProjects.map(p =>
+                        p.id === selectedProject.id
+                            ? { ...p, objectives: updatedObjectives }
+                            : p
+                    )
+                );
+            }
+
+            return result;
+        } catch (err) {
+            setError(err.message);
+            console.error('Error updating objective:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedProject]);
+
+    /**
+     * Deletes a project objective
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Note: Backend cascades deletion to related steps automatically
+     */
+    const handleObjectiveDelete = useCallback(async (objectiveId) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Delete via environment-aware API
+            const result = await deleteObjective(objectiveId);
+
+            // Update local state
+            if (selectedProject) {
+                const updatedObjectives = selectedProject.objectives.filter(
+                    obj => obj.id !== objectiveId
+                );
+
+                setSelectedProject(prev => ({
+                    ...prev,
+                    objectives: updatedObjectives
+                }));
+
+                setProjects(prevProjects =>
+                    prevProjects.map(p =>
+                        p.id === selectedProject.id
+                            ? { ...p, objectives: updatedObjectives }
+                            : p
+                    )
+                );
+            }
+
+            return result;
+        } catch (err) {
+            setError(err.message);
+            console.error('Error deleting objective:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedProject]);
+
     return {
         // State
         loading,
@@ -592,10 +708,10 @@ export function useProject(customerId = null) {
         projects,
         selectedProject,
         projectRecords,
-        
+
         // Getters
         activeProjects: projects.filter(project => project.status === 'Open'),
-        
+
         // Actions
         loadProjects,
         loadProjectDetails,
@@ -606,7 +722,9 @@ export function useProject(customerId = null) {
         handleProjectDelete,
         handleProjectTeamChange,
         handleObjectiveCreate,
-        
+        handleObjectiveUpdate,
+        handleObjectiveDelete,
+
         // Utilities
         getProjectCompletion,
         clearError: () => setError(null),
