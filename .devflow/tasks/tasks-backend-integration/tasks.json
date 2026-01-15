@@ -63,17 +63,26 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Successfully implemented new backend API endpoints in src/api/tasks.js with feature flag (USE_BACKEND_API=true) and FileMaker fallback for backward compatibility. Updated 5 core functions: fetchTasksForProject (GET /tasks with project_id filter), createTask (POST /tasks), updateTask (PATCH /tasks/{id}), updateTaskStatus (POST /tasks/{id}/toggle-completion), and added deleteTask (DELETE /tasks/{id}). All functions use HMAC-SHA256 authentication via generateBackendAuthHeader() imported from fileMaker.js. Implemented comprehensive error handling (handleApiError) that properly formats validation errors, string detail messages, and other error response formats from the backend API. All endpoints verified against OpenAPI specification at https://api.claritybusinesssolutions.ca/openapi.json. Project builds successfully with no compilation errors. Added comprehensive logging for debugging with [Tasks API] prefixes."
+      "implementation_notes": "Implemented new backend-based task endpoints in 'src/api/tasks.js', replacing FileMaker calls for 'fetchTasksForProject', 'createTask', 'updateTask', and 'updateTaskStatus', and adding a new 'deleteTask' function mapped to 'GET or POST or PATCH or DELETE' routes per the OpenAPI spec including 'POST /tasks/{taskId}/toggle-completion'. Integrated HMAC auth by reusing 'generateBackendAuthHeader' from 'src/api/fileMaker.js', added a 'USE_BACKEND_API' feature flag to keep FileMaker fallback for backward compatibility, and introduced centralized error handling and '[Tasks API]' logging for consistent diagnostics. Verified endpoint alignment against 'https://api.claritybusinesssolutions.ca/openapi.json' and confirmed builds pass with no syntax or import issues."
     },
     {
       "id": "TSK0004",
       "title": "Implement timer endpoints in api/tasks.js",
       "description": "Implement new timer endpoints: startTaskTimer (with idempotency check), stopTaskTimer (with financial record creation), pauseTimer, resumeTimer, fetchTaskTimers, getActiveTimer. Handle concurrency control and atomic operations.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0002"
-      ]
+      ],
+      "completed_at": "2026-01-15T06:00:00.000Z",
+      "deliverables": [
+        ".devflow/tasks/tasks-backend-integration/TIMER_ENDPOINTS_IMPLEMENTATION.md"
+      ],
+      "notes": "Implemented all timer endpoints in src/api/tasks.js with backend API integration and FileMaker fallback. Added startTaskTimer (POST /time-entries/start), stopTaskTimer (POST /time-entries/{id}/stop with atomic financial record creation), pauseTimer, resumeTimer, getActiveTimer (GET /time-entries/active), and updated fetchTaskTimers with advanced filtering. All endpoints use HMAC authentication, comprehensive error handling, and detailed logging. Backend handles idempotency, concurrency control (one active timer per staff), and atomic operations. Pause/resume only supported in backend mode. Build verified successfully.",
+      "implementation_notes": "Successfully implemented all 6 timer endpoints in 'src/api/tasks.js' with full backend API integration. Key features: (1) startTaskTimer uses POST /time-entries/start with idempotency via backend enforcement, (2) stopTaskTimer uses POST /time-entries/{id}/stop with atomic financial record creation (skips for fixed-price projects), (3) pauseTimer and resumeTimer (POST /time-entries/{id}/pause and /resume) only work in backend mode - FileMaker throws unsupported error, (4) getActiveTimer (GET /time-entries/active) fetches current active timer with graceful 404 handling, (5) fetchTaskTimers updated to support advanced filtering (project_id, customer_id, staff_id, status, date ranges, pagination). All endpoints use HMAC-SHA256 authentication via generateBackendAuthHeader(), maintain FileMaker fallback (except pause/resume), include comprehensive error handling with field-level validation messages, and add detailed logging with [Tasks API] prefix. Backend guarantees concurrency control (one active timer per staff), atomic stop+financial operations, and state validation. Verified build compiles successfully. Documented complete API contracts, error scenarios, data mappings, and migration strategy in TIMER_ENDPOINTS_IMPLEMENTATION.md.",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0005",
