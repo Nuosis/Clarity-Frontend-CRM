@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useSnackBar } from '../context/SnackBarContext';
-import { createNewLink, fetchLinksByProject, deleteLinkById } from '../services/linkService';
+import { createNewLink, fetchLinksByProject, updateExistingLink, deleteLinkById } from '../services/linkService';
 import { parseGitHubUrl } from '../utils/githubUtils';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 
@@ -116,6 +116,57 @@ export function useLink() {
     }, [showError]);
 
     /**
+     * Update an existing link
+     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * @param {string} linkId - Link ID
+     * @param {Object} data - Update data
+     * @param {string} data.link - Updated link URL
+     * @param {string} data.url - Updated link URL (alias)
+     * @returns {Promise<Object|null>} Updated link object or null on error
+     */
+    const handleLinkUpdate = useCallback(async (linkId, data) => {
+        if (!linkId) {
+            showError('Link ID is required');
+            return null;
+        }
+        if (!data || (!data.link && !data.url)) {
+            showError('Link URL is required');
+            return null;
+        }
+
+        try {
+            setLoading(true);
+            setError(null);
+
+            const updatedLink = await updateExistingLink(linkId, data);
+
+            // Re-augment with GitHub metadata if applicable
+            const linkUrl = updatedLink.url || data.link || data.url;
+            const gh = parseGitHubUrl(linkUrl);
+            const isGitHub = gh?.isGitHub && gh.owner && gh.repo;
+
+            if (isGitHub) {
+                updatedLink.metadata = {
+                    github: {
+                        owner: gh.owner,
+                        repo: gh.repo,
+                        normalizedUrl: gh.normalizedUrl || linkUrl
+                    }
+                };
+            }
+
+            return updatedLink;
+        } catch (err) {
+            const errorMessage = err.message || 'Error updating link';
+            setError(errorMessage);
+            showError(errorMessage);
+            return null;
+        } finally {
+            setLoading(false);
+        }
+    }, [showError]);
+
+    /**
      * Delete a link
      * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
      * @param {string} linkId - Link ID
@@ -148,6 +199,7 @@ export function useLink() {
         error,
         handleLinkCreate,
         handleFetchLinks,
+        handleLinkUpdate,
         handleLinkDelete,
         clearError: () => setError(null)
     };

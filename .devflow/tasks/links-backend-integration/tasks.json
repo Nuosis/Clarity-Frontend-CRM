@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-15T21:53:47.000Z",
+  "updated_at": "2026-01-15T22:15:00.000Z",
   "feature": {
     "name": "Links Backend Integration",
     "slug": "links-backend-integration",
@@ -118,7 +118,7 @@
       ],
       "completed_at": "2026-01-15T00:00:00.000Z",
       "notes": "✅ Updated processProjectLinks() to handle backend LinkResponse format with explicit project_id filtering, safe URL parsing, sorting, and complete field mapping. ✅ Updated processTaskLinks() to support both FileMaker and backend formats with task_id filtering, title generation, and sorting. ✅ Added source parameter ('filemaker'|'backend') to both functions. ✅ Updated loadTaskDetails() call site to pass taskId and source. ✅ All acceptance criteria met: proper filtering by parent entity, timestamp formatting (snake_case→camelCase), fallback titles with safe URL parsing. ✅ Build verified successfully. See TSK0004-implementation-summary.md for detailed changes.",
-      "implementation_notes": "Refactored processProjectLinks() and processTaskLinks() to handle both FileMaker and backend LinkResponse formats. Key changes: (1) Added explicit filtering by project_id/task_id for backend format to ensure only relevant links returned; (2) Implemented safe URL parsing with try-catch for title generation from hostname, with fallback to raw link on error; (3) Added timestamp-based sorting (newest first) for better UX; (4) Extended backend format mapping to include all fields (taskId, customerId, organizationId, updatedAt); (5) Updated processTaskLinks signature to accept taskId and source parameters; (6) Updated loadTaskDetails() call site to pass required parameters. Both functions now support dual-environment operation while maintaining backward compatibility with FileMaker format. Build verified successfully with no compilation errors.",
+      "implementation_notes": "Implemented updates to link processing to support the new backend API schema while preserving FileMaker compatibility by enhancing 'processProjectLinks' in 'src/services/projectService.js' and extending 'processTaskLinks' in 'src/services/taskService.js' to accept a 'source' plus entity id filtering (added 'taskId' param and updated the 'loadTaskDetails' call site). Key decisions included reusing the shared backend transformation logic from 'src/services/linkService.js', adding explicit filtering by 'project_id' and 'task_id', safe URL parsing for title generation, and consistent newest-first sorting via timestamps with snake_case to camelCase mapping. Updated 'tasks.json' to mark TSK0004 complete and added session documentation in 'TSK0004-implementation-summary.md' and 'TSK0004-COMPLETION-REPORT.md', validating changes via successful 'npm run build'.",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -127,7 +127,7 @@
       "id": "TSK0005",
       "title": "Enhance useLink hook for full CRUD",
       "description": "Add update and delete operations to useLink hook, maintain create functionality",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "acceptance_criteria": [
         "handleLinkCreate() works with new API",
@@ -142,7 +142,13 @@
       ],
       "dependencies": [
         "TSK0003"
-      ]
+      ],
+      "completed_at": "2026-01-15T22:15:00.000Z",
+      "notes": "✅ Added handleLinkUpdate() method to useLink hook with full GitHub metadata re-augmentation support. ✅ handleLinkDelete() already existed and is working correctly. ✅ handleLinkCreate() maintained with GitHub URL detection and metadata augmentation. ✅ Imported updateExistingLink() from linkService. ✅ All operations include proper error handling with user-friendly messages via SnackBar. ✅ Loading states managed correctly for all operations. ✅ GitHub detection works for both create and update operations via parseGitHubUrl(). ✅ Build verified - project compiles successfully with no errors.",
+      "implementation_notes": "Enhanced 'src/hooks/useLink.js' by adding 'handleLinkUpdate()' callback that leverages the existing 'updateExistingLink' service method from 'linkService.js', validates inputs (linkId and data.link/url), manages loading/error states, and crucially re-augments the updated link with GitHub metadata using the same 'parseGitHubUrl' logic as 'handleLinkCreate'. Key decisions included importing 'updateExistingLink' from linkService, maintaining consistency with existing create/delete patterns (validation → service call → error handling), and preserving GitHub repository detection for updated URLs (non-invasive metadata.github tagging). Verified the implementation by checking the updated hook exports 'handleLinkUpdate' alongside create/fetch/delete, confirmed existing components (ProjectLinksTab.jsx and TaskList.jsx) can consume the new method, and validated successful build with 'npm run build'. Updated 'tasks.json' to mark TSK0005 complete with timestamp 2026-01-15T22:15:00.000Z.",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0006",
