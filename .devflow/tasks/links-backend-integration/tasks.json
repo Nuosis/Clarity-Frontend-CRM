@@ -1,0 +1,205 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-13T00:00:00.000Z",
+  "feature": {
+    "name": "Links Backend Integration",
+    "slug": "links-backend-integration",
+    "description": "Integrate frontend with new backend /links API endpoints, replacing FileMaker calls",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "DO NOT modify backend infrastructure or database schema",
+    "Maintain existing UX - all current UI flows must work identically",
+    "Use HMAC authentication for all backend requests",
+    "Support environment detection (FileMaker vs Web App)",
+    "Preserve GitHub integration features",
+    "Handle errors gracefully with user-friendly messages"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Verify backend links endpoints availability",
+      "description": "Test that all required /links endpoints are accessible and working with HMAC auth",
+      "status": "pending",
+      "priority": "high",
+      "acceptance_criteria": [
+        "GET /links?project_id={id} returns 200",
+        "POST /links creates link successfully",
+        "PATCH /links/{id} updates link",
+        "DELETE /links/{id} removes link",
+        "All endpoints accept HMAC auth headers"
+      ],
+      "files": [],
+      "dependencies": []
+    },
+    {
+      "id": "TSK0002",
+      "title": "Refactor src/api/links.js for backend API",
+      "description": "Replace FileMaker calls with backend REST API calls, add full CRUD operations",
+      "status": "pending",
+      "priority": "high",
+      "acceptance_criteria": [
+        "createLink() calls POST /links with correct schema",
+        "getLinks() calls GET /links with filter params",
+        "updateLink() calls PATCH /links/{id}",
+        "deleteLink() calls DELETE /links/{id}",
+        "All functions use HMAC authentication",
+        "Proper error handling for backend responses"
+      ],
+      "files": [
+        "src/api/links.js"
+      ],
+      "dependencies": ["TSK0001"]
+    },
+    {
+      "id": "TSK0003",
+      "title": "Update src/services/linkService.js schema mapping",
+      "description": "Update service layer to handle backend LinkResponse format instead of FileMaker format",
+      "status": "pending",
+      "priority": "high",
+      "acceptance_criteria": [
+        "processLinks() maps LinkResponse to frontend format",
+        "createNewLink() accepts parent type (project/task/customer/org)",
+        "URL validation still works",
+        "Add updateLink() and deleteLink() service functions",
+        "Maintain GitHub URL detection logic"
+      ],
+      "files": [
+        "src/services/linkService.js"
+      ],
+      "dependencies": ["TSK0002"]
+    },
+    {
+      "id": "TSK0004",
+      "title": "Update project and task link processing functions",
+      "description": "Update processProjectLinks and processTaskLinks to work with new schema",
+      "status": "pending",
+      "priority": "medium",
+      "acceptance_criteria": [
+        "processProjectLinks() handles LinkResponse format",
+        "processTaskLinks() handles LinkResponse format",
+        "Links correctly filtered by parent entity",
+        "Timestamps properly formatted",
+        "Fallback titles work correctly"
+      ],
+      "files": [
+        "src/services/projectService.js",
+        "src/services/taskService.js"
+      ],
+      "dependencies": ["TSK0003"]
+    },
+    {
+      "id": "TSK0005",
+      "title": "Enhance useLink hook for full CRUD",
+      "description": "Add update and delete operations to useLink hook, maintain create functionality",
+      "status": "pending",
+      "priority": "high",
+      "acceptance_criteria": [
+        "handleLinkCreate() works with new API",
+        "handleLinkUpdate() added for editing links",
+        "handleLinkDelete() added for removing links",
+        "GitHub detection still works",
+        "Optimistic updates work with new response format",
+        "Error handling for all operations"
+      ],
+      "files": [
+        "src/hooks/useLink.js"
+      ],
+      "dependencies": ["TSK0003"]
+    },
+    {
+      "id": "TSK0006",
+      "title": "Update ProjectLinksTab component",
+      "description": "Update ProjectLinksTab to use new API and schema, maintain existing UX",
+      "status": "pending",
+      "priority": "high",
+      "acceptance_criteria": [
+        "Links render correctly with new schema",
+        "Create link still works",
+        "Optimistic updates work correctly",
+        "GitHub repository detection/creation works",
+        "Error handling works properly",
+        "Loading states display correctly"
+      ],
+      "files": [
+        "src/components/projects/ProjectLinksTab.jsx"
+      ],
+      "dependencies": ["TSK0005"]
+    },
+    {
+      "id": "TSK0007",
+      "title": "Update task link display and creation",
+      "description": "Update task list components to work with new links API and schema",
+      "status": "pending",
+      "priority": "medium",
+      "acceptance_criteria": [
+        "Task links render correctly",
+        "Create link from task works",
+        "Links refresh after creation",
+        "Error handling works"
+      ],
+      "files": [
+        "src/components/tasks/TaskList.jsx"
+      ],
+      "dependencies": ["TSK0005"]
+    },
+    {
+      "id": "TSK0008",
+      "title": "Add edit/delete UI for links (optional)",
+      "description": "Add UI controls for editing and deleting links now that backend supports it",
+      "status": "pending",
+      "priority": "low",
+      "acceptance_criteria": [
+        "Edit button on links opens edit modal/input",
+        "Delete button removes link with confirmation",
+        "Update API called on edit save",
+        "Delete API called on confirm",
+        "UI updates after successful operations"
+      ],
+      "files": [
+        "src/components/projects/ProjectLinksTab.jsx",
+        "src/components/tasks/TaskList.jsx"
+      ],
+      "dependencies": ["TSK0006", "TSK0007"]
+    },
+    {
+      "id": "TSK0009",
+      "title": "Update tests and fixtures",
+      "description": "Update all link-related tests to use new backend schema and mocks",
+      "status": "pending",
+      "priority": "medium",
+      "acceptance_criteria": [
+        "API tests updated for backend format",
+        "Service tests updated for new schema",
+        "Hook tests cover all CRUD operations",
+        "Mock data uses LinkResponse format",
+        "All tests pass"
+      ],
+      "files": [
+        "src/api/__tests__/links.test.js",
+        "src/services/__tests__/linkService.test.js",
+        "src/hooks/__tests__/useLink.test.js"
+      ],
+      "dependencies": ["TSK0002", "TSK0003", "TSK0005"]
+    },
+    {
+      "id": "TSK0010",
+      "title": "Integration testing and verification",
+      "description": "Manual testing of all link operations in development environment",
+      "status": "pending",
+      "priority": "high",
+      "acceptance_criteria": [
+        "Create link for project works end-to-end",
+        "Create link for task works end-to-end",
+        "Links render and open correctly",
+        "GitHub integration works",
+        "Edit/delete work (if implemented)",
+        "Error handling displays proper messages",
+        "No FileMaker errors in console"
+      ],
+      "files": [],
+      "dependencies": ["TSK0006", "TSK0007"]
+    }
+  ]
+}

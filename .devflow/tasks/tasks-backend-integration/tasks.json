@@ -1,0 +1,187 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-15T05:31:00.000Z",
+  "feature": {
+    "name": "Tasks Backend Integration",
+    "slug": "tasks-backend-integration",
+    "description": "Integrate tasks and timer features with new Supabase-backed backend APIs, replacing FileMaker implementation",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "Do NOT modify backend infrastructure or database schema",
+    "Do NOT create test files if equivalent tests already exist - extend existing tests instead",
+    "Maintain backward compatibility during transition - add feature flags if needed",
+    "Use established patterns from dataService.js for HMAC authentication",
+    "Follow existing code patterns in the codebase - do not introduce new patterns",
+    "Add comprehensive logging for debugging timer and financial record operations",
+    "Handle errors gracefully with user-friendly messages",
+    "Do NOT remove FileMaker code until confirmed working in production"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Audit current task component usage",
+      "description": "Find all components that use tasks, timers, and related functionality. Identify which files need updates for the new API integration. Document current data flow and state management patterns.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "completed_at": "2026-01-15T05:31:00.000Z",
+      "deliverables": [
+        ".devflow/tasks/tasks-backend-integration/AUDIT_COMPONENT_USAGE.md"
+      ],
+      "notes": "Comprehensive audit completed covering 25+ files across components, hooks, services, and API layers. Documented current FileMaker-centric implementation, identified all integration points, estimated 85-125 hours of development effort for full backend migration. Created detailed file-by-file analysis with field mappings, data flow diagrams, risk assessment, and recommended backend API specification."
+    },
+    {
+      "id": "TSK0002",
+      "title": "Create API request/response mappers",
+      "description": "Create mapper functions to transform between FileMaker data shapes and new backend API shapes. Handle ID conversions (recordId/__ID → UUID), field name changes, type conversions (string booleans → real booleans), and timestamp formats.",
+      "status": "queued",
+      "priority": "high",
+      "dependencies": [
+        "TSK0001"
+      ]
+    },
+    {
+      "id": "TSK0003",
+      "title": "Implement new task endpoints in api/tasks.js",
+      "description": "Replace FileMaker API calls with new backend endpoint calls for: fetchTasksForProject, createTask, updateTask, updateTaskStatus, deleteTask. Use dataService.generateBackendAuthHeader() for HMAC auth. Add proper error handling for new error response format.",
+      "status": "queued",
+      "priority": "high",
+      "dependencies": [
+        "TSK0002"
+      ]
+    },
+    {
+      "id": "TSK0004",
+      "title": "Implement timer endpoints in api/tasks.js",
+      "description": "Implement new timer endpoints: startTaskTimer (with idempotency check), stopTaskTimer (with financial record creation), pauseTimer, resumeTimer, fetchTaskTimers, getActiveTimer. Handle concurrency control and atomic operations.",
+      "status": "queued",
+      "priority": "high",
+      "dependencies": [
+        "TSK0002"
+      ]
+    },
+    {
+      "id": "TSK0005",
+      "title": "Update taskService.js business logic",
+      "description": "Update service layer functions to use new API shapes and handle new business logic: timer idempotency, concurrency control (one active timer per staff), financial record generation on stop (with fixed-price detection), pause/resume accumulation, adjustment validations (6-minute increments).",
+      "status": "queued",
+      "priority": "high",
+      "dependencies": [
+        "TSK0003",
+        "TSK0004"
+      ]
+    },
+    {
+      "id": "TSK0006",
+      "title": "Update task validation rules",
+      "description": "Update TASK_FIELDS validation in taskService.js to match new backend schema. Update field names, add new required fields, remove deprecated fields. Ensure validation errors match backend error messages.",
+      "status": "queued",
+      "priority": "medium",
+      "dependencies": [
+        "TSK0003"
+      ]
+    },
+    {
+      "id": "TSK0007",
+      "title": "Update task list components",
+      "description": "Update all task list components to use new data shapes. Handle pagination, filtering, and sorting with new API parameters. Update loading states and error displays. Verify task grouping (active vs completed) still works correctly.",
+      "status": "queued",
+      "priority": "high",
+      "dependencies": [
+        "TSK0005",
+        "TSK0001"
+      ]
+    },
+    {
+      "id": "TSK0008",
+      "title": "Update task detail components",
+      "description": "Update task detail views to display new fields and handle new data shapes. Update timer display to show pause/resume state. Add better error messages for timer concurrency conflicts.",
+      "status": "queued",
+      "priority": "high",
+      "dependencies": [
+        "TSK0005",
+        "TSK0001"
+      ]
+    },
+    {
+      "id": "TSK0009",
+      "title": "Update task form components",
+      "description": "Update task creation and edit forms to match new schema. Update field validation to use new backend rules. Handle new error response format with field-level errors. Update success/error messaging.",
+      "status": "queued",
+      "priority": "high",
+      "dependencies": [
+        "TSK0006",
+        "TSK0001"
+      ]
+    },
+    {
+      "id": "TSK0010",
+      "title": "Update timer UI components",
+      "description": "Update timer components to support pause/resume functionality. Add UI for adjustment in 6-minute increments. Display active timer state on app load. Handle timer concurrency errors gracefully (show existing active timer).",
+      "status": "queued",
+      "priority": "high",
+      "dependencies": [
+        "TSK0004",
+        "TSK0001"
+      ]
+    },
+    {
+      "id": "TSK0011",
+      "title": "Implement financial record integration on timer stop",
+      "description": "Update stopTimer logic to handle financial record creation atomically. Implement fixed-price project detection. Handle partial failures (timer stops but financial record fails). Add retry logic for financial record creation. Log all operations for debugging.",
+      "status": "queued",
+      "priority": "high",
+      "dependencies": [
+        "TSK0004",
+        "TSK0005"
+      ]
+    },
+    {
+      "id": "TSK0012",
+      "title": "Update API mocks and fixtures",
+      "description": "Update all task-related mocks to match new backend API responses. Create fixtures with new data shapes. Update mock implementations to simulate new business logic (idempotency, concurrency checks, etc.).",
+      "status": "queued",
+      "priority": "medium",
+      "dependencies": [
+        "TSK0003",
+        "TSK0004"
+      ]
+    },
+    {
+      "id": "TSK0013",
+      "title": "Update unit tests for API layer",
+      "description": "Update tests for src/api/tasks.js to cover new endpoints. Add tests for HMAC authentication. Add tests for error handling. Add tests for request/response mapping.",
+      "status": "queued",
+      "priority": "medium",
+      "dependencies": [
+        "TSK0003",
+        "TSK0004",
+        "TSK0012"
+      ]
+    },
+    {
+      "id": "TSK0014",
+      "title": "Update unit tests for service layer",
+      "description": "Update tests for src/services/taskService.js to cover new business logic. Add tests for timer idempotency. Add tests for concurrency control. Add tests for financial record generation. Add tests for pause/resume calculations. Add tests for adjustment validations.",
+      "status": "queued",
+      "priority": "medium",
+      "dependencies": [
+        "TSK0005",
+        "TSK0012"
+      ]
+    },
+    {
+      "id": "TSK0015",
+      "title": "Add integration tests for complete task lifecycle",
+      "description": "Create end-to-end tests for: create task → start timer → stop timer → verify financial record. Test fixed-price project (no financial record). Test concurrent timer scenarios. Test error recovery paths.",
+      "status": "queued",
+      "priority": "medium",
+      "dependencies": [
+        "TSK0011",
+        "TSK0012"
+      ]
+    }
+  ]
+}

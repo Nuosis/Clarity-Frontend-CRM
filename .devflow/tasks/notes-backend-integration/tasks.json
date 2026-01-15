@@ -1,0 +1,168 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-13T00:00:00Z",
+  "feature": {
+    "name": "Notes Backend Integration",
+    "slug": "notes-backend-integration",
+    "description": "Migrate notes functionality from FileMaker to backend Supabase API",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "All backend API calls MUST use HMAC authentication via dataService.generateBackendAuthHeader()",
+    "Maintain backward compatibility - existing UI components should work with minimal changes",
+    "No FileMaker API calls in notes code paths after migration",
+    "All errors must be logged to console AND displayed to user via SnackBar",
+    "Data transformation must happen in service layer, not components",
+    "Pagination state must be managed per entity (project/task/customer)",
+    "Handle missing 'created_by' field gracefully (not in current backend schema)"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Verify backend schema and test API endpoints",
+      "description": "Test actual backend /api/notes endpoints to confirm schema matches OpenAPI spec. Test create, list, update, delete operations. Document any discrepancies.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": [],
+      "estimated_effort": "30 minutes"
+    },
+    {
+      "id": "TSK0002",
+      "title": "Update src/api/notes.js with backend API functions",
+      "description": "Replace FileMaker createNote() with backend API wrapper functions: fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, createNote, updateNote, deleteNote. Use dataService.request() with HMAC auth.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001"],
+      "files_to_modify": ["src/api/notes.js"],
+      "estimated_effort": "1 hour"
+    },
+    {
+      "id": "TSK0003",
+      "title": "Update src/api/projects.js fetchProjectNotes()",
+      "description": "Replace FileMaker query with call to fetchNotesByProject() from notes.js. Ensure return format matches what ProjectNotesTab expects.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0002"],
+      "files_to_modify": ["src/api/projects.js"],
+      "estimated_effort": "20 minutes"
+    },
+    {
+      "id": "TSK0004",
+      "title": "Update src/api/tasks.js fetchTaskNotes()",
+      "description": "Replace FileMaker query with call to fetchNotesByTask() from notes.js. Ensure return format matches what TaskList expects.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0002"],
+      "files_to_modify": ["src/api/tasks.js"],
+      "estimated_effort": "20 minutes"
+    },
+    {
+      "id": "TSK0005",
+      "title": "Update src/services/noteService.js data transformation",
+      "description": "Update processNotes() to transform backend response format (note→content, created_at→createdAt, etc.). Update createNewNote() to accept entityType and build correct request payload. Remove FileMaker-specific logic.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001"],
+      "files_to_modify": ["src/services/noteService.js"],
+      "estimated_effort": "45 minutes"
+    },
+    {
+      "id": "TSK0006",
+      "title": "Update src/hooks/useNote.js for backend operations",
+      "description": "Update handleNoteCreate() to use new API signature. Add handleNoteUpdate() and handleNoteDelete() operations. Add pagination state (hasMore, offset, loading). Update error handling for backend error format.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0002", "TSK0005"],
+      "files_to_modify": ["src/hooks/useNote.js"],
+      "estimated_effort": "1 hour"
+    },
+    {
+      "id": "TSK0007",
+      "title": "Verify ProjectNotesTab component compatibility",
+      "description": "Test that ProjectNotesTab renders notes correctly with new data format. Update any field accessors if needed (e.g., note.fieldData.note → note.content). Ensure create note flow works.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0003", "TSK0005", "TSK0006"],
+      "files_to_modify": ["src/components/projects/ProjectNotesTab.jsx"],
+      "estimated_effort": "30 minutes"
+    },
+    {
+      "id": "TSK0008",
+      "title": "Verify TaskList component compatibility",
+      "description": "Test that TaskList and TaskItem render task notes correctly with new data format. Ensure create note flow works for tasks. Update any field accessors if needed.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0004", "TSK0005", "TSK0006"],
+      "files_to_modify": ["src/components/tasks/TaskList.jsx"],
+      "estimated_effort": "30 minutes"
+    },
+    {
+      "id": "TSK0009",
+      "title": "Add pagination UI for notes (optional enhancement)",
+      "description": "Add 'Load More' button to ProjectNotesTab and TaskList when hasMore=true. Wire up to fetch next page of notes. Display loading state during fetch.",
+      "status": "pending",
+      "priority": "low",
+      "dependencies": ["TSK0007", "TSK0008"],
+      "files_to_modify": [
+        "src/components/projects/ProjectNotesTab.jsx",
+        "src/components/tasks/TaskList.jsx"
+      ],
+      "estimated_effort": "45 minutes"
+    },
+    {
+      "id": "TSK0010",
+      "title": "End-to-end testing - Create project note",
+      "description": "Manual test: Create a note on a project, verify it appears in the list, verify it persists after reload. Test error handling for empty content.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0007"],
+      "estimated_effort": "15 minutes"
+    },
+    {
+      "id": "TSK0011",
+      "title": "End-to-end testing - Create task note",
+      "description": "Manual test: Expand a task, create a note, verify it appears in the list, verify it persists after collapse/expand. Test error handling.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0008"],
+      "estimated_effort": "15 minutes"
+    },
+    {
+      "id": "TSK0012",
+      "title": "End-to-end testing - Update and delete notes",
+      "description": "Manual test: Update a note's content, verify changes persist. Delete a note, verify it's removed. Test error cases (invalid note ID, network failure).",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0006"],
+      "estimated_effort": "20 minutes"
+    },
+    {
+      "id": "TSK0013",
+      "title": "Remove FileMaker imports from notes code",
+      "description": "Clean up: Remove unused FileMaker imports from notes.js, noteService.js, and related files. Verify no FileMaker API calls remain in notes code paths.",
+      "status": "pending",
+      "priority": "low",
+      "dependencies": ["TSK0010", "TSK0011", "TSK0012"],
+      "files_to_modify": [
+        "src/api/notes.js",
+        "src/services/noteService.js"
+      ],
+      "estimated_effort": "10 minutes"
+    },
+    {
+      "id": "TSK0014",
+      "title": "Update documentation and add code comments",
+      "description": "Document the new notes API usage patterns. Add JSDoc comments to new functions. Update CLAUDE.md if notes architecture changed significantly.",
+      "status": "pending",
+      "priority": "low",
+      "dependencies": ["TSK0013"],
+      "files_to_modify": [
+        "src/api/notes.js",
+        "src/services/noteService.js",
+        "CLAUDE.md"
+      ],
+      "estimated_effort": "30 minutes"
+    }
+  ]
+}

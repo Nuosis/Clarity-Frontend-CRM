@@ -1,0 +1,246 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-13T00:00:00.000Z",
+  "feature": {
+    "name": "FileMaker Frontend Removal",
+    "slug": "filemaker-frontend-removal",
+    "description": "Remove all FileMaker dependencies from the frontend, transitioning to pure Supabase + Backend API architecture",
+    "review_status": "pending",
+    "review_iteration": 0
+  },
+  "standing_constraints": [
+    "Do not remove FileMaker code until all feature backend integrations are verified working",
+    "Maintain backward compatibility during transition - use feature flags if needed",
+    "All changes must pass build and existing tests",
+    "Follow backend change request protocol - do not modify database schema",
+    "Update documentation as code is removed",
+    "Keep audit trail of what was removed and why"
+  ],
+  "tasks": [
+    {
+      "id": "TSK0001",
+      "title": "Verify all feature backend integrations complete",
+      "description": "Check that all prerequisite feature migrations (customers, tasks, projects, notes, links, financial records, QuickBooks) have backend APIs deployed and functional. Teams is already complete (INS0026). Review deployment status and test basic API calls for each feature.",
+      "status": "pending",
+      "priority": "critical",
+      "dependencies": [],
+      "tags": ["prerequisite", "verification"]
+    },
+    {
+      "id": "TSK0002",
+      "title": "Audit FileMaker references in codebase",
+      "description": "Create comprehensive inventory of all FileMaker references, categorized by: (1) API calls, (2) environment detection, (3) authentication, (4) configuration, (5) utilities, (6) tests. Document which references are safe to remove vs. which need replacement. Output to audit report file.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": [],
+      "tags": ["analysis", "audit"]
+    },
+    {
+      "id": "TSK0003",
+      "title": "Create feature flag system for gradual rollout",
+      "description": "Implement a feature flag mechanism to control FileMaker vs. Backend API routing during transition. Add useFeatureFlag hook and FeatureFlagProvider context. Flags should control: (1) use_filemaker_auth, (2) use_filemaker_customers, (3) use_filemaker_projects, etc. Allows safe incremental migration.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001"],
+      "tags": ["infrastructure", "safety"]
+    },
+    {
+      "id": "TSK0004",
+      "title": "Update customers API to use backend endpoints",
+      "description": "Replace FileMaker calls in src/api/customers.js with backend API endpoints. Update fetchCustomers, fetchCustomerById, createCustomer, updateCustomer, deleteCustomer functions. Handle new schema mapping, error handling, and pagination. Add feature flag support.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001", "TSK0003"],
+      "tags": ["api", "customers"]
+    },
+    {
+      "id": "TSK0005",
+      "title": "Update projects API to use backend endpoints",
+      "description": "Replace FileMaker calls in src/api/projects.js with backend API endpoints. Update fetchProjects, fetchProjectById, createProject, updateProject, archiveProject functions. Handle new schema for objectives, images, and related data. Add feature flag support.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001", "TSK0003"],
+      "tags": ["api", "projects"]
+    },
+    {
+      "id": "TSK0006",
+      "title": "Update tasks API to use backend endpoints",
+      "description": "Replace FileMaker calls in src/api/tasks.js with backend API endpoints. Update fetchTasks, fetchTaskById, createTask, updateTask, updateTaskStatus functions. Handle timer operations (start/stop/pause) using new backend timer endpoints. Add feature flag support.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001", "TSK0003"],
+      "tags": ["api", "tasks", "timer"]
+    },
+    {
+      "id": "TSK0007",
+      "title": "Update notes API to use backend endpoints",
+      "description": "Replace FileMaker calls in src/api/notes.js with backend API endpoints. Update fetchNotesByEntity, createNote, updateNote, deleteNote functions. Handle polymorphic associations (customer/project/task). Add feature flag support.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001", "TSK0003"],
+      "tags": ["api", "notes"]
+    },
+    {
+      "id": "TSK0008",
+      "title": "Update links API to use backend endpoints",
+      "description": "Replace FileMaker calls in src/api/links.js with backend API endpoints. Update fetchLinksByEntity, createLink, updateLink, deleteLink functions. Handle polymorphic associations (customer/project/task). Add feature flag support.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001", "TSK0003"],
+      "tags": ["api", "links"]
+    },
+    {
+      "id": "TSK0009",
+      "title": "Update financial records API to use backend endpoints",
+      "description": "Replace FileMaker calls in src/api/financialRecords.js with backend API endpoints. Update fetchFinancialRecords, fetchUnpaidRecords, fetchRecordsByDateRange functions. Handle new customer_sales schema. Add feature flag support.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001", "TSK0003"],
+      "tags": ["api", "financial"]
+    },
+    {
+      "id": "TSK0010",
+      "title": "Replace QuickBooks FileMaker scripts with backend API",
+      "description": "Remove FileMaker script execution for QuickBooks (initializeQuickBooks, testConnection, etc.) from src/api/fileMaker.js. Replace with backend API calls to new QuickBooks endpoints. Update financial UI panels to use new integration points. Add feature flag support.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0001", "TSK0003"],
+      "tags": ["api", "quickbooks"]
+    },
+    {
+      "id": "TSK0011",
+      "title": "Update dualWriteService for Supabase-only mode",
+      "description": "Refactor src/services/dualWriteService.js to remove FileMaker writes. Either deprecate entirely (if backend handles all writes) or update to single-write mode with logging. Add deprecation warnings. Document migration path.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0004", "TSK0005", "TSK0006"],
+      "tags": ["service", "cleanup"]
+    },
+    {
+      "id": "TSK0012",
+      "title": "Remove FileMaker reconciliation from financialSyncService",
+      "description": "Update src/services/financialSyncService.js to remove FileMaker dapiRecords reconciliation logic. Update to rely solely on Supabase customer_sales as source of truth. Add migration validation if needed.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0009"],
+      "tags": ["service", "financial"]
+    },
+    {
+      "id": "TSK0013",
+      "title": "Remove FileMaker environment detection from initializationService",
+      "description": "Update src/services/initializationService.js to remove FileMaker environment detection (window.FileMaker check). Remove FileMaker-specific initialization paths. Simplify to Supabase-only startup flow. Keep backward compatibility via feature flag initially.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0004", "TSK0005", "TSK0006", "TSK0007", "TSK0008", "TSK0009"],
+      "tags": ["service", "initialization"]
+    },
+    {
+      "id": "TSK0014",
+      "title": "Remove FileMaker auth from SignIn component",
+      "description": "Update src/components/auth/SignIn.jsx to remove FileMaker authentication flow. Remove FileMaker environment detection and bridge authentication. Keep only Supabase authentication. Add feature flag support for gradual rollout.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0013"],
+      "tags": ["auth", "ui"]
+    },
+    {
+      "id": "TSK0015",
+      "title": "Simplify dataService to single routing path",
+      "description": "Refactor src/services/dataService.js to remove dual-environment routing. Remove ENVIRONMENT_TYPES.FILEMAKER and AUTH_METHODS.FILEMAKER constants. Remove environment context tracking. Simplify to single Supabase + Backend API path. Keep feature flag support for transition period.",
+      "status": "pending",
+      "priority": "critical",
+      "dependencies": ["TSK0013", "TSK0014"],
+      "tags": ["service", "core"]
+    },
+    {
+      "id": "TSK0016",
+      "title": "Remove useFileMakerBridge hook",
+      "description": "Delete useFileMakerBridge hook from src/hooks/index.js. Update any components still importing it. Ensure no components depend on FileMaker bridge functionality. Add deprecation notices before removal.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0015"],
+      "tags": ["hooks", "cleanup"]
+    },
+    {
+      "id": "TSK0017",
+      "title": "Delete FileMaker API files",
+      "description": "Delete src/api/fileMaker.js and src/api/fileMakerEdgeFunction.js. Verify no imports remain. Update src/api/index.js if it re-exports these modules. Document what was removed.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0010", "TSK0015", "TSK0016"],
+      "tags": ["cleanup", "api"]
+    },
+    {
+      "id": "TSK0018",
+      "title": "Remove fm-gofer dependency",
+      "description": "Remove fm-gofer from package.json dependencies. Run npm install to update lock file. Verify build succeeds without it. Check for any remaining imports.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0017"],
+      "tags": ["dependencies", "cleanup"]
+    },
+    {
+      "id": "TSK0019",
+      "title": "Remove FileMaker environment variables",
+      "description": "Remove VITE_FM_URL, VITE_FM_DATABASE, VITE_FM_USER, VITE_FM_PASSWORD from .env.example. Update environment variable documentation. Add migration notes for users to update their .env files.",
+      "status": "pending",
+      "priority": "low",
+      "dependencies": ["TSK0015"],
+      "tags": ["config", "documentation"]
+    },
+    {
+      "id": "TSK0020",
+      "title": "Remove FileMaker deployment scripts",
+      "description": "Remove or deprecate npm run deploy-to-fm and npm run upload scripts from package.json. Update deployment documentation. Keep scripts in git history for reference.",
+      "status": "pending",
+      "priority": "low",
+      "dependencies": ["TSK0015"],
+      "tags": ["deployment", "cleanup"]
+    },
+    {
+      "id": "TSK0021",
+      "title": "Update CLAUDE.md to remove FileMaker references",
+      "description": "Update CLAUDE.md to remove all FileMaker-specific guidance. Update architecture section to reflect Supabase-first approach. Remove FileMaker integration section. Update development guidelines to remove FileMaker considerations. Keep migration history for reference.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["TSK0015"],
+      "tags": ["documentation"]
+    },
+    {
+      "id": "TSK0022",
+      "title": "Update README.md to remove FileMaker references",
+      "description": "Update README.md to reflect Supabase-only architecture. Remove FileMaker setup instructions. Update architecture diagrams if present. Add migration completed notice.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0021"],
+      "tags": ["documentation"]
+    },
+    {
+      "id": "TSK0023",
+      "title": "Update test mocks to remove FileMaker fixtures",
+      "description": "Remove FileMaker-specific test fixtures and mocks. Update tests to use backend API mocks instead. Ensure all tests pass with new mock data shapes.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["TSK0004", "TSK0005", "TSK0006", "TSK0007", "TSK0008", "TSK0009"],
+      "tags": ["testing"]
+    },
+    {
+      "id": "TSK0024",
+      "title": "Run full regression test suite",
+      "description": "Execute complete test suite after all migrations. Verify all features work: customers, projects, tasks, notes, links, financial records, QuickBooks, teams. Test authentication flow, data CRUD operations, and user workflows. Document any issues found.",
+      "status": "pending",
+      "priority": "critical",
+      "dependencies": ["TSK0023"],
+      "tags": ["testing", "validation"]
+    },
+    {
+      "id": "TSK0025",
+      "title": "Remove feature flags and finalize migration",
+      "description": "After successful validation, remove feature flag system and hard-code Supabase/Backend API paths. Remove all temporary compatibility code. Final cleanup pass. Create migration completion report.",
+      "status": "pending",
+      "priority": "low",
+      "dependencies": ["TSK0024"],
+      "tags": ["cleanup", "finalization"]
+    }
+  ]
+}

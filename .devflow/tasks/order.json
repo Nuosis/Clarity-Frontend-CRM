@@ -34,6 +34,46 @@
       "slug": "quickbooks-migration-requirements",
       "name": "QuickBooks Migration Requirements",
       "description": "Document requirements for migrating QuickBooks integration from FileMaker script execution to backend/Supabase, including OAuth flow, token management, organization scoping, invoice generation, and error handling"
+    },
+    {
+      "slug": "tasks-backend-integration",
+      "name": "Tasks Backend Integration",
+      "description": "Integrate tasks and timer features with new Supabase-backed backend APIs (12 endpoints), replacing FileMaker implementation with proper data mapping, timer semantics, financial record generation, and comprehensive testing"
+    },
+    {
+      "slug": "customers-backend-integration",
+      "name": "Customers Backend API Integration",
+      "description": "Integrate frontend customer management with new backend API endpoints at /api/customers/*, supporting relational data model with nested emails/phones/addresses while maintaining FileMaker backward compatibility"
+    },
+    {
+      "slug": "projects-backend-integration",
+      "name": "Projects Backend Integration",
+      "description": "Migrate Projects feature from FileMaker to new backend API endpoints with full CRUD operations for projects, objectives, steps, images, links, and notes"
+    },
+    {
+      "slug": "notes-backend-integration",
+      "name": "Notes Backend Integration",
+      "description": "Migrate notes functionality from FileMaker to backend Supabase API, updating API layer, service transformations, and hooks to use /api/notes endpoints with HMAC authentication, pagination, and full CRUD support"
+    },
+    {
+      "slug": "links-backend-integration",
+      "name": "Links Backend Integration",
+      "description": "Integrate frontend with new backend /links API endpoints, replacing FileMaker calls with full CRUD operations for links associated with projects, tasks, customers, and organizations"
+    },
+    {
+      "slug": "financial-records-backend-integration",
+      "name": "Financial Records Backend Integration",
+      "description": "Integrate financial records frontend with new backend Supabase RPC APIs, replacing FileMaker calls with get_financial_records, create_financial_record, mark_records_billed RPCs and updating all related services and components"
+    },
+    {
+      "slug": "quickbooks-backend-integration",
+      "name": "QuickBooks Backend Integration",
+      "description": "Integrate frontend with new backend QuickBooks API infrastructure for connection management, synchronization, and invoice operations, replacing FileMaker script calls with direct backend integration"
+    },
+    {
+      "slug": "filemaker-frontend-removal",
+      "name": "FileMaker Frontend Removal",
+      "description": "Remove all FileMaker dependencies from frontend codebase, including fm-gofer bridge, dual-environment routing, FileMaker authentication, and environment detection, transitioning to pure Supabase + Backend API architecture"
     }
   ]
 }
