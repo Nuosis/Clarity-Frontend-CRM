@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { query } from '../../services/supabaseService';
+import { formatPhoneDisplay } from '../../utils/phoneUtils';
+import { extractPrimaryContact, extractPrimaryAddress } from '../../services/customerService';
 
 function CustomerHeader({
   customer,
@@ -14,15 +16,22 @@ function CustomerHeader({
 }) {
   const { darkMode } = useTheme();
   const [vapiTesting, setVapiTesting] = useState(false);
+  const [nestedContacts, setNestedContacts] = useState({
+    emails: [],
+    phones: [],
+    addresses: [],
+    loading: true
+  });
 
-  // Load VAPI Testing flag
+  // Load VAPI Testing flag and nested contact data
   useEffect(() => {
-    const loadVapiTestingFlag = async () => {
+    const loadCustomerData = async () => {
       const customerId = customer?.__ID || customer?.id;
       if (!customerId) return;
 
       try {
-        const result = await query('customer_settings', {
+        // Load VAPI Testing flag
+        const settingsResult = await query('customer_settings', {
           select: '*',
           filter: [
             {
@@ -38,20 +47,44 @@ function CustomerHeader({
           ]
         });
 
-        if (result.success && result.data && result.data.length > 0) {
-          const setting = result.data[0];
+        if (settingsResult.success && settingsResult.data && settingsResult.data.length > 0) {
+          const setting = settingsResult.data[0];
           const value = setting.data;
           setVapiTesting(value === true || value === 'true' || value === '1');
         } else {
           setVapiTesting(false);
         }
+
+        // Load nested contact information from backend/Supabase
+        const [emailsResult, phonesResult, addressesResult] = await Promise.all([
+          query('customer_email', {
+            select: '*',
+            filter: { column: 'customer_id', operator: 'eq', value: customerId }
+          }),
+          query('customer_phone', {
+            select: '*',
+            filter: { column: 'customer_id', operator: 'eq', value: customerId }
+          }),
+          query('customer_address', {
+            select: '*',
+            filter: { column: 'customer_id', operator: 'eq', value: customerId }
+          })
+        ]);
+
+        setNestedContacts({
+          emails: emailsResult.success && emailsResult.data ? emailsResult.data : [],
+          phones: phonesResult.success && phonesResult.data ? phonesResult.data : [],
+          addresses: addressesResult.success && addressesResult.data ? addressesResult.data : [],
+          loading: false
+        });
       } catch (error) {
-        console.error('Error loading VAPI Testing flag:', error);
+        console.error('Error loading customer data:', error);
         setVapiTesting(false);
+        setNestedContacts({ emails: [], phones: [], addresses: [], loading: false });
       }
     };
 
-    loadVapiTestingFlag();
+    loadCustomerData();
   }, [customer?.__ID, customer?.id]);
   
   return (
@@ -89,14 +122,67 @@ function CustomerHeader({
             )}
           </div>
           <div className={`mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            {customer.Email && (
-              <span className="mr-4">
-                {customer.Email}
-              </span>
-            )}
-            {customer.Phone && (
-              <span className="mr-4">{customer.Phone}</span>
-            )}
+            {(() => {
+              // Determine contact information based on data source
+              let displayEmail = null;
+              let displayPhone = null;
+              let additionalEmailsCount = 0;
+              let additionalPhonesCount = 0;
+
+              if (!nestedContacts.loading && (nestedContacts.emails.length > 0 || nestedContacts.phones.length > 0)) {
+                // Use nested backend data if available
+                displayEmail = extractPrimaryContact(nestedContacts.emails, 'email');
+                displayPhone = extractPrimaryContact(nestedContacts.phones, 'phone');
+                additionalEmailsCount = nestedContacts.emails.length > 1 ? nestedContacts.emails.length - 1 : 0;
+                additionalPhonesCount = nestedContacts.phones.length > 1 ? nestedContacts.phones.length - 1 : 0;
+              } else {
+                // Fallback to flat FileMaker data
+                displayEmail = customer.Email;
+                displayPhone = customer.Phone;
+              }
+
+              return (
+                <>
+                  {displayEmail && (
+                    <span className="mr-4 inline-flex items-center gap-1">
+                      <span>{displayEmail}</span>
+                      {additionalEmailsCount > 0 && (
+                        <span className={`
+                          text-xs px-2 py-0.5 rounded-full font-medium
+                          ${darkMode
+                            ? 'bg-blue-900/30 text-blue-300'
+                            : 'bg-blue-100 text-blue-700'
+                          }
+                        `} title={`${additionalEmailsCount} additional email${additionalEmailsCount > 1 ? 's' : ''}`}>
+                          +{additionalEmailsCount}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                  {displayPhone && (
+                    <span className="mr-4 inline-flex items-center gap-1">
+                      <span>{formatPhoneDisplay(displayPhone)}</span>
+                      {additionalPhonesCount > 0 && (
+                        <span className={`
+                          text-xs px-2 py-0.5 rounded-full font-medium
+                          ${darkMode
+                            ? 'bg-blue-900/30 text-blue-300'
+                            : 'bg-blue-100 text-blue-700'
+                          }
+                        `} title={`${additionalPhonesCount} additional phone${additionalPhonesCount > 1 ? 's' : ''}`}>
+                          +{additionalPhonesCount}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                  {!displayEmail && !displayPhone && !nestedContacts.loading && (
+                    <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>
+                      No contact information
+                    </span>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
         <div className="flex space-x-3">
