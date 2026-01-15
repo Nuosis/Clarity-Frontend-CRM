@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useSnackBar } from '../context/SnackBarContext';
-import { createNewNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, deleteNoteById } from '../services/noteService';
-import { updateNote } from '../api/notes';
+import { createNewNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, deleteNoteById, updateNoteById } from '../services/noteService';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 
 /**
@@ -226,7 +225,7 @@ export function useNote() {
             setLoading(true);
             setError(null);
 
-            const result = await updateNote(noteId, data);
+            const result = await updateNoteById(noteId, data);
 
             if (!result?.id) {
                 throw new Error('Failed to update note: No ID returned');

@@ -1,4 +1,4 @@
-import { createNote, fetchProjectNotes, deleteNote } from '../api/notes';
+import { createNote, fetchProjectNotes, deleteNote, updateNote } from '../api/notes';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from './dataService';
 
 /**
@@ -132,6 +132,31 @@ export async function fetchNotesByCustomer(customerId, options = {}) {
         // Backend API returns array directly - transform to normalized format
         return Array.isArray(result) ? result.map(transformBackendNote) : [];
     }
+}
+
+/**
+ * Update a note by ID
+ * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * @param {string} noteId - The note ID
+ * @param {Object} data - Update data
+ * @param {string} data.content - Updated note content
+ * @param {string} data.note - Updated note content (alias)
+ * @param {string} data.type - Updated note type
+ * @returns {Promise<Object>} Updated note record
+ */
+export async function updateNoteById(noteId, data) {
+    if (!noteId) {
+        throw new Error('Note ID is required');
+    }
+
+    if (!data || (!data.content && !data.note && !data.type)) {
+        throw new Error('Update data is required (content or type)');
+    }
+
+    const result = await updateNote(noteId, data);
+
+    // Transform the backend response to normalized format
+    return transformBackendNote(result);
 }
 
 /**

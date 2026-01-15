@@ -7,8 +7,12 @@ import TextInput from '../global/TextInput';
 function ProjectNotesTab({ project, darkMode }) {
   const [showNewNoteInput, setShowNewNoteInput] = useState(false);
   const [allNotes, setAllNotes] = useState([]);
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editContent, setEditContent] = useState('');
   const {
     handleNoteCreate,
+    handleNoteUpdate,
+    handleNoteDelete,
     handleFetchNotes,
     getPagination,
     loading: noteLoading
@@ -34,6 +38,52 @@ function ProjectNotesTab({ project, darkMode }) {
       }
     } catch (error) {
       console.error('Error loading more notes:', error);
+    }
+  };
+
+  // Start editing a note
+  const handleStartEdit = (noteId, currentContent) => {
+    setEditingNoteId(noteId);
+    setEditContent(currentContent);
+  };
+
+  // Cancel editing
+  const handleCancelEdit = () => {
+    setEditingNoteId(null);
+    setEditContent('');
+  };
+
+  // Save edited note
+  const handleSaveEdit = async (noteId) => {
+    if (!editContent.trim()) {
+      return;
+    }
+
+    try {
+      const result = await handleNoteUpdate(noteId, { content: editContent.trim() });
+      if (result) {
+        await loadProjectDetails(project.id);
+        setEditingNoteId(null);
+        setEditContent('');
+      }
+    } catch (error) {
+      console.error('Error updating note:', error);
+    }
+  };
+
+  // Delete a note
+  const handleDelete = async (noteId) => {
+    if (!window.confirm('Are you sure you want to delete this note?')) {
+      return;
+    }
+
+    try {
+      const success = await handleNoteDelete(noteId);
+      if (success) {
+        await loadProjectDetails(project.id);
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
     }
   };
 
@@ -80,6 +130,8 @@ function ProjectNotesTab({ project, darkMode }) {
             const noteAuthor = note.author || note.createdBy;
             const noteCreatedAt = note.createdAt || note.created_at;
 
+            const isEditing = editingNoteId === noteId;
+
             return (
               <div
                 key={noteId}
@@ -88,13 +140,83 @@ function ProjectNotesTab({ project, darkMode }) {
                   ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
                 `}
               >
-                <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{noteContent}</p>
-                {(noteAuthor || noteCreatedAt) && (
-                  <div className={`mt-2 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                    {noteAuthor && <span>By {noteAuthor}</span>}
-                    {noteAuthor && noteCreatedAt && <span> • </span>}
-                    {noteCreatedAt && <span>{new Date(noteCreatedAt).toLocaleDateString()}</span>}
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className={`
+                        w-full p-2 rounded border resize-none
+                        ${darkMode
+                          ? 'bg-gray-700 border-gray-600 text-gray-200'
+                          : 'bg-white border-gray-300 text-gray-900'}
+                      `}
+                      rows={4}
+                      disabled={noteLoading}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSaveEdit(noteId)}
+                        disabled={noteLoading || !editContent.trim()}
+                        className="px-3 py-1 bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50"
+                      >
+                        {noteLoading ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        disabled={noteLoading}
+                        className={`
+                          px-3 py-1 rounded
+                          ${darkMode
+                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}
+                        `}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-start">
+                      <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{noteContent}</p>
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => handleStartEdit(noteId, noteContent)}
+                          disabled={noteLoading}
+                          className={`
+                            px-2 py-1 text-sm rounded
+                            ${darkMode
+                              ? 'text-blue-400 hover:bg-gray-700'
+                              : 'text-blue-600 hover:bg-blue-50'}
+                          `}
+                          data-testid={`edit-note-${noteId}`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(noteId)}
+                          disabled={noteLoading}
+                          className={`
+                            px-2 py-1 text-sm rounded
+                            ${darkMode
+                              ? 'text-red-400 hover:bg-gray-700'
+                              : 'text-red-600 hover:bg-red-50'}
+                          `}
+                          data-testid={`delete-note-${noteId}`}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    {(noteAuthor || noteCreatedAt) && (
+                      <div className={`mt-2 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                        {noteAuthor && <span>By {noteAuthor}</span>}
+                        {noteAuthor && noteCreatedAt && <span> • </span>}
+                        {noteCreatedAt && <span>{new Date(noteCreatedAt).toLocaleDateString()}</span>}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             );

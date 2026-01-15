@@ -25,6 +25,8 @@ const TaskItem = React.memo(function TaskItem({
     handleTimerStart,
     handleTaskSelect,
     handleCreateNote,
+    handleUpdateNote,
+    handleDeleteNote,
     handleCreateLink,
     handleLoadMoreNotes,
     notesPagination,
@@ -33,6 +35,8 @@ const TaskItem = React.memo(function TaskItem({
     const [isExpanded, setIsExpanded] = useState(false);
     const [showNoteInput, setShowNoteInput] = useState(false);
     const [showLinkInput, setShowLinkInput] = useState(false);
+    const [editingNoteId, setEditingNoteId] = useState(null);
+    const [editContent, setEditContent] = useState('');
     const { showError } = useSnackBar();
 
     const toggleExpand = useCallback(async () => {
@@ -119,16 +123,105 @@ const TaskItem = React.memo(function TaskItem({
                                     </h5>
                                     <div className="max-h-[105px] overflow-y-auto pr-2">
                                         <div className="space-y-2">
-                                            {taskNotes.map(note => (
-                                                <p key={note.id} className={`
-                                                    text-sm pl-2 border-l-2
-                                                    ${darkMode
-                                                        ? 'text-gray-400 border-gray-700'
-                                                        : 'text-gray-600 border-gray-200'}
-                                                `}>
-                                                    {note.content}
-                                                </p>
-                                            ))}
+                                            {taskNotes.map(note => {
+                                                const isEditing = editingNoteId === note.id;
+                                                return isEditing ? (
+                                                    <div key={note.id} className="space-y-1">
+                                                        <textarea
+                                                            value={editContent}
+                                                            onChange={(e) => setEditContent(e.target.value)}
+                                                            className={`
+                                                                w-full p-1 text-sm rounded border resize-none
+                                                                ${darkMode
+                                                                    ? 'bg-gray-700 border-gray-600 text-gray-200'
+                                                                    : 'bg-white border-gray-300 text-gray-900'}
+                                                            `}
+                                                            rows={2}
+                                                        />
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await handleUpdateNote(note.id, { content: editContent.trim() });
+                                                                        await onExpand(task.id);
+                                                                        setEditingNoteId(null);
+                                                                        setEditContent('');
+                                                                    } catch (error) {
+                                                                        showError('Error updating note');
+                                                                    }
+                                                                }}
+                                                                disabled={!editContent.trim()}
+                                                                className="px-2 py-0.5 text-xs bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50"
+                                                            >
+                                                                Save
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingNoteId(null);
+                                                                    setEditContent('');
+                                                                }}
+                                                                className={`
+                                                                    px-2 py-0.5 text-xs rounded
+                                                                    ${darkMode
+                                                                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}
+                                                                `}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div key={note.id} className="flex justify-between items-start group">
+                                                        <p className={`
+                                                            text-sm pl-2 border-l-2 flex-1
+                                                            ${darkMode
+                                                                ? 'text-gray-400 border-gray-700'
+                                                                : 'text-gray-600 border-gray-200'}
+                                                        `}>
+                                                            {note.content}
+                                                        </p>
+                                                        <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingNoteId(note.id);
+                                                                    setEditContent(note.content);
+                                                                }}
+                                                                className={`
+                                                                    px-1 py-0.5 text-xs rounded
+                                                                    ${darkMode
+                                                                        ? 'text-blue-400 hover:bg-gray-700'
+                                                                        : 'text-blue-600 hover:bg-blue-50'}
+                                                                `}
+                                                                data-testid={`edit-task-note-${note.id}`}
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (window.confirm('Delete this note?')) {
+                                                                        try {
+                                                                            await handleDeleteNote(note.id);
+                                                                            await onExpand(task.id);
+                                                                        } catch (error) {
+                                                                            showError('Error deleting note');
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                className={`
+                                                                    px-1 py-0.5 text-xs rounded
+                                                                    ${darkMode
+                                                                        ? 'text-red-400 hover:bg-gray-700'
+                                                                        : 'text-red-600 hover:bg-red-50'}
+                                                                `}
+                                                                data-testid={`delete-task-note-${note.id}`}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                     {notesPagination?.hasMore && (
@@ -292,6 +385,8 @@ TaskItem.propTypes = {
     handleTimerStart: PropTypes.func.isRequired,
     handleTaskSelect: PropTypes.func.isRequired,
     handleCreateNote: PropTypes.func.isRequired,
+    handleUpdateNote: PropTypes.func.isRequired,
+    handleDeleteNote: PropTypes.func.isRequired,
     handleCreateLink: PropTypes.func.isRequired,
     handleLoadMoreNotes: PropTypes.func.isRequired,
     notesPagination: PropTypes.object,
@@ -314,6 +409,8 @@ const TaskSection = React.memo(function TaskSection({
     handleTimerStart,
     handleTaskSelect,
     handleCreateNote,
+    handleUpdateNote,
+    handleDeleteNote,
     handleCreateLink,
     handleLoadMoreNotes,
     notesPagination,
@@ -356,6 +453,8 @@ const TaskSection = React.memo(function TaskSection({
                         handleTimerStart={handleTimerStart}
                         handleTaskSelect={handleTaskSelect}
                         handleCreateNote={handleCreateNote}
+                        handleUpdateNote={handleUpdateNote}
+                        handleDeleteNote={handleDeleteNote}
                         handleCreateLink={handleCreateLink}
                         handleLoadMoreNotes={handleLoadMoreNotes}
                         notesPagination={notesPagination}
@@ -382,6 +481,8 @@ TaskSection.propTypes = {
     handleTimerStart: PropTypes.func.isRequired,
     handleTaskSelect: PropTypes.func.isRequired,
     handleCreateNote: PropTypes.func.isRequired,
+    handleUpdateNote: PropTypes.func.isRequired,
+    handleDeleteNote: PropTypes.func.isRequired,
     handleCreateLink: PropTypes.func.isRequired,
     handleLoadMoreNotes: PropTypes.func.isRequired,
     notesPagination: PropTypes.object,
@@ -424,6 +525,8 @@ function TaskList({
 
     const {
         handleNoteCreate,
+        handleNoteUpdate,
+        handleNoteDelete,
         handleFetchNotes,
         getPagination,
         loading: noteLoading
@@ -472,6 +575,28 @@ function TaskList({
             throw error;
         }
     }, [handleNoteCreate, handleTaskSelect]);
+
+    const handleUpdateNote = useCallback(async (noteId, data) => {
+        try {
+            console.log("update note called for task ... ", { noteId, data })
+            const result = await handleNoteUpdate(noteId, data);
+            return result;
+        } catch (error) {
+            console.error('Error updating note:', error);
+            throw error;
+        }
+    }, [handleNoteUpdate]);
+
+    const handleDeleteNote = useCallback(async (noteId) => {
+        try {
+            console.log("delete note called for task ... ", { noteId })
+            const result = await handleNoteDelete(noteId);
+            return result;
+        } catch (error) {
+            console.error('Error deleting note:', error);
+            throw error;
+        }
+    }, [handleNoteDelete]);
 
     const handleCreateLink = useCallback(async (fkId, url) => {
         try {
@@ -603,6 +728,8 @@ function TaskList({
                 handleTimerStart={handleTimerStart}
                 handleTaskSelect={handleTaskSelect}
                 handleCreateNote={handleCreateNote}
+                handleUpdateNote={handleUpdateNote}
+                handleDeleteNote={handleDeleteNote}
                 handleCreateLink={handleCreateLink}
                 handleLoadMoreNotes={handleLoadMoreNotes}
                 notesPagination={notesPagination}
@@ -640,6 +767,8 @@ function TaskList({
                             handleTimerStart={handleTimerStart}
                             handleTaskSelect={handleTaskSelect}
                             handleCreateNote={handleCreateNote}
+                            handleUpdateNote={handleUpdateNote}
+                            handleDeleteNote={handleDeleteNote}
                             handleCreateLink={handleCreateLink}
                             handleLoadMoreNotes={handleLoadMoreNotes}
                             notesPagination={notesPagination}
