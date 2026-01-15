@@ -1,6 +1,27 @@
 /**
  * Financial Synchronization Service
- * Ensures devRecords match customer_sales for given date ranges
+ *
+ * ⚠️ DEPRECATED - DO NOT USE FOR NEW CODE
+ *
+ * This service was designed for dual-write synchronization between FileMaker (devRecords)
+ * and Supabase (customer_sales). It is now OBSOLETE because:
+ *
+ * 1. Timer entries go directly to Supabase via create_financial_record RPC
+ * 2. Supabase is the single source of truth (no FileMaker dual-write needed)
+ * 3. FileMaker is being phased out per CLAUDE.md migration strategy
+ *
+ * CURRENT USE: Historical data migration scripts only
+ * - scripts/sync-missing-records.js (one-time backfill)
+ * - sync-december.mjs (one-time backfill)
+ *
+ * FOR NEW CODE: Use src/api/financialRecords.js directly
+ * - create_financial_record RPC for new records
+ * - get_financial_records RPC for queries
+ * - mark_records_billed RPC for billing updates
+ *
+ * See FINANCIAL_SYNC_SERVICE_DEPRECATION.md for full analysis
+ *
+ * @deprecated Use direct Supabase RPC calls instead
  */
 import { query, update, insert, remove } from './supabaseService';
 import { fetchRecordsForDateRange } from '../api/financialRecords';

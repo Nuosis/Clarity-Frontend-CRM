@@ -74,22 +74,31 @@
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Migrated salesService from direct Supabase table queries to financialRecords API using Supabase RPCs. Updated all fetch functions (fetchSalesByOrganization, fetchUnbilledSalesByOrganization, fetchCurrentMonthSalesByOrganization, fetchSalesByCustomer, fetchUnbilledSalesByCustomer, fetchCurrentMonthSalesByCustomer) to call financialRecords API functions (fetchFinancialRecords, fetchUnpaidRecords) and transform responses via transformFinancialRecordsToSales(). The transformation function maps from normalized FileMaker-compatible format (fieldData wrapper with __ID, _custID, Billable_Time_Rounded, Hourly_Rate, DateStart) to sales format (id, customer_id, quantity, unit_price, date). Updated createSalesFromUnbilledFinancials() to handle new API response structure. Deprecated organizationId parameters (now uses JWT context). Maintained backward compatibility with all existing components and hooks."
+      "implementation_notes": "Implemented migration of 'src/services/salesService.js' from direct Supabase table queries against 'customer_sales' to the new RPC-based financial records API, updating all fetch methods (org, customer, current month, unbilled) and 'createSalesFromUnbilledFinancials' to use 'fetchFinancialRecords()' and 'fetchUnpaidRecords()' with the new response shape. Added a transformation layer ('transformFinancialRecordsToSales') to map normalized financial record fields (for example 'financial_id', '_custID', 'Billable_Time_Rounded') into the sales-service contract while keeping all existing function signatures intact for hook and component compatibility. Key decision was to preserve backward compatibility by retaining deprecated 'organizationId' parameters (now sourced from JWT context) and performing customer filtering client-side where needed; build verified successfully and documentation/task notes were updated (tasks.json and 'TSK0003_COMPLETION_SUMMARY.md')."
     },
     {
       "id": "TSK0004",
       "title": "Simplify or deprecate financialSyncService",
       "description": "Review src/services/financialSyncService.js and determine if dual-write sync logic is still needed now that Supabase is the primary source. If timer creates records directly in Supabase via create_financial_record RPC, the sync service may be obsolete. Either remove the service or simplify to one-way FileMaker → Supabase migration tool for historical data only.",
-      "status": "queued",
+      "status": "done",
       "priority": "low",
       "dependencies": [
         "TSK0001",
         "TSK0005"
       ],
       "files": [
-        "src/services/financialSyncService.js"
+        "src/services/financialSyncService.js",
+        "src/hooks/useFinancialSync.js",
+        "src/components/financial/FinancialSyncPanel.jsx",
+        "CLAUDE.md",
+        "FINANCIAL_SYNC_SERVICE_DEPRECATION.md"
       ],
-      "notes": "Check how timer stop currently creates financial records - may need timer migration first"
+      "notes": "✅ COMPLETED: Service marked as DEPRECATED with clear documentation. Analysis shows timer creates records directly via create_financial_record RPC, making sync service obsolete. Added deprecation warnings to service, hook, and UI component. Created comprehensive deprecation analysis document. Updated CLAUDE.md to indicate service is deprecated. Service kept only for historical data migration scripts (sync-missing-records.js, sync-december.mjs). No breaking changes - service not in critical path.",
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "executionError": null,
+      "implementation_notes": "Analyzed financialSyncService and determined it is OBSOLETE because timer entries now go directly to Supabase via create_financial_record RPC (no FileMaker dual-write). Created FINANCIAL_SYNC_SERVICE_DEPRECATION.md with full architecture analysis showing the old sync flow (FileMaker→Sync→Supabase) vs new direct flow (App→Supabase RPC). Added @deprecated JSDoc warnings to financialSyncService.js, useFinancialSync.js, and FinancialSyncPanel.jsx clearly stating FOR NEW CODE use src/api/financialRecords.js directly. Updated CLAUDE.md Key Services section to strike through financialSyncService and note it's deprecated for historical migration only. Service currently used only by scripts/sync-missing-records.js and sync-december.mjs for one-time backfill operations. No breaking changes as sync service is not part of critical financial record operations (create/read/update handled by direct RPC calls)."
     },
     {
       "id": "TSK0005",

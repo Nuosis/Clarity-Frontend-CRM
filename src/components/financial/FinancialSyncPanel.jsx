@@ -6,6 +6,15 @@ import { useAppState } from '../../context/AppStateContext';
 
 /**
  * Component for managing financial synchronization between devRecords and customer_sales
+ *
+ * ⚠️ DEPRECATED - SCHEDULED FOR REMOVAL
+ *
+ * This component uses the obsolete financialSyncService which is no longer needed.
+ * Timer entries go directly to Supabase via create_financial_record RPC.
+ *
+ * See FINANCIAL_SYNC_SERVICE_DEPRECATION.md for migration path.
+ *
+ * @deprecated Will be removed in next sprint - sync is no longer needed
  * @param {Object} props - Component props
  * @param {boolean} props.darkMode - Whether dark mode is enabled
  * @param {function} [props.onSyncComplete] - Optional callback when sync is completed

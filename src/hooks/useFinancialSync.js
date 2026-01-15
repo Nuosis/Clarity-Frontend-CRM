@@ -10,6 +10,17 @@ import {
 
 /**
  * Hook for managing financial synchronization between devRecords and customer_sales
+ *
+ * ⚠️ DEPRECATED - DO NOT USE FOR NEW CODE
+ *
+ * This hook wraps the obsolete financialSyncService. See FINANCIAL_SYNC_SERVICE_DEPRECATION.md
+ *
+ * FOR NEW CODE: Use src/api/financialRecords.js directly
+ * - create_financial_record RPC for new records
+ * - get_financial_records RPC for queries
+ * - mark_records_billed RPC for billing updates
+ *
+ * @deprecated Use direct Supabase RPC calls instead
  */
 export function useFinancialSync() {
   const { user } = useAppState();

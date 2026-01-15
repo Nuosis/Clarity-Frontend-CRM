@@ -264,8 +264,10 @@ App (index.jsx)
 - **dualWriteService.js**: Synchronizes data between FileMaker and Supabase
 - **teamService.js**: Team, staff, and team member management (Supabase-backed)
 - **proposalExtendedService.js**: Extended proposal system with packages/deliverables
-- **financialSyncService.js**: QuickBooks synchronization
+- **~~financialSyncService.js~~**: **DEPRECATED** - Was for FileMaker→Supabase sync, now obsolete (timer goes direct to Supabase)
 - **mailjetService.js**: Email campaign management
+
+**Note:** Financial records now use direct Supabase RPC calls (`src/api/financialRecords.js`). The sync service is kept only for historical data migration scripts.
 
 ## Backend Integration
 
