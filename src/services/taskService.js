@@ -129,93 +129,154 @@ export async function stopTimer(params, organizationId = null) {
         throw new Error('Time adjustment must be in 6-minute (0.1 hour) increments');
     }
 
-    console.log('[Task Service] Stopping timer:', params.recordId, {
-        description: params.description,
-        saveImmediately: params.saveImmediately,
-        totalPauseTime: params.totalPauseTime || 0,
-        adjustment: params.adjustment || 0
-    });
+    console.log('[Task Service] ========== STOP TIMER START ==========');
+    console.log('[Task Service] Stopping timer:', params.recordId);
+    console.log('[Task Service] Description:', params.description || '(none)');
+    console.log('[Task Service] Save immediately:', params.saveImmediately);
+    console.log('[Task Service] Total pause time:', params.totalPauseTime || 0, 'seconds');
+    console.log('[Task Service] Adjustment:', params.adjustment || 0, 'seconds');
+    console.log('[Task Service] Total adjustment:', (params.totalPauseTime || 0) + (params.adjustment || 0), 'seconds');
 
-    try {
-        // Stop the timer - backend handles financial record creation atomically
-        const result = await stopTaskTimerAPI(
-            params.recordId,
-            params.description,
-            params.saveImmediately,
-            (params.totalPauseTime || 0) + (params.adjustment || 0)
-        );
+    let retryCount = 0;
+    const maxRetries = 2;
+    let lastError = null;
 
-        console.log('[Task Service] Timer stopped successfully:', result);
+    // Retry loop for backend API calls
+    while (retryCount <= maxRetries) {
+        try {
+            // Stop the timer - backend handles financial record creation atomically
+            const result = await stopTaskTimerAPI(
+                params.recordId,
+                params.description,
+                params.saveImmediately,
+                (params.totalPauseTime || 0) + (params.adjustment || 0)
+            );
 
-        // Backend API returns structured response with time_entry and financial_record
-        if (result?.time_entry) {
-            console.log('[Task Service] Time entry:', result.time_entry);
+            console.log('[Task Service] Timer stopped successfully on attempt', retryCount + 1);
 
-            if (result.financial_record) {
-                console.log('[Task Service] Financial record created:', result.financial_record);
-            } else {
-                console.log('[Task Service] No financial record created (likely fixed-price project)');
-            }
+            // Backend API returns structured response with time_entry and financial_record
+            if (result?.time_entry) {
+                console.log('[Task Service] Backend API response received');
+                console.log('[Task Service] Time entry ID:', result.time_entry.id);
+                console.log('[Task Service] Duration minutes:', result.time_entry.duration_minutes);
+                console.log('[Task Service] Is billable:', result.time_entry.is_billable);
+                console.log('[Task Service] Status:', result.time_entry.status);
 
-            // Return backend response as-is
-            return result;
-        }
-
-        // FileMaker legacy response handling
-        if (result && result.response) {
-            console.log('[Task Service] Processing FileMaker response');
-
-            try {
-                // Get the organization ID from the parameter or from the global state
-                const orgId = organizationId || (window.state?.user?.supabaseOrgID);
-
-                if (!orgId) {
-                    console.warn('[Task Service] No organization ID found, skipping sales record creation');
-                    return result;
+                if (result.financial_record) {
+                    console.log('[Task Service] ✓ Financial record created successfully');
+                    console.log('[Task Service] Financial record ID:', result.financial_record.id);
+                    console.log('[Task Service] Amount:', result.financial_record.amount);
+                    console.log('[Task Service] Hours:', result.financial_record.hours);
+                    console.log('[Task Service] Rate:', result.financial_record.rate);
+                    console.log('[Task Service] Is billable:', result.financial_record.is_billable);
+                } else {
+                    console.log('[Task Service] ⚠ No financial record created');
+                    console.log('[Task Service] Reason: Likely fixed-price project or non-billable time entry');
                 }
 
-                // Declare financialId variable
-                let financialId;
+                console.log('[Task Service] ========== STOP TIMER SUCCESS ==========');
+                return result;
+            }
+
+            // FileMaker legacy response handling
+            if (result && result.response) {
+                console.log('[Task Service] FileMaker legacy response received');
+                console.log('[Task Service] Processing FileMaker financial record sync...');
 
                 try {
-                    console.log(`[Task Service] Fetching financial record by recordId: ${params.recordId}`);
-                    const financialRecord = await fetchFinancialRecordByRecordId(params.recordId);
+                    // Get the organization ID from the parameter or from the global state
+                    const orgId = organizationId || (window.state?.user?.supabaseOrgID);
 
-                    if (financialRecord && financialRecord.response && financialRecord.response.data && financialRecord.response.data.length > 0) {
-                        financialId = financialRecord.response.data[0].fieldData.__ID;
-                        console.log(`[Task Service] Found financial ID from record lookup: ${financialId}`);
+                    if (!orgId) {
+                        console.warn('[Task Service] ⚠ No organization ID found, skipping sales record creation');
+                        console.log('[Task Service] ========== STOP TIMER SUCCESS (no sync) ==========');
+                        return result;
+                    }
 
-                        // Check if this is a fixed-price project
-                        const fixedPrice = parseFloat(financialRecord.response.data[0].fieldData["customers_Projects::f_fixedPrice"] || 0);
-                        console.log(`[Task Service] Project fixed price value: ${fixedPrice}`);
+                    console.log('[Task Service] Organization ID:', orgId);
 
-                        if (fixedPrice > 0) {
-                            console.log('[Task Service] Skipping sales record creation for fixed-price project');
-                            financialId = null; // Prevent sales record creation
+                    // Declare financialId variable
+                    let financialId;
+                    let isFixedPrice = false;
+
+                    try {
+                        console.log('[Task Service] Fetching financial record by recordId:', params.recordId);
+                        const financialRecord = await fetchFinancialRecordByRecordId(params.recordId);
+
+                        if (financialRecord && financialRecord.response && financialRecord.response.data && financialRecord.response.data.length > 0) {
+                            financialId = financialRecord.response.data[0].fieldData.__ID;
+                            console.log('[Task Service] Found financial ID:', financialId);
+
+                            // Check if this is a fixed-price project
+                            const fixedPrice = parseFloat(financialRecord.response.data[0].fieldData["customers_Projects::f_fixedPrice"] || 0);
+                            console.log('[Task Service] Project fixed price value:', fixedPrice);
+
+                            if (fixedPrice > 0) {
+                                console.log('[Task Service] ⚠ Fixed-price project detected (fixedPrice =', fixedPrice, ')');
+                                console.log('[Task Service] Skipping sales record creation for fixed-price project');
+                                isFixedPrice = true;
+                                financialId = null; // Prevent sales record creation
+                            }
+                        } else {
+                            console.warn('[Task Service] ⚠ No financial record found in response');
+                        }
+                    } catch (fetchError) {
+                        console.error('[Task Service] ✗ Error fetching financial record by recordId:', fetchError);
+                        console.error('[Task Service] Stack trace:', fetchError.stack);
+                    }
+
+                    if (financialId) {
+                        // Create a sales record in Supabase
+                        console.log('[Task Service] Creating sales record for financial record:', financialId);
+                        await createSaleFromFinancialRecord(financialId, orgId);
+                        console.log('[Task Service] ✓ Sales record created successfully');
+                    } else {
+                        if (isFixedPrice) {
+                            console.log('[Task Service] ⚠ No sales record created: Fixed-price project');
+                        } else {
+                            console.warn('[Task Service] ⚠ No sales record created: Financial record ID not found');
                         }
                     }
-                } catch (fetchError) {
-                    console.error('[Task Service] Error fetching financial record by recordId:', fetchError);
-                }
 
-                if (financialId) {
-                    // Create a sales record in Supabase
-                    console.log(`[Task Service] Creating sales record for financial record ${financialId} with organization ID ${orgId}`);
-                    await createSaleFromFinancialRecord(financialId, orgId);
-                } else {
-                    console.warn('[Task Service] Could not find financial record ID or project is fixed-price');
+                    console.log('[Task Service] ========== STOP TIMER SUCCESS ==========');
+                    return result;
+                } catch (error) {
+                    console.error('[Task Service] ✗ Error in FileMaker sales record sync:', error);
+                    console.error('[Task Service] Stack trace:', error.stack);
+                    // Don't throw the error, as we still want to return the timer stop result
+                    // Timer was stopped successfully, sync failure is non-critical
+                    console.log('[Task Service] Timer stopped but sales sync failed - returning result anyway');
+                    console.log('[Task Service] ========== STOP TIMER PARTIAL SUCCESS ==========');
+                    return result;
                 }
-            } catch (error) {
-                console.error('[Task Service] Error creating sales record:', error);
-                // Don't throw the error, as we still want to return the timer stop result
+            }
+
+            // Unknown response format
+            console.warn('[Task Service] ⚠ Unexpected response format:', result);
+            console.log('[Task Service] ========== STOP TIMER SUCCESS (unexpected format) ==========');
+            return result;
+
+        } catch (error) {
+            lastError = error;
+            retryCount++;
+
+            console.error('[Task Service] ✗ Stop timer attempt', retryCount, 'failed:', error.message);
+
+            if (retryCount <= maxRetries) {
+                // Retry with exponential backoff
+                const delayMs = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
+                console.log('[Task Service] Retrying in', delayMs, 'ms...');
+                await new Promise(resolve => setTimeout(resolve, delayMs));
             }
         }
-
-        return result;
-    } catch (error) {
-        console.error('[Task Service] Failed to stop timer:', error);
-        throw error;
     }
+
+    // All retries exhausted
+    console.error('[Task Service] ✗✗✗ All stop timer attempts failed after', maxRetries + 1, 'tries');
+    console.error('[Task Service] Final error:', lastError?.message);
+    console.error('[Task Service] Stack trace:', lastError?.stack);
+    console.log('[Task Service] ========== STOP TIMER FAILED ==========');
+    throw lastError || new Error('Failed to stop timer after multiple attempts');
 }
 
 /**
