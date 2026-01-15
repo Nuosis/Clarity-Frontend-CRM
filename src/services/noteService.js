@@ -2,57 +2,85 @@ import { createNote, fetchProjectNotes, deleteNote } from '../api/notes';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from './dataService';
 
 /**
- * Creates a new note for a project
+ * Creates a new note
  * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
- * @param {string} fkId - Foreign key ID (project ID)
- * @param {string} note - The note content
- * @param {string} type - The note type (optional, default: 'general')
+ *
+ * New signature: createNewNote(entityType, entityId, noteContent, type)
+ * Legacy signature: createNewNote(entityId, noteContent, type) - assumes entityType='project'
+ *
+ * @param {string} entityTypeOrId - Entity type ('project'/'task'/'customer') OR entity ID (legacy)
+ * @param {string} entityIdOrContent - Entity ID OR note content (legacy)
+ * @param {string} noteContentOrType - Note content OR type string (legacy)
+ * @param {string} type - Note type (optional, default: 'general')
  * @returns {Promise<Object>} Created note record
  */
-export async function createNewNote(fkId, note, type = 'general') {
-    if (!fkId || !note?.trim()) {
-        throw new Error('Project ID and note content are required');
+export async function createNewNote(entityTypeOrId, entityIdOrContent, noteContentOrType, type = 'general') {
+    let entityType, entityId, noteContent;
+
+    // Detect signature pattern based on first parameter
+    if (['project', 'task', 'customer'].includes(entityTypeOrId)) {
+        // New signature: (entityType, entityId, noteContent, type)
+        entityType = entityTypeOrId;
+        entityId = entityIdOrContent;
+        noteContent = noteContentOrType;
+    } else {
+        // Legacy signature: (entityId, noteContent, type)
+        entityType = 'project'; // Default to project for backward compatibility
+        entityId = entityTypeOrId;
+        noteContent = entityIdOrContent;
+        type = noteContentOrType || 'general';
     }
 
-    return await createNote({
-        project_id: fkId,
-        fkId, // Legacy FileMaker support
-        content: note.trim(),
-        note: note.trim(), // Legacy FileMaker support
+    if (!entityId || !noteContent?.trim()) {
+        throw new Error('Entity ID and note content are required');
+    }
+
+    // Build payload based on entity type
+    const payload = {
+        content: noteContent.trim(),
+        note: noteContent.trim(), // Alias for backend API
         type
-    });
+    };
+
+    // Set the appropriate foreign key based on entity type
+    if (entityType === 'project') {
+        payload.project_id = entityId;
+        payload.fkId = entityId; // Legacy FileMaker support
+    } else if (entityType === 'task') {
+        payload.task_id = entityId;
+        payload.fkId = entityId; // Legacy FileMaker support
+    } else if (entityType === 'customer') {
+        payload.customer_id = entityId;
+        payload.fkId = entityId; // Legacy FileMaker support
+    }
+
+    const result = await createNote(payload);
+
+    // Transform the backend response to normalized format
+    return transformBackendNote(result);
 }
 
 /**
  * Fetch notes for a project
  * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
  * @param {string} projectId - The project ID
+ * @param {Object} options - Query options (limit, offset)
  * @returns {Promise<Array>} Array of notes
  */
-export async function fetchNotesByProject(projectId) {
+export async function fetchNotesByProject(projectId, options = {}) {
     if (!projectId) {
         throw new Error('Project ID is required');
     }
 
-    const result = await fetchProjectNotes(projectId);
+    const result = await fetchProjectNotes(projectId, options);
     const env = getEnvironmentContext();
 
     // Process based on environment
     if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
         return processNotes(result);
     } else {
-        // Backend API returns array directly
-        return Array.isArray(result) ? result.map(note => ({
-            id: note.id,
-            content: note.content,
-            author: note.author,
-            createdAt: note.created_at,
-            updatedAt: note.updated_at,
-            fieldData: {
-                __ID: note.id,
-                note: note.content
-            }
-        })) : [];
+        // Backend API returns array directly - transform to normalized format
+        return Array.isArray(result) ? result.map(transformBackendNote) : [];
     }
 }
 
@@ -71,8 +99,40 @@ export async function deleteNoteById(noteId) {
 }
 
 /**
+ * Transforms backend API note response to normalized format
+ * Handles the mapping from backend snake_case to camelCase
+ * @param {Object} note - Backend note object
+ * @returns {Object} Normalized note object
+ */
+export function transformBackendNote(note) {
+    if (!note) {
+        return null;
+    }
+
+    return {
+        id: note.id,
+        content: note.note, // Backend uses 'note', frontend uses 'content'
+        type: note.type || 'general',
+        createdAt: note.created_at,
+        updatedAt: note.updated_at,
+        createdBy: note.created_by || null, // May be null if not set
+        updatedBy: note.updated_by || null,
+        organizationId: note.organization_id,
+        // Include parent entity references
+        projectId: note.project_id || null,
+        customerId: note.customer_id || null,
+        taskId: note.task_id || null,
+        // Legacy fieldData for backward compatibility with components expecting it
+        fieldData: {
+            __ID: note.id,
+            note: note.note
+        }
+    };
+}
+
+/**
  * Processes notes data from FileMaker
- * @param {Object} data - Raw notes data
+ * @param {Object} data - Raw FileMaker notes data
  * @returns {Array} Processed notes
  */
 export function processNotes(data) {
@@ -86,7 +146,11 @@ export function processNotes(data) {
             recordId: note.recordID,
             content: note.fieldData.note,
             createdAt: note.fieldData['~CreationTimestamp'],
-            createdBy: note.fieldData['~CreatedBy']
+            createdBy: note.fieldData['~CreatedBy'],
+            fieldData: {
+                __ID: note.fieldData.__ID,
+                note: note.fieldData.note
+            }
         }))
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
