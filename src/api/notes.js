@@ -1,9 +1,7 @@
-import { dataService, getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
-import { handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
+import { dataService, getEnvironmentContext } from '../services/dataService';
 
 /**
- * Creates a new note
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Creates a new note via backend API
  *
  * @param {Object} data - The note data
  * @param {string} data.note - Note content (required)
@@ -19,77 +17,62 @@ import { handleFileMakerOperation, validateParams, Layouts, Actions } from './fi
  * @note 'created_by' is set automatically by backend from JWT, not from request payload
  */
 export async function createNote(data) {
-    validateParams({ data }, ['data']);
-    const env = getEnvironmentContext();
-
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return handleFileMakerOperation(async () => {
-            const params = {
-                layout: Layouts.NOTES,
-                action: Actions.CREATE,
-                fieldData: {
-                    note: data.content || data.note,
-                    _fkID: data.project_id || data.customer_id || data.task_id,
-                    type: data.type || 'general'
-                }
-            };
-
-            return await dataService.request(params);
-        });
-    } else {
-        // Backend API: POST /projects/{parent_id}/notes
-        // Database schema uses explicit FKs: project_id, customer_id, task_id
-        // Exactly ONE must be provided (enforced by check constraint)
-
-        const projectId = data.project_id;
-        const customerId = data.customer_id;
-        const taskId = data.task_id;
-
-        // Determine parent entity
-        if (!projectId && !customerId && !taskId) {
-            throw new Error('One of project_id, customer_id, or task_id is required for creating notes');
-        }
-
-        // Ensure exactly one parent is provided
-        const parentCount = [projectId, customerId, taskId].filter(Boolean).length;
-        if (parentCount > 1) {
-            throw new Error('Only one of project_id, customer_id, or task_id should be provided');
-        }
-
-        // Check organization scope
-        if (!env.authentication?.user?.supabaseOrgID) {
-            throw new Error('Organization context required for creating notes. Please authenticate.');
-        }
-
-        // Build payload matching database schema
-        const payload = {
-            note: data.content || data.note,
-            type: data.type || 'general',
-            project_id: projectId || null,
-            customer_id: customerId || null,
-            task_id: taskId || null
-            // organization_id added by backend from X-Organization-ID header
-            // created_by set by backend from JWT token
-        };
-
-        // Use appropriate endpoint based on parent entity
-        let endpoint;
-        if (projectId) {
-            endpoint = `/projects/${projectId}/notes`;
-        } else if (taskId) {
-            endpoint = `/tasks/${taskId}/notes`;
-        } else if (customerId) {
-            endpoint = `/customers/${customerId}/notes`;
-        }
-
-        const response = await dataService.post(endpoint, payload);
-        return response.data || response;
+    if (!data) {
+        throw new Error('Data is required');
     }
+
+    // Backend API: POST /projects/{parent_id}/notes
+    // Database schema uses explicit FKs: project_id, customer_id, task_id
+    // Exactly ONE must be provided (enforced by check constraint)
+
+    const projectId = data.project_id;
+    const customerId = data.customer_id;
+    const taskId = data.task_id;
+
+    // Determine parent entity
+    if (!projectId && !customerId && !taskId) {
+        throw new Error('One of project_id, customer_id, or task_id is required for creating notes');
+    }
+
+    // Ensure exactly one parent is provided
+    const parentCount = [projectId, customerId, taskId].filter(Boolean).length;
+    if (parentCount > 1) {
+        throw new Error('Only one of project_id, customer_id, or task_id should be provided');
+    }
+
+    // Check organization scope
+    const env = getEnvironmentContext();
+    if (!env.authentication?.user?.supabaseOrgID) {
+        throw new Error('Organization context required for creating notes. Please authenticate.');
+    }
+
+    // Build payload matching database schema
+    const payload = {
+        note: data.content || data.note,
+        type: data.type || 'general',
+        project_id: projectId || null,
+        customer_id: customerId || null,
+        task_id: taskId || null
+        // organization_id added by backend from X-Organization-ID header
+        // created_by set by backend from JWT token
+    };
+
+    // Use appropriate endpoint based on parent entity
+    let endpoint;
+    if (projectId) {
+        endpoint = `/projects/${projectId}/notes`;
+    } else if (taskId) {
+        endpoint = `/tasks/${taskId}/notes`;
+    } else if (customerId) {
+        endpoint = `/customers/${customerId}/notes`;
+    }
+
+    const response = await dataService.post(endpoint, payload);
+    return response.data || response;
 }
 
 /**
- * Fetch notes for a project
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Fetch notes for a project via backend API
  *
  * @param {string} projectId - Project ID
  * @param {Object} options - Query options
@@ -98,33 +81,21 @@ export async function createNote(data) {
  * @returns {Promise<Array>} Array of note objects
  */
 export async function fetchNotesByProject(projectId, options = {}) {
-    validateParams({ projectId }, ['projectId']);
-    const env = getEnvironmentContext();
-
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return handleFileMakerOperation(async () => {
-            const params = {
-                layout: Layouts.NOTES,
-                action: Actions.READ,
-                query: [{ "_fkID": projectId }]
-            };
-
-            return await dataService.request(params);
-        });
-    } else {
-        // Backend API: GET /projects/{project_id}/notes
-        const queryParams = {};
-        if (options.limit) queryParams.limit = options.limit;
-        if (options.offset) queryParams.offset = options.offset;
-
-        const response = await dataService.get(`/projects/${projectId}/notes`, { params: queryParams });
-        return response.data || response;
+    if (!projectId) {
+        throw new Error('Project ID is required');
     }
+
+    // Backend API: GET /projects/{project_id}/notes
+    const queryParams = {};
+    if (options.limit) queryParams.limit = options.limit;
+    if (options.offset) queryParams.offset = options.offset;
+
+    const response = await dataService.get(`/projects/${projectId}/notes`, { params: queryParams });
+    return response.data || response;
 }
 
 /**
- * Fetch notes for a task
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Fetch notes for a task via backend API
  *
  * @param {string} taskId - Task ID
  * @param {Object} options - Query options
@@ -133,33 +104,21 @@ export async function fetchNotesByProject(projectId, options = {}) {
  * @returns {Promise<Array>} Array of note objects
  */
 export async function fetchNotesByTask(taskId, options = {}) {
-    validateParams({ taskId }, ['taskId']);
-    const env = getEnvironmentContext();
-
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return handleFileMakerOperation(async () => {
-            const params = {
-                layout: Layouts.NOTES,
-                action: Actions.READ,
-                query: [{ "_fkID": taskId }]
-            };
-
-            return await dataService.request(params);
-        });
-    } else {
-        // Backend API: GET /tasks/{task_id}/notes
-        const queryParams = {};
-        if (options.limit) queryParams.limit = options.limit;
-        if (options.offset) queryParams.offset = options.offset;
-
-        const response = await dataService.get(`/tasks/${taskId}/notes`, { params: queryParams });
-        return response.data || response;
+    if (!taskId) {
+        throw new Error('Task ID is required');
     }
+
+    // Backend API: GET /tasks/{task_id}/notes
+    const queryParams = {};
+    if (options.limit) queryParams.limit = options.limit;
+    if (options.offset) queryParams.offset = options.offset;
+
+    const response = await dataService.get(`/tasks/${taskId}/notes`, { params: queryParams });
+    return response.data || response;
 }
 
 /**
- * Fetch notes for a customer
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Fetch notes for a customer via backend API
  *
  * @param {string} customerId - Customer ID
  * @param {Object} options - Query options
@@ -168,28 +127,17 @@ export async function fetchNotesByTask(taskId, options = {}) {
  * @returns {Promise<Array>} Array of note objects
  */
 export async function fetchNotesByCustomer(customerId, options = {}) {
-    validateParams({ customerId }, ['customerId']);
-    const env = getEnvironmentContext();
-
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return handleFileMakerOperation(async () => {
-            const params = {
-                layout: Layouts.NOTES,
-                action: Actions.READ,
-                query: [{ "_fkID": customerId }]
-            };
-
-            return await dataService.request(params);
-        });
-    } else {
-        // Backend API: GET /customers/{customer_id}/notes
-        const queryParams = {};
-        if (options.limit) queryParams.limit = options.limit;
-        if (options.offset) queryParams.offset = options.offset;
-
-        const response = await dataService.get(`/customers/${customerId}/notes`, { params: queryParams });
-        return response.data || response;
+    if (!customerId) {
+        throw new Error('Customer ID is required');
     }
+
+    // Backend API: GET /customers/{customer_id}/notes
+    const queryParams = {};
+    if (options.limit) queryParams.limit = options.limit;
+    if (options.offset) queryParams.offset = options.offset;
+
+    const response = await dataService.get(`/customers/${customerId}/notes`, { params: queryParams });
+    return response.data || response;
 }
 
 /**
@@ -201,8 +149,7 @@ export async function fetchProjectNotes(projectId, options = {}) {
 }
 
 /**
- * Update a note by ID
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Update a note by ID via backend API
  *
  * @param {string} noteId - The note ID
  * @param {Object} data - Update data
@@ -214,62 +161,38 @@ export async function fetchProjectNotes(projectId, options = {}) {
  * @note Backend sets 'updated_by' automatically from JWT token
  */
 export async function updateNote(noteId, data) {
-    validateParams({ noteId, data }, ['noteId', 'data']);
-    const env = getEnvironmentContext();
-
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return handleFileMakerOperation(async () => {
-            const params = {
-                layout: Layouts.NOTES,
-                action: Actions.UPDATE,
-                recordId: noteId,
-                fieldData: {
-                    note: data.content || data.note,
-                    type: data.type
-                }
-            };
-
-            return await dataService.request(params);
-        });
-    } else {
-        // Backend API: PATCH /projects/notes/{note_id}
-        const payload = {};
-        if (data.note || data.content) {
-            payload.note = data.content || data.note;
-        }
-        if (data.type) {
-            payload.type = data.type;
-        }
-
-        const response = await dataService.patch(`/projects/notes/${noteId}`, payload);
-        return response.data || response;
+    if (!noteId) {
+        throw new Error('Note ID is required');
     }
+    if (!data) {
+        throw new Error('Update data is required');
+    }
+
+    // Backend API: PATCH /projects/notes/{note_id}
+    const payload = {};
+    if (data.note || data.content) {
+        payload.note = data.content || data.note;
+    }
+    if (data.type) {
+        payload.type = data.type;
+    }
+
+    const response = await dataService.patch(`/projects/notes/${noteId}`, payload);
+    return response.data || response;
 }
 
 /**
- * Delete a note by ID
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Delete a note by ID via backend API
  *
  * @param {string} noteId - The note ID
  * @returns {Promise<Object>} Deletion result
  */
 export async function deleteNote(noteId) {
-    validateParams({ noteId }, ['noteId']);
-    const env = getEnvironmentContext();
-
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return handleFileMakerOperation(async () => {
-            const params = {
-                layout: Layouts.NOTES,
-                action: Actions.DELETE,
-                recordId: noteId
-            };
-
-            return await dataService.request(params);
-        });
-    } else {
-        // Backend API: DELETE /projects/notes/{note_id}
-        const response = await dataService.delete(`/projects/notes/${noteId}`);
-        return response.data || response;
+    if (!noteId) {
+        throw new Error('Note ID is required');
     }
+
+    // Backend API: DELETE /projects/notes/{note_id}
+    const response = await dataService.delete(`/projects/notes/${noteId}`);
+    return response.data || response;
 }

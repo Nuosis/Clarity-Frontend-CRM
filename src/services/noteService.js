@@ -1,9 +1,7 @@
 import { createNote, fetchProjectNotes, deleteNote, updateNote } from '../api/notes';
-import { getEnvironmentContext, ENVIRONMENT_TYPES } from './dataService';
 
 /**
- * Creates a new note
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Creates a new note via backend API
  *
  * New signature: createNewNote(entityType, entityId, noteContent, type)
  * Legacy signature: createNewNote(entityId, noteContent, type) - assumes entityType='project'
@@ -45,13 +43,10 @@ export async function createNewNote(entityTypeOrId, entityIdOrContent, noteConte
     // Set the appropriate foreign key based on entity type
     if (entityType === 'project') {
         payload.project_id = entityId;
-        payload.fkId = entityId; // Legacy FileMaker support
     } else if (entityType === 'task') {
         payload.task_id = entityId;
-        payload.fkId = entityId; // Legacy FileMaker support
     } else if (entityType === 'customer') {
         payload.customer_id = entityId;
-        payload.fkId = entityId; // Legacy FileMaker support
     }
 
     const result = await createNote(payload);
@@ -61,8 +56,7 @@ export async function createNewNote(entityTypeOrId, entityIdOrContent, noteConte
 }
 
 /**
- * Fetch notes for a project
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Fetch notes for a project via backend API
  * @param {string} projectId - The project ID
  * @param {Object} options - Query options (limit, offset)
  * @returns {Promise<Array>} Array of notes
@@ -73,20 +67,13 @@ export async function fetchNotesByProject(projectId, options = {}) {
     }
 
     const result = await fetchProjectNotes(projectId, options);
-    const env = getEnvironmentContext();
 
-    // Process based on environment
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return processNotes(result);
-    } else {
-        // Backend API returns array directly - transform to normalized format
-        return Array.isArray(result) ? result.map(transformBackendNote) : [];
-    }
+    // Backend API returns array directly - transform to normalized format
+    return Array.isArray(result) ? result.map(transformBackendNote) : [];
 }
 
 /**
- * Fetch notes for a task
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Fetch notes for a task via backend API
  * @param {string} taskId - The task ID
  * @param {Object} options - Query options (limit, offset)
  * @returns {Promise<Array>} Array of notes
@@ -98,20 +85,13 @@ export async function fetchNotesByTask(taskId, options = {}) {
 
     const { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');
     const result = await fetchTaskNotesAPI(taskId, options);
-    const env = getEnvironmentContext();
 
-    // Process based on environment
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return processNotes(result);
-    } else {
-        // Backend API returns array directly - transform to normalized format
-        return Array.isArray(result) ? result.map(transformBackendNote) : [];
-    }
+    // Backend API returns array directly - transform to normalized format
+    return Array.isArray(result) ? result.map(transformBackendNote) : [];
 }
 
 /**
- * Fetch notes for a customer
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Fetch notes for a customer via backend API
  * @param {string} customerId - The customer ID
  * @param {Object} options - Query options (limit, offset)
  * @returns {Promise<Array>} Array of notes
@@ -123,20 +103,13 @@ export async function fetchNotesByCustomer(customerId, options = {}) {
 
     const { fetchNotesByCustomer: fetchCustomerNotesAPI } = await import('../api/notes');
     const result = await fetchCustomerNotesAPI(customerId, options);
-    const env = getEnvironmentContext();
 
-    // Process based on environment
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return processNotes(result);
-    } else {
-        // Backend API returns array directly - transform to normalized format
-        return Array.isArray(result) ? result.map(transformBackendNote) : [];
-    }
+    // Backend API returns array directly - transform to normalized format
+    return Array.isArray(result) ? result.map(transformBackendNote) : [];
 }
 
 /**
- * Update a note by ID
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Update a note by ID via backend API
  * @param {string} noteId - The note ID
  * @param {Object} data - Update data
  * @param {string} data.content - Updated note content
@@ -160,8 +133,7 @@ export async function updateNoteById(noteId, data) {
 }
 
 /**
- * Delete a note by ID
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Delete a note by ID via backend API
  * @param {string} noteId - The note ID
  * @returns {Promise<Object>} Deletion result
  */
@@ -205,27 +177,3 @@ export function transformBackendNote(note) {
     };
 }
 
-/**
- * Processes notes data from FileMaker
- * @param {Object} data - Raw FileMaker notes data
- * @returns {Array} Processed notes
- */
-export function processNotes(data) {
-    if (!data?.response?.data) {
-        return [];
-    }
-
-    return data.response.data
-        .map(note => ({
-            id: note.fieldData.__ID,
-            recordId: note.recordID,
-            content: note.fieldData.note,
-            createdAt: note.fieldData['~CreationTimestamp'],
-            createdBy: note.fieldData['~CreatedBy'],
-            fieldData: {
-                __ID: note.fieldData.__ID,
-                note: note.fieldData.note
-            }
-        }))
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-}

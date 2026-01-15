@@ -1,11 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useSnackBar } from '../context/SnackBarContext';
 import { createNewNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, deleteNoteById, updateNoteById } from '../services/noteService';
-import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 
 /**
- * Hook for managing note operations
- * Environment-aware: Handles both backend API and FileMaker environments
+ * Hook for managing note operations via backend API
  */
 export function useNote() {
     const [loading, setLoading] = useState(false);
@@ -50,8 +48,7 @@ export function useNote() {
     }, []);
 
     /**
-     * Create a new note
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Create a new note via backend API
      *
      * Supports both signatures for backward compatibility:
      * - New: handleNoteCreate(entityType, entityId, noteContent, type)
@@ -112,8 +109,7 @@ export function useNote() {
     }, [showError]);
 
     /**
-     * Fetch notes for any entity type with pagination support
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Fetch notes for any entity type with pagination support via backend API
      *
      * Supports both legacy and new signatures:
      * - Legacy: handleFetchNotes(projectId, options) - assumes entityType='project'
@@ -172,15 +168,12 @@ export function useNote() {
             }
 
             // Update pagination state
-            const env = getEnvironmentContext();
-            if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-                updatePagination(entityType, entityId, {
-                    offset,
-                    limit,
-                    hasMore: notes.length >= limit,
-                    total: append ? currentPagination.total + notes.length : notes.length
-                });
-            }
+            updatePagination(entityType, entityId, {
+                offset,
+                limit,
+                hasMore: notes.length >= limit,
+                total: append ? currentPagination.total + notes.length : notes.length
+            });
 
             console.log(`[useNote] Notes fetched successfully:`, { entityType, entityId, count: notes.length, offset, limit });
             return notes;
@@ -196,8 +189,7 @@ export function useNote() {
     }, [showError, getPagination, updatePagination]);
 
     /**
-     * Update a note
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Update a note via backend API
      *
      * @param {string} noteId - Note ID
      * @param {Object} data - Update data
@@ -245,8 +237,7 @@ export function useNote() {
     }, [showError]);
 
     /**
-     * Delete a note
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Delete a note via backend API
      *
      * @param {string} noteId - Note ID
      * @returns {Promise<boolean>} Success status

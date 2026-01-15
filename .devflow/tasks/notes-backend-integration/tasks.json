@@ -312,7 +312,7 @@
         "src/components/tasks/TaskList.jsx",
         ".devflow/tasks/notes-backend-integration/E2E_UPDATE_DELETE_TEST_PLAN.md"
       ],
-      "implementation_notes": "Implemented complete update and delete note functionality by: (1) Adding updateNoteById() to noteService with backend API call and transformation, (2) Updating useNote hook to use service layer for consistency, (3) Adding inline edit UI to ProjectNotesTab with editingNoteId state, editContent state, and handlers for start/cancel/save edit and delete, (4) Adding compact inline edit UI to TaskList TaskItem component with group-hover buttons and nested editing states, (5) Wiring handlers through TaskSection component with new props, (6) Updating all PropTypes for TaskItem, TaskSection to include new handlers, (7) Adding handleUpdateNote and handleDeleteNote callbacks in TaskList main component that delegate to hook functions. Key UI decisions: Edit buttons appear on hover to reduce visual clutter, inline editing preserves list context without modals, Save button disabled when empty to prevent validation errors, browser confirmation dialog for delete to prevent accidents. Created comprehensive 18-test-case manual test plan covering functional, error, UI, accessibility, and performance testing. Build verified clean. Ready for manual testing execution.",
+      "implementation_notes": "Implemented end-to-end update and delete note functionality with inline editing UI across project and task notes, including hover-revealed edit delete actions, save cancel controls, validation, loading states, and confirmation on delete. Key changes were made in 'src/services/noteService.js' (exported added 'updateNoteById' for service-layer consistency), 'src/hooks/useNote.js' (standardized to use the service layer), and UI updates in 'src/components/projects/ProjectNotesTab.jsx' and 'src/components/tasks/TaskList.jsx' (plus related handler wiring and PropTypes updates for TaskSection TaskItem). Important decisions included using inline editing to preserve context, progressive disclosure via hover buttons to reduce clutter, and browser confirm dialogs to avoid new dependencies; builds were re-verified and manual test documentation plus tasks.json updates were added to support validation of the new flows.",
       "executionPid": null,
       "executionError": null,
       "sessionId": null
@@ -321,7 +321,7 @@
       "id": "TSK0013",
       "title": "Remove FileMaker imports from notes code",
       "description": "Clean up: Remove unused FileMaker imports from notes.js, noteService.js, and related files. Verify no FileMaker API calls remain in notes code paths.",
-      "status": "queued",
+      "status": "done",
       "priority": "low",
       "dependencies": [
         "TSK0010",
@@ -330,9 +330,19 @@
       ],
       "files_to_modify": [
         "src/api/notes.js",
-        "src/services/noteService.js"
+        "src/services/noteService.js",
+        "src/hooks/useNote.js"
       ],
-      "estimated_effort": "10 minutes"
+      "estimated_effort": "10 minutes",
+      "actual_effort": "20 minutes",
+      "completed_at": "2026-01-15T17:00:00Z",
+      "completion_notes": "Successfully removed all FileMaker imports and code paths from notes functionality. Changes made: (1) src/api/notes.js - Removed FileMaker imports (handleFileMakerOperation, validateParams, Layouts, Actions), removed all ENVIRONMENT_TYPES.FILEMAKER conditional branches, simplified all functions to only use backend API calls. (2) src/services/noteService.js - Removed getEnvironmentContext and ENVIRONMENT_TYPES imports, removed all FileMaker conditional branches from fetch functions, removed processNotes() function (FileMaker-specific), removed legacy FileMaker support comments and fkId payload fields, updated all JSDoc to reflect backend-only implementation. (3) src/hooks/useNote.js - Removed getEnvironmentContext and ENVIRONMENT_TYPES imports, removed ENVIRONMENT_TYPES.WEBAPP conditional check in pagination logic (now always updates pagination), updated all JSDoc comments to remove FileMaker references. Verified build passes successfully with no compilation errors. Grep search confirms zero FileMaker references remain in notes code paths.",
+      "artifacts": [
+        "src/api/notes.js",
+        "src/services/noteService.js",
+        "src/hooks/useNote.js"
+      ],
+      "implementation_notes": "Completed comprehensive cleanup of FileMaker code from notes functionality. The notes feature is now Supabase-only via backend API. All environment detection, FileMaker bridge calls, and FileMaker-specific data transformations have been removed. Functions now directly use backend API without conditional branching. Build verification passed successfully. Standing constraint satisfied: 'No FileMaker API calls in notes code paths after migration'."
     },
     {
       "id": "TSK0014",
