@@ -225,17 +225,34 @@ export function processProjectLinks(links, projectId, source = 'filemaker') {
     // Backend API format: array directly or wrapped in data property
     if (source === 'backend') {
         const linksArray = Array.isArray(links) ? links : (links?.data || []);
-        return linksArray.map(link => ({
-            id: link.id,
-            url: link.link,
-            // Backend has no title column - derive from URL hostname
-            title: link.title || (link.link ? new URL(link.link).hostname : ''),
-            customerId: link.customer_id,
-            organizationId: link.organization_id,
-            projectId: link.project_id,
-            createdAt: link.created_at,
-            updatedAt: link.updated_at
-        }));
+
+        // Filter links by project_id and transform to frontend format
+        return linksArray
+            .filter(link => link.project_id === projectId)
+            .map(link => {
+                // Generate title from URL hostname if not provided
+                let title = link.title;
+                if (!title && link.link) {
+                    try {
+                        title = new URL(link.link).hostname;
+                    } catch {
+                        title = link.link;
+                    }
+                }
+
+                return {
+                    id: link.id,
+                    url: link.link,
+                    title: title,
+                    customerId: link.customer_id,
+                    organizationId: link.organization_id,
+                    projectId: link.project_id,
+                    taskId: link.task_id,
+                    createdAt: link.created_at,
+                    updatedAt: link.updated_at
+                };
+            })
+            .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     }
 
     // FileMaker format: response.data with fieldData
@@ -245,12 +262,27 @@ export function processProjectLinks(links, projectId, source = 'filemaker') {
 
     return links.response.data
         .filter(link => link.fieldData._fkID === projectId)
-        .map(link => ({
-            id: link.fieldData.__ID,
-            recordId: link.recordId,
-            url: link.fieldData.link,
-            title: link.fieldData.title || new URL(link.fieldData.link).hostname
-        }));
+        .map(link => {
+            // Generate title from URL if not provided
+            let title = link.fieldData.title;
+            if (!title && link.fieldData.link) {
+                try {
+                    title = new URL(link.fieldData.link).hostname;
+                } catch {
+                    title = link.fieldData.link;
+                }
+            }
+
+            return {
+                id: link.fieldData.__ID,
+                recordId: link.recordId,
+                url: link.fieldData.link,
+                title: title,
+                createdAt: link.fieldData['~creationTimestamp'],
+                modifiedAt: link.fieldData['~modificationTimestamp']
+            };
+        })
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 }
 
 /**

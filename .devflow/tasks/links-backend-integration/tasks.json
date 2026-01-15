@@ -90,15 +90,16 @@
       ],
       "completed_at": "2026-01-15T00:00:00.000Z",
       "notes": "✅ Added transformBackendLink() function to map backend snake_case to frontend camelCase format (link→url, created_at→createdAt, etc.). ✅ Updated createNewLink() to support both legacy (fkId, link) and new (params object) signatures with parentType parameter for project/task/customer/org. ✅ URL validation maintained in both create and update operations. ✅ Added updateExistingLink() service function with URL validation. ✅ Added fetchLinksByEntity() for flexible multi-entity fetching. ✅ deleteLinkById() already existed and maintained. ✅ GitHub URL detection logic preserved (handled in useLink hook via parseGitHubUrl). ✅ All functions return frontend-formatted data via transformBackendLink(). ✅ Build verified - project compiles successfully with no errors.",
-      "implementation_notes": "Refactored 'src/services/linkService.js' to transform backend LinkResponse format (snake_case with 'link' field) to frontend format (camelCase with 'url' field). Added 'transformBackendLink()' utility that maps backend fields (link, created_at, project_id, etc.) to frontend equivalents (url, createdAt, projectId, etc.) and generates title from URL hostname. Updated 'createNewLink()' to support dual signatures: legacy (fkId, link, parentType) and new (params object), with automatic normalization of 'url' to 'link' field for backend compatibility. Added 'updateExistingLink()' function with URL validation and backend field normalization. Added 'fetchLinksByEntity()' for generic entity-based fetching. Updated 'fetchLinksByProject()' to use transformation utility. Maintained FileMaker compatibility via existing 'processLinks()' function. GitHub URL detection is handled upstream in 'useLink' hook, preserved as non-invasive metadata augmentation. All service functions now return consistent frontend format. Build verified successfully.",
-      "executionPid": 69965,
-      "sessionId": "cca897ce-6682-4bff-9738-fcf1d0f56e22"
+      "implementation_notes": "Implemented backend LinkResponse support in 'src/services/linkService.js' by adding a 'transformBackendLink' mapper that converts snake_case fields (including 'link', 'created_at', and parent ids) into the frontend camelCase model, generates a hostname-based 'title', and handles invalid URLs safely. Enhanced link CRUD by updating 'createNewLink' to accept a new object signature with 'parentType' (while preserving the legacy signature), adding 'updateExistingLink' and a generic 'fetchLinksByEntity' with pagination, and updating 'fetchLinksByProject' to return transformed results while keeping 'processLinks' for FileMaker compatibility. Key decisions were to maintain backward compatibility, normalize 'url' and 'link' inputs for validation, and preserve existing GitHub URL parsing behavior outside the service layer; task status was marked complete in 'tasks.json' and supporting verification and completion docs were added ('TSK0003-transformation-demo.js', 'TSK0003-COMPLETION-REPORT.md', 'TSK0003-implementation-summary.md').",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0004",
       "title": "Update project and task link processing functions",
       "description": "Update processProjectLinks and processTaskLinks to work with new schema",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "acceptance_criteria": [
         "processProjectLinks() handles LinkResponse format",
@@ -109,11 +110,18 @@
       ],
       "files": [
         "src/services/projectService.js",
-        "src/services/taskService.js"
+        "src/services/taskService.js",
+        ".devflow/tasks/links-backend-integration/TSK0004-implementation-summary.md"
       ],
       "dependencies": [
         "TSK0003"
-      ]
+      ],
+      "completed_at": "2026-01-15T00:00:00.000Z",
+      "notes": "✅ Updated processProjectLinks() to handle backend LinkResponse format with explicit project_id filtering, safe URL parsing, sorting, and complete field mapping. ✅ Updated processTaskLinks() to support both FileMaker and backend formats with task_id filtering, title generation, and sorting. ✅ Added source parameter ('filemaker'|'backend') to both functions. ✅ Updated loadTaskDetails() call site to pass taskId and source. ✅ All acceptance criteria met: proper filtering by parent entity, timestamp formatting (snake_case→camelCase), fallback titles with safe URL parsing. ✅ Build verified successfully. See TSK0004-implementation-summary.md for detailed changes.",
+      "implementation_notes": "Refactored processProjectLinks() and processTaskLinks() to handle both FileMaker and backend LinkResponse formats. Key changes: (1) Added explicit filtering by project_id/task_id for backend format to ensure only relevant links returned; (2) Implemented safe URL parsing with try-catch for title generation from hostname, with fallback to raw link on error; (3) Added timestamp-based sorting (newest first) for better UX; (4) Extended backend format mapping to include all fields (taskId, customerId, organizationId, updatedAt); (5) Updated processTaskLinks signature to accept taskId and source parameters; (6) Updated loadTaskDetails() call site to pass required parameters. Both functions now support dual-environment operation while maintaining backward compatibility with FileMaker format. Build verified successfully with no compilation errors.",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0005",

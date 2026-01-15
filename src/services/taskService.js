@@ -46,7 +46,7 @@ export async function loadTaskDetails(taskId) {
     return {
         timers: processTimerRecords(timerResult),
         notes: processTaskNotes(notesResult),
-        links: processTaskLinks(linksResult)
+        links: processTaskLinks(linksResult, taskId, 'filemaker')
     };
 }
 
@@ -528,21 +528,74 @@ export function processTaskNotes(data) {
 
 /**
  * Processes links for a task
- * @param {Object} data - Raw links data
+ * Handles both FileMaker (response.data) and backend API formats
+ * Backend uses explicit foreign keys (task_id), FileMaker uses polymorphic _fkID
+ * @param {Object|Array} data - Raw links data (FileMaker wrapped or backend array)
+ * @param {string} taskId - Task ID (required for filtering backend results)
+ * @param {string} source - Data source: 'filemaker' or 'backend'
  * @returns {Array} Processed links
  */
-export function processTaskLinks(data) {
+export function processTaskLinks(data, taskId, source = 'filemaker') {
+    // Backend API format: array directly or wrapped in data property
+    if (source === 'backend') {
+        const linksArray = Array.isArray(data) ? data : (data?.data || []);
+
+        // Filter links by task_id and transform to frontend format
+        return linksArray
+            .filter(link => link.task_id === taskId)
+            .map(link => {
+                // Generate title from URL hostname if not provided
+                let title = link.title;
+                if (!title && link.link) {
+                    try {
+                        title = new URL(link.link).hostname;
+                    } catch {
+                        title = link.link;
+                    }
+                }
+
+                return {
+                    id: link.id,
+                    url: link.link,
+                    title: title,
+                    customerId: link.customer_id,
+                    organizationId: link.organization_id,
+                    projectId: link.project_id,
+                    taskId: link.task_id,
+                    createdAt: link.created_at,
+                    updatedAt: link.updated_at
+                };
+            })
+            .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    }
+
+    // FileMaker format: response.data with fieldData
     if (!data?.response?.data) {
         return [];
     }
 
-    return data.response.data.map(link => ({
-        id: link.fieldData.__ID,
-        recordId: link.recordId,
-        url: link.fieldData.link,
-        createdAt: link.fieldData['~creationTimestamp'],
-        modifiedAt: link.fieldData['~modificationTimestamp']
-    }));
+    return data.response.data
+        .map(link => {
+            // Generate title from URL if not provided
+            let title = link.fieldData.title;
+            if (!title && link.fieldData.link) {
+                try {
+                    title = new URL(link.fieldData.link).hostname;
+                } catch {
+                    title = link.fieldData.link;
+                }
+            }
+
+            return {
+                id: link.fieldData.__ID,
+                recordId: link.recordId,
+                url: link.fieldData.link,
+                title: title,
+                createdAt: link.fieldData['~creationTimestamp'],
+                modifiedAt: link.fieldData['~modificationTimestamp']
+            };
+        })
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 }
 
 /**
