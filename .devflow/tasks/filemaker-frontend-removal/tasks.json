@@ -384,13 +384,14 @@
       "sessionId": null,
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Successfully removed fm-gofer package from dependencies. Deprecated mailjetService.js with clear error messages for all FileMaker-dependent functions. Build passes without fm-gofer. Email sending functionality temporarily unavailable pending backend API migration.",
-      "implementation_notes": "Removed fm-gofer npm package and deprecated mailjetService.js which was the only consumer. Updated getMailJetConfig, sendEmailWithAttachment, and isMailjetConfigured to return errors with clear deprecation messages. Removed fm-gofer from package.json dependencies and ran npm install (removed 1 package). Build verified successful (2.58s). Only remaining reference is commented import in mailjetService.js. Email sending for proposals and activity reports temporarily unavailable until backend /api/email/send endpoint is implemented. Created completion summary and quick reference docs."
+      "implementation_notes": "Implemented removal of the 'fm-gofer' dependency by deleting it from 'package.json' and updating 'package-lock.json', then verifying the app still builds cleanly. Updated 'src/services/mailjetService.js' to deprecate the FileMaker-proxy Mailjet integration: the 'fm-gofer' import was removed (left only as a commented reference) and FileMaker-dependent functions like 'sendEmailWithAttachment' and 'isMailjetConfigured' were stubbed to return clear unavailability errors while keeping non-FM helpers intact. Key decision: because email sending is still used in production and no backend email endpoint exists yet, the integration was intentionally disabled with explicit warnings and documentation rather than replaced, and a backend change request plus task completion and audit docs were added (including updates to 'tasks.json').",
+      "executionError": null
     },
     {
       "id": "TSK0019",
       "title": "Remove FileMaker environment variables",
       "description": "Remove VITE_FM_URL, VITE_FM_DATABASE, VITE_FM_USER, VITE_FM_PASSWORD from .env.example. Update environment variable documentation. Add migration notes for users to update their .env files.",
-      "status": "queued",
+      "status": "done",
       "priority": "low",
       "dependencies": [
         "TSK0015"
@@ -398,7 +399,13 @@
       "tags": [
         "config",
         "documentation"
-      ]
+      ],
+      "completed_at": "2026-01-16T12:00:00.000Z",
+      "verification_notes": "Removed FileMaker environment variables (VITE_FM_URL, VITE_FM_DATABASE, VITE_FM_USER, VITE_FM_PASSWORD) from documentation. Updated CLAUDE.md and README.md to remove these variables from required configuration lists. Added migration note to README.md informing users they can safely remove these variables from their .env files. Verified no code references to these environment variables exist. Build passes successfully.",
+      "implementation_notes": "Removed FileMaker environment variables from project documentation by updating CLAUDE.md to remove the four FM-specific variables from the required environment variables list and adding a migration note explaining their removal. Updated README.md to remove the FileMaker configuration section from the .env example and added a migration note for users upgrading from FileMaker-enabled versions. Verified no code actually uses these environment variables (grep searches returned no matches for import.meta.env.VITE_FM_* or process.env.VITE_FM_*). Build verified successful. Task marked complete in tasks.json.",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0020",

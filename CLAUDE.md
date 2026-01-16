@@ -713,11 +713,12 @@ Required variables in `.env`:
 - `VITE_APP_NAME`, `VITE_VERSION`
 - `VITE_API_URL`, `VITE_SECRET_KEY`
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_SERVICE_ROLE_KEY`
-- `VITE_FM_URL`, `VITE_FM_DATABASE`, `VITE_FM_USER`, `VITE_FM_PASSWORD`
 - `VITE_QB_CLIENT_ID`, `VITE_QB_CLIENT_SECRET`
 - `VITE_MAILJET_API_KEY`, `VITE_MAILJET_SECRET_KEY`
 
 **NEVER modify environment files without explicit permission.**
+
+**Note:** FileMaker environment variables (`VITE_FM_URL`, `VITE_FM_DATABASE`, `VITE_FM_USER`, `VITE_FM_PASSWORD`) have been removed as of the FileMaker frontend removal. These are no longer required.
 
 ## Common Pitfalls
 

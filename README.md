@@ -62,12 +62,6 @@ VITE_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 VITE_API_URL=https://api.claritybusinesssolutions.ca
 VITE_SECRET_KEY=your-hmac-secret
 
-# FileMaker (Legacy)
-VITE_FM_URL=your-filemaker-server
-VITE_FM_DATABASE=clarityCRM
-VITE_FM_USER=your-username
-VITE_FM_PASSWORD=your-password
-
 # QuickBooks (Optional)
 VITE_QB_CLIENT_ID=your-qb-client-id
 VITE_QB_CLIENT_SECRET=your-qb-secret
@@ -76,6 +70,8 @@ VITE_QB_CLIENT_SECRET=your-qb-secret
 VITE_MAILJET_API_KEY=your-mailjet-key
 VITE_MAILJET_SECRET_KEY=your-mailjet-secret
 ```
+
+> **Migration Note:** If upgrading from a version with FileMaker support, you can safely remove the following environment variables from your `.env` file: `VITE_FM_URL`, `VITE_FM_DATABASE`, `VITE_FM_USER`, `VITE_FM_PASSWORD`. These are no longer used as of the FileMaker frontend removal.
 
 4. Start the development server:
 ```bash
