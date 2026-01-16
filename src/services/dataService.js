@@ -424,7 +424,7 @@ const convertFileMakerParamsToHTTP = (params) => {
   
   // Map FileMaker layouts to backend endpoints
   const layoutToEndpoint = {
-    'devCustomers': 'contacts_api',
+    'devCustomers': 'api/customers',
     'devTeams': 'teams',
     'devProjects': 'projects',
     'devTasks': 'tasks',

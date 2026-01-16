@@ -89,7 +89,7 @@ export async function fetchCustomers(options = {}) {
                 queryParams.order = options.order;
             }
 
-            const response = await dataService.get('/contacts_api', { params: queryParams });
+            const response = await dataService.get('/api/customers', { params: queryParams });
             return normalizeCustomerData(response.data || response, env.type);
         }
     }, 'fetchCustomers', { options });
@@ -123,7 +123,7 @@ export async function fetchCustomerById(customerId) {
             });
         } else {
             // Web app environment
-            const response = await dataService.get(`/contacts_api/${customerId}`);
+            const response = await dataService.get(`/api/customers/${customerId}`);
             return normalizeCustomerData(response.data || response, env.type);
         }
     }, 'fetchCustomerById', { customerId });
@@ -159,7 +159,7 @@ export async function updateCustomer(customerId, data) {
             });
         } else {
             // Web app environment
-            const response = await dataService.patch(`/contacts_api/${customerId}`, data);
+            const response = await dataService.patch(`/api/customers/${customerId}`, data);
             return normalizeCustomerData(response.data || response, env.type);
         }
     }, 'updateCustomer', { customerId, dataKeys: Object.keys(data) });
@@ -193,7 +193,7 @@ export async function createCustomer(data) {
             });
         } else {
             // Web app environment
-            const response = await dataService.post('/contacts_api', data);
+            const response = await dataService.post('/api/customers', data);
             return normalizeCustomerData(response.data || response, env.type);
         }
     }, 'createCustomer', { dataKeys: Object.keys(data) });
@@ -231,8 +231,8 @@ export async function toggleCustomerStatus(customerId, active) {
             });
         } else {
             // Web app environment
-            const response = await dataService.patch(`/contacts_api/${customerId}`, {
-                f_active: active ? "1" : "0"
+            const response = await dataService.patch(`/api/customers/${customerId}/status`, {
+                is_active: active
             });
             return normalizeCustomerData(response.data || response, env.type);
         }
@@ -265,7 +265,7 @@ export async function fetchActiveCustomers() {
             });
         } else {
             // Web app environment
-            const response = await dataService.get('/contacts_api', { f_active: "1" });
+            const response = await dataService.get('/api/customers', { params: { active: true } });
             return normalizeCustomerData(response.data || response, env.type);
         }
     }, 'fetchActiveCustomers');
@@ -299,7 +299,7 @@ export async function deleteCustomer(customerId) {
             });
         } else {
             // Web app environment
-            const response = await dataService.delete(`/contacts_api/${customerId}`);
+            const response = await dataService.delete(`/api/customers/${customerId}`);
             return response.data || response;
         }
     }, 'deleteCustomer', { customerId });

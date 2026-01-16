@@ -69,13 +69,14 @@
       "sessionId": null,
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Feature flag system fully implemented with FeatureFlagContext, useFeatureFlag hook, environment-aware helpers, and declarative routing. Includes localStorage persistence, 15 default flags for all major features, and comprehensive documentation. Build verified successful.",
-      "implementation_notes": "Implemented comprehensive feature flag system: (1) Created FeatureFlagContext (src/context/FeatureFlagContext.jsx) with 15 default flags, localStorage persistence, and full CRUD operations. (2) Created useFeatureFlag hook (src/hooks/useFeatureFlag.js) with environment-aware helpers (useEnvironmentAwareFeatureFlag, useFeatureRoute) for automatic environment detection. (3) Integrated FeatureFlagProvider into app (src/main.jsx) after AppStateProvider. (4) Created extensive documentation (docs/FEATURE_FLAGS.md) with API reference, usage patterns, migration strategy, debugging guide, and best practices. (5) Created migration example guide (docs/FEATURE_FLAG_MIGRATION_EXAMPLE.md) with step-by-step walkthrough of migrating customer search feature. (6) Updated CLAUDE.md to document feature flag system, usage patterns, available flags, migration strategy, and debugging commands. (7) Exported hooks from src/hooks/index.js. Build verified with 'npm run build' - successful compilation. Key decisions: Named flags use_backend_[feature] (not use_filemaker_), environment-aware hooks automatically disable backend flags in FileMaker environment, declarative routing pattern for cleaner code, localStorage persistence for user control, comprehensive documentation for future migrations."
+      "implementation_notes": "Implemented a feature flag system to support gradual rollout of backend API migrations, including a new FeatureFlagContext provider with localStorage persistence and CRUD operations plus hooks for basic access, environment-aware flag behavior, and declarative routing. Key files added or updated include 'src/context/FeatureFlagContext.jsx', 'src/hooks/useFeatureFlag.js', 'src/hooks/index.js', and integration of the FeatureFlagProvider into the app provider hierarchy in 'src/main.jsx' (placed after AppStateProvider). Added comprehensive documentation in 'docs/FEATURE_FLAGS.md' and 'docs/FEATURE_FLAG_MIGRATION_EXAMPLE.md', and updated 'CLAUDE.md' with usage patterns, available flags, and debugging notes; builds were run and confirmed successful to validate compilation.",
+      "executionError": null
     },
     {
       "id": "TSK0004",
       "title": "Update customers API to use backend endpoints",
       "description": "Replace FileMaker calls in src/api/customers.js with backend API endpoints. Update fetchCustomers, fetchCustomerById, createCustomer, updateCustomer, deleteCustomer functions. Handle new schema mapping, error handling, and pagination. Add feature flag support.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001",
@@ -84,7 +85,12 @@
       "tags": [
         "api",
         "customers"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T12:00:00.000Z",
+      "verification_notes": "Updated all customer API endpoints from /contacts_api to /api/customers. Updated dataService.js layout mapping. All endpoints now use correct backend API paths including /api/customers/search and /api/customers/{id}/status. Build verified successful.",
+      "implementation_notes": "Corrected backend endpoint URLs in src/api/customers.js from /contacts_api to /api/customers for all CRUD operations (fetchCustomers, fetchCustomerById, createCustomer, updateCustomer, deleteCustomer, toggleCustomerStatus, fetchActiveCustomers, searchCustomers). Updated dataService.js layout mapping from 'devCustomers': 'contacts_api' to 'devCustomers': 'api/customers'. Changed toggleCustomerStatus to use dedicated /api/customers/{id}/status endpoint with is_active boolean instead of f_active string. Updated fetchActiveCustomers to use params object with active: true. Environment-aware routing already implemented - FileMaker environment continues to use fm-gofer bridge, web app environment now uses correct backend API endpoints. Feature flag use_backend_customers already defined in FeatureFlagContext. Build verified successful with no errors."
     },
     {
       "id": "TSK0005",
