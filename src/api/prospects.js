@@ -468,32 +468,14 @@ export const convertProspectToCustomer = async (prospectId, customerType = 'CUST
 
   console.log('[Prospect Conversion] FileMaker data to send:', fileMakerData)
 
+  // DEPRECATED (TSK0017): FileMaker integration removed
   // Step 3: Create customer in FileMaker via backend API
-  // Import FileMaker API functions
-  const { fetchDataFromFileMaker, Layouts, Actions } = await import('./fileMaker.js')
-  
-  let fileMakerRecordId
-  try {
-    const fileMakerResponse = await fetchDataFromFileMaker({
-      layout: Layouts.CUSTOMERS,
-      action: Actions.CREATE,
-      fieldData: fileMakerData
-    })
+  // This feature is no longer supported. Customers should be created via Backend API.
+  console.warn('[Prospect Conversion] FileMaker integration removed - customer will only exist in Supabase')
+  let fileMakerRecordId = null
 
-    // Extract record ID from FileMaker response
-    fileMakerRecordId = fileMakerResponse.response?.recordId ||
-                        fileMakerResponse.response?.data?.recordId ||
-                        fileMakerResponse.recordId
-
-    if (!fileMakerRecordId) {
-      throw new Error('FileMaker did not return a record ID')
-    }
-
-    console.log('[Prospect Conversion] FileMaker customer created:', fileMakerRecordId)
-  } catch (error) {
-    console.error('[Prospect Conversion] FileMaker creation failed:', error)
-    throw new Error(`Failed to create FileMaker customer: ${error.message}`)
-  }
+  // TODO: Implement Backend API customer creation here
+  // See src/api/customers.js createCustomer() for reference
 
   // Step 4: Update Supabase record type to mark as converted customer
   const { data: updatedCustomer, error: updateError } = await supabase

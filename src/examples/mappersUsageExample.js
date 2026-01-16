@@ -9,7 +9,8 @@
  */
 
 import { dataService } from '../services/dataService';
-import { fetchDataFromFileMaker } from '../api/fileMaker';
+// DEPRECATED (TSK0017): FileMaker integration removed
+// import { fetchDataFromFileMaker } from '../api/fileMaker';
 import {
     mapFinancialRecordToBackend,
     mapFinancialRecordToFileMaker,

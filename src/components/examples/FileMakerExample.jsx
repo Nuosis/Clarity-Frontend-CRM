@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import {
-  listRecords,
-  getRecord,
-  createRecord,
-  updateRecord,
-  deleteRecord,
-  executeScript,
-  uploadContainer,
-  downloadContainer
-} from '../../api/fileMakerEdgeFunction';
+// DEPRECATED (TSK0017): FileMaker integration removed
+// import {
+//   listRecords,
+//   getRecord,
+//   createRecord,
+//   updateRecord,
+//   deleteRecord,
+//   executeScript,
+//   uploadContainer,
+//   downloadContainer
+// } from '../../api/fileMakerEdgeFunction';
 
 /**
  * FileMaker API Example Component
- * 
- * This component demonstrates how to use the FileMaker edge function
- * to interact with the FileMaker Data API.
+ *
+ * DEPRECATED: FileMaker integration has been removed.
+ * This component is no longer functional.
  */
 const FileMakerExample = () => {
   const [layout, setLayout] = useState('Customers');

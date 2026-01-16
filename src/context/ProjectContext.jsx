@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { recordQueueManager } from '../services/recordQueueManager';
-import { Layouts, Actions, fetchDataFromFileMaker } from '../api';
+// DEPRECATED (TSK0017): FileMaker integration removed
+// import { Layouts, Actions, fetchDataFromFileMaker } from '../api';
 
 const ProjectContext = createContext();
 

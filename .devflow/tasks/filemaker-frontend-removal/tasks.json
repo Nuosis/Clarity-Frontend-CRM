@@ -340,7 +340,7 @@
       ],
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Successfully removed useFileMakerBridge hook from src/hooks/index.js. Verified no components import or use the hook. Build passes successfully. Only remaining reference is a local variable name in fileMaker.js (unrelated to the React hook, will be removed in TSK0017).",
-      "implementation_notes": "Removed the complete useFileMakerBridge() function definition (62 lines) from src/hooks/index.js, including its state management for FileMaker bridge detection, connection status, retry logic, and error handling. Verified zero imports or usages of the hook across the codebase using grep. Confirmed the only remaining string match 'useFileMakerBridge' is a local boolean variable in src/api/fileMaker.js used for environment detection (not the React hook). Ran npm run build successfully with no new errors or warnings. Created TSK0016_COMPLETION_SUMMARY.md documenting the removal, verification process, and impact assessment. Updated tasks.json to mark TSK0016 complete.",
+      "implementation_notes": "Removed the unused React hook 'useFileMakerBridge' from 'src/hooks/index.js', including its associated logic and an unused React import, after confirming there were no real imports or usages anywhere in 'src'. Verified the build still compiles successfully and that the only remaining 'useFileMakerBridge' string is a boolean flag variable in 'src/api/fileMaker.js' (not the hook). Updated 'tasks.json' to mark TSK0016 complete and added supporting docs in 'TSK0016_COMPLETION_SUMMARY.md' and 'TSK0016_QUICK_REFERENCE.md'.",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -349,7 +349,7 @@
       "id": "TSK0017",
       "title": "Delete FileMaker API files",
       "description": "Delete src/api/fileMaker.js and src/api/fileMakerEdgeFunction.js. Verify no imports remain. Update src/api/index.js if it re-exports these modules. Document what was removed.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0010",
@@ -359,7 +359,13 @@
       "tags": [
         "cleanup",
         "api"
-      ]
+      ],
+      "completed_at": "2026-01-16T12:00:00.000Z",
+      "verification_notes": "Successfully deleted src/api/fileMaker.js (444 lines) and src/api/fileMakerEdgeFunction.js (282 lines). Migrated generateBackendAuthHeader to dataService.js. Updated all imports and commented out FileMaker-dependent code. Build verified successful.",
+      "implementation_notes": "Deleted both FileMaker API files and migrated the reusable generateBackendAuthHeader function to dataService.js with export. Updated all dependent files including mailjet.js (switched to dataService import), QboTestPanel.jsx (commented out FileMaker features), prospects.js (deprecated conversion feature), customerActivity.js (deprecated), recordQueueManager.js (deprecated), ProjectContext.jsx (commented imports), and all test/example files. Marked several modules for future removal: customerActivity, recordQueueManager, FileMakerExample component. Build passes successfully. Created comprehensive completion summary documenting all changes, deprecated modules, and migration impacts.",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0018",

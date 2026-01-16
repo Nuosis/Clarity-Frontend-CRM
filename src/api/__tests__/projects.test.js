@@ -68,7 +68,8 @@ jest.mock('../fileMaker', () => ({
 // Import after mocks are set up
 import * as projectsApi from '../projects';
 import * as dataService from '../../services/dataService';
-import * as fileMakerApi from '../fileMaker';
+// DEPRECATED (TSK0017): FileMaker integration removed
+// import * as fileMakerApi from '../fileMaker';
 
 describe('Project API Integration Tests', () => {
     beforeEach(() => {

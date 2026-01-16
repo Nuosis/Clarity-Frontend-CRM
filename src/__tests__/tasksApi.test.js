@@ -11,7 +11,8 @@
 
 import axios from 'axios';
 import * as tasksApi from '../api/tasks';
-import * as fileMakerApi from '../api/fileMaker';
+// DEPRECATED (TSK0017): FileMaker integration removed
+// import * as fileMakerApi from '../api/fileMaker';
 import { backendConfig } from '../config';
 
 // Mock axios

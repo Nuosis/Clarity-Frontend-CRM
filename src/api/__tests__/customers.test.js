@@ -132,7 +132,8 @@ jest.mock('../../errors/customerErrors', () => {
 // Import after mocks are set up
 import * as customersApi from '../customers';
 import * as dataService from '../../services/dataService';
-import * as fileMakerApi from '../fileMaker';
+// DEPRECATED (TSK0017): FileMaker integration removed
+// import * as fileMakerApi from '../fileMaker';
 import {
     CustomerError,
     CustomerErrorCodes,

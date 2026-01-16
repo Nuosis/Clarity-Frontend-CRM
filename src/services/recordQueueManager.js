@@ -1,6 +1,8 @@
-import { fetchDataFromFileMaker } from '../api';
+// DEPRECATED (TSK0017): FileMaker integration removed
+// This module is no longer functional and should not be used.
+// import { fetchDataFromFileMaker } from '../api';
 
-// Singleton queue manager for FileMaker record fetching
+// Singleton queue manager for FileMaker record fetching (DEPRECATED)
 class RecordQueueManager {
     constructor() {
         this.queue = [];
@@ -29,10 +31,12 @@ class RecordQueueManager {
 
     processQueue() {
         if (this.isProcessing || this.queue.length === 0) return;
-        
+
         this.isProcessing = true;
         const request = this.queue[0];
-        fetchDataFromFileMaker(request.params, 0, false);
+        // DEPRECATED (TSK0017): FileMaker integration removed
+        console.warn('RecordQueueManager is deprecated and no longer functional');
+        // fetchDataFromFileMaker(request.params, 0, false);
     }
 
     enqueue(params, callback) {

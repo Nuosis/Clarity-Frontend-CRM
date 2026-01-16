@@ -1,4 +1,7 @@
-import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
+// DEPRECATED (TSK0017): This module uses FileMaker-specific functionality
+// FileMaker API files have been removed. This module needs to be refactored
+// to use Backend API or marked for removal.
+// import { fetchDataFromFileMaker, handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
 
 // Utility functions for formatting
 function formatCurrency(amount) {

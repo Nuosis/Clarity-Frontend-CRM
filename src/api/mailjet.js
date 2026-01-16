@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { backendConfig } from '../config';
-import { generateBackendAuthHeader } from './fileMaker';
+import { generateBackendAuthHeader } from '../services/dataService';
 import { isValidEmail } from '../utils/validation';
 
 /**

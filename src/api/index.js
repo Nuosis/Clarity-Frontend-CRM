@@ -1,11 +1,5 @@
-// FileMaker base functionality
-export {
-    fetchDataFromFileMaker,
-    handleFileMakerOperation,
-    validateParams,
-    Layouts,
-    Actions
-} from './fileMaker';
+// FileMaker base functionality - DEPRECATED (TSK0017)
+// All FileMaker integration has been removed. Use Backend API instead.
 
 // Customer operations
 export {

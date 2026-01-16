@@ -57,7 +57,7 @@ export const hasOrganizationContext = () => {
  * @param {string} payload - Request payload
  * @returns {Promise<string>} Authorization header
  */
-const generateBackendAuthHeader = async (payload = '') => {
+export const generateBackendAuthHeader = async (payload = '') => {
   const secretKey = import.meta.env.VITE_SECRET_KEY;
   
   if (!secretKey) {

@@ -8,8 +8,6 @@ import {
   sendQBOInvoiceEmail,
   getQBOCustomer
 } from '../../api/quickbooksApi';
-import { executeScript } from '../../api/fileMakerEdgeFunction';
-import { fetchDataFromFileMaker } from '../../api/fileMaker';
 import { useAppState } from '../../context/AppStateContext';
 import { adminUpdate } from '../../services/supabaseService';
 
@@ -469,30 +467,10 @@ function QboTestPanel({ darkMode = false }) {
                   return false;
                 }
                 
-                // If the record has a financial_id, update the corresponding billable hours record in FileMaker
+                // DEPRECATED: FileMaker integration removed (TSK0017)
+                // If the record has a financial_id, it would have updated FileMaker, but that's no longer needed
                 if (record.financial_id) {
-                  console.log('Updating billable hours record in FileMaker:', record.financial_id);
-                  
-                  try {
-                    const params = {
-                      layout: 'dapiRecord',
-                      action: 'update',
-                      UUID: record.financial_id,
-                      fieldData: { "f_billed": "1" }
-                    };
-                    
-                    console.log('FileMaker update params:', params);
-                    const fmResult = await fetchDataFromFileMaker(params, 0, true);
-                    console.log('FileMaker update result:', fmResult);
-                    
-                    if (fmResult.error) {
-                      console.error(`Failed to update FileMaker record ${record.financial_id}: ${fmResult.error}`);
-                      return false;
-                    }
-                  } catch (fmError) {
-                    console.error('Error updating FileMaker record:', fmError);
-                    return false;
-                  }
+                  console.log('Skipping FileMaker update (integration removed):', record.financial_id);
                 }
               } catch (updateError) {
                 console.error('Error during update operation:', updateError);
@@ -572,65 +550,11 @@ function QboTestPanel({ darkMode = false }) {
       
       console.log(`Using customer email address: ${emailAddress}`);
       
+      // DEPRECATED: FileMaker integration removed (TSK0017)
       // Check if this is an OBSI customer (steven@oakbaysoftrends.net)
       if (emailAddress === 'steven@oakbaysoftrends.net') {
-        console.log('OBSI customer detected, using special handling');
-        
-        // Get the financial IDs from the records to invoice
-        const financialIds = recordsToInvoice
-          .filter(record => record.financial_id)
-          .map(record => record.financial_id);
-        
-        if (financialIds.length === 0) {
-          throw new Error('No financial IDs found for OBSI customer');
-        }
-        
-        console.log('Financial IDs:', financialIds);
-        
-        // Get the first financial ID to fetch the customer ID from FileMaker
-        const firstFinancialId = financialIds[0];
-        
-        // Fetch the FileMaker record to get the customer ID
-        const fmParams = {
-          layout: 'dapiRecords',
-          action: 'read',
-          query: [{"__ID":firstFinancialId}]
-        };
-        
-        const fmResult = await fetchDataFromFileMaker(fmParams, 0, true);
-        console.log('FileMaker record result:', fmResult);
-        if (!fmResult.response.data || fmResult.response.data.length === 0) {
-          throw new Error('FileMaker record not found');
-        }
-        
-        // Extract the customer ID from the FileMaker record
-        const fmCustomerId = fmResult.response.data[0].fieldData._custID;
-        
-        if (!fmCustomerId) {
-          throw new Error('FileMaker customer ID not found');
-        }
-        
-        console.log('FileMaker customer ID:', fmCustomerId);
-        
-        // Get the invoice number from the selected invoice
-        const invoiceNumber = selectedInvoice.DocNumber;
-        
-        // Create the parameter for the FileMaker script
-        const scriptParam = JSON.stringify({
-          ids: financialIds,
-          custID: fmCustomerId,
-          invNo: invoiceNumber
-        });
-        
-        console.log('Calling FileMaker script with param:', scriptParam);
-        
-        // Call the FileMaker script
-        if (typeof FileMaker !== 'undefined' && FileMaker.PerformScript) {
-          FileMaker.PerformScript('bill obsi customer', scriptParam);
-          // alert(`OBSI customer billing initiated for invoice #${invoiceNumber}`);
-        } else {
-          throw new Error('FileMaker object not available');
-        }
+        console.warn('OBSI customer special handling disabled (FileMaker integration removed)');
+        throw new Error('OBSI customer special handling requires FileMaker integration (removed)');
       } else {
         // Regular customer - send email via QuickBooks
         const result = await sendQBOInvoiceEmail(selectedInvoiceId, emailAddress);
@@ -699,22 +623,12 @@ function QboTestPanel({ darkMode = false }) {
   }, [selectedCustomerId, qboQueryResults]);
   
   // Execute FileMaker health check script
+  // DEPRECATED: FileMaker integration removed (TSK0017)
   const executeFmHealthCheck = useCallback(async () => {
     setIsFmHealthLoading(true);
-    setFmHealthError(null);
+    setFmHealthError('FileMaker integration has been removed');
     setFmHealthResults(null);
-    
-    try {
-      const layout = 'dapiRecordDetails';
-      const scriptName = 'health';
-      const result = await executeScript(layout, scriptName);
-      setFmHealthResults(result);
-    } catch (error) {
-      console.error("Error executing FileMaker health check:", error);
-      setFmHealthError(error.message || "Failed to execute FileMaker health check");
-    } finally {
-      setIsFmHealthLoading(false);
-    }
+    setIsFmHealthLoading(false);
   }, []);
   
   // Handle customer selection
