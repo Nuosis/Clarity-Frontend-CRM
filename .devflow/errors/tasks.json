@@ -50,6 +50,166 @@
       ],
       "createdAt": "2026-01-11T14:22:57.866Z",
       "updatedAt": "2026-01-11T14:29:45.000Z"
+    },
+    {
+      "id": "error-1768595251532",
+      "title": "Investigate: Environment detection without FileMaker failure",
+      "description": "## What Failed\nUnknown failure pattern\n\n## Scenario\n- **Feature**: filemaker-removal-requirements\n- **Scenario**: Environment detection without FileMaker\n- **ID**: SCN-1768140949525-ffp3\n\n## Error Message\n```\nAssertion: FileMaker integration removal status\nExecution failed\nScenario failed\n```\n\n## Test Outputs\n- ✓ **requirements_check**: {\"projectRoot\":true,\"packageJson\":true,\"srcDirectory\":true,\"envFile\":true,\"nodeModules\":true,\"buildScript\":true}\n- ✓ **dataService_exists**: true\n- ✓ **environment_types_found**: {\"found\":true,\"matches\":[\"src/services/dataService.js:export const ENVIRONMENT_TYPES = {\",\"src/services/dataService.js:    type: ENVIRONMENT_TYPES.WEBAPP,\"],\"count\":2}\n- ✓ **auth_methods_found**: {\"found\":true,\"matches\":[\"src/services/dataService.js:export const AUTH_METHODS = {\"],\"count\":1}\n- ✓ **signin_component_exists**: true\n- ✓ **detectFileMaker_function_found**: {\"found\":false,\"matches\":[],\"count\":0}\n- ✓ **scenario_result**: {\"dataServiceExists\":true,\"hasEnvironmentTypes\":true,\"hasAuthMethods\":true,\"signInExists\":true,\"hasDetectFileMaker\":false}\n\n## Expected Outputs\n- **environment detection result**: should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined\n- **backend API response**: should return data structure compatible with FileMaker response format when routing through backend\n- **authentication state**: should contain valid Supabase session with user ID and access token when using SUPABASE auth method\n- **HMAC authorization header**: should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests\n- **data service routing decision**: should route to backend API when environmentType is WEBAPP and useFileMaker flag is false\n- **FileMaker integration removal status**: should return no matches when grepping codebase for FileMaker references after removal\n\n## Reproduction\n```bash\ncd playground/filemaker-removal-requirements && node playground.js environment-detection-without-filemaker\n```\n\n## Logs\nSee full execution log: `playground/filemaker-removal-requirements/results/environment-detection-without-filemaker/execution.jsonl`\n\n## Fix Approach\nThis is a bug in existing code or configuration. Investigate the error, identify the root cause, and fix the implementation.",
+      "errorType": "test",
+      "status": "queued",
+      "priority": "medium",
+      "error_message": "Assertion: FileMaker integration removal status\nExecution failed\nScenario failed",
+      "reproduction_steps": [
+        "Run: cd playground/filemaker-removal-requirements && node playground.js environment-detection-without-filemaker",
+        "Observe the test failure output",
+        "Check execution.jsonl for detailed event log"
+      ],
+      "affected_files": [
+        "playground/filemaker-removal-requirements/playground.js"
+      ],
+      "playgroundContext": {
+        "featureSlug": "filemaker-removal-requirements",
+        "scenarioId": "SCN-1768140949525-ffp3",
+        "scenarioSlug": "environment-detection-without-filemaker",
+        "scenarioName": "Environment detection without FileMaker",
+        "scenarioDescription": "Verify app correctly detects web app environment when FileMaker objects are absent",
+        "inputs": [
+          {
+            "name": "window.FileMaker",
+            "type": "object",
+            "value": null
+          },
+          {
+            "name": "window.FMGofer",
+            "type": "object",
+            "value": null
+          },
+          {
+            "name": "environmentType",
+            "type": "string",
+            "value": null
+          },
+          {
+            "name": "authMethod",
+            "type": "string",
+            "value": null
+          },
+          {
+            "name": "fetchDataFromFileMaker parameters",
+            "type": "object",
+            "value": null
+          },
+          {
+            "name": "axios request config",
+            "type": "object",
+            "value": null
+          }
+        ],
+        "expectedOutputs": [
+          {
+            "name": "environment detection result",
+            "assertion": "should return WEBAPP environment type and SUPABASE auth method when window.FileMaker is undefined"
+          },
+          {
+            "name": "backend API response",
+            "assertion": "should return data structure compatible with FileMaker response format when routing through backend"
+          },
+          {
+            "name": "authentication state",
+            "assertion": "should contain valid Supabase session with user ID and access token when using SUPABASE auth method"
+          },
+          {
+            "name": "HMAC authorization header",
+            "assertion": "should generate valid HMAC header in format 'Bearer {signature}.{timestamp}' for backend requests"
+          },
+          {
+            "name": "data service routing decision",
+            "assertion": "should route to backend API when environmentType is WEBAPP and useFileMaker flag is false"
+          },
+          {
+            "name": "FileMaker integration removal status",
+            "assertion": "should return no matches when grepping codebase for FileMaker references after removal"
+          }
+        ],
+        "actualOutputs": [
+          {
+            "name": "requirements_check",
+            "value": {
+              "projectRoot": true,
+              "packageJson": true,
+              "srcDirectory": true,
+              "envFile": true,
+              "nodeModules": true,
+              "buildScript": true
+            },
+            "passed": true
+          },
+          {
+            "name": "dataService_exists",
+            "value": true,
+            "passed": true
+          },
+          {
+            "name": "environment_types_found",
+            "value": {
+              "found": true,
+              "matches": [
+                "src/services/dataService.js:export const ENVIRONMENT_TYPES = {",
+                "src/services/dataService.js:    type: ENVIRONMENT_TYPES.WEBAPP,"
+              ],
+              "count": 2
+            },
+            "passed": true
+          },
+          {
+            "name": "auth_methods_found",
+            "value": {
+              "found": true,
+              "matches": [
+                "src/services/dataService.js:export const AUTH_METHODS = {"
+              ],
+              "count": 1
+            },
+            "passed": true
+          },
+          {
+            "name": "signin_component_exists",
+            "value": true,
+            "passed": true
+          },
+          {
+            "name": "detectFileMaker_function_found",
+            "value": {
+              "found": false,
+              "matches": [],
+              "count": 0
+            },
+            "passed": true
+          },
+          {
+            "name": "scenario_result",
+            "value": {
+              "dataServiceExists": true,
+              "hasEnvironmentTypes": true,
+              "hasAuthMethods": true,
+              "signInExists": true,
+              "hasDetectFileMaker": false
+            },
+            "passed": true
+          }
+        ],
+        "terminalCommand": "cd playground/filemaker-removal-requirements && node playground.js environment-detection-without-filemaker",
+        "executionLogPath": "playground/filemaker-removal-requirements/results/environment-detection-without-filemaker/execution.jsonl",
+        "cacheHash": "2b6e6bf0bd7f",
+        "scriptPath": "playground/filemaker-removal-requirements/playground.js",
+        "scriptLanguage": "js",
+        "duration": 87,
+        "executedAt": "2026-01-16T20:27:31.532Z"
+      },
+      "createdAt": "2026-01-16T20:27:31.532Z",
+      "updatedAt": "2026-01-16T20:29:23.964Z",
+      "stage": "resolving",
+      "sessionId": "cfbafc47-4a79-44f8-a208-c183fbf857d2"
     }
   ],
   "settings": {

@@ -1,0 +1,263 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-16T20:13:46.571Z",
+    "featureSlug": "notes-migration-requirements",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 3,
+    "featureName": "Notes Migration Requirements",
+    "mode": "autonomous",
+    "sessionId": "0ebabe7e-512c-4db2-bffe-29616f9bff82",
+    "processId": 1768594426570,
+    "lastUpdated": "2026-01-16T20:18:14.974Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-16T20:13:47.039Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Create requirements/notes directory structure (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a new documentation scaffold under 'requirements/notes' by creating the directory and adding placeholder templates for migration planning and requirements capture. Key files added include 'requirements/notes/README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md'. Templates were standardized with '[TO BE DOCUMENTED]' placeholders, example patterns from the Teams migration, and reminders for code references, while explicitly following the Backend Change Protocol to document requirements without changing backend infrastructure.\n\n---\n\n### Document current notes implementation (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive documentation of the existing notes feature by analyzing the FileMaker layout and the full frontend stack (API, services, hooks, and UI), including detailed end-to-end data flows and current CRUD coverage. Added the writeup to 'requirements/notes/current-implementation.md' (574 lines), referencing key files such as 'src/api/notes.js', 'src/api/projects.js', 'src/api/tasks.js', 'src/services/noteService.js', 'src/hooks/useNote.js', 'src/hooks/useProject.js', 'src/hooks/useTask.js', 'src/components/projects/ProjectNotesTab.jsx', and 'src/components/tasks/TaskList.jsx'. Captured important decisions and findings, notably the inconsistent note data shape between project notes (raw FileMaker fieldData) and task notes (processed content), plus limitations like missing update delete, no pagination, and an unused 'type' field. Verified the project build succeeds and updated task status and timestamps accordingly.\n\n---\n\n### Analyze notes UI behavior and user flows (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nDocumented the existing notes UI behavior and end-to-end user flows by adding a large new 'UI Behavior and User Flows' section to 'requirements/notes/current-implementation.md', covering creation workflows for project and task notes, display/sorting patterns, validation rules, state management, refresh behavior, error UX, accessibility, modal behavior, and explicitly noting that edit/delete are not implemented. The documentation references the current implementation across key files including 'src/components/projects/ProjectNotesTab.jsx', 'src/components/tasks/TaskList.jsx', 'src/components/global/TextInput.jsx', 'src/hooks/useNote.js', 'src/hooks/useTask.js', 'src/services/noteService.js', and 'src/services/taskService.js', with line-level callouts. Important decisions/findings captured include the project vs task notes data-format inconsistency, differing sorting responsibility (backend vs service layer), and that metadata is intentionally hidden from the UI. The task status and timestamp were updated and the build was verified to compile successfully.\n\n---\n\n### Map FileMaker devNotes schema to Supabase (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive FileMaker devNotes to Supabase data model mapping documentation by fully replacing the placeholder template in 'requirements/notes/data-model-mapping.md' with detailed schema, field mappings, migration transformations, constraints, indexes, triggers, and RLS guidance, including references to existing code such as 'src/api/fileMaker.js', 'src/api/notes.js', 'src/api/projects.js', and 'src/api/tasks.js'. Updated 'tasks.json' to mark 'TSK0004' as completed after confirming the build succeeded. Key decisions documented include using a single 'notes' table with nullable parent foreign keys plus a check constraint to enforce exactly one parent, deriving 'organization_id' from the parent entity for multi-tenancy, and applying cascade deletes and partial indexes for performance.\n\n---\n\n### Define backend API contracts for notes (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented complete backend API contract documentation for the notes feature by replacing placeholder content in 'requirements/notes/api-contracts.md' with a full 722-line spec covering 5 REST endpoints, request and response schemas, validation rules, error catalog, and Supabase RLS and realtime access patterns based on existing backend documentation conventions. Updated 'tasks.json' to mark 'TSK0005' as completed and verified the project still builds successfully. Key decisions documented include HMAC-SHA256 auth for the backend API vs JWT for Supabase access, enforcing exactly one parent entity with organization scoping, offset pagination (default 50 max 200), hard deletes, and immutable parent assignment after creation.\n\n---\n\n### Design authorization and RLS policies (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive notes authorization and RLS design documentation by adding 'requirements/notes/authorization.md', detailing auth methods (HMAC backend vs JWT direct), proposed SQL helper functions for parent-entity access inheritance, and full SELECT, INSERT, UPDATE, DELETE policy specifications with org scoping via JWT 'user_metadata.organization_id'. Key decisions captured include a simple equal-permissions model (no initial RBAC), backend API using the service role with app-level org checks, frontend using the anon key under RLS, and cascade deletion to prevent orphaned notes. Verified the project still compiles, then marked the task complete and updated the 'updated_at' timestamp in 'tasks.json'.\n\n---\n\n### Create migration and backfill plan (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive Notes migration and backfill plan from FileMaker to Supabase, covering export, ID and user mapping, transformation pipeline, bulk load strategy, validation, rollback, and a recommended big bang cutover timeline. Key work landed in 'requirements/notes/migration-plan.md' (filling the prior placeholder with a full template-aligned plan and appendices including scripts and checks) and 'tasks.json' (marking TSK0007 as DONE and updating the session timestamp). Important decisions documented include using the service role key to bypass RLS during bulk operations, batching inserts at 500 records with rate limiting and retries, deriving organization strictly from the parent entity, and mapping unknown creators to a migration user with an orphaned-note tolerance under 5%. Build verification was run after updates to confirm everything still compiles successfully.\n\n---\n\n### Define acceptance criteria and test cases (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive acceptance criteria and test cases for the notes migration, covering CRUD parity with FileMaker, migration validation, security/authorization, performance, accessibility, and deployment/rollback scenarios. Added a new requirements document at 'requirements/notes/acceptance-criteria.md' (~1,836 lines) with detailed checkpoints, categorized test cases, SQL validation queries, and explicit MVP limitations (eg no edit/delete UI, offset pagination, no initial full-text search). Updated 'tasks.json' to mark TSK0008 as done with implementation notes, and verified the project build succeeds after the documentation-only changes.\n\n---\n\n### Write requirements README overview (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive overview README to replace the placeholder at 'requirements/notes/README.md', consolidating the Notes migration requirements into a single hub with navigation links, feature and architecture summaries, key decisions, dependencies, risks, testing strategy, open backend questions, timeline, and ownership details. Updated 'tasks.json' to mark 'TSK0009' complete and refreshed the 'updated_at' timestamp. Verified the build compiles successfully after the documentation and task-tracking changes, ensuring cross-references and code pointers are consistent.\n\n---\n\n### Review and validate requirements completeness (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nCompleted a comprehensive review and validation of the Notes migration requirements across 7 documentation files including 'README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md', confirming the package is approved and implementation-ready with 5 non-blocking open design questions noted. Added the consolidated review report at '.devflow/tasks/notes-migration-requirements/REQUIREMENTS_REVIEW.md' capturing document-by-document findings, code reference checks, consistency validation, and schema and security assessments. Updated 'tasks.json' to mark 'TSK0010' complete and set 'review_status' to 'approved', then re-verified the build passes after the change.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 10,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 467
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-16T20:14:22.163Z",
+    "output": {
+      "findings": [],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-16T20:15:26.020Z",
+    "output": {
+      "findings": [],
+      "files_reviewed": 0,
+      "issues_found": 0
+    }
+  },
+  "SecurityCheckNode": {
+    "timestamp": "2026-01-16T20:16:39.808Z",
+    "output": {
+      "findings": [
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "high",
+          "title": "Service Role Key Exposure Risk in Migration Script Documentation",
+          "description": "The migration scripts documented in migration-plan.md (lines 599-602, 735-738) reference SUPABASE_SERVICE_ROLE_KEY as an environment variable. While this is template code for the backend team, there is no explicit warning about the security implications of this key. The service role key bypasses ALL Row-Level Security policies and grants unrestricted database access. If this key is accidentally committed to version control, logged, or exposed in error messages during migration, it could lead to complete database compromise across all organizations.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY  // BYPASSES ALL RLS!\n);",
+          "recommendation": "Add prominent security warnings in the migration script documentation: 1) Never commit service role key to version control, 2) Never log the key or include it in error messages, 3) Rotate the key immediately if exposed, 4) Use least-privilege credentials where possible, 5) Run migration scripts in secure, isolated environments only, 6) Consider using temporary elevated privileges that expire after migration rather than persistent service role key."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "medium",
+          "title": "Missing Input Sanitization Guidance for Note Content",
+          "description": "While the documentation specifies validation for empty content and trimming whitespace (requirements/notes/api-contracts.md:502, data-model-mapping.md:293-300), there is no explicit guidance on sanitizing user-provided note content to prevent XSS attacks. Notes are stored as plain TEXT in the database and will be rendered in the frontend React components (ProjectNotesTab.jsx, TaskList.jsx). If note content contains malicious JavaScript (e.g., <script>alert('XSS')</script>) and is rendered using dangerouslySetInnerHTML or similar unsafe methods, it could execute in other users' browsers.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md",
+            "requirements/notes/data-model-mapping.md"
+          ],
+          "code_snippet": "note: TEXT NOT NULL  -- No sanitization specified\nValidation:\n  - NOT NULL constraint\n  - Frontend trims whitespace: `note.trim()`\n  - Minimum length: 1 character (after trim)",
+          "recommendation": "Add explicit XSS prevention requirements to the API contracts: 1) Backend should sanitize HTML/JavaScript from note content on input, OR 2) Document that frontend MUST render note content as plain text only (not HTML), 3) If rich text is needed in future, require explicit HTML sanitization library (e.g., DOMPurify) on both backend and frontend, 4) Add acceptance criteria test case for XSS prevention, 5) Document CSP (Content Security Policy) headers to mitigate XSS risks."
+        },
+        {
+          "id": "SEC-003",
+          "category": "security",
+          "severity": "medium",
+          "title": "HMAC Timestamp Validation Not Fully Specified",
+          "description": "The authorization documentation (authorization.md:46-53) specifies HMAC-SHA256 authentication with timestamp validation, but does not specify the maximum allowed timestamp age (replay attack window). The test script (test-notes-backend-schema.js:45-52) generates timestamps but has no expiration check. Without a strictly enforced timestamp freshness window, an attacker who intercepts a valid HMAC signature could replay the request indefinitely, bypassing the intended security.",
+          "file_paths": [
+            "requirements/notes/authorization.md",
+            "test-notes-backend-schema.js"
+          ],
+          "code_snippet": "function generateAuthHeader(payload = '') {\n  const timestamp = Math.floor(Date.now() / 1000);\n  const message = `${timestamp}.${payload}`;\n  // ... generates signature ...\n  return `Bearer ${signature}.${timestamp}`;\n}\n// No timestamp expiration validation documented",
+          "recommendation": "Specify explicit HMAC timestamp validation requirements: 1) Backend MUST reject requests with timestamps older than 5 minutes (300 seconds), 2) Backend MUST reject requests with future timestamps (clock skew tolerance: 30 seconds max), 3) Add error code 'EXPIRED_AUTH_TOKEN' to API contracts when timestamp validation fails, 4) Document this in authorization.md section on HMAC authentication, 5) Add acceptance test case for replay attack prevention."
+        },
+        {
+          "id": "SEC-004",
+          "category": "security",
+          "severity": "medium",
+          "title": "Insufficient Rate Limiting Specification",
+          "description": "The authorization documentation (authorization.md) mentions rate limiting as a security consideration but provides no concrete implementation requirements. The API contracts documentation (api-contracts.md) does not specify rate limiting for note creation, which could allow abuse such as: 1) Spam attacks creating thousands of notes, 2) DoS attacks exhausting database resources, 3) Note flooding to hide malicious activity in logs. The migration script also has basic rate limiting (1 second pause between batches) but this is for the migration only, not production API.",
+          "file_paths": [
+            "requirements/notes/authorization.md",
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Migration script rate limiting (line 779-781)\nif (i < batches.length - 1) {\n  await new Promise(resolve => setTimeout(resolve, 1000));  // 1 second pause\n}\n// No production API rate limiting specified",
+          "recommendation": "Add specific rate limiting requirements to api-contracts.md: 1) Note creation: Maximum 10 notes per user per minute, 2) Note listing: Maximum 100 requests per user per minute, 3) Return HTTP 429 Too Many Requests when limits exceeded, 4) Add 'RATE_LIMIT_EXCEEDED' error code to error catalog, 5) Include rate limit headers in responses (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset), 6) Consider per-organization rate limits in addition to per-user limits."
+        },
+        {
+          "id": "SEC-005",
+          "category": "security",
+          "severity": "low",
+          "title": "Missing Security Headers Specification",
+          "description": "The API contracts documentation does not specify required security headers for the backend API endpoints. Missing security headers can expose the application to various attacks: 1) No Content-Security-Policy to mitigate XSS, 2) No X-Content-Type-Options to prevent MIME-sniffing attacks, 3) No X-Frame-Options to prevent clickjacking, 4) No Strict-Transport-Security to enforce HTTPS.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// No security headers specified in API response requirements",
+          "recommendation": "Add security headers requirements to api-contracts.md: 1) Content-Security-Policy: default-src 'self', 2) X-Content-Type-Options: nosniff, 3) X-Frame-Options: DENY, 4) Strict-Transport-Security: max-age=31536000; includeSubDomains, 5) X-XSS-Protection: 1; mode=block (for legacy browsers), 6) Document these headers in a 'Security Headers' section of API contracts."
+        },
+        {
+          "id": "SEC-006",
+          "category": "security",
+          "severity": "low",
+          "title": "Hardcoded Test UUID in Test Script",
+          "description": "The test script (test-notes-backend-schema.js:119) uses a hardcoded test UUID '550e8400-e29b-41d4-a716-446655440000' which could accidentally collide with a real project ID in production if the script is run against the wrong environment. While this is a test file, running it against production could create/delete notes on a real project without proper safeguards.",
+          "file_paths": [
+            "test-notes-backend-schema.js"
+          ],
+          "code_snippet": "// Use a test project ID (we'll use a dummy UUID)\nconst TEST_PROJECT_ID = '550e8400-e29b-41d4-a716-446655440000';",
+          "recommendation": "Add environment safety checks to test script: 1) Check that API_URL does not contain 'api.claritybusinesssolutions.ca' (production domain) and exit with error if it does, 2) Require explicit '--allow-production' flag to override this check, 3) Add warning prompt asking for confirmation before running against any non-localhost environment, 4) Generate random test UUIDs instead of hardcoded ones, 5) Add cleanup to delete any test data created during the test run."
+        }
+      ],
+      "files_reviewed": 0,
+      "vulnerabilities_found": 6
+    }
+  },
+  "ArchitectureCheckNode": {
+    "timestamp": "2026-01-16T20:18:14.972Z",
+    "output": {
+      "findings": [
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent API Endpoint Structure with Existing Backend Patterns",
+          "description": "The documented API contracts specify a flat endpoint structure 'GET /api/notes?project_id={id}' for listing notes (requirements/notes/api-contracts.md:19), but the frontend integration examples show nested endpoints 'GET /projects/{project_id}/notes' (test-notes-backend-schema.js:122, 137). This inconsistency creates ambiguity for the backend team. The existing Customer API pattern uses '/api/customers' flat structure, while the documented notes endpoints mix both patterns. The test script uses 'POST /projects/{TEST_PROJECT_ID}/notes' but the API contracts document 'POST /api/notes'. This architectural inconsistency will lead to integration failures when the backend team implements the API.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md",
+            "test-notes-backend-schema.js"
+          ],
+          "code_snippet": "// API Contracts doc (line 19):\nGET /api/notes?project_id=789e4567...\n\n// But test script uses (line 137):\nPOST /projects/${TEST_PROJECT_ID}/notes\n\n// And also uses (line 262):\nGET /projects/notes/${createdNoteId}",
+          "recommendation": "Standardize on ONE endpoint structure throughout all documentation. Recommended approach following existing Customer API pattern: Use flat structure '/api/notes' with query parameters for filtering, as documented in api-contracts.md lines 19-36. Update test-notes-backend-schema.js to use the correct endpoints: 'POST /api/notes' (not '/projects/{id}/notes'), 'GET /api/notes?project_id={id}' for listing, and 'GET /api/notes/{noteId}' for retrieval. Remove all references to nested '/projects/{id}/notes' endpoints to prevent confusion."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent Data Transformation Layer Pattern",
+          "description": "The documented architecture shows notes using 'transformBackendNote()' in noteService.js to convert snake_case to camelCase (docs/NOTES_BACKEND_INTEGRATION.md:47, requirements/notes/current-implementation.md:98-119), but this pattern differs from the established Customer API pattern which uses 'normalizeCustomerData()' in the API layer (src/api/customers.js:14-29). Customers normalize in the API layer before returning to services, while Notes transform in the service layer. This architectural inconsistency makes the codebase harder to maintain and violates the established separation of concerns where API layer handles format normalization.",
+          "file_paths": [
+            "requirements/notes/current-implementation.md",
+            "docs/NOTES_BACKEND_INTEGRATION.md",
+            "src/api/customers.js"
+          ],
+          "code_snippet": "// Customer pattern (API layer normalization):\n// src/api/customers.js:14-29\nfunction normalizeCustomerData(data) {\n  return { id: data.id || data.__ID, ...data };\n}\nexport async function fetchCustomers(options = {}) {\n  const response = await dataService.get('/api/customers', ...);\n  return normalizeCustomerData(response.data); // ← API layer\n}\n\n// Notes pattern (Service layer transformation):\n// noteService.js (documented)\nexport function transformBackendNote(note) {\n  return { content: note.note, ... }; // ← Service layer\n}",
+          "recommendation": "Align Notes architecture with the established Customer API pattern: 1) Move 'transformBackendNote()' from noteService.js to notes.js API layer and rename to 'normalizeNoteData()' for consistency, 2) Have API layer functions (fetchProjectNotes, createNote, etc.) call normalizeNoteData() before returning data, 3) Service layer should receive already-normalized data and focus on business logic only, 4) Update all documentation to reflect this pattern, 5) This ensures consistent architecture across all backend-integrated features."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Missing Error Handling Pattern Consistency",
+          "description": "The documented API contracts define a comprehensive error catalog with specific error codes (requirements/notes/api-contracts.md:496-538) including 'EMPTY_NOTE_CONTENT', 'NO_PARENT_ENTITY', etc., but the documentation does not specify the error handling wrapper pattern used by the established Customer API. Customers use 'withErrorHandling()' wrapper and custom 'CustomerError' class (src/api/customers.js:3-7, 44, 82) with CustomerErrorCodes for consistent error handling. The Notes API contracts don't specify whether similar NoteError/NoteErrorCodes should be created, leading to potential architectural inconsistency in error handling across features.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md",
+            "src/api/customers.js"
+          ],
+          "code_snippet": "// Customer pattern:\nimport { withErrorHandling, CustomerError, CustomerErrorCodes } from '../errors/customerErrors';\n\nexport async function fetchCustomers(options = {}) {\n  return withErrorHandling(async () => {\n    // ... logic\n  }, 'fetchCustomers', { options });\n}\n\n// Notes pattern (not specified in docs):\n// No mention of withErrorHandling or custom error classes",
+          "recommendation": "Add error handling architecture specification to api-contracts.md: 1) Create 'src/errors/noteErrors.js' with 'NoteError' class and 'NoteErrorCodes' enum matching the error catalog, 2) Document that all API functions must use 'withErrorHandling()' wrapper pattern, 3) Map backend error codes to frontend NoteErrorCodes, 4) Update frontend integration section (api-contracts.md:602-652) to include error handling examples with withErrorHandling wrapper, 5) Add this to acceptance criteria to ensure implementation follows established pattern."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Dual Backend Pattern Not Documented in Architecture",
+          "description": "The existing implementation documentation shows Notes using a dual-backend pattern with environment-based routing between FileMaker and Backend API (docs/NOTES_BACKEND_INTEGRATION.md:170-182, requirements/notes/current-implementation.md:175-194), but the API contracts and architecture documentation don't specify how this pattern should be implemented in the API layer. The Customer API doesn't show this pattern (customers.js uses Backend API only), while Teams use Supabase directly (teams.js). The Notes feature appears to be the only one requiring dual-backend support, but this architectural requirement is scattered across documentation rather than being clearly specified in the API layer design.",
+          "file_paths": [
+            "docs/NOTES_BACKEND_INTEGRATION.md",
+            "requirements/notes/api-contracts.md",
+            "requirements/notes/current-implementation.md"
+          ],
+          "code_snippet": "// Documented dual-backend pattern (lines 175-182):\nconst env = getEnvironmentContext();\nif (env.type === ENVIRONMENT_TYPES.FILEMAKER) {\n    // Use FileMaker bridge\n} else {\n    // Use Backend API with HMAC auth\n}\n\n// But API contracts don't specify WHERE this logic lives\n// Or how to structure API functions to support both backends",
+          "recommendation": "Clarify the dual-backend architecture in api-contracts.md: 1) Add 'Dual Backend Support' section explaining environment detection pattern, 2) Specify that src/api/notes.js functions should internally route based on environment (like: export async function createNote(data) { if (isFileMaker()) return fileMakerCreate(data); return backendApiCreate(data); }), 3) Document that this is a transitional architecture - once FileMaker is fully deprecated, these conditionals will be removed, 4) Add architectural decision record (ADR) explaining why Notes needs dual support while Customers don't (migration timing), 5) Include this pattern in the frontend integration examples."
+        },
+        {
+          "id": "ARC-005",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Missing Organization Scope Validation Pattern",
+          "description": "The Customer API includes explicit organization scope validation using 'checkOrganizationScope()' before API calls (src/api/customers.js:48, 88), ensuring requests fail early if organization context is missing. The documented Notes API contracts specify organization scoping via 'X-Organization-ID' header (api-contracts.md:67, authorization.md:67) but don't document whether the same checkOrganizationScope() validation should occur in the frontend before making requests. This creates inconsistency in how organization scoping is enforced at the API layer.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md",
+            "requirements/notes/authorization.md",
+            "src/api/customers.js"
+          ],
+          "code_snippet": "// Customer pattern (explicit validation):\nexport async function fetchCustomers(options = {}) {\n  return withErrorHandling(async () => {\n    const auth = getAuthenticationContext();\n    checkOrganizationScope({ authentication: auth }, 'fetchCustomers'); // ← Validates org\n    const response = await dataService.get('/api/customers', ...);\n    return normalizeCustomerData(response);\n  }, 'fetchCustomers', { options });\n}\n\n// Notes pattern (not specified):\n// No mention of checkOrganizationScope() validation",
+          "recommendation": "Add organization scope validation requirement to api-contracts.md frontend integration section: 1) Specify that all API functions must call 'checkOrganizationScope()' after getting authentication context, 2) Document that this provides early validation and better error messages, 3) Show example: 'const auth = getAuthenticationContext(); checkOrganizationScope({ authentication: auth }, \"fetchProjectNotes\");', 4) Add to code examples in lines 608-651, 5) Include in acceptance criteria test cases."
+        },
+        {
+          "id": "ARC-006",
+          "category": "architectural_fit",
+          "severity": "low",
+          "title": "Service Layer Responsibility Inconsistency",
+          "description": "The documented noteService.js functions include both data transformation (processNotes, transformBackendNote) and business logic (createNewNote with validation) in the same layer (requirements/notes/current-implementation.md:84-119). However, the established Customer architecture separates these concerns: customerService.js handles business logic and validation, while normalization happens in the API layer. The Notes architecture mixes transformation and validation in the service layer, creating inconsistency in layer responsibilities.",
+          "file_paths": [
+            "requirements/notes/current-implementation.md",
+            "src/api/customers.js"
+          ],
+          "code_snippet": "// Notes service layer (documented):\n// src/services/noteService.js:10-20\nexport function createNewNote(fkId, note, type) {\n  validateInputs(fkId, note); // Business logic\n  return createNote({ note: note.trim(), ... }); // Data prep\n}\n\nexport function processNotes(data) {\n  return data.map(transformNote).sort(...); // Transformation\n}\n\n// Mixes validation, transformation, and data prep",
+          "recommendation": "Clarify service layer responsibilities in current-implementation.md and api-contracts.md: 1) API layer (notes.js): HTTP communication + response normalization (format transformation), 2) Service layer (noteService.js): Business logic + validation only, NOT data transformation, 3) If transformation is needed beyond normalization, create separate utility functions in a 'utils/noteUtils.js' file, 4) Update documentation to show clear separation: API → normalize, Service → validate/business logic, 5) Align with Customer pattern for consistency."
+        }
+      ],
+      "patterns_reviewed": 0,
+      "violations_found": 6
+    }
+  },
+  "JudgeNode": {
+    "timestamp": "2026-01-16T20:18:14.974Z",
+    "output": {
+      "total_findings": 12,
+      "kept_findings": [
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent API Endpoint Structure with Existing Backend Patterns",
+          "description": "The documented API contracts specify a flat endpoint structure 'GET /api/notes?project_id={id}' for listing notes (requirements/notes/api-contracts.md:19), but the frontend integration examples show nested endpoints 'GET /projects/{project_id}/notes' (test-notes-backend-schema.js:122, 137). This inconsistency creates ambiguity for the backend team. The existing Customer API pattern uses '/api/customers' flat structure, while the documented notes endpoints mix both patterns. The test script uses 'POST /projects/{TEST_PROJECT_ID}/notes' but the API contracts document 'POST /api/notes'. This architectural inconsistency will lead to integration failures when the backend team implements the API.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md",
+            "test-notes-backend-schema.js"
+          ],
+          "code_snippet": "// API Contracts doc (line 19):\nGET /api/notes?project_id=789e4567...\n\n// But test script uses (line 137):\nPOST /projects/${TEST_PROJECT_ID}/notes\n\n// And also uses (line 262):\nGET /projects/notes/${createdNoteId}",
+          "recommendation": "Standardize on ONE endpoint structure throughout all documentation. Recommended approach following existing Customer API pattern: Use flat structure '/api/notes' with query parameters for filtering, as documented in api-contracts.md lines 19-36. Update test-notes-backend-schema.js to use the correct endpoints: 'POST /api/notes' (not '/projects/{id}/notes'), 'GET /api/notes?project_id={id}' for listing, and 'GET /api/notes/{noteId}' for retrieval. Remove all references to nested '/projects/{id}/notes' endpoints to prevent confusion."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent Data Transformation Layer Pattern",
+          "description": "The documented architecture shows notes using 'transformBackendNote()' in noteService.js to convert snake_case to camelCase (docs/NOTES_BACKEND_INTEGRATION.md:47, requirements/notes/current-implementation.md:98-119), but this pattern differs from the established Customer API pattern which uses 'normalizeCustomerData()' in the API layer (src/api/customers.js:14-29). Customers normalize in the API layer before returning to services, while Notes transform in the service layer. This architectural inconsistency makes the codebase harder to maintain and violates the established separation of concerns where API layer handles format normalization.",
+          "file_paths": [
+            "requirements/notes/current-implementation.md",
+            "docs/NOTES_BACKEND_INTEGRATION.md",
+            "src/api/customers.js"
+          ],
+          "code_snippet": "// Customer pattern (API layer normalization):\n// src/api/customers.js:14-29\nfunction normalizeCustomerData(data) {\n  return { id: data.id || data.__ID, ...data };\n}\nexport async function fetchCustomers(options = {}) {\n  const response = await dataService.get('/api/customers', ...);\n  return normalizeCustomerData(response.data); // ← API layer\n}\n\n// Notes pattern (Service layer transformation):\n// noteService.js (documented)\nexport function transformBackendNote(note) {\n  return { content: note.note, ... }; // ← Service layer\n}",
+          "recommendation": "Align Notes architecture with the established Customer API pattern: 1) Move 'transformBackendNote()' from noteService.js to notes.js API layer and rename to 'normalizeNoteData()' for consistency, 2) Have API layer functions (fetchProjectNotes, createNote, etc.) call normalizeNoteData() before returning data, 3) Service layer should receive already-normalized data and focus on business logic only, 4) Update all documentation to reflect this pattern, 5) This ensures consistent architecture across all backend-integrated features."
+        }
+      ],
+      "dropped_findings": [],
+      "merged_findings": [],
+      "decisions": [
+        {
+          "finding_id": "ARC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        }
+      ],
+      "summary": "Judge phase complete: 12 findings reviewed, 2 kept (critical/major), 0 dropped (minor/suggestion), 0 merged (duplicates)"
+    }
+  }
+}

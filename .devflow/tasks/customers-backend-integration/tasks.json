@@ -6,7 +6,10 @@
     "slug": "customers-backend-integration",
     "description": "Integrate frontend customer management with new backend API endpoints, supporting relational data model with nested emails/phones/addresses while maintaining FileMaker backward compatibility",
     "review_status": "pending",
-    "review_iteration": 0
+    "review_iteration": 1,
+    "updatedAt": "2026-01-16T19:47:06.671Z",
+    "review_stage": "finalizing",
+    "review_session_id": "35dd2cb0-b741-4dc1-8780-d5416cd4b844"
   },
   "standing_constraints": [
     "MUST maintain FileMaker backward compatibility - FileMaker environment continues to work",

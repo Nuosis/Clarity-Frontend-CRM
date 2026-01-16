@@ -1,0 +1,460 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-16T19:39:25.927Z",
+    "featureSlug": "customers-backend-integration",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 1,
+    "featureName": "Customers Backend API Integration",
+    "mode": "autonomous",
+    "sessionId": "35dd2cb0-b741-4dc1-8780-d5416cd4b844",
+    "processId": 1768592365926,
+    "lastUpdated": "2026-01-16T19:47:06.667Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-16T19:39:26.320Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Create backend API client for customer endpoints (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nConfirmed the existing customer requirements documentation was already implemented: the full 'requirements/customers/' folder structure and a comprehensive 'README.md' (plus 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md') were present and matched the standardized template used elsewhere (eg 'requirements/teams/README.md'). Verified the project build compiled successfully and checked that the backend API client could be imported and that 'dataService' exposed the expected methods. Key decision was to make no file changes since the required structure and documentation already existed and complied with the documented protocol/guidelines.'\n\n---\n\n### Implement environment-aware routing in API layer (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nImplemented environment-aware routing for the customer API so each customer operation routes via the FileMaker fm-gofer bridge in the FileMaker environment or via the web backend at '/contacts_api' with HMAC auth in the web app environment, while normalizing responses to a consistent shape and adding context-aware error handling. The primary code change was in 'src/api/customers.js', updating seven functions including 'fetchCustomers', 'fetchCustomerById', 'createCustomer', 'updateCustomer', 'toggleCustomerStatus', 'fetchActiveCustomers', and 'deleteCustomer' to use environment-aware routing through 'dataService'. Verification included a successful build and tracing the request flow through environment setup and the axios interceptor path, confirming no new endpoints or API signatures were invented and that existing endpoint mappings in 'dataService.js' were reused. Documentation artifacts were produced to capture implementation and verification details, including 'IMPLEMENTATION_VERIFICATION.md', 'TASK_COMPLETION_SUMMARY.md', 'DATA_FLOW_VERIFICATION.md', and 'VERIFICATION_CHECKLIST.md'.\n\n---\n\n### Create data transformation utilities for backend schema (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nImplemented bidirectional data transformation utilities to convert between FileMaker flat customer records and the backend relational schema, including nested emails, phones, and addresses, primary flag normalization, validation, batch transforms with per-record error recovery, and FileMaker '1' and '0' to boolean conversions. The core work was added to 'src/services/customerService.js' (10 new exported helpers such as 'transformFileMakerToBackend' and 'transformBackendToFileMaker'), with supporting JSDoc and integrity-focused helpers like 'mergeNestedContacts' and 'ensureSinglePrimary'. Verification included a temporary test script (created, executed, then removed) plus final build and import checks, and project tracking was updated in 'tasks.json'. Documentation of the implementation and usage was captured in 'TRANSFORMATION_UTILITIES_SUMMARY.md', and an explicit decision was made to be null-safe and preserve data round-trip while enforcing exactly one primary contact per type.\n\n---\n\n### Update customerService to process backend responses (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented backend response processing in customerService.js by adding processBackendCustomerList and processBackendCustomerDetail to normalize multiple backend envelope formats and preserve FileMaker compatibility. Updated existing utilities (sortCustomers, filterActiveCustomers, groupCustomersByStatus, validateCustomerData, and calculateCustomerStats) to operate safely on both FileMaker and backend customer shapes, including enhanced stats (withEmail, withPhone, withAddress) and multi-field sorting. Resolved a duplicate calculateCustomerStats definition, verified successful builds and exports, added then removed a temporary verification script, and updated tasks.json plus documentation files BACKEND_PROCESSING_IMPLEMENTATION.md, docs/CUSTOMER_SERVICE_API.md, and TSK0004_COMPLETION_SUMMARY.md to record completion and usage guidance.\n\n---\n\n### Update useCustomer hook for backend API (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nUpdated useCustomer hook to integrate with backend API while maintaining FileMaker compatibility. Added pagination state (total, limit, offset, has_more) and environment-aware processing using processBackendCustomerList/processBackendCustomerDetail for web app and processCustomerData for FileMaker. Updated all CRUD operations (loadCustomers, handleCustomerSelect, handleCustomerCreate, handleCustomerUpdate, handleCustomerStatusToggle, handleCustomerDelete) to detect environment via getEnvironmentContext() and route appropriately. Enhanced loadCustomers to accept pagination options (limit, offset, active, search, sort, order) which are passed to fetchCustomers API. Modified API layer (src/api/customers.js) fetchCustomers to support query parameters for backend pagination. Updated state management to handle both id/__ID and recordId for backward compatibility. Exported new backend processing functions from services/index.js. Build verified successfully. FileMaker dual-write pattern preserved in handleCustomerUpdate. All acceptance criteria met: pagination support, nested data handling, environment-aware routing, backward compatibility maintained.\n\n---\n\n### Add search functionality to useCustomer hook (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented customer search support in the 'useCustomer' hook backed by the new '/api/customers/search' endpoint, including debounced querying, query validation, loading and results state, and robust error handling with cleanup on unmount. Key changes were made in 'src/api/customers.js' (added 'searchCustomers' with environment-aware behavior and FileMaker fallback), 'src/hooks/useCustomer.js' (added 'handleCustomerSearch', 'searchQuery', 'searchResults', 'isSearching', and debounce logic), and 'src/api/index.js' (exported 'searchCustomers'). Important decisions included a 300ms configurable debounce, minimum 1-character queries with auto-clear on empty input, and preserving backward compatibility via client-side filtering when the backend endpoint is unavailable. Task tracking was updated in '.devflow/tasks/customers-backend-integration/tasks.json', and documentation was added in 'CUSTOMER_SEARCH_IMPLEMENTATION.md', 'TSK0006_COMPLETION_SUMMARY.md', and 'TSK0006_VERIFICATION.md', with a temporary verification script created and then removed after build validation.\n\n---\n\n### Update CustomerDetails to display nested data (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented nested contact rendering in the customer header by enhancing 'src/components/customers/CustomerHeader.jsx' to load emails, phones, and addresses from Supabase relational tables and display primary email and phone with '+N' badges and tooltips when additional contacts exist. Kept backward compatibility by falling back to the legacy flat FileMaker fields when nested data is missing, ensuring no prop or API changes and graceful handling of empty states. Added supporting verification and documentation in 'CUSTOMER_HEADER_NESTED_DATA_IMPLEMENTATION.md', reusing existing utilities like phone formatting and keeping the build clean aside from unrelated warnings.\n\n---\n\n### Update CustomerForm for new fields and nested data (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a full rewrite of the customer entry UI to support the new relational backend model by adding nested state and CRUD handlers for emails, phones, and addresses (including type selectors and enforcing exactly one primary per contact type), while supporting both create and edit modes via a new 'customer' prop and preserving contact IDs for updates. Updated submission and initialization logic in 'src/components/customers/CustomerForm.jsx' to be environment-aware, transforming data to nested arrays for the web app backend and to a flat primary-only payload for FileMaker, with legacy fields conditionally shown and FileMaker compatibility maintained. Marked the work complete in '.devflow/tasks/customers-backend-integration/tasks.json' and added documentation in 'TSK0008_CUSTOMER_FORM_COMPLETION.md' and 'docs/CUSTOMER_FORM_USAGE.md'. Verified the implementation with a successful 'npm run build' and import checks to ensure the component compiles and exports correctly.\n\n---\n\n### Add organization context to customer operations (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented organization context propagation for all customer backend calls by injecting an 'X-Organization-ID' header from 'env.authentication.user.supabaseOrgID' via the request interceptor in 'src/services/dataService.js', including non-blocking warnings when the org id is missing. Updated initialization in 'src/index.jsx' (web app and FileMaker flows) to refresh the dataService environment context after 'initializationService.fetchSupabaseUserId()' populates the full user object, ensuring the org id is available for subsequent requests. Documented the expanded user shape in 'src/context/AppStateContext.jsx' and marked the task complete in '.devflow/tasks/customers-backend-integration/tasks.json', with the key decision to centralize org scoping in the dataService interceptor so existing customer API calls (via 'dataService.get()') required no signature changes.\n\n---\n\n### Implement comprehensive error handling (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive customer API error handling system by adding a dedicated module in 'src/errors/customerErrors.js' (CustomerError extending ServiceError, 30+ error codes, parsers, org-scope validation, 'withErrorHandling' wrapper, and 'formatErrorForUI') and exporting utilities via 'src/errors/index.js'. Updated 'src/api/customers.js' to wrap all 8 customer operations with 'withErrorHandling', add organization scoping checks, and improve search query validation, and enhanced 'src/hooks/useCustomer.js' with 'formattedError' state plus a 'setErrorWithFormatting' helper to surface user-friendly messages and better validation parsing. Due to Jest import issues, verification pivoted to compile and import checks, with final confirmation via successful builds ('npm run build') and documentation delivered in 'ERROR_HANDLING_IMPLEMENTATION.md', 'ERROR_HANDLING_EXAMPLES.md', and 'TSK0010_COMPLETION_SUMMARY.md', alongside marking TSK0010 complete in '.devflow/tasks/customers-backend-integration/tasks.json'.\n\n---\n\n### Add pagination support to customer list (TSK0011)\n**Status:** done\n\n**Implementation Notes:**\nImplemented customer list pagination by adding a reusable pagination UI and wiring it into the existing customer data flow that already supported limit and offset plus pagination metadata. Key changes include creating 'src/components/common/PaginationControls.jsx', updating 'src/index.jsx' to track pagination state and add page and page-size handlers, and updating 'src/components/Sidebar.jsx' to accept new pagination props, render the controls in customer mode, and extend PropTypes. The approach deliberately leveraged existing backend and hook support ('src/api/customers.js', 'src/services/customerService.js', 'src/hooks/useCustomer.js') rather than altering API contracts, and included cleanup of temporary verification code plus a final build confirmation.\n\n---\n\n### Write unit tests for customer data transformations (TSK0012)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive Jest unit tests covering all customer data transformation logic between FileMaker and backend formats, including nested extraction, batch array transforms, validation, primary flag normalization, and response envelope processing plus key edge cases like nulls, whitespace, and invalid inputs. Added the new test suite in 'src/services/__tests__/customerTransformations.test.js' and documented coverage and scope in 'CUSTOMER_TRANSFORMATION_TESTS_SUMMARY.md'. Updated '.devflow/tasks/customers-backend-integration/tasks.json' to mark the task complete with notes, and adjusted a brittle assertion to validate thrown errors rather than exact messages due to differing error paths in 'processBackendCustomerDetail'.\n\n---\n\n### Write integration tests for API client (TSK0013)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive integration tests for the customer API client by adding 'src/api/__tests__/customers.test.js', covering all CRUD flows plus search, status toggling, org scoping, auth headers, data normalization, and extensive error handling across both FileMaker and backend API paths (46 tests total). Resolved Jest incompatibility with 'import.meta' in 'config.js' by shifting to a broader mocking strategy, ultimately mocking the 'supabaseService' and other config-dependent imports so the suite could execute reliably. Verified outputs by rerunning the full test suite and confirming strong coverage on 'customers.js' (96.42% statements, 82.35% branches) and a successful production build, ensuring all referenced endpoints, exports, and error codes matched the actual implementation.\n\n---\n\n### Update documentation for customer API integration (TSK0014)\n**Status:** done\n\n**Implementation Notes:**\nImplemented full customer API integration documentation by creating 'docs/CUSTOMER_API_INTEGRATION.md' as a comprehensive end to end guide (architecture, data models, auth, env routing, org scoping, migration from FileMaker, endpoint reference, troubleshooting, and layered code examples). Updated 'CLAUDE.md' to add a dedicated Customer API Integration section, expand Prospects vs Customers guidance, and extend Common Pitfalls and Documentation Resources with customer specific notes. Added 'docs/TSK0014_COMPLETION_SUMMARY.md' and 'docs/TSK0014_VERIFICATION_CHECKLIST.md' to capture deliverables, acceptance criteria validation, and build verification, and marked TSK0014 as done in 'tasks.json'. Key decisions included centralizing customer integration knowledge into a single canonical doc with cross references and explicitly documenting dual environment routing and FileMaker to backend migration strategy.\n\n---\n\n### Perform end-to-end testing in both environments (TSK0015)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive end-to-end validation for customer management across FileMaker and web app paths, including running the dev server, executing existing automated tests, verifying builds, and manually exercising backend endpoints via OpenAPI. Added testing deliverables: 'E2E_TEST_REPORT.md', 'test-customer-api.js' (HMAC-based), 'test-customer-frontend.html' (JWT-based), and 'TSK0015_COMPLETION_SUMMARY.md', and updated the task JSON to mark TSK0015 complete. Key decisions and findings: the only automated failure was a non-blocking 'import.meta.env' config issue, and API testing confirmed organization scoping requires JWT user context (HMAC alone lacks org context), with a noted data gap where most customer rows have NULL 'organization_id' pending migration/backfill.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 15,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 392
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-16T19:41:26.273Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Toggle Customer Status endpoint path does not match API contract specification",
+          "description": "TSK0005 (Update useCustomer hook for backend API) requires 'handleCustomerStatusToggle uses PATCH /api/customers/{id}/status' according to acceptance criteria. However, the implementation uses '/api/customers/{id}/toggle-status' instead of '/api/customers/{id}/status'. The API contract specification in requirements/customers/api-contracts.md (line 473) explicitly defines the endpoint as 'PATCH /api/customers/:id/status'. The implemented endpoint path '/toggle-status' does not match the documented contract.",
+          "file_paths": [
+            "src/api/customers.js:167",
+            "requirements/customers/api-contracts.md:473"
+          ],
+          "code_snippet": null,
+          "recommendation": "Change the endpoint path in src/api/customers.js line 167 from `/api/customers/${customerId}/toggle-status` to `/api/customers/${customerId}/status` to match the API contract. Also update the integration tests in src/api/__tests__/customers.test.js lines 724-727 and 742-745 to verify the correct endpoint path is being called."
+        },
+        {
+          "id": "COM-002",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Toggle Customer Status endpoint missing request body as specified in API contract",
+          "description": "According to the API contract in requirements/customers/api-contracts.md (lines 480-485), the PATCH /api/customers/:id/status endpoint requires a request body with the format {\"is_active\": boolean}. However, the implementation in src/api/customers.js line 167 calls dataService.patch() with no request body. The function signature 'toggleCustomerStatus(customerId)' does not accept or send the required 'is_active' parameter. This violates the documented API contract which explicitly shows the request body requirement.",
+          "file_paths": [
+            "src/api/customers.js:158-169",
+            "requirements/customers/api-contracts.md:480-485",
+            "src/hooks/useCustomer.js:285-310"
+          ],
+          "code_snippet": null,
+          "recommendation": "Update the toggleCustomerStatus function signature to accept an 'isActive' parameter: `toggleCustomerStatus(customerId, isActive)` and include it in the request body. Update the implementation at line 167 to: `await dataService.patch(`/api/customers/${customerId}/status`, { is_active: isActive })`. Also update all callers in useCustomer.js (handleCustomerStatusToggle) to pass the active status value when calling toggleCustomerStatus."
+        },
+        {
+          "id": "COM-003",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "Integration tests verify incorrect endpoint path for toggle status operation",
+          "description": "The integration tests in src/api/__tests__/customers.test.js verify that toggleCustomerStatus calls '/contacts_api/cust-123' (lines 725, 743) which is the FileMaker endpoint pattern. However, these tests are in the 'Backend API (webapp environment)' describe block (line 700), indicating they should be testing the backend API path '/api/customers/{id}/status', not the FileMaker path. The tests also verify the wrong request body format (f_active: '1'/'0' instead of is_active: boolean). While the tests match the current incorrect implementation, they do not verify compliance with the documented API contract.",
+          "file_paths": [
+            "src/api/__tests__/customers.test.js:712-746",
+            "requirements/customers/api-contracts.md:473-506"
+          ],
+          "code_snippet": null,
+          "recommendation": "Update the integration tests to verify the correct backend API endpoint path '/api/customers/{id}/status' and request body format { is_active: boolean }. The tests should verify: 1) Correct endpoint path is called, 2) Request body contains is_active as a boolean, 3) Organization scoping is applied, 4) Proper error handling for missing organization context."
+        }
+      ],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-16T19:42:59.104Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Race condition in debounced search with stale closure",
+          "description": "In src/hooks/useCustomer.js, the handleCustomerSearch function creates a setTimeout callback that captures the current 'query' parameter, but if the user types quickly and triggers multiple debounced searches, the environment context (getEnvironmentContext()) is fetched inside the setTimeout callback at lines 416. This can lead to race conditions where: 1) Multiple searches execute concurrently with different query values, 2) Results from an older search might arrive after a newer search, causing stale data to overwrite fresh results, 3) The isSearching state might be set to false prematurely if an earlier search completes after a later one starts.",
+          "file_paths": [
+            "src/hooks/useCustomer.js:381-437"
+          ],
+          "code_snippet": "const handleCustomerSearch = useCallback((query, options = {}) => {\n    // Clear existing timeout\n    if (searchTimeoutRef.current) {\n        clearTimeout(searchTimeoutRef.current);\n    }\n    // ...\n    searchTimeoutRef.current = setTimeout(async () => {\n        try {\n            const result = await searchCustomers(query, { limit });\n            const env = getEnvironmentContext();\n            // Process results - but 'query' might be stale\n            setSearchResults(processedResults);\n        } finally {\n            setIsSearching(false); // Race: might clear isSearching for newer search\n        }\n    }, debounceMs);\n}, [setErrorWithFormatting]);",
+          "recommendation": "Implement request cancellation using AbortController or add a request ID tracking mechanism. Store the current search request ID in a ref, check if the request is still current before setting results: `const requestId = ++searchRequestIdRef.current; ... if (requestId === searchRequestIdRef.current) { setSearchResults(...) }`. This ensures only the most recent search results are applied to state."
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing isActive parameter in toggleCustomerStatus API call",
+          "description": "In src/api/customers.js line 158-169, the toggleCustomerStatus function accepts only customerId as a parameter but the API contract requires sending the new is_active value in the request body. However, in src/hooks/useCustomer.js line 301, the hook calls toggleCustomerStatus(customerId, active) with two parameters, but the API function signature doesn't accept the second parameter, so it's silently ignored. The PATCH request at line 167 is sent without a body, which violates the API contract that expects `{ is_active: boolean }`.",
+          "file_paths": [
+            "src/api/customers.js:158-169",
+            "src/hooks/useCustomer.js:295-331"
+          ],
+          "code_snippet": "// src/api/customers.js\nexport async function toggleCustomerStatus(customerId) { // Missing 'isActive' param\n    return withErrorHandling(async () => {\n        // ...\n        const response = await dataService.patch(`/api/customers/${customerId}/toggle-status`);\n        // No request body sent!\n        return normalizeCustomerData(response.data || response);\n    }, 'toggleCustomerStatus', { customerId });\n}\n\n// src/hooks/useCustomer.js\nconst result = await toggleCustomerStatus(customerId, active); // 'active' param ignored",
+          "recommendation": "Update the toggleCustomerStatus function signature to accept the isActive parameter and include it in the request body: `export async function toggleCustomerStatus(customerId, isActive) { ... const response = await dataService.patch(`/api/customers/${customerId}/status`, { is_active: isActive }); ... }`. Also update the withErrorHandling context to include the isActive value for better debugging."
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Memory leak potential from uncancelled setTimeout in unmounted component",
+          "description": "In src/components/customers/CustomerForm.jsx lines 368-374, a setTimeout is used to auto-select a newly created customer after form submission. If the component unmounts before the timeout fires (e.g., user navigates away immediately after creating a customer), the timeout callback will still execute and attempt to call handleCustomerSelect, which may reference stale props/state or cause warnings about state updates on unmounted components. While there is a try-catch that logs warnings, the timeout itself is never stored in a ref for cleanup.",
+          "file_paths": [
+            "src/components/customers/CustomerForm.jsx:368-375"
+          ],
+          "code_snippet": "// Create new customer\nconst result = await createCustomer(customerData);\nshowError('Customer created successfully');\n\n// Auto-select newly created customer\nif (result && result.id) {\n    setTimeout(async () => {\n        try {\n            await handleCustomerSelect(result.id);\n        } catch (error) {\n            console.warn('Could not auto-select newly created customer:', error);\n        }\n    }, 100);\n}",
+          "recommendation": "Store the timeout ID in a ref and clear it in the cleanup function of a useEffect: `const autoSelectTimeoutRef = useRef(null); ... autoSelectTimeoutRef.current = setTimeout(...); ... useEffect(() => { return () => { if (autoSelectTimeoutRef.current) clearTimeout(autoSelectTimeoutRef.current); }; }, []);`. Alternatively, remove the setTimeout wrapper entirely and call handleCustomerSelect directly with proper error handling."
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "checkOrganizationScope receives wrong parameter structure",
+          "description": "In src/api/customers.js, all API functions call checkOrganizationScope with `{ authentication: auth }` as the first parameter (e.g., line 48). However, the checkOrganizationScope function in src/errors/customerErrors.js line 346 expects an 'env' object with `env.type` and `env.authentication.user.supabaseOrgID` structure. The API layer passes `{ authentication: auth }` which doesn't have a 'type' property, so the check at line 347 `if (env.type === 'webapp')` will never be true, causing the organization scope validation to be silently skipped for all API calls.",
+          "file_paths": [
+            "src/api/customers.js:48",
+            "src/errors/customerErrors.js:346-356"
+          ],
+          "code_snippet": "// src/api/customers.js\nconst auth = getAuthenticationContext();\ncheckOrganizationScope({ authentication: auth }, 'fetchCustomers'); // Missing 'type' property\n\n// src/errors/customerErrors.js\nexport function checkOrganizationScope(env, operation = 'unknown') {\n    if (env.type === 'webapp') { // This will never be true!\n        if (!env.authentication?.user?.supabaseOrgID) {\n            throw new CustomerError(...);\n        }\n    }\n}",
+          "recommendation": "Update all checkOrganizationScope calls in src/api/customers.js to pass the full environment context: `const env = getEnvironmentContext(); checkOrganizationScope(env, 'fetchCustomers');`. The getEnvironmentContext() function returns the complete environment object with the 'type' property that checkOrganizationScope expects. This will enable proper organization scope validation for backend API calls."
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inefficient array filtering with multiple passes in CustomerForm validation",
+          "description": "In src/components/customers/CustomerForm.jsx lines 317-323, the form submission code filters emails, phones, and addresses arrays to remove empty values. Then in lines 379-381, the FileMaker environment code filters the same arrays again to find primary contacts. This results in multiple passes over the same arrays. While not critical for small datasets, it's unnecessarily inefficient and could be optimized.",
+          "file_paths": [
+            "src/components/customers/CustomerForm.jsx:317-381"
+          ],
+          "code_snippet": "// First pass - filter out empty contacts\nconst validEmails = emails.filter(e => e.email && e.email.trim());\nconst validPhones = phones.filter(p => p.phone && p.phone.trim());\nconst validAddresses = addresses.filter(a => ...);\n\n// Later in FileMaker branch - second pass to find primary\nconst primaryEmail = validEmails.find(e => e.is_primary) || validEmails[0];\nconst primaryPhone = validPhones.find(p => p.is_primary) || validPhones[0];\nconst primaryAddress = validAddresses.find(a => a.is_primary) || validAddresses[0] || {};",
+          "recommendation": "Combine the filtering and primary extraction into a single utility function that returns both the valid array and the primary contact in one pass. Alternatively, since the arrays are typically small (1-5 items), document this as acceptable performance and no change needed. The current code is readable and maintainable, which may outweigh the minor performance concern."
+        }
+      ],
+      "files_reviewed": 0,
+      "issues_found": 5
+    }
+  },
+  "SecurityCheckNode": {
+    "timestamp": "2026-01-16T19:45:25.626Z",
+    "output": {
+      "findings": [
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "high",
+          "title": "Insecure fallback authentication bypasses HMAC security",
+          "description": "In src/services/dataService.js lines 63-74 and 101-102, when the VITE_SECRET_KEY environment variable is missing or when crypto operations fail, the system falls back to predictable 'dev-token' or 'fallback-token' authentication headers. These fallback tokens are weak and predictable (just 'Bearer dev-token.{timestamp}' or 'Bearer fallback-token.{timestamp}'), effectively bypassing HMAC authentication. An attacker could:\n1. Force the application into fallback mode by causing crypto API failures\n2. In development environments without SECRET_KEY, generate valid auth headers by simply appending the current timestamp\n3. Replay attacks become trivial as the token format is predictable\n4. This completely undermines the HMAC-SHA256 security model for backend API authentication",
+          "file_paths": [
+            "src/services/dataService.js:60-104"
+          ],
+          "code_snippet": "export const generateBackendAuthHeader = async (payload = '') => {\n  const secretKey = import.meta.env.VITE_SECRET_KEY;\n  \n  if (!secretKey) {\n    console.warn('[DataService] SECRET_KEY not available. Using development mode.');\n    // In development, return a simple auth header\n    const timestamp = Math.floor(Date.now() / 1000);\n    return `Bearer dev-token.${timestamp}`; // SECURITY RISK: Predictable token\n  }\n  \n  // Check if Web Crypto API is available\n  if (typeof crypto === 'undefined' || !crypto.subtle) {\n    console.warn('[DataService] Web Crypto API not available. Using fallback auth.');\n    const timestamp = Math.floor(Date.now() / 1000);\n    return `Bearer fallback-token.${timestamp}`; // SECURITY RISK: Predictable token\n  }\n  // ...\n  } catch (error) {\n    console.warn('[DataService] Crypto operation failed, using fallback:', error);\n    return `Bearer fallback-token.${timestamp}`; // SECURITY RISK: Predictable token\n  }\n};",
+          "recommendation": "Remove all fallback authentication mechanisms. If the SECRET_KEY is missing or crypto operations fail, the application should: 1) Throw an error and refuse to make backend API calls, 2) Display a configuration error to the user, 3) Log a critical error for system administrators. Never allow unauthenticated or weakly-authenticated requests. Change lines 63-67 to: `if (!secretKey) { throw new Error('VITE_SECRET_KEY is required for backend authentication. Application cannot proceed.'); }` and remove the fallback catch blocks at lines 100-103."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "high",
+          "title": "Organization context validation silently bypassed - authorization vulnerability",
+          "description": "In src/errors/customerErrors.js line 346-356, the checkOrganizationScope function expects an environment object with 'type' property to determine if organization validation is needed. However, in src/api/customers.js (lines 48, 88, 108, etc.), all API functions call checkOrganizationScope with `{ authentication: auth }` structure that lacks the 'type' property. This causes the check at line 347 `if (env.type === 'webapp')` to never evaluate to true, completely bypassing organization scope validation for ALL customer API calls. This is a critical authorization vulnerability because:\n1. Backend API calls proceed without verifying organization context exists\n2. Users could potentially access customers from other organizations if the backend relies on client-side validation\n3. The X-Organization-ID header may be missing (lines 135-147 only warn, don't block) allowing cross-organization data access\n4. No error is thrown when organization ID is missing, violating the standing constraint 'MUST include organization_id scoping for all backend API calls'",
+          "file_paths": [
+            "src/api/customers.js:48,88,108,127,146,165,187,208",
+            "src/errors/customerErrors.js:346-356"
+          ],
+          "code_snippet": "// src/api/customers.js\nconst auth = getAuthenticationContext();\ncheckOrganizationScope({ authentication: auth }, 'fetchCustomers'); // Missing 'type' property!\n\n// src/errors/customerErrors.js\nexport function checkOrganizationScope(env, operation = 'unknown') {\n    if (env.type === 'webapp') { // This condition is NEVER true due to incorrect parameter structure\n        if (!env.authentication?.user?.supabaseOrgID) {\n            throw new CustomerError(\n                'Organization context is required but not found',\n                CustomerErrorCodes.ORG_SCOPE_MISSING,\n                { operation, environment: env.type }\n            );\n        }\n    }\n}",
+          "recommendation": "Fix all checkOrganizationScope calls in src/api/customers.js to pass the complete environment context. Replace `const auth = getAuthenticationContext(); checkOrganizationScope({ authentication: auth }, operation);` with `const env = getEnvironmentContext(); checkOrganizationScope(env, operation);`. The getEnvironmentContext() function returns the complete environment object with the 'type' property. Also update dataService.js lines 135-147 to throw an error (not just warn) when organization ID is missing for webapp environment: `if (!auth.user?.supabaseOrgID) { throw new Error('Organization ID is required for backend API calls'); }`"
+        },
+        {
+          "id": "SEC-003",
+          "category": "security",
+          "severity": "medium",
+          "title": "Missing pagination limit enforcement allows resource exhaustion",
+          "description": "In src/api/customers.js lines 43-74, the fetchCustomers and searchCustomers functions accept user-provided 'limit' values without enforcing maximum bounds. While the API contract documentation specifies a maximum of 200 records per request (requirements/customers/api-contracts.md line 49), the frontend code does not validate or cap this value. An attacker or compromised client could:\n1. Request excessively large result sets (e.g., limit=999999) causing backend resource exhaustion\n2. Trigger denial-of-service conditions by overwhelming the database with large queries\n3. Consume excessive memory in the frontend application processing large datasets\n4. Bypass intended pagination controls to extract entire customer databases in single requests\nThe same issue exists in searchCustomers (line 191) where limit defaults to 50 but has no maximum cap.",
+          "file_paths": [
+            "src/api/customers.js:43-74,180-199"
+          ],
+          "code_snippet": "export async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        // ...\n        const queryParams = {\n            limit: options.limit || 50,  // No maximum validation!\n            offset: options.offset || 0,\n            include_related: options.include_related !== false\n        };\n        // ...\n    }, 'fetchCustomers', { options });\n}\n\nexport async function searchCustomers(query, options = {}) {\n    return withErrorHandling(async () => {\n        // ...\n        const queryParams = {\n            q: query,\n            limit: options.limit || 50,  // No maximum validation!\n            offset: options.offset || 0,\n            include_related: options.include_related !== false\n        };\n        // ...\n    }, 'searchCustomers', { query, options });\n}",
+          "recommendation": "Add client-side validation to enforce the API contract's maximum limit of 200 records. In both fetchCustomers and searchCustomers, add validation: `const MAX_LIMIT = 200; const validatedLimit = Math.min(Math.max(1, options.limit || 50), MAX_LIMIT); queryParams.limit = validatedLimit;`. Also add a warning if the user-provided limit exceeds the maximum: `if (options.limit > MAX_LIMIT) { console.warn(`Requested limit ${options.limit} exceeds maximum ${MAX_LIMIT}, capping to ${MAX_LIMIT}`); }`. This provides defense-in-depth even though the backend should also enforce this limit."
+        },
+        {
+          "id": "SEC-004",
+          "category": "security",
+          "severity": "medium",
+          "title": "Sensitive backend error details exposed in client-side error objects",
+          "description": "In src/errors/customerErrors.js lines 163, 171, 178, 188, 195, 204, 215, 226, 234, 244, and 252, the parseHttpError function includes the complete 'responseData' from backend API errors in the CustomerError details object. This responseData may contain:\n1. Internal server stack traces or error messages revealing backend implementation details\n2. Database query information or schema details in validation errors\n3. Internal API endpoints or service names\n4. User IDs or other identifiers from other users in multi-tenant error scenarios\n5. Debugging information that should remain server-side\nThese error details are then returned to the frontend (line 410 in formatErrorForUI) where they could be logged, displayed, or accessed through browser developer tools. While some details are needed for debugging, exposing the raw responseData is excessive and creates an information disclosure vulnerability.",
+          "file_paths": [
+            "src/errors/customerErrors.js:150-254,405-427"
+          ],
+          "code_snippet": "// Lines 163, 178, 188, etc.\nreturn new CustomerError(\n    'Authentication token expired',\n    CustomerErrorCodes.AUTH_TOKEN_EXPIRED,\n    { operation, status, responseData }  // SECURITY RISK: Full backend response exposed\n);\n\n// Line 410 - Details passed to UI\nexport function formatErrorForUI(error) {\n    if (error instanceof CustomerError) {\n        return {\n            title: getErrorTitle(error.code),\n            message: error.userFriendlyMessage,\n            details: error.details,  // Contains full responseData!\n            code: error.code,\n            // ...\n        };\n    }\n}",
+          "recommendation": "Sanitize error details before including them in CustomerError objects. Create a whitelist of safe fields to expose: 1) For validation errors, only include field names and validation types (not actual data), 2) For authorization errors, only include the error code and operation name, 3) Never include raw backend response data. Modify parseHttpError to create sanitized details: `{ operation, status, errorCode: responseData.code, fieldErrors: sanitizeValidationErrors(responseData.errors) }` where sanitizeValidationErrors removes sensitive values and only keeps field names and error types. In production builds, consider completely removing the 'details' field from formatErrorForUI output."
+        },
+        {
+          "id": "SEC-005",
+          "category": "security",
+          "severity": "low",
+          "title": "Weak email validation regex allows malformed addresses",
+          "description": "In src/services/customerService.js line 352 and src/components/customers/CustomerForm.jsx line 282, email validation uses an overly permissive regex pattern `/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/` (CustomerForm) and `/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/` (customerService). While this prevents the most obvious invalid formats, it allows many malformed email addresses that could cause issues:\n1. Multiple @ symbols in local part (e.g., 'test@@domain.com' passes as '^[^\\s@]+' matches 'test')\n2. Special characters that should be quoted in local part\n3. No validation of TLD length or format\n4. Allows invalid characters like spaces in display names without quotes\n5. Could enable injection attacks if email addresses are used in email headers without proper escaping\nWhile not immediately exploitable, accepting invalid email addresses can lead to data quality issues, failed email deliveries, and potential injection vulnerabilities in downstream email processing systems.",
+          "file_paths": [
+            "src/services/customerService.js:351-354",
+            "src/components/customers/CustomerForm.jsx:282"
+          ],
+          "code_snippet": "// src/services/customerService.js\nfunction isValidEmail(email) {\n    const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n    return emailRegex.test(email);\n}\n\n// src/components/customers/CustomerForm.jsx\nemails.forEach((emailObj, index) => {\n    if (emailObj.email && !/\\S+@\\S+\\.\\S+/.test(emailObj.email)) {\n        newErrors[`email_${index}`] = 'Invalid email format';\n    }\n});",
+          "recommendation": "Use a more robust email validation regex that better adheres to RFC 5322 standards. Replace the email regex with: `/^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/`. For even better validation, consider using a well-tested library like 'validator.js' with `validator.isEmail(email, { require_tld: true })`. This provides RFC-compliant validation without the maintenance burden of custom regex patterns. Ensure both CustomerForm.jsx and customerService.js use the same validation logic."
+        },
+        {
+          "id": "SEC-006",
+          "category": "security",
+          "severity": "low",
+          "title": "Console logging exposes organization IDs and potentially sensitive data",
+          "description": "Throughout the codebase, numerous console.log statements expose potentially sensitive information in browser console logs that persist in browser history and could be accessed by:\n1. Malicious browser extensions\n2. Attackers with local access to the machine\n3. Screen sharing or remote support sessions where the console is visible\n\nSpecific examples:\n- src/services/dataService.js:28 logs authentication context including organization IDs\n- src/services/dataService.js:137 logs organization IDs in plain text\n- src/services/dataService.js:123-127 logs request details including URLs and auth state\n- src/hooks/useCustomer.js:300 logs customer IDs during operations\n- src/errors/customerErrors.js:371,378,385,395 log full error objects including context\n\nWhile these logs are helpful for debugging, they create an information disclosure risk in production environments.",
+          "file_paths": [
+            "src/services/dataService.js:28,123-147",
+            "src/hooks/useCustomer.js:300",
+            "src/errors/customerErrors.js:371-395"
+          ],
+          "code_snippet": "// src/services/dataService.js\nexport const setAuthenticationContext = (authState) => {\n  currentAuthentication = { ...authState };\n  console.log('[DataService] Authentication context set:', currentAuthentication); // Exposes auth data\n};\n\n// Request interceptor\nif (auth.user && auth.user.supabaseOrgID) {\n    config.headers['X-Organization-ID'] = auth.user.supabaseOrgID;\n    console.log('[DataService] Added organization context:', auth.user.supabaseOrgID); // Exposes org ID\n}",
+          "recommendation": "Implement environment-aware logging that only outputs detailed logs in development mode. Wrap all sensitive console.log statements with: `if (import.meta.env.DEV) { console.log(...); }`. For production builds, either remove logs entirely or use a structured logging library that can be configured to suppress sensitive data. Consider implementing a custom logger utility with log levels (debug, info, warn, error) that automatically strips sensitive fields like organization IDs, user emails, and authentication tokens in production. Replace direct console.log calls with this logger: `logger.debug('[DataService] Auth context set', { isAuthenticated: currentAuthentication.isAuthenticated })` where the logger sanitizes the output based on environment."
+        }
+      ],
+      "files_reviewed": 0,
+      "vulnerabilities_found": 6
+    }
+  },
+  "ArchitectureCheckNode": {
+    "timestamp": "2026-01-16T19:47:06.665Z",
+    "output": {
+      "findings": [
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent checkOrganizationScope implementation violates established pattern",
+          "description": "The customer API introduces a custom checkOrganizationScope function in src/errors/customerErrors.js that expects a different parameter structure (env.type === 'webapp') than the established pattern used across all other API modules (projects.js, notes.js, tasks.js, links.js, images.js). The established pattern defines checkOrganizationScope locally in each API file and accepts { authentication: auth } with a simple check for auth?.user?.supabaseOrgID. The customer implementation creates a different interface requiring env.type which breaks architectural consistency and creates confusion about which pattern to follow. Additionally, the customer API calls this function with { authentication: auth } (lines 48, 88, 108, etc. in customers.js) which doesn't match the function's expected { type, authentication } structure, causing the validation to be silently bypassed.",
+          "file_paths": [
+            "src/api/customers.js:48,88,108,127,146,165,187,208",
+            "src/errors/customerErrors.js:346-356",
+            "src/api/projects.js:42-46",
+            "src/api/notes.js:9-13",
+            "src/api/tasks.js:9-13"
+          ],
+          "code_snippet": "// Established pattern in projects.js, notes.js, tasks.js, links.js, images.js:\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n    if (!auth?.user?.supabaseOrgID) {\n        throw new Error(`Organization context required for ${operation}. Please authenticate.`);\n    }\n}\n\n// Customer API deviation in customerErrors.js:\nexport function checkOrganizationScope(env, operation = 'unknown') {\n    if (env.type === 'webapp') {  // Different parameter structure!\n        if (!env.authentication?.user?.supabaseOrgID) {\n            throw new CustomerError(...);\n        }\n    }\n}\n\n// Customer API usage (incorrect):\nconst auth = getAuthenticationContext();\ncheckOrganizationScope({ authentication: auth }, 'fetchCustomers'); // Missing 'type' property",
+          "recommendation": "Remove the checkOrganizationScope function from src/errors/customerErrors.js and define it locally in src/api/customers.js following the established pattern. Replace the implementation with: `function checkOrganizationScope({ authentication: auth }, operation) { if (!auth?.user?.supabaseOrgID) { throw new CustomerError('Organization context required for ' + operation, CustomerErrorCodes.ORG_SCOPE_MISSING); } }`. This maintains consistency with the 5 other API modules while still using the CustomerError class for proper error handling. The pattern of defining checkOrganizationScope locally in each API file is intentional to avoid circular dependencies and maintain module independence."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Custom error handling wrapper breaks established error handling pattern",
+          "description": "The customer API introduces a withErrorHandling wrapper function (customerErrors.js:365-398) that wraps all API operations in try-catch blocks and transforms errors into CustomerError instances. This pattern is not used by any other API module in the codebase. All other API modules (projects.js, notes.js, tasks.js, links.js, images.js, prospects.js) throw errors directly and let the calling layer (hooks/services) handle error transformation and user messaging. This creates an inconsistent error handling architecture where: 1) Customer operations have errors pre-wrapped before reaching hooks, 2) All other operations let hooks handle errors, 3) Error handling responsibility is split between API and hook layers inconsistently, 4) Testing and debugging become more complex due to different error propagation paths.",
+          "file_paths": [
+            "src/api/customers.js:44-74,82-93,101-113",
+            "src/errors/customerErrors.js:365-398",
+            "src/api/projects.js:54-65",
+            "src/api/notes.js:31-82"
+          ],
+          "code_snippet": "// Customer API pattern (unique to customers.js):\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        const auth = getAuthenticationContext();\n        checkOrganizationScope({ authentication: auth }, 'fetchCustomers');\n        const response = await dataService.get('/api/customers', { params: queryParams });\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomers', { options });\n}\n\n// Established pattern (projects.js, notes.js, tasks.js, etc.):\nexport async function fetchProjectsForCustomer(customerId) {\n    if (!customerId) {\n        throw new Error('Customer ID is required');\n    }\n    const auth = getAuthenticationContext();\n    checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomer');\n    const response = await dataService.get(`/api/projects/customer/${customerId}`);\n    return normalizeProjectData(response.data || response);\n    // No error wrapper - errors propagate naturally to caller\n}",
+          "recommendation": "Remove the withErrorHandling wrapper from all customer API functions in src/api/customers.js. Let errors propagate naturally to the useCustomer hook where they can be caught, transformed to CustomerError if needed, and handled consistently with all other features. The hook layer (useCustomer.js) already has try-catch blocks and setError handling - this is the appropriate layer for error transformation. Update customers.js functions to follow the established pattern: directly throw errors without wrapping, check inputs at function start, and let axios/dataService errors bubble up. The setErrorWithFormatting function in useCustomer.js can still use formatErrorForUI for user-friendly messages."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Data normalization function placement inconsistent with service layer pattern",
+          "description": "The customer API defines a normalizeCustomerData function directly in src/api/customers.js (lines 14-29). However, the established pattern places data transformation and normalization logic in the service layer, not the API layer. For example: 1) projectService.js has processProjectData and processBackendProject for transformations, 2) noteService.js has transformBackendNote for normalization, 3) The API layer in notes.js and projects.js only makes HTTP calls and returns raw responses. The API layer should be a thin client for HTTP operations, while the service layer handles business logic and data transformation. The customer implementation blurs this separation of concerns by placing transformation logic in the API layer.",
+          "file_paths": [
+            "src/api/customers.js:14-29",
+            "src/services/customerService.js:30-83,90-101",
+            "src/api/projects.js:19-34",
+            "src/services/projectService.js:26-65"
+          ],
+          "code_snippet": "// Customer API (transformation in API layer):\n// src/api/customers.js\nfunction normalizeCustomerData(data) {\n    if (Array.isArray(data)) {\n        return data.map(customer => ({\n            id: customer.id || customer.__ID,\n            __ID: customer.id || customer.__ID,\n            ...customer\n        }));\n    }\n    return { id: data.id || data.__ID, __ID: data.id || data.__ID, ...data };\n}\n\n// Established pattern (transformation in service layer):\n// src/api/projects.js\nfunction normalizeProjectData(data) { /* minimal normalization */ }\n// src/services/projectService.js\nexport function processProjectData(projectData, relatedData = {}, source = 'filemaker') {\n    /* comprehensive transformation logic */\n}",
+          "recommendation": "Move the normalizeCustomerData function from src/api/customers.js into src/services/customerService.js and integrate it with the existing processBackendCustomerList and processBackendCustomerDetail functions. The API layer should return raw responses, and the service layer should handle all data transformation. Alternatively, since customerService already has comprehensive transformation functions, simply remove normalizeCustomerData from the API layer and use the existing service layer functions in the hooks. This maintains clear separation of concerns: API = HTTP operations, Services = business logic and transformations, Hooks = state management and orchestration."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Missing environment-aware routing pattern used by other API modules",
+          "description": "The customer API implementation does not include explicit environment detection and routing logic that other backend-integrated features demonstrate. While the implementation notes claim 'environment-aware routing through dataService', the actual customers.js code shows direct calls to dataService.get/post/patch/delete without any environment checks. In contrast, projects.js and notes.js include explicit comments about environment awareness and routing patterns (e.g., 'Environment-aware API client for project operations. Routes to backend REST API in webapp environment, FileMaker in legacy environment.'). The customer API relies entirely on dataService's internal routing, but doesn't document this dependency or provide fallback behavior if dataService routing changes. Other modules show more explicit control flow for environment handling.",
+          "file_paths": [
+            "src/api/customers.js:1-214",
+            "src/api/projects.js:1-10",
+            "src/hooks/useCustomer.js:93-126"
+          ],
+          "code_snippet": "// Customer API (no explicit environment handling documented):\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        // ... directly calls dataService without environment checks\n        const response = await dataService.get('/api/customers', { params: queryParams });\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomers', { options });\n}\n\n// Projects API pattern (explicit environment documentation):\n/**\n * Projects API Client - Backend Integration\n * Environment-aware API client for project operations.\n * Routes to backend REST API in webapp environment, FileMaker in legacy environment.\n * Feature flag control: use_backend_projects (checked at service/hook layer)\n */",
+          "recommendation": "Add clear documentation to src/api/customers.js header comments explaining the environment-aware routing architecture and how it relies on dataService for environment detection. Consider whether customers.js should follow the projects.js pattern of explicit environment handling or whether the current implicit delegation to dataService is acceptable. If staying with implicit routing, document this architectural decision clearly at the file level. If environment-specific behavior is needed, add explicit getEnvironmentContext() checks similar to how useCustomer.js handles it (lines 93-126). Consistency in documentation and pattern clarity will help future maintainers understand the routing architecture."
+        }
+      ],
+      "patterns_reviewed": 0,
+      "violations_found": 4
+    }
+  },
+  "JudgeNode": {
+    "timestamp": "2026-01-16T19:47:06.667Z",
+    "output": {
+      "total_findings": 18,
+      "kept_findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Toggle Customer Status endpoint path does not match API contract specification",
+          "description": "TSK0005 (Update useCustomer hook for backend API) requires 'handleCustomerStatusToggle uses PATCH /api/customers/{id}/status' according to acceptance criteria. However, the implementation uses '/api/customers/{id}/toggle-status' instead of '/api/customers/{id}/status'. The API contract specification in requirements/customers/api-contracts.md (line 473) explicitly defines the endpoint as 'PATCH /api/customers/:id/status'. The implemented endpoint path '/toggle-status' does not match the documented contract.",
+          "file_paths": [
+            "src/api/customers.js:167",
+            "requirements/customers/api-contracts.md:473"
+          ],
+          "code_snippet": null,
+          "recommendation": "Change the endpoint path in src/api/customers.js line 167 from `/api/customers/${customerId}/toggle-status` to `/api/customers/${customerId}/status` to match the API contract. Also update the integration tests in src/api/__tests__/customers.test.js lines 724-727 and 742-745 to verify the correct endpoint path is being called."
+        },
+        {
+          "id": "COM-002",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Toggle Customer Status endpoint missing request body as specified in API contract",
+          "description": "According to the API contract in requirements/customers/api-contracts.md (lines 480-485), the PATCH /api/customers/:id/status endpoint requires a request body with the format {\"is_active\": boolean}. However, the implementation in src/api/customers.js line 167 calls dataService.patch() with no request body. The function signature 'toggleCustomerStatus(customerId)' does not accept or send the required 'is_active' parameter. This violates the documented API contract which explicitly shows the request body requirement.",
+          "file_paths": [
+            "src/api/customers.js:158-169",
+            "requirements/customers/api-contracts.md:480-485",
+            "src/hooks/useCustomer.js:285-310"
+          ],
+          "code_snippet": null,
+          "recommendation": "Update the toggleCustomerStatus function signature to accept an 'isActive' parameter: `toggleCustomerStatus(customerId, isActive)` and include it in the request body. Update the implementation at line 167 to: `await dataService.patch(`/api/customers/${customerId}/status`, { is_active: isActive })`. Also update all callers in useCustomer.js (handleCustomerStatusToggle) to pass the active status value when calling toggleCustomerStatus."
+        },
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Race condition in debounced search with stale closure",
+          "description": "In src/hooks/useCustomer.js, the handleCustomerSearch function creates a setTimeout callback that captures the current 'query' parameter, but if the user types quickly and triggers multiple debounced searches, the environment context (getEnvironmentContext()) is fetched inside the setTimeout callback at lines 416. This can lead to race conditions where: 1) Multiple searches execute concurrently with different query values, 2) Results from an older search might arrive after a newer search, causing stale data to overwrite fresh results, 3) The isSearching state might be set to false prematurely if an earlier search completes after a later one starts.",
+          "file_paths": [
+            "src/hooks/useCustomer.js:381-437"
+          ],
+          "code_snippet": "const handleCustomerSearch = useCallback((query, options = {}) => {\n    // Clear existing timeout\n    if (searchTimeoutRef.current) {\n        clearTimeout(searchTimeoutRef.current);\n    }\n    // ...\n    searchTimeoutRef.current = setTimeout(async () => {\n        try {\n            const result = await searchCustomers(query, { limit });\n            const env = getEnvironmentContext();\n            // Process results - but 'query' might be stale\n            setSearchResults(processedResults);\n        } finally {\n            setIsSearching(false); // Race: might clear isSearching for newer search\n        }\n    }, debounceMs);\n}, [setErrorWithFormatting]);",
+          "recommendation": "Implement request cancellation using AbortController or add a request ID tracking mechanism. Store the current search request ID in a ref, check if the request is still current before setting results: `const requestId = ++searchRequestIdRef.current; ... if (requestId === searchRequestIdRef.current) { setSearchResults(...) }`. This ensures only the most recent search results are applied to state."
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing isActive parameter in toggleCustomerStatus API call",
+          "description": "In src/api/customers.js line 158-169, the toggleCustomerStatus function accepts only customerId as a parameter but the API contract requires sending the new is_active value in the request body. However, in src/hooks/useCustomer.js line 301, the hook calls toggleCustomerStatus(customerId, active) with two parameters, but the API function signature doesn't accept the second parameter, so it's silently ignored. The PATCH request at line 167 is sent without a body, which violates the API contract that expects `{ is_active: boolean }`.",
+          "file_paths": [
+            "src/api/customers.js:158-169",
+            "src/hooks/useCustomer.js:295-331"
+          ],
+          "code_snippet": "// src/api/customers.js\nexport async function toggleCustomerStatus(customerId) { // Missing 'isActive' param\n    return withErrorHandling(async () => {\n        // ...\n        const response = await dataService.patch(`/api/customers/${customerId}/toggle-status`);\n        // No request body sent!\n        return normalizeCustomerData(response.data || response);\n    }, 'toggleCustomerStatus', { customerId });\n}\n\n// src/hooks/useCustomer.js\nconst result = await toggleCustomerStatus(customerId, active); // 'active' param ignored",
+          "recommendation": "Update the toggleCustomerStatus function signature to accept the isActive parameter and include it in the request body: `export async function toggleCustomerStatus(customerId, isActive) { ... const response = await dataService.patch(`/api/customers/${customerId}/status`, { is_active: isActive }); ... }`. Also update the withErrorHandling context to include the isActive value for better debugging."
+        },
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent checkOrganizationScope implementation violates established pattern",
+          "description": "The customer API introduces a custom checkOrganizationScope function in src/errors/customerErrors.js that expects a different parameter structure (env.type === 'webapp') than the established pattern used across all other API modules (projects.js, notes.js, tasks.js, links.js, images.js). The established pattern defines checkOrganizationScope locally in each API file and accepts { authentication: auth } with a simple check for auth?.user?.supabaseOrgID. The customer implementation creates a different interface requiring env.type which breaks architectural consistency and creates confusion about which pattern to follow. Additionally, the customer API calls this function with { authentication: auth } (lines 48, 88, 108, etc. in customers.js) which doesn't match the function's expected { type, authentication } structure, causing the validation to be silently bypassed.",
+          "file_paths": [
+            "src/api/customers.js:48,88,108,127,146,165,187,208",
+            "src/errors/customerErrors.js:346-356",
+            "src/api/projects.js:42-46",
+            "src/api/notes.js:9-13",
+            "src/api/tasks.js:9-13"
+          ],
+          "code_snippet": "// Established pattern in projects.js, notes.js, tasks.js, links.js, images.js:\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n    if (!auth?.user?.supabaseOrgID) {\n        throw new Error(`Organization context required for ${operation}. Please authenticate.`);\n    }\n}\n\n// Customer API deviation in customerErrors.js:\nexport function checkOrganizationScope(env, operation = 'unknown') {\n    if (env.type === 'webapp') {  // Different parameter structure!\n        if (!env.authentication?.user?.supabaseOrgID) {\n            throw new CustomerError(...);\n        }\n    }\n}\n\n// Customer API usage (incorrect):\nconst auth = getAuthenticationContext();\ncheckOrganizationScope({ authentication: auth }, 'fetchCustomers'); // Missing 'type' property",
+          "recommendation": "Remove the checkOrganizationScope function from src/errors/customerErrors.js and define it locally in src/api/customers.js following the established pattern. Replace the implementation with: `function checkOrganizationScope({ authentication: auth }, operation) { if (!auth?.user?.supabaseOrgID) { throw new CustomerError('Organization context required for ' + operation, CustomerErrorCodes.ORG_SCOPE_MISSING); } }`. This maintains consistency with the 5 other API modules while still using the CustomerError class for proper error handling. The pattern of defining checkOrganizationScope locally in each API file is intentional to avoid circular dependencies and maintain module independence."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Custom error handling wrapper breaks established error handling pattern",
+          "description": "The customer API introduces a withErrorHandling wrapper function (customerErrors.js:365-398) that wraps all API operations in try-catch blocks and transforms errors into CustomerError instances. This pattern is not used by any other API module in the codebase. All other API modules (projects.js, notes.js, tasks.js, links.js, images.js, prospects.js) throw errors directly and let the calling layer (hooks/services) handle error transformation and user messaging. This creates an inconsistent error handling architecture where: 1) Customer operations have errors pre-wrapped before reaching hooks, 2) All other operations let hooks handle errors, 3) Error handling responsibility is split between API and hook layers inconsistently, 4) Testing and debugging become more complex due to different error propagation paths.",
+          "file_paths": [
+            "src/api/customers.js:44-74,82-93,101-113",
+            "src/errors/customerErrors.js:365-398",
+            "src/api/projects.js:54-65",
+            "src/api/notes.js:31-82"
+          ],
+          "code_snippet": "// Customer API pattern (unique to customers.js):\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        const auth = getAuthenticationContext();\n        checkOrganizationScope({ authentication: auth }, 'fetchCustomers');\n        const response = await dataService.get('/api/customers', { params: queryParams });\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomers', { options });\n}\n\n// Established pattern (projects.js, notes.js, tasks.js, etc.):\nexport async function fetchProjectsForCustomer(customerId) {\n    if (!customerId) {\n        throw new Error('Customer ID is required');\n    }\n    const auth = getAuthenticationContext();\n    checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomer');\n    const response = await dataService.get(`/api/projects/customer/${customerId}`);\n    return normalizeProjectData(response.data || response);\n    // No error wrapper - errors propagate naturally to caller\n}",
+          "recommendation": "Remove the withErrorHandling wrapper from all customer API functions in src/api/customers.js. Let errors propagate naturally to the useCustomer hook where they can be caught, transformed to CustomerError if needed, and handled consistently with all other features. The hook layer (useCustomer.js) already has try-catch blocks and setError handling - this is the appropriate layer for error transformation. Update customers.js functions to follow the established pattern: directly throw errors without wrapping, check inputs at function start, and let axios/dataService errors bubble up. The setErrorWithFormatting function in useCustomer.js can still use formatErrorForUI for user-friendly messages."
+        }
+      ],
+      "dropped_findings": [
+        "COM-003",
+        "COD-003",
+        "COD-004",
+        "COD-005",
+        "ARC-003",
+        "ARC-004"
+      ],
+      "merged_findings": [],
+      "decisions": [
+        {
+          "finding_id": "COM-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COM-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COM-003",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-003",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-003",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        }
+      ],
+      "summary": "Judge phase complete: 18 findings reviewed, 6 kept (critical/major), 6 dropped (minor/suggestion), 0 merged (duplicates)"
+    }
+  }
+}

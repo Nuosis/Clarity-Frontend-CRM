@@ -77,10 +77,13 @@
             }
           ],
           "eventFile": "playground/filemaker-removal-requirements/events/environment-detection-without-filemaker.json",
-          "status": "pending",
+          "status": "failed",
           "resultPath": "playground/filemaker-removal-requirements/results/environment-detection-without-filemaker/",
           "createdAt": "2026-01-11T14:15:49.525Z",
-          "updatedAt": "2026-01-11T14:15:49.525Z"
+          "updatedAt": "2026-01-16T20:27:31.530Z",
+          "lastRunAt": "2026-01-16T20:27:31.530Z",
+          "lastDuration": 87,
+          "lastError": "Test failures:\nAssertion: FileMaker integration removal status\nExecution failed\nScenario failed"
         },
         {
           "id": "SCN-1768140949525-n2v6",
@@ -1134,11 +1137,11 @@
         }
       ],
       "createdAt": "2026-01-11T12:16:12.862Z",
-      "updatedAt": "2026-01-11T14:22:57.131Z",
+      "updatedAt": "2026-01-16T20:27:31.530Z",
       "currentSetupStep": "Ready for testing",
       "scriptPath": "playground/filemaker-removal-requirements/playground.js",
       "scriptLanguage": "js"
     }
   },
-  "updatedAt": "2026-01-11T14:22:57.131Z"
+  "updatedAt": "2026-01-16T20:27:31.530Z"
 }

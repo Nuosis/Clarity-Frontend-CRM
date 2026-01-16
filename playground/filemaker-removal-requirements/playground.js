@@ -290,13 +290,23 @@ const scenarioRunners = {
       logger.output('detectFileMaker_function_found', fmDetectCheck);
     }
 
-    return {
+    // Check for FileMaker references in codebase (for the assertion)
+    const fileMakerRefsCheck = grepCodebase('FileMaker', { path: 'src' });
+    logger.output('filemaker_references_check', fileMakerRefsCheck);
+
+    const resultObject = {
       dataServiceExists,
       hasEnvironmentTypes: envTypesCheck.found,
       hasAuthMethods: authMethodsCheck.found,
       signInExists,
-      hasDetectFileMaker: signInExists && grepCodebase('detectFileMaker', { path: 'src/components/auth/SignIn.jsx' }).found
+      hasDetectFileMaker: signInExists && grepCodebase('detectFileMaker', { path: 'src/components/auth/SignIn.jsx' }).found,
     };
+
+    // Add the FileMaker integration removal status - return count (0 = no matches = success)
+    // Note: Using count instead of boolean to avoid falsy value fallback issue in line 976
+    resultObject['FileMaker integration removal status'] = fileMakerRefsCheck.count;
+
+    return resultObject;
   },
 
   /**

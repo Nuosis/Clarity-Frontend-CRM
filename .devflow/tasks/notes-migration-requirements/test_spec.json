@@ -1,0 +1,326 @@
+{
+  "generatedAt": "2026-01-16T19:41:18.661Z",
+  "inputs": [
+    {
+      "name": "note",
+      "type": "string",
+      "description": "The content/text of the note to be created",
+      "source": "noteService.createNewNote() - content parameter"
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "description": "The type/category of the note (defaults to 'general')",
+      "source": "noteService.createNewNote() - type parameter"
+    },
+    {
+      "name": "project_id",
+      "type": "string",
+      "description": "UUID of the parent project (if note is associated with a project)",
+      "source": "POST /api/projects/{id}/notes endpoint - path parameter"
+    },
+    {
+      "name": "task_id",
+      "type": "string",
+      "description": "UUID of the parent task (if note is associated with a task)",
+      "source": "POST /api/tasks/{id}/notes endpoint - path parameter"
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "description": "UUID of the parent customer (if note is associated with a customer)",
+      "source": "POST /api/customers/{id}/notes endpoint - path parameter"
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "description": "Maximum number of notes to return in pagination (default 50, max 200)",
+      "source": "GET /api/notes query parameter"
+    },
+    {
+      "name": "offset",
+      "type": "number",
+      "description": "Number of notes to skip for pagination (default 0)",
+      "source": "GET /api/notes query parameter"
+    },
+    {
+      "name": "organization_id",
+      "type": "string",
+      "description": "Organization UUID extracted from JWT claims for multi-tenancy scoping",
+      "source": "JWT user_metadata.organization_id via X-Organization-ID header"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "note",
+      "type": "object",
+      "description": "A note object with id, content, type, timestamps, creator, and parent association",
+      "assertion": "should return object with id (UUID), note (string), type (string), project_id/task_id/customer_id (UUID or null), created_at (ISO timestamp), created_by (UUID), updated_at (ISO timestamp), organization_id (UUID)"
+    },
+    {
+      "name": "notes",
+      "type": "array",
+      "description": "Array of note objects for a given parent entity",
+      "assertion": "should return array of note objects sorted by created_at DESC with pagination metadata (total, limit, offset, has_more)"
+    },
+    {
+      "name": "error",
+      "type": "object",
+      "description": "Structured error response with code and message",
+      "assertion": "should return object with error_code (string), message (string), and optional details (object)"
+    },
+    {
+      "name": "created_note",
+      "type": "object",
+      "description": "Newly created note returned after POST operation",
+      "assertion": "should return note object with auto-generated id, timestamps, and created_by matching authenticated user"
+    },
+    {
+      "name": "updated_note",
+      "type": "object",
+      "description": "Updated note returned after PATCH operation",
+      "assertion": "should return note object with modified note/type fields and updated_at timestamp newer than created_at"
+    },
+    {
+      "name": "deleted_note_id",
+      "type": "string",
+      "description": "UUID of the deleted note",
+      "assertion": "should return the id of the deleted note and subsequent GET should return 404"
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "Create project note successfully",
+      "description": "User creates a new note associated with a project they have access to",
+      "steps": [
+        "Authenticate user and extract organization_id from JWT",
+        "Submit POST /api/projects/{project_id}/notes with note content and type",
+        "Backend validates project exists and belongs to user's organization",
+        "Backend creates note with project_id, organization_id, created_by from JWT",
+        "Backend returns newly created note object"
+      ],
+      "expectedOutcome": "Note is created with valid UUID, timestamps, and project association; returned object includes all fields and matches input content",
+      "priority": "critical"
+    },
+    {
+      "name": "Create task note successfully",
+      "description": "User creates a new note associated with a task they have access to",
+      "steps": [
+        "Authenticate user and extract organization_id from JWT",
+        "Submit POST /api/tasks/{task_id}/notes with note content and type",
+        "Backend validates task exists and belongs to user's organization",
+        "Backend creates note with task_id, organization_id, created_by from JWT",
+        "Backend returns newly created note object"
+      ],
+      "expectedOutcome": "Note is created with valid UUID, timestamps, and task association; returned object includes all fields and matches input content",
+      "priority": "critical"
+    },
+    {
+      "name": "Fetch notes for project with pagination",
+      "description": "User retrieves paginated list of notes for a specific project",
+      "steps": [
+        "Authenticate user and extract organization_id from JWT",
+        "Submit GET /api/projects/{project_id}/notes?limit=50&offset=0",
+        "Backend validates project exists and belongs to user's organization",
+        "Backend fetches notes filtered by project_id and organization_id, ordered by created_at DESC",
+        "Backend returns paginated response with notes array and metadata"
+      ],
+      "expectedOutcome": "Returns array of up to 50 notes sorted newest first, with pagination metadata (total, limit, offset, has_more)",
+      "priority": "critical"
+    },
+    {
+      "name": "Reject note creation without parent entity",
+      "description": "Backend enforces exactly one parent foreign key constraint",
+      "steps": [
+        "Attempt to create note with no project_id, task_id, or customer_id",
+        "Backend validation fails check constraint"
+      ],
+      "expectedOutcome": "Returns 400 error with code INVALID_REQUEST and message indicating exactly one parent entity is required",
+      "priority": "critical"
+    },
+    {
+      "name": "Reject note creation with multiple parent entities",
+      "description": "Backend enforces exactly one parent foreign key constraint",
+      "steps": [
+        "Attempt to create note with both project_id and task_id populated",
+        "Backend validation fails check constraint"
+      ],
+      "expectedOutcome": "Returns 400 error with code INVALID_REQUEST and message indicating exactly one parent entity is allowed",
+      "priority": "critical"
+    },
+    {
+      "name": "Enforce organization scoping via RLS",
+      "description": "User cannot access notes from another organization",
+      "steps": [
+        "Authenticate user A from organization X",
+        "Attempt to fetch notes for project belonging to organization Y",
+        "RLS policy filters notes by organization_id from JWT",
+        "Backend returns empty array (no permission error exposed)"
+      ],
+      "expectedOutcome": "Returns empty array or 404 error; user cannot see notes from other organizations",
+      "priority": "critical"
+    },
+    {
+      "name": "Validate note content length",
+      "description": "Backend enforces minimum and maximum content length",
+      "steps": [
+        "Submit note with empty content string",
+        "Backend validation fails"
+      ],
+      "expectedOutcome": "Returns 400 error with code INVALID_NOTE_CONTENT and message indicating content cannot be empty",
+      "priority": "high"
+    },
+    {
+      "name": "Update note content successfully",
+      "description": "User updates the content of an existing note they created",
+      "steps": [
+        "Authenticate user and fetch existing note created by same user",
+        "Submit PATCH /api/notes/{note_id} with new note content",
+        "Backend validates note exists and belongs to user's organization",
+        "Backend updates note field and updated_at timestamp",
+        "Backend returns updated note object"
+      ],
+      "expectedOutcome": "Note content is updated, updated_at is newer than created_at, created_at and created_by remain unchanged",
+      "priority": "high"
+    },
+    {
+      "name": "Delete note successfully",
+      "description": "User deletes a note they have permission to delete",
+      "steps": [
+        "Authenticate user and fetch existing note from their organization",
+        "Submit DELETE /api/notes/{note_id}",
+        "Backend validates note exists and belongs to user's organization",
+        "Backend performs hard delete",
+        "Backend returns deleted note ID"
+      ],
+      "expectedOutcome": "Note is permanently deleted from database; subsequent GET returns 404",
+      "priority": "high"
+    },
+    {
+      "name": "Cascade delete notes when parent project is deleted",
+      "description": "Deleting a project automatically deletes all associated notes",
+      "steps": [
+        "Create project with multiple associated notes",
+        "Delete parent project",
+        "Database ON DELETE CASCADE triggers",
+        "All notes with matching project_id are deleted"
+      ],
+      "expectedOutcome": "All notes associated with deleted project are removed; no orphaned notes remain",
+      "priority": "high"
+    },
+    {
+      "name": "Reject unauthorized note access",
+      "description": "User cannot access notes without valid authentication",
+      "steps": [
+        "Submit GET /api/notes without authentication header",
+        "Backend authentication middleware rejects request"
+      ],
+      "expectedOutcome": "Returns 401 error with code UNAUTHORIZED",
+      "priority": "critical"
+    },
+    {
+      "name": "Handle pagination edge case: offset beyond total",
+      "description": "Request with offset greater than total notes returns empty array",
+      "steps": [
+        "Project has 10 total notes",
+        "Submit GET /api/projects/{id}/notes?limit=50&offset=20",
+        "Backend calculates has_more as false"
+      ],
+      "expectedOutcome": "Returns empty notes array with has_more=false and total=10",
+      "priority": "medium"
+    },
+    {
+      "name": "Enforce pagination limit maximum",
+      "description": "Backend caps limit parameter at 200 to prevent resource exhaustion",
+      "steps": [
+        "Submit GET /api/notes?limit=500",
+        "Backend enforces max limit of 200"
+      ],
+      "expectedOutcome": "Returns up to 200 notes despite requesting 500; response metadata shows limit=200",
+      "priority": "medium"
+    },
+    {
+      "name": "Preserve creator and timestamp during migration",
+      "description": "Migrated notes maintain original created_at and created_by values",
+      "steps": [
+        "Export FileMaker note with ~CreationTimestamp and ~CreatedBy",
+        "Map FileMaker creator to Supabase user UUID",
+        "Bulk insert note with explicit created_at and created_by",
+        "Verify migrated note has original timestamp and creator"
+      ],
+      "expectedOutcome": "Migrated note has created_at matching FileMaker ~CreationTimestamp and created_by matching mapped user UUID",
+      "priority": "critical"
+    },
+    {
+      "name": "Validate parent entity exists before note creation",
+      "description": "Backend rejects note creation if parent entity does not exist",
+      "steps": [
+        "Submit POST /api/projects/{non_existent_uuid}/notes",
+        "Backend validates project_id foreign key",
+        "Foreign key constraint fails"
+      ],
+      "expectedOutcome": "Returns 404 error with code ENTITY_NOT_FOUND and message indicating parent project does not exist",
+      "priority": "high"
+    },
+    {
+      "name": "Handle concurrent note creation on same parent",
+      "description": "Multiple users can create notes on the same project simultaneously",
+      "steps": [
+        "User A and User B both authenticated to same organization",
+        "Both submit POST /api/projects/{id}/notes concurrently",
+        "Backend processes both requests independently",
+        "Both notes are created with unique IDs and timestamps"
+      ],
+      "expectedOutcome": "Both notes are created successfully with different created_by values; no race conditions or conflicts",
+      "priority": "medium"
+    },
+    {
+      "name": "Reject note update if user lacks permission",
+      "description": "RLS policy prevents users from updating notes in other organizations",
+      "steps": [
+        "User A from organization X creates note",
+        "User B from organization Y attempts PATCH /api/notes/{note_id}",
+        "RLS policy filters by organization_id from JWT",
+        "Update fails silently or returns 404"
+      ],
+      "expectedOutcome": "Returns 404 error; user cannot update notes from other organizations",
+      "priority": "high"
+    },
+    {
+      "name": "Return notes sorted by created_at DESC",
+      "description": "Notes are always returned in reverse chronological order",
+      "steps": [
+        "Create 3 notes with timestamps T1, T2, T3 (T1 < T2 < T3)",
+        "Submit GET /api/projects/{id}/notes",
+        "Backend orders by created_at DESC"
+      ],
+      "expectedOutcome": "Notes array is ordered [T3, T2, T1] with newest first",
+      "priority": "high"
+    },
+    {
+      "name": "Validate type field defaults to 'general'",
+      "description": "Omitting type field in create request defaults to 'general'",
+      "steps": [
+        "Submit POST /api/projects/{id}/notes with note content but no type field",
+        "Backend applies default value 'general' to type column",
+        "Backend returns created note"
+      ],
+      "expectedOutcome": "Created note has type='general'",
+      "priority": "medium"
+    },
+    {
+      "name": "Verify organization_id derivation from parent entity",
+      "description": "Note inherits organization_id from parent project/task/customer",
+      "steps": [
+        "Fetch project with organization_id = ORG_X",
+        "Create note for that project",
+        "Backend derives organization_id from parent project"
+      ],
+      "expectedOutcome": "Created note has organization_id matching parent project's organization_id",
+      "priority": "high"
+    }
+  ],
+  "entryPoints": [],
+  "stateVariables": [],
+  "asyncBoundaries": []
+}

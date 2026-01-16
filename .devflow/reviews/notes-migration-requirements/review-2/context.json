@@ -1,0 +1,229 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-16T19:40:26.089Z",
+    "featureSlug": "notes-migration-requirements",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 2,
+    "featureName": "Notes Migration Requirements",
+    "mode": "autonomous",
+    "sessionId": "062902f9-b841-4bbe-ab38-83320cf99138",
+    "processId": 1768592426089,
+    "lastUpdated": "2026-01-16T19:46:47.884Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-16T19:40:26.333Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Create requirements/notes directory structure (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a new documentation scaffold under 'requirements/notes' by creating the directory and adding placeholder templates for migration planning and requirements capture. Key files added include 'requirements/notes/README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md'. Templates were standardized with '[TO BE DOCUMENTED]' placeholders, example patterns from the Teams migration, and reminders for code references, while explicitly following the Backend Change Protocol to document requirements without changing backend infrastructure.\n\n---\n\n### Document current notes implementation (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive documentation of the existing notes feature by analyzing the FileMaker layout and the full frontend stack (API, services, hooks, and UI), including detailed end-to-end data flows and current CRUD coverage. Added the writeup to 'requirements/notes/current-implementation.md' (574 lines), referencing key files such as 'src/api/notes.js', 'src/api/projects.js', 'src/api/tasks.js', 'src/services/noteService.js', 'src/hooks/useNote.js', 'src/hooks/useProject.js', 'src/hooks/useTask.js', 'src/components/projects/ProjectNotesTab.jsx', and 'src/components/tasks/TaskList.jsx'. Captured important decisions and findings, notably the inconsistent note data shape between project notes (raw FileMaker fieldData) and task notes (processed content), plus limitations like missing update delete, no pagination, and an unused 'type' field. Verified the project build succeeds and updated task status and timestamps accordingly.\n\n---\n\n### Analyze notes UI behavior and user flows (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nDocumented the existing notes UI behavior and end-to-end user flows by adding a large new 'UI Behavior and User Flows' section to 'requirements/notes/current-implementation.md', covering creation workflows for project and task notes, display/sorting patterns, validation rules, state management, refresh behavior, error UX, accessibility, modal behavior, and explicitly noting that edit/delete are not implemented. The documentation references the current implementation across key files including 'src/components/projects/ProjectNotesTab.jsx', 'src/components/tasks/TaskList.jsx', 'src/components/global/TextInput.jsx', 'src/hooks/useNote.js', 'src/hooks/useTask.js', 'src/services/noteService.js', and 'src/services/taskService.js', with line-level callouts. Important decisions/findings captured include the project vs task notes data-format inconsistency, differing sorting responsibility (backend vs service layer), and that metadata is intentionally hidden from the UI. The task status and timestamp were updated and the build was verified to compile successfully.\n\n---\n\n### Map FileMaker devNotes schema to Supabase (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive FileMaker devNotes to Supabase data model mapping documentation by fully replacing the placeholder template in 'requirements/notes/data-model-mapping.md' with detailed schema, field mappings, migration transformations, constraints, indexes, triggers, and RLS guidance, including references to existing code such as 'src/api/fileMaker.js', 'src/api/notes.js', 'src/api/projects.js', and 'src/api/tasks.js'. Updated 'tasks.json' to mark 'TSK0004' as completed after confirming the build succeeded. Key decisions documented include using a single 'notes' table with nullable parent foreign keys plus a check constraint to enforce exactly one parent, deriving 'organization_id' from the parent entity for multi-tenancy, and applying cascade deletes and partial indexes for performance.\n\n---\n\n### Define backend API contracts for notes (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented complete backend API contract documentation for the notes feature by replacing placeholder content in 'requirements/notes/api-contracts.md' with a full 722-line spec covering 5 REST endpoints, request and response schemas, validation rules, error catalog, and Supabase RLS and realtime access patterns based on existing backend documentation conventions. Updated 'tasks.json' to mark 'TSK0005' as completed and verified the project still builds successfully. Key decisions documented include HMAC-SHA256 auth for the backend API vs JWT for Supabase access, enforcing exactly one parent entity with organization scoping, offset pagination (default 50 max 200), hard deletes, and immutable parent assignment after creation.\n\n---\n\n### Design authorization and RLS policies (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive notes authorization and RLS design documentation by adding 'requirements/notes/authorization.md', detailing auth methods (HMAC backend vs JWT direct), proposed SQL helper functions for parent-entity access inheritance, and full SELECT, INSERT, UPDATE, DELETE policy specifications with org scoping via JWT 'user_metadata.organization_id'. Key decisions captured include a simple equal-permissions model (no initial RBAC), backend API using the service role with app-level org checks, frontend using the anon key under RLS, and cascade deletion to prevent orphaned notes. Verified the project still compiles, then marked the task complete and updated the 'updated_at' timestamp in 'tasks.json'.\n\n---\n\n### Create migration and backfill plan (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive Notes migration and backfill plan from FileMaker to Supabase, covering export, ID and user mapping, transformation pipeline, bulk load strategy, validation, rollback, and a recommended big bang cutover timeline. Key work landed in 'requirements/notes/migration-plan.md' (filling the prior placeholder with a full template-aligned plan and appendices including scripts and checks) and 'tasks.json' (marking TSK0007 as DONE and updating the session timestamp). Important decisions documented include using the service role key to bypass RLS during bulk operations, batching inserts at 500 records with rate limiting and retries, deriving organization strictly from the parent entity, and mapping unknown creators to a migration user with an orphaned-note tolerance under 5%. Build verification was run after updates to confirm everything still compiles successfully.\n\n---\n\n### Define acceptance criteria and test cases (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive acceptance criteria and test cases for the notes migration, covering CRUD parity with FileMaker, migration validation, security/authorization, performance, accessibility, and deployment/rollback scenarios. Added a new requirements document at 'requirements/notes/acceptance-criteria.md' (~1,836 lines) with detailed checkpoints, categorized test cases, SQL validation queries, and explicit MVP limitations (eg no edit/delete UI, offset pagination, no initial full-text search). Updated 'tasks.json' to mark TSK0008 as done with implementation notes, and verified the project build succeeds after the documentation-only changes.\n\n---\n\n### Write requirements README overview (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive overview README to replace the placeholder at 'requirements/notes/README.md', consolidating the Notes migration requirements into a single hub with navigation links, feature and architecture summaries, key decisions, dependencies, risks, testing strategy, open backend questions, timeline, and ownership details. Updated 'tasks.json' to mark 'TSK0009' complete and refreshed the 'updated_at' timestamp. Verified the build compiles successfully after the documentation and task-tracking changes, ensuring cross-references and code pointers are consistent.\n\n---\n\n### Review and validate requirements completeness (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nCompleted a comprehensive review and validation of the Notes migration requirements across 7 documentation files including 'README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md', confirming the package is approved and implementation-ready with 5 non-blocking open design questions noted. Added the consolidated review report at '.devflow/tasks/notes-migration-requirements/REQUIREMENTS_REVIEW.md' capturing document-by-document findings, code reference checks, consistency validation, and schema and security assessments. Updated 'tasks.json' to mark 'TSK0010' complete and set 'review_status' to 'approved', then re-verified the build passes after the change.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 10,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 243
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-16T19:40:54.975Z",
+    "output": {
+      "findings": [],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-16T19:42:12.716Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing error handling in async parent entity detection",
+          "description": "The `detectParentEntity()` function in migration-plan.md (lines 175-237) performs multiple async Supabase queries without proper error handling. If any query fails (network issues, auth problems, etc.), the function will throw an unhandled exception that could crash the entire migration process mid-stream.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "async function detectParentEntity(fkId, supabase) {\n  const { data: project } = await supabase\n    .from('projects')\n    .select('id, organization_id')\n    .eq('id', fkId)\n    .maybeSingle();\n  // No error handling if query fails",
+          "recommendation": "Wrap each Supabase query in try-catch blocks and handle errors gracefully. Consider returning a specific error state that can be retried or logged. Example:\n\ntry {\n  const { data: project, error } = await supabase.from('projects')...\n  if (error) throw error;\n  if (project) return { entity_type: 'project', ... };\n} catch (error) {\n  console.error(`Failed to query projects for fkId ${fkId}:`, error);\n  return { entity_type: 'query_failed', error: error.message, fkId };\n}"
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "No retry logic for failed Supabase queries in transformation",
+          "description": "The transformation script (lines 587-722) performs database lookups for every note to detect parent entities. With potentially thousands of notes, network failures or rate limiting could cause the entire transformation to fail. The script only catches errors at the note level but doesn't implement retry logic for transient failures.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "for (const fmNote of exportData.notes) {\n  try {\n    const parentInfo = await detectParentEntity(fmNote._fkID, supabase);\n    // No retry on transient failures\n  } catch (error) {\n    invalidNotes.push({ reason: error.message, fmNote });\n  }\n}",
+          "recommendation": "Implement exponential backoff retry logic for database queries. Add a retry helper function:\n\nasync function withRetry(fn, maxRetries = 3) {\n  for (let i = 0; i < maxRetries; i++) {\n    try {\n      return await fn();\n    } catch (error) {\n      if (i === maxRetries - 1) throw error;\n      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));\n    }\n  }\n}\n\nThen use: const parentInfo = await withRetry(() => detectParentEntity(fmNote._fkID, supabase));"
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Potential memory exhaustion from loading entire dataset",
+          "description": "The transformation script (line 596) loads the entire export file into memory: `JSON.parse(fs.readFileSync('migration-data/notes-export.json'))`. For large datasets (10,000+ notes), this could cause memory issues. The script then processes all notes in a single loop without streaming.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const exportData = JSON.parse(fs.readFileSync('migration-data/notes-export.json'));\n// Entire dataset in memory\nfor (const fmNote of exportData.notes) {\n  // Process all notes\n}",
+          "recommendation": "Use streaming JSON parsing for large datasets. Consider using a library like 'stream-json' or process in chunks:\n\nconst stream = fs.createReadStream('migration-data/notes-export.json');\nconst parser = JSONStream.parse('notes.*');\nstream.pipe(parser);\n\nfor await (const fmNote of parser) {\n  // Process one note at a time\n}\n\nAlternatively, if files are <100MB, current approach is acceptable but add a memory check and warning."
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "moderate",
+          "title": "Race condition in batch insert with sequential processing",
+          "description": "The load script (lines 728-799) processes batches sequentially with only a 1-second delay between batches, but doesn't verify that each batch completed successfully before proceeding. If a batch insert is still processing when the next batch starts, this could cause constraint violations or data corruption.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const { data, error } = await supabase\n  .from('notes')\n  .insert(batch);\n\nif (error) {\n  // Logged but continues to next batch\n  failedBatches.push({ batchIndex: i, batch, error: error.message });\n}\n\n// Rate limiting - pause between batches\nif (i < batches.length - 1) {\n  await new Promise(resolve => setTimeout(resolve, 1000));\n}",
+          "recommendation": "Add explicit verification that the insert completed before proceeding. The 'await' should handle this, but add verification:\n\nconst { data, error } = await supabase.from('notes').insert(batch);\n\nif (error) {\n  console.error(`Batch ${i + 1} failed:`, error);\n  // Stop processing on critical errors\n  if (error.code === 'PGRST116' || error.code === '23505') {\n    throw new Error(`Critical error in batch ${i + 1}: ${error.message}`);\n  }\n  failedBatches.push({ batchIndex: i, batch, error });\n} else {\n  // Verify data was inserted\n  console.log(`  ✅ Batch ${i + 1} inserted ${data?.length || batch.length} records`);\n}"
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "moderate",
+          "title": "Missing null checks for environment variables",
+          "description": "The transformation script (lines 598-609) uses environment variables without verifying they exist. If SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or MIGRATION_USER_ID are missing, the script will fail with cryptic errors rather than clear validation messages.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY\n);\n\nconst migrationUserId = process.env.MIGRATION_USER_ID ||\n  emailToUUID.get('migration@claritybusinesssolutions.ca');",
+          "recommendation": "Add environment variable validation at the start of each script:\n\nfunction validateEnvironment() {\n  const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];\n  const missing = required.filter(key => !process.env[key]);\n  \n  if (missing.length > 0) {\n    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);\n  }\n  \n  if (!process.env.MIGRATION_USER_ID) {\n    console.warn('MIGRATION_USER_ID not set - will use fallback email lookup');\n  }\n}\n\nvalidateEnvironment();"
+        },
+        {
+          "id": "COD-006",
+          "category": "code_soundness",
+          "severity": "moderate",
+          "title": "Insufficient validation of user mapping result",
+          "description": "The `buildUserMapping()` function (lines 248-262) doesn't validate that any users were found or handle the case where the auth.admin.listUsers() returns an empty list. It also doesn't check if the migration user exists.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "async function buildUserMapping(supabase) {\n  const { data: users, error } = await supabase.auth.admin.listUsers();\n\n  if (error) {\n    throw new Error(`Failed to fetch users: ${error.message}`);\n  }\n\n  const emailToUUID = new Map();\n  users.users.forEach(user => {\n    emailToUUID.set(user.email.toLowerCase(), user.id);\n  });\n\n  console.log(`Built user mapping for ${emailToUUID.size} users`);\n  return emailToUUID;\n}",
+          "recommendation": "Add validation for empty user list and verify migration user exists:\n\nif (error) {\n  throw new Error(`Failed to fetch users: ${error.message}`);\n}\n\nif (!users || !users.users || users.users.length === 0) {\n  throw new Error('No users found in auth.users - cannot map creators');\n}\n\nconst emailToUUID = new Map();\nusers.users.forEach(user => {\n  if (!user.email) {\n    console.warn(`User ${user.id} has no email - skipping`);\n    return;\n  }\n  emailToUUID.set(user.email.toLowerCase(), user.id);\n});\n\n// Verify migration user exists\nconst migrationEmail = 'migration@claritybusinesssolutions.ca';\nif (!emailToUUID.has(migrationEmail)) {\n  throw new Error(`Migration user ${migrationEmail} not found - create before running migration`);\n}\n\nconsole.log(`Built user mapping for ${emailToUUID.size} users`);\nreturn emailToUUID;"
+        },
+        {
+          "id": "COD-007",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inefficient sequential parent entity lookups",
+          "description": "The `detectParentEntity()` function (lines 175-237) checks projects, then tasks, then customers sequentially for every note. This results in 3N database queries in the worst case (where N = number of notes). For large datasets, this is very slow.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "async function detectParentEntity(fkId, supabase) {\n  // Check projects first\n  const { data: project } = await supabase.from('projects')...\n  if (project) return {...};\n  \n  // Check tasks\n  const { data: task } = await supabase.from('tasks')...\n  if (task) return {...};\n  \n  // Check customers\n  const { data: customer } = await supabase.from('customers')...\n}",
+          "recommendation": "Optimize by:\n1. Pre-loading all parent entity IDs into Maps before transformation loop\n2. Or use Promise.all to check all three tables in parallel:\n\nconst [projectResult, taskResult, customerResult] = await Promise.all([\n  supabase.from('projects').select('id, organization_id').eq('id', fkId).maybeSingle(),\n  supabase.from('tasks').select('id, project_id, projects!inner(organization_id)').eq('id', fkId).maybeSingle(),\n  supabase.from('customers').select('id, organization_id').eq('id', fkId).maybeSingle()\n]);\n\nif (projectResult.data) return { entity_type: 'project', ... };\nif (taskResult.data) return { entity_type: 'task', ... };\nif (customerResult.data) return { entity_type: 'customer', ... };\n\nThis reduces 3N queries to N queries with 3 parallel lookups each."
+        },
+        {
+          "id": "COD-008",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Export validation doesn't check for file write permissions",
+          "description": "The export script (lines 42-106) creates directories and writes files without checking if the filesystem is writable or has sufficient space. If the disk is full or directory creation fails, the script will crash mid-export.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const exportPath = 'migration-data/notes-export.json';\nfs.mkdirSync('migration-data', { recursive: true });\nfs.writeFileSync(exportPath, JSON.stringify(exportData, null, 2));",
+          "recommendation": "Add filesystem validation before export:\n\ntry {\n  const dir = 'migration-data';\n  fs.mkdirSync(dir, { recursive: true });\n  \n  // Check write permissions\n  const testFile = path.join(dir, '.write-test');\n  fs.writeFileSync(testFile, 'test');\n  fs.unlinkSync(testFile);\n  \n  // Check disk space (if needed)\n  const stats = fs.statSync(dir);\n  \n  fs.writeFileSync(exportPath, JSON.stringify(exportData, null, 2));\n} catch (error) {\n  throw new Error(`Failed to write export file: ${error.message}`);\n}"
+        }
+      ],
+      "files_reviewed": 0,
+      "issues_found": 8
+    }
+  },
+  "SecurityCheckNode": {
+    "timestamp": "2026-01-16T19:44:29.006Z",
+    "output": {
+      "findings": [],
+      "files_reviewed": 0,
+      "vulnerabilities_found": 0
+    }
+  },
+  "ArchitectureCheckNode": {
+    "timestamp": "2026-01-16T19:46:47.880Z",
+    "output": {
+      "findings": [],
+      "patterns_reviewed": 0,
+      "violations_found": 0
+    }
+  },
+  "JudgeNode": {
+    "timestamp": "2026-01-16T19:46:47.884Z",
+    "output": {
+      "total_findings": 8,
+      "kept_findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing error handling in async parent entity detection",
+          "description": "The `detectParentEntity()` function in migration-plan.md (lines 175-237) performs multiple async Supabase queries without proper error handling. If any query fails (network issues, auth problems, etc.), the function will throw an unhandled exception that could crash the entire migration process mid-stream.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "async function detectParentEntity(fkId, supabase) {\n  const { data: project } = await supabase\n    .from('projects')\n    .select('id, organization_id')\n    .eq('id', fkId)\n    .maybeSingle();\n  // No error handling if query fails",
+          "recommendation": "Wrap each Supabase query in try-catch blocks and handle errors gracefully. Consider returning a specific error state that can be retried or logged. Example:\n\ntry {\n  const { data: project, error } = await supabase.from('projects')...\n  if (error) throw error;\n  if (project) return { entity_type: 'project', ... };\n} catch (error) {\n  console.error(`Failed to query projects for fkId ${fkId}:`, error);\n  return { entity_type: 'query_failed', error: error.message, fkId };\n}"
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "No retry logic for failed Supabase queries in transformation",
+          "description": "The transformation script (lines 587-722) performs database lookups for every note to detect parent entities. With potentially thousands of notes, network failures or rate limiting could cause the entire transformation to fail. The script only catches errors at the note level but doesn't implement retry logic for transient failures.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "for (const fmNote of exportData.notes) {\n  try {\n    const parentInfo = await detectParentEntity(fmNote._fkID, supabase);\n    // No retry on transient failures\n  } catch (error) {\n    invalidNotes.push({ reason: error.message, fmNote });\n  }\n}",
+          "recommendation": "Implement exponential backoff retry logic for database queries. Add a retry helper function:\n\nasync function withRetry(fn, maxRetries = 3) {\n  for (let i = 0; i < maxRetries; i++) {\n    try {\n      return await fn();\n    } catch (error) {\n      if (i === maxRetries - 1) throw error;\n      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));\n    }\n  }\n}\n\nThen use: const parentInfo = await withRetry(() => detectParentEntity(fmNote._fkID, supabase));"
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Potential memory exhaustion from loading entire dataset",
+          "description": "The transformation script (line 596) loads the entire export file into memory: `JSON.parse(fs.readFileSync('migration-data/notes-export.json'))`. For large datasets (10,000+ notes), this could cause memory issues. The script then processes all notes in a single loop without streaming.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const exportData = JSON.parse(fs.readFileSync('migration-data/notes-export.json'));\n// Entire dataset in memory\nfor (const fmNote of exportData.notes) {\n  // Process all notes\n}",
+          "recommendation": "Use streaming JSON parsing for large datasets. Consider using a library like 'stream-json' or process in chunks:\n\nconst stream = fs.createReadStream('migration-data/notes-export.json');\nconst parser = JSONStream.parse('notes.*');\nstream.pipe(parser);\n\nfor await (const fmNote of parser) {\n  // Process one note at a time\n}\n\nAlternatively, if files are <100MB, current approach is acceptable but add a memory check and warning."
+        }
+      ],
+      "dropped_findings": [
+        "COD-007",
+        "COD-008"
+      ],
+      "merged_findings": [],
+      "decisions": [
+        {
+          "finding_id": "COD-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-007",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-008",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        }
+      ],
+      "summary": "Judge phase complete: 8 findings reviewed, 3 kept (critical/major), 2 dropped (minor/suggestion), 0 merged (duplicates)"
+    }
+  }
+}
