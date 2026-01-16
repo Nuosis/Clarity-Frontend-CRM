@@ -1,5 +1,4 @@
 import { createLink, fetchLinks, updateLink as updateLinkApi, deleteLink } from '../api/links';
-import { getEnvironmentContext, ENVIRONMENT_TYPES } from './dataService';
 
 /**
  * Transform backend LinkResponse to frontend format
@@ -36,7 +35,7 @@ export function transformBackendLink(backendLink) {
 
 /**
  * Creates a new link
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Uses backend API
  * @param {string|Object} fkIdOrParams - Foreign key ID (legacy) or params object
  * @param {string} link - The link URL (if fkIdOrParams is string)
  * @param {string} [parentType='project'] - Type of parent entity (project/task/customer/organization)
@@ -87,7 +86,7 @@ export async function createNewLink(fkIdOrParams, link, parentType = 'project') 
 
 /**
  * Fetch links for a project
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Uses backend API
  * @param {string} projectId - The project ID
  * @returns {Promise<Array>} Array of links in frontend format
  */
@@ -97,17 +96,11 @@ export async function fetchLinksByProject(projectId) {
     }
 
     const result = await fetchLinks({ project_id: projectId });
-    const env = getEnvironmentContext();
 
-    // Process based on environment
-    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-        return processLinks(result);
-    } else {
-        // Backend API returns array directly - transform to frontend format
-        return Array.isArray(result)
-            ? result.map(transformBackendLink).filter(Boolean)
-            : [];
-    }
+    // Backend API returns array directly - transform to frontend format
+    return Array.isArray(result)
+        ? result.map(transformBackendLink).filter(Boolean)
+        : [];
 }
 
 /**
@@ -171,7 +164,7 @@ export async function updateExistingLink(linkId, data) {
 
 /**
  * Delete a link by ID
- * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+ * Uses backend API
  * @param {string} linkId - The link ID
  * @returns {Promise<Object>} Deletion result
  */
@@ -181,25 +174,4 @@ export async function deleteLinkById(linkId) {
     }
 
     return await deleteLink(linkId);
-}
-
-/**
- * Processes links data from FileMaker
- * @param {Object} data - Raw links data
- * @returns {Array} Processed links
- */
-export function processLinks(data) {
-    if (!data?.response?.data) {
-        return [];
-    }
-
-    return data.response.data
-        .map(link => ({
-            id: link.fieldData.__ID,
-            recordId: link.recordID,
-            url: link.fieldData.link,
-            createdAt: link.fieldData['~creationTimestamp'],
-            createdBy: link.fieldData['~createdBy']
-        }))
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }

@@ -153,13 +153,13 @@
       "executionError": null,
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Notes API already fully migrated to backend endpoints. All functions use dataService with proper REST endpoints (/projects/{id}/notes, /tasks/{id}/notes, /customers/{id}/notes). No FileMaker-specific code found. Feature flags enabled (use_backend_project_notes, use_backend_task_notes). Build verified successful.",
-      "implementation_notes": "Verified TSK0007 was already complete - the notes API has been fully migrated to backend endpoints with no implementation work needed. All CRUD operations (create, fetch, update, delete) use dataService.get/post/patch/delete to call backend REST endpoints for projects, tasks, and customers. The API correctly uses environment-aware routing via dataService (not hardcoded dual paths), supporting both FileMaker (legacy) and web app environments transparently. Service layer (noteService.js) implements proper data transformations (snake_case to camelCase, 'note' to 'content'), and the hook layer (useNote.js) manages per-entity pagination state. Feature flags are already enabled. No FileMaker-specific code (FMGofer, performScript, etc.) exists in any notes-related files. Created comprehensive completion documentation in TSK0007_COMPLETION_SUMMARY.md covering architecture, data flow, verification steps, and confirming build success."
+      "implementation_notes": "Verified that TSK0007 was already complete: the notes API in 'src/api/notes.js' uses backend endpoints via 'dataService.get post patch delete' for project, task, and customer notes, with org scoping and no FileMaker-specific logic in the notes layer (environment routing remains centralized in 'dataService'). Confirmed supporting layers in 'src/services/noteService.js' (snake_case to camelCase, 'note' to 'content', backward-compatible 'fieldData') and 'src/hooks/useNote.js' (CRUD and per-entity pagination) are backend-ready, and validated feature flags 'use_backend_project_notes' and 'use_backend_task_notes' are enabled. Marked TSK0007 done in 'tasks.json' and added verification and reference docs ('TSK0007_COMPLETION_SUMMARY.md', 'TSK0007_QUICK_REFERENCE.md', 'TSK0007_VERIFICATION_REPORT.md') after confirming the build passes."
     },
     {
       "id": "TSK0008",
       "title": "Update links API to use backend endpoints",
       "description": "Replace FileMaker calls in src/api/links.js with backend API endpoints. Update fetchLinksByEntity, createLink, updateLink, deleteLink functions. Handle polymorphic associations (customer/project/task). Add feature flag support.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001",
@@ -168,7 +168,13 @@
       "tags": [
         "api",
         "links"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "completed_at": "2026-01-15T12:00:00.000Z",
+      "verification_notes": "Links API already fully migrated to backend endpoints. Removed all FileMaker-specific code from linkService.js (processLinks function, environment checks) and useLink.js (environment detection, conditional response handling). Enabled use_backend_links feature flag. Build verified successful.",
+      "implementation_notes": "Verified that TSK0008 links API layer was already using backend endpoints exclusively via dataService, then removed all FileMaker legacy code from the service layer (src/services/linkService.js: processLinks function, getEnvironmentContext imports, environment-based routing) and hook layer (src/hooks/useLink.js: FileMaker response handling in handleLinkCreate, environment imports, conditional logic). Updated feature flag in src/context/FeatureFlagContext.jsx to enable use_backend_links by default. Confirmed the project compiles successfully via npm run build. Created TSK0008_COMPLETION_SUMMARY.md and TSK0008_QUICK_REFERENCE.md documentation, and updated tasks.json to mark TSK0008 complete."
     },
     {
       "id": "TSK0009",

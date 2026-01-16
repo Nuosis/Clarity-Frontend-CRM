@@ -67,7 +67,7 @@ const DEFAULT_FLAGS = {
     use_backend_proposals: true, // Already using backend API
 
     // Links
-    use_backend_links: false,
+    use_backend_links: true, // Migrated to backend API
 
     // Marketing (Supabase-only, no FileMaker equivalent)
     use_supabase_prospects: true,

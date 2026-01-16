@@ -2,11 +2,10 @@ import { useState, useCallback } from 'react';
 import { useSnackBar } from '../context/SnackBarContext';
 import { createNewLink, fetchLinksByProject, updateExistingLink, deleteLinkById } from '../services/linkService';
 import { parseGitHubUrl } from '../utils/githubUtils';
-import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 
 /**
  * Hook for managing link operations
- * Environment-aware: Handles both backend API and FileMaker environments
+ * Uses backend API
  */
 export function useLink() {
     const [loading, setLoading] = useState(false);
@@ -17,7 +16,7 @@ export function useLink() {
      * Create a new link for a record.
      * Automatically detects GitHub repository URLs and augments the returned link object
      * with metadata.github { owner, repo, normalizedUrl } for non-invasive tagging (Phase 1).
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment.
+     * Uses backend API.
      *
      * @param {string} fkId - Foreign key ID (e.g., Task or Project ID)
      * @param {string} linkUrl - The URL to link
@@ -34,7 +33,6 @@ export function useLink() {
             setLoading(true);
             setError(null);
 
-            const env = getEnvironmentContext();
             const trimmedUrl = linkUrl.trim();
 
             // Phase 1: local-only GitHub URL detection (no API calls)
@@ -47,31 +45,17 @@ export function useLink() {
             // Pass parentType to createNewLink so it creates the correct FK
             const result = await createNewLink(fkId, trimmedUrl, parentType);
 
-            // Handle response based on environment
-            let newLink;
-            if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-                if (!result?.response?.recordId) {
-                    throw new Error('Failed to create link: No record ID returned');
-                }
-
-                newLink = {
-                    id: result.response.recordId,
-                    url: trimmedUrl,
-                    createdAt: new Date().toISOString()
-                };
-            } else {
-                // Backend API response (already transformed by linkService)
-                if (!result?.id) {
-                    throw new Error('Failed to create link: No ID returned');
-                }
-
-                newLink = {
-                    id: result.id,
-                    url: result.url || trimmedUrl,
-                    title: result.title || new URL(trimmedUrl).hostname,
-                    createdAt: result.createdAt || new Date().toISOString()
-                };
+            // Backend API response (already transformed by linkService)
+            if (!result?.id) {
+                throw new Error('Failed to create link: No ID returned');
             }
+
+            const newLink = {
+                id: result.id,
+                url: result.url || trimmedUrl,
+                title: result.title || new URL(trimmedUrl).hostname,
+                createdAt: result.createdAt || new Date().toISOString()
+            };
 
             // Non-invasive augmentation: attach metadata only if GitHub repo detected
             if (metadata) {
@@ -91,7 +75,7 @@ export function useLink() {
 
     /**
      * Fetch links for a project
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      * @param {string} projectId - Project ID
      * @returns {Promise<Array>} Array of links
      */
@@ -119,7 +103,7 @@ export function useLink() {
 
     /**
      * Update an existing link
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      * @param {string} linkId - Link ID
      * @param {Object} data - Update data
      * @param {string} data.link - Updated link URL
@@ -170,7 +154,7 @@ export function useLink() {
 
     /**
      * Delete a link
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      * @param {string} linkId - Link ID
      * @returns {Promise<boolean>} Success status
      */
