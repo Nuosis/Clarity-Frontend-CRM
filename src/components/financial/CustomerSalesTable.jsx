@@ -1,76 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { createQBOCustomer, createQBOInvoice, listQBOCustomers, sendQBOInvoiceEmail, searchQBOCustomers } from '../../api/quickbooksApi';
-import { update, getSupabaseClient } from '../../services/supabaseService';
-import { generateInvoicePayload, validateInvoiceData, formatInvoiceForLogging } from '../../services/invoiceGenerationService';
+import { createQBOCustomer, searchQBOCustomers, createInvoiceFromRecords } from '../../api/quickbooksApi';
 import CreateQBOCustomerModal from './CreateQBOCustomerModal';
 import RecordDetailsModal from './RecordDetailsModal';
-
-/**
- * Comprehensive error serialization utility that handles various error object structures
- * @param {*} error - The error object to serialize
- * @returns {string} A human-readable error message
- */
-const serializeError = (error) => {
-  // Handle null/undefined
-  if (!error) return 'Unknown error occurred';
-  
-  // Handle string errors
-  if (typeof error === 'string') return error;
-  
-  // Handle non-object errors
-  if (typeof error !== 'object') return String(error);
-  
-  // Try common error message fields in order of preference
-  const messageFields = [
-    'detail',           // Backend API format
-    'message',          // Standard Error.message
-    'error',            // Generic error field
-    'statusText',       // HTTP status text
-    'data.message',     // Nested message
-    'response.data.detail', // Axios error format
-    'response.data.message',
-    'response.statusText'
-  ];
-  
-  for (const field of messageFields) {
-    const value = field.split('.').reduce((obj, key) => obj?.[key], error);
-    if (value && typeof value === 'string' && value.trim()) {
-      return value.trim();
-    }
-  }
-  
-  // Handle QuickBooks SDK fault format
-  if (error.Fault?.Error?.[0]?.Detail) {
-    return error.Fault.Error[0].Detail;
-  }
-  
-  // Handle array errors (take first meaningful message)
-  if (Array.isArray(error) && error.length > 0) {
-    return serializeError(error[0]);
-  }
-  
-  // Handle HTTP status information
-  if (error.status || error.statusCode) {
-    const status = error.status || error.statusCode;
-    const statusText = error.statusText || 'HTTP Error';
-    return `${statusText} (${status})`;
-  }
-  
-  // Try to safely serialize the object
-  try {
-    const serialized = JSON.stringify(error, null, 2);
-    // Truncate very long error messages
-    return serialized.length > 500 ? serialized.substring(0, 500) + '...' : serialized;
-  } catch (serializationError) {
-    // Fallback to toString if JSON serialization fails (circular references, etc.)
-    try {
-      return error.toString();
-    } catch (toStringError) {
-      return 'Error occurred but could not be serialized';
-    }
-  }
-};
 
 /**
  * Component to display individual sales lines for a customer
@@ -260,16 +192,16 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
 
   /**
    * Handles the QBO invoice button click
-   * Orchestrates the billing workflow:
-   * 1. Creates an invoice in QBO for the selected customer
-   * 2. Updates the inv_id field in Supabase for each sales item
-   * 3. Updates billable hours records to mark them as billed
-   * 4. Triggers QBO to send the invoice
+   * Uses new backend endpoint to create invoice from sales records.
+   * Backend handles:
+   * 1. Invoice payload generation
+   * 2. Invoice creation in QuickBooks
+   * 3. Marking records as billed in database
+   * 4. Optionally sending invoice email
    */
   const handleQboInvoiceClick = useCallback(async () => {
-    console.log('🚀 [INVESTIGATION] QuickBooks invoice button clicked - starting systematic investigation');
-    console.log('🔍 [INVESTIGATION] Component imports from:', '../../api/quickbooksApi');
-    
+    console.log('🚀 QuickBooks invoice button clicked');
+
     if (records.length === 0) {
       alert('No sales records to invoice');
       return;
@@ -291,7 +223,7 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
       const customerId = firstRecord.customer_id;
       const customerName = firstRecord.customer_name || firstRecord.customers?.business_name || 'Unknown Customer';
 
-      console.log('🔍 [INVESTIGATION] Customer details:', { customerId, customerName });
+      console.log('Customer details:', { customerId, customerName });
 
       if (!customerId) {
         alert('Customer ID is missing from the sales records');
@@ -300,18 +232,18 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
 
       // Find QBO customer using advanced search
       setProcessingMilestone('Finding customer...');
-      console.log('🔍 [INVESTIGATION] About to call searchQBOCustomerAdvanced with:', customerName);
+      console.log('Searching for QuickBooks customer:', customerName);
       const qboCustomers = await searchQBOCustomerAdvanced(customerName);
-      
+
       // If no customers found, show create modal
       if (qboCustomers.length === 0) {
         console.log(`Customer "${customerName}" not found in QuickBooks`);
         setShowCreateCustomerModal(true);
         return;
       }
-      
+
       let selectedQboCustomer = null;
-      
+
       if (qboCustomers.length === 1) {
         // Exactly one matching customer found
         selectedQboCustomer = qboCustomers[0];
@@ -322,261 +254,63 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         qboCustomers.forEach((customer, index) => {
           customerOptions += `${index + 1}: ${customer.DisplayName}\n`;
         });
-        
+
         const selectedIndex = prompt(
           `Multiple matching customers found in QuickBooks. Please enter the number of the correct customer:\n\n${customerOptions}`,
           '1'
         );
-        
+
         if (!selectedIndex || isNaN(parseInt(selectedIndex)) || parseInt(selectedIndex) < 1 || parseInt(selectedIndex) > qboCustomers.length) {
           alert('Invalid selection. Invoice creation cancelled.');
           return;
         }
-        
+
         selectedQboCustomer = qboCustomers[parseInt(selectedIndex) - 1];
         console.log(`Selected QBO customer: ${selectedQboCustomer.DisplayName} (ID: ${selectedQboCustomer.Id})`);
       }
 
       // Filter out records that are already invoiced
       const recordsToInvoice = records.filter(record => record.inv_id === null);
-      
+
       if (recordsToInvoice.length === 0) {
         alert('All records are already invoiced');
         return;
       }
 
-      // Validate invoice data before generating payload
-      const validation = validateInvoiceData(recordsToInvoice, selectedQboCustomer);
-      if (!validation.isValid) {
-        console.error('Invoice data validation failed:', validation.errors);
-        alert(`Cannot create invoice: ${validation.errors.join(', ')}`);
-        return;
-      }
-
-      setProcessingMilestone('Generating invoice...');
-      
-      // Generate advanced invoice payload using the new service
-      const invoicePayload = await generateInvoicePayload(recordsToInvoice, selectedQboCustomer);
-      
-      console.log('Generated advanced invoice payload:');
-      console.log(formatInvoiceForLogging(invoicePayload));
+      // Extract record IDs for backend API
+      const recordIds = recordsToInvoice.map(record => record.id);
 
       setProcessingMilestone('Creating invoice...');
-      // Create invoice in QBO
-      console.log('Creating QBO invoice with advanced payload:', invoicePayload);
-      const invoiceResult = await createQBOInvoice(invoicePayload);
-      
-      // Comprehensive logging for debugging postprocessing issues
-      //   "invoice": {
-      //     "AllowIPNPayment": true,
-      //     "AllowOnlineACHPayment": false,
-      //     "AllowOnlineCreditCardPayment": false,
-      //     "ApplyTaxAfterDiscount": false,
-      //     "Balance": 0,
-      //     "BillAddr": null,
-      //     "BillEmail": null,
-      //     "BillEmailBcc": null,
-      //     "BillEmailCc": null,
-      //     "CurrencyRef": null,
-      //     "CustomField": [],
-      //     "CustomerMemo": null,
-      //     "CustomerRef": {
-      //       "name": "AL3",
-      //       "value": "394"
-      //     },
-      //     "DeliveryInfo": null,
-      //     "DepartmentRef": null,
-      //     "Deposit": 0,
-      //     "DocNumber": "3942507001",
-      //     "DueDate": "2025-07-31",
-      //     "EInvoiceStatus": null,
-      //     "EmailStatus": "NotSet",
-      //     "ExchangeRate": 1,
-      //     "FreeFormAddress": false,
-      //     "GlobalTaxCalculation": "TaxExcluded",
-      //     "HomeBalance": 0,
-      //     "HomeTotalAmt": 0,
-      //     "Id": "6495",
-      //     "InvoiceLink": "",
-      //     "Line": [
-      //       {
-      //         "Amount": 697,
-      //         "Description": "AL3:NAEMT",
-      //         "DetailType": "SalesItemLineDetail",
-      //         "LineNum": 1,
-      //         "SalesItemLineDetail": {
-      //           "ItemRef": {
-      //             "name": "Development USD",
-      //             "value": "7"
-      //           },
-      //           "Qty": 6.97,
-      //           "TaxCodeRef": {
-      //             "value": 3
-      //           },
-      //           "UnitPrice": 100
-      //         }
-      //       },
-      //       {
-      //         "Amount": 76.5,
-      //         "Description": "AL3:Miro",
-      //         "DetailType": "SalesItemLineDetail",
-      //         "LineNum": 2,
-      //         "SalesItemLineDetail": {
-      //           "ItemRef": {
-      //             "name": "Development USD",
-      //             "value": "7"
-      //           },
-      //           "Qty": 0.765,
-      //           "TaxCodeRef": {
-      //             "value": 3
-      //           },
-      //           "UnitPrice": 100
-      //         }
-      //       },
-      //       {
-      //         "Amount": 34,
-      //         "Description": "AL3:In",
-      //         "DetailType": "SalesItemLineDetail",
-      //         "LineNum": 3,
-      //         "SalesItemLineDetail": {
-      //           "ItemRef": {
-      //             "name": "Development USD",
-      //             "value": "7"
-      //           },
-      //           "Qty": 0.34,
-      //           "TaxCodeRef": {
-      //             "value": 3
-      //           },
-      //           "UnitPrice": 100
-      //         }
-      //       },
-      //       {
-      //         "Amount": 42.5,
-      //         "Description": "AL3:TSL",
-      //         "DetailType": "SalesItemLineDetail",
-      //         "LineNum": 4,
-      //         "SalesItemLineDetail": {
-      //           "ItemRef": {
-      //             "name": "Development USD",
-      //             "value": "7"
-      //           },
-      //           "Qty": 0.425,
-      //           "TaxCodeRef": {
-      //             "value": 3
-      //           },
-      //           "UnitPrice": 100
-      //         }
-      //       }
-      //     ],
-      //     "LinkedTxn": [],
-      //     "MetaData": null,
-      //     "PrintStatus": "NotSet",
-      //     "PrivateNote": "",
-      //     "RecurDataRef": null,
-      //     "SalesTermRef": null,
-      //     "ShipAddr": null,
-      //     "ShipDate": "",
-      //     "ShipMethodRef": null,
-      //     "SyncToken": 0,
-      //     "TaxExemptionRef": null,
-      //     "TotalAmt": "",
-      //     "TrackingNum": "",
-      //     "TxnDate": "",
-      //     "TxnTaxDetail": null,
-      //     "domain": "QBO",
-      //     "sparse": false
-      //   }
-      // }
 
-      // Handle different response structures
-      let qboInvoiceId = null;
-      
-      if (invoiceResult.invoice && invoiceResult.invoice.Id) {
-        // Direct invoice response (lowercase) - CURRENT FORMAT
-        qboInvoiceId = invoiceResult.invoice.Id;
-        console.log('✅ Success: Direct invoice format (lowercase), ID:', qboInvoiceId);
-      } else if (invoiceResult.Invoice && invoiceResult.Invoice.Id) {
-        // Direct Invoice response (uppercase) - Legacy format
-        qboInvoiceId = invoiceResult.Invoice.Id;
-        console.log('✅ Success: Direct Invoice format (uppercase), ID:', qboInvoiceId);
-      } else {
-        // Handle error cases - check for various error response formats
-        let errorMessage = 'Unknown error occurred during invoice creation';
-        
-        if (invoiceResult.detail) {
-          // Backend API error format (most common)
-          errorMessage = invoiceResult.detail;
-        } else if (invoiceResult.error) {
-          // Generic error field
-          errorMessage = invoiceResult.error;
-        } else if (invoiceResult.message) {
-          // Message field
-          errorMessage = invoiceResult.message;
-        } else if (invoiceResult.Fault && invoiceResult.Fault.Error && invoiceResult.Fault.Error[0] && invoiceResult.Fault.Error[0].Detail) {
-          // QuickBooks SDK fault format
-          errorMessage = invoiceResult.Fault.Error[0].Detail;
-        } else if (invoiceResult.Fault ) {
-          // QuickBooks SDK fault format
-          errorMessage = invoiceResult.Fault;
-        }
-        
-        throw new Error(`Failed to create invoice in QuickBooks: ${errorMessage}`);
-      }
-      console.log(`Invoice created in QBO with ID: ${qboInvoiceId}`);
+      // Call new backend endpoint to create invoice from records
+      // Backend handles: payload generation, QB invoice creation, marking records billed, email sending
+      console.log(`Creating invoice for ${recordIds.length} records using backend API`);
+      const invoiceData = {
+        record_ids: recordIds,
+        customer_qb_id: selectedQboCustomer.Id,
+        send_email: true, // Request email to be sent
+        due_date: null // Let backend calculate default due date
+      };
 
-      setProcessingMilestone('Updating records...');
-      // Update the inv_id field in Supabase for each sales item using mark_records_billed RPC
-      try {
-        // Extract record IDs (Supabase id) from recordsToInvoice
-        const recordIds = recordsToInvoice.map(record => record.id);
+      const result = await createInvoiceFromRecords(invoiceData);
 
-        console.log(`Marking ${recordIds.length} records as billed with invoice ID: ${qboInvoiceId}`);
-
-        // Call mark_records_billed RPC directly to set the actual QuickBooks invoice ID
-        const supabase = getSupabaseClient();
-        const { data, error } = await supabase.rpc('mark_records_billed', {
-          p_record_ids: recordIds,
-          p_invoice_id: qboInvoiceId
-        });
-
-        if (error) {
-          console.error('[CustomerSalesTable] RPC error:', error);
-          throw new Error(`Failed to update records with invoice ID: ${error.message}`);
-        }
-
-        console.log(`Successfully marked ${data || 0} records as billed with invoice ${qboInvoiceId}`);
-
-      } catch (error) {
-        console.error('Error marking records as billed:', error);
-        throw new Error(`Failed to update records: ${error.message}`);
+      // Check for success
+      if (!result.success) {
+        throw new Error(result.detail || result.error || 'Failed to create invoice');
       }
 
-      // Send the invoice email using QBO native functionality
-      setProcessingMilestone('Sending invoice email...');
-      try {
-        console.log(`Sending invoice ${qboInvoiceId} to customer via email`);
-        const emailResult = await sendQBOInvoiceEmail(qboInvoiceId);
-        console.log('Invoice email sent successfully:', emailResult);
-        
-        alert(`Invoice created successfully in QuickBooks Online and email sent to customer.`);
-      } catch (emailError) {
-        console.warn('Failed to send invoice email:', emailError);
-        
-        // Use the comprehensive error serialization utility
-        const errorMessage = serializeError(emailError);
-        
-        // Log the full error details for debugging
-        console.error('Email error details:', {
-          originalError: emailError,
-          extractedMessage: errorMessage,
-          errorType: typeof emailError,
-          errorKeys: emailError && typeof emailError === 'object' ? Object.keys(emailError) : 'N/A'
-        });
-        
-        // Don't fail the entire process if email sending fails
-        alert(`Invoice created successfully in QuickBooks Online. However, there was an issue sending the email: ${errorMessage}`);
-      }
-      
+      const invoiceInfo = result.data;
+      console.log('Invoice created successfully:', invoiceInfo);
+
+      // Show success message with invoice details
+      const successMessage = `Invoice ${invoiceInfo.invoice_number} created successfully!\n\n` +
+        `Invoice ID: ${invoiceInfo.invoice_id}\n` +
+        `Total Amount: $${invoiceInfo.total_amount.toFixed(2)}\n` +
+        `Records Billed: ${invoiceInfo.records_billed}\n` +
+        `Email sent to customer.`;
+
+      alert(successMessage);
+
       // Refresh the data to show updated invoice status
       if (typeof onRefresh === 'function') {
         onRefresh();
@@ -584,15 +318,26 @@ function CustomerSalesTable({ records, onEditRecord, darkMode = false, onRefresh
         // Fallback to page reload if no refresh callback provided
         window.location.reload();
       }
-      
+
     } catch (error) {
-      console.error('Error creating QBO invoice:', error);
-      alert(`Error creating invoice: ${error.message}`);
+      console.error('Error creating invoice:', error);
+
+      // Extract meaningful error message
+      let errorMessage = 'Unknown error occurred';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.detail) {
+        errorMessage = error.detail;
+      } else if (error.responseData?.detail) {
+        errorMessage = error.responseData.detail;
+      }
+
+      alert(`Error creating invoice: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
       setProcessingMilestone('');
     }
-  }, [records]);
+  }, [records, onRefresh, searchQBOCustomerAdvanced]);
   
   // Handle creating a customer in QBO
   const handleCreateCustomer = async (customerData) => {
