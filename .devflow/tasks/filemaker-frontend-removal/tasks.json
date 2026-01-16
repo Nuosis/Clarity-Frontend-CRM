@@ -131,14 +131,14 @@
       "sessionId": null,
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Updated all task and timer API endpoints to use environment-aware routing. Replaced hardcoded USE_BACKEND_API flag with getEnvironmentContext(). Task CRUD operations now use /api/tasks endpoints, timer operations use /time-entries endpoints. All functions maintain FileMaker fallback for backward compatibility. Build verified successful.",
-      "implementation_notes": "Migrated src/api/tasks.js from hardcoded backend flag to environment-aware routing pattern. Removed axios/backendConfig imports in favor of dataService. Updated all task CRUD functions (fetchTasksForProject, createTask, updateTask, updateTaskStatus, deleteTask) to use dataService.get/post/patch/delete with /api/tasks endpoints. Updated all timer functions (startTaskTimer, stopTaskTimer, pauseTimer, resumeTimer, getActiveTimer, fetchTaskTimers) to use /time-entries endpoints. Maintained full FileMaker fallback support for dual-environment compatibility. Build confirmed successful with no compilation errors.",
+      "implementation_notes": "Implemented TSK0006 by migrating the frontend tasks API to environment-aware backend endpoints using dataService instead of a hardcoded USE_BACKEND_API flag, while preserving the FileMaker fallback via getEnvironmentContext and ENVIRONMENT_TYPES. Updated src/api/tasks.js to route task CRUD through '/api/tasks' (including toggle-completion) and reworked timer operations to use the '/time-entries/*' pattern rather than '/tasks/{id}/timer/*', keeping data transformations and handleApiError consistency. Marked the work complete in '.devflow/tasks/filemaker-frontend-removal/tasks.json' and added documentation in '.devflow/tasks/filemaker-frontend-removal/TSK0006_COMPLETION_SUMMARY.md' and '.devflow/tasks/filemaker-frontend-removal/TSK0006_QUICK_REFERENCE.md', with builds verified via 'npm run build'.",
       "executionError": null
     },
     {
       "id": "TSK0007",
       "title": "Update notes API to use backend endpoints",
       "description": "Replace FileMaker calls in src/api/notes.js with backend API endpoints. Update fetchNotesByEntity, createNote, updateNote, deleteNote functions. Handle polymorphic associations (customer/project/task). Add feature flag support.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001",
@@ -147,7 +147,13 @@
       "tags": [
         "api",
         "notes"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "completed_at": "2026-01-15T12:00:00.000Z",
+      "verification_notes": "Notes API already fully migrated to backend endpoints. All functions use dataService with proper REST endpoints (/projects/{id}/notes, /tasks/{id}/notes, /customers/{id}/notes). No FileMaker-specific code found. Feature flags enabled (use_backend_project_notes, use_backend_task_notes). Build verified successful.",
+      "implementation_notes": "Verified TSK0007 was already complete - the notes API has been fully migrated to backend endpoints with no implementation work needed. All CRUD operations (create, fetch, update, delete) use dataService.get/post/patch/delete to call backend REST endpoints for projects, tasks, and customers. The API correctly uses environment-aware routing via dataService (not hardcoded dual paths), supporting both FileMaker (legacy) and web app environments transparently. Service layer (noteService.js) implements proper data transformations (snake_case to camelCase, 'note' to 'content'), and the hook layer (useNote.js) manages per-entity pagination state. Feature flags are already enabled. No FileMaker-specific code (FMGofer, performScript, etc.) exists in any notes-related files. Created comprehensive completion documentation in TSK0007_COMPLETION_SUMMARY.md covering architecture, data flow, verification steps, and confirming build success."
     },
     {
       "id": "TSK0008",
