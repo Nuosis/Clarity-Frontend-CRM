@@ -4,6 +4,7 @@
  * Environment-aware API client for project operations.
  * Routes to backend REST API in webapp environment, FileMaker in legacy environment.
  *
+ * Feature flag control: use_backend_projects (checked at service/hook layer)
  * All requests use HMAC authentication via dataService for security.
  */
 
@@ -74,7 +75,7 @@ export async function fetchProjectsForCustomer(customerId) {
         });
     } else {
         // Use dedicated customer endpoint
-        const response = await dataService.get(`/projects/customer/${customerId}`);
+        const response = await dataService.get(`/api/projects/customer/${customerId}`);
         return normalizeProjectData(response.data || response, env.type);
     }
 }
@@ -104,9 +105,9 @@ export async function fetchProjectsForCustomers(customerIds) {
     } else {
         // Fetch projects for each customer and combine results
         const projectLists = await Promise.all(
-            customerIds.map(id => dataService.get(`/projects/customer/${id}`))
+            customerIds.map(id => dataService.get(`/api/projects/customer/${id}`))
         );
-        const allProjects = projectLists.flat();
+        const allProjects = projectLists.flatMap(response => response.data || response);
         return normalizeProjectData(allProjects, env.type);
     }
 }
@@ -132,7 +133,7 @@ export async function fetchProjectById(projectId) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.get(`/projects/${projectId}`);
+        const response = await dataService.get(`/api/projects/${projectId}`);
         // Backend returns { success: true, data: project } for single get
         const projectData = response.data || response;
         return normalizeProjectData(projectData, env.type);
@@ -157,7 +158,7 @@ export async function fetchProjectWithDetails(projectId) {
             return await fetchAllProjectData(projectId);
         });
     } else {
-        const response = await dataService.get(`/projects/${projectId}/detail`);
+        const response = await dataService.get(`/api/projects/${projectId}/detail`);
         return normalizeProjectData(response.data || response, env.type);
     }
 }
@@ -183,7 +184,7 @@ export async function createProject(data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.post('/projects', data);
+        const response = await dataService.post('/api/projects', data);
         return normalizeProjectData(response.data || response, env.type);
     }
 }
@@ -211,7 +212,7 @@ export async function updateProject(projectId, data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.put(`/projects/${projectId}`, data);
+        const response = await dataService.put(`/api/projects/${projectId}`, data);
         return normalizeProjectData(response.data || response, env.type);
     }
 }
@@ -237,7 +238,7 @@ export async function deleteProject(projectId) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.delete(`/projects/${projectId}`);
+        const response = await dataService.delete(`/api/projects/${projectId}`);
         return response.data || response;
     }
 }
@@ -266,7 +267,7 @@ export async function updateProjectStatus(projectId, status) {
         });
     } else {
         // Backend has dedicated status endpoint with business logic hooks
-        const response = await dataService.patch(`/projects/${projectId}/status`, { status });
+        const response = await dataService.patch(`/api/projects/${projectId}/status`, { status });
         return normalizeProjectData(response.data || response, env.type);
     }
 }
@@ -292,7 +293,7 @@ export async function fetchProjectObjectives(projectId) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.get(`/objectives/project/${projectId}`);
+        const response = await dataService.get(`/api/objectives/project/${projectId}`);
         return response.data || response;
     }
 }
@@ -318,7 +319,7 @@ export async function createObjective(data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.post('/objectives', data);
+        const response = await dataService.post('/api/objectives', data);
         return response.data || response;
     }
 }
@@ -346,7 +347,7 @@ export async function updateObjective(objectiveId, data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.patch(`/objectives/${objectiveId}`, data);
+        const response = await dataService.patch(`/api/objectives/${objectiveId}`, data);
         return response.data || response;
     }
 }
@@ -373,7 +374,7 @@ export async function deleteObjective(objectiveId) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.delete(`/objectives/${objectiveId}`);
+        const response = await dataService.delete(`/api/objectives/${objectiveId}`);
         return response.data || response;
     }
 }
@@ -395,7 +396,7 @@ export async function reorderObjectives(projectId, objectiveIds) {
         throw new Error('Objective reordering not supported in FileMaker environment');
     } else {
         const response = await dataService.post(
-            `/objectives/projects/${projectId}/reorder`,
+            `/api/objectives/projects/${projectId}/reorder`,
             objectiveIds
         );
         return response.data || response;
@@ -419,7 +420,7 @@ export async function toggleObjectiveCompleted(objectiveId) {
             throw new Error('Use updateObjective with f_completed field for FileMaker');
         });
     } else {
-        const response = await dataService.patch(`/objectives/${objectiveId}/completed`);
+        const response = await dataService.patch(`/api/objectives/${objectiveId}/completed`);
         return response.data || response;
     }
 }
@@ -440,7 +441,7 @@ export async function fetchProjectImages(projectId) {
             return await fetchProjectRelatedData(projectId, Layouts.PROJECT_IMAGES);
         });
     } else {
-        const response = await dataService.get(`/projects/${projectId}/images`);
+        const response = await dataService.get(`/api/projects/${projectId}/images`);
         return response.data || response;
     }
 }
@@ -467,7 +468,7 @@ export async function createProjectImage(projectId, data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.post(`/projects/${projectId}/images`, data);
+        const response = await dataService.post(`/api/projects/${projectId}/images`, data);
         return response.data || response;
     }
 }
@@ -495,7 +496,7 @@ export async function updateProjectImage(imageId, data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.put(`/projects/images/${imageId}`, data);
+        const response = await dataService.put(`/api/projects/images/${imageId}`, data);
         return response.data || response;
     }
 }
@@ -521,7 +522,7 @@ export async function deleteProjectImage(imageId) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.delete(`/projects/images/${imageId}`);
+        const response = await dataService.delete(`/api/projects/images/${imageId}`);
         return response.data || response;
     }
 }
@@ -562,7 +563,7 @@ export async function createProjectNote(projectId, data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.post(`/projects/${projectId}/notes`, data);
+        const response = await dataService.post(`/api/projects/${projectId}/notes`, data);
         return response.data || response;
     }
 }
@@ -590,7 +591,7 @@ export async function updateProjectNote(noteId, data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.patch(`/projects/notes/${noteId}`, data);
+        const response = await dataService.patch(`/api/projects/notes/${noteId}`, data);
         return response.data || response;
     }
 }
@@ -616,7 +617,7 @@ export async function deleteProjectNote(noteId) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.delete(`/projects/notes/${noteId}`);
+        const response = await dataService.delete(`/api/projects/notes/${noteId}`);
         return response.data || response;
     }
 }
@@ -674,7 +675,7 @@ export async function createStep(data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.post('/steps', data);
+        const response = await dataService.post('/api/steps', data);
         return response.data || response;
     }
 }
@@ -702,7 +703,7 @@ export async function updateStep(stepId, data) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.patch(`/steps/${stepId}`, data);
+        const response = await dataService.patch(`/api/steps/${stepId}`, data);
         return response.data || response;
     }
 }
@@ -728,7 +729,7 @@ export async function deleteStep(stepId) {
             return await dataService.request(params);
         });
     } else {
-        const response = await dataService.delete(`/steps/${stepId}`);
+        const response = await dataService.delete(`/api/steps/${stepId}`);
         return response.data || response;
     }
 }
@@ -750,7 +751,7 @@ export async function toggleStepCompleted(stepId) {
             throw new Error('Use updateStep with completed field for FileMaker');
         });
     } else {
-        const response = await dataService.patch(`/steps/${stepId}/completed`);
+        const response = await dataService.patch(`/api/steps/${stepId}/completed`);
         return response.data || response;
     }
 }
@@ -772,7 +773,7 @@ export async function reorderSteps(objectiveId, stepIds) {
         throw new Error('Step reordering not supported in FileMaker environment');
     } else {
         const response = await dataService.post(
-            `/steps/objectives/${objectiveId}/reorder`,
+            `/api/steps/objectives/${objectiveId}/reorder`,
             stepIds
         );
         return response.data || response;
