@@ -1,77 +1,48 @@
 /**
  * Mailjet Email Service
  *
+ * **DEPRECATED**: This service is deprecated as of FileMaker removal (TSK0018).
+ * Email functionality needs to be migrated to a backend API endpoint.
+ *
+ * **Current Status**:
+ * - FileMaker integration removed
+ * - Service stubbed to prevent build errors
+ * - All email functions will return errors until backend integration is complete
+ *
+ * **Migration Path**:
+ * 1. Backend team: Create /api/email/send endpoint with Mailjet integration
+ * 2. Frontend: Replace this service with backend API calls
+ * 3. See: BACKEND_CHANGE_REQUEST_EMAIL_SENDING.md (to be created)
+ *
  * This service provides functionality to send emails with attachments using the Mailjet API.
+ *
+ * @deprecated Use backend API email endpoint instead (when available)
  */
-import FMGofer from 'fm-gofer';
-// Direct FileMaker script call as specified by the user
-console.log("[DEBUG] Using direct FileMaker script call to send emails via Mailjet");
+
+// FileMaker integration removed - fm-gofer dependency eliminated
+// import FMGofer from 'fm-gofer'; // REMOVED - TSK0018
+console.warn("[DEPRECATED] mailjetService.js: FileMaker email integration removed. Email sending functionality requires backend API migration.");
 /**
  * Fetch Mailjet configuration using the FileMaker FMGofer.Performscript call.
  * This function calls the default FileMaker script 'JS * Fetch Data' with action 'returnMailJetConfig'
  * to retrieve a JSON string containing the Mailjet configuration.
  *
+ * @deprecated FileMaker integration removed - needs backend API replacement
  * @returns {Promise<Object>} - Parsed configuration object with keys such as apiKey, secret, senderEmail, and senderName.
  */
 async function getMailJetConfig() {
-  try {
-    // Create a proper payload with the action key as required by FMGopher
-    const payload = JSON.stringify({
-      action: 'returnMailJetConfig'
-    });
-    
-    console.log("[DEBUG] Fetching Mailjet config with payload:", payload);
-    
-    const configJson = await FMGofer.PerformScript('JS * Fetch Data', payload);
-    const rawConfig = JSON.parse(configJson);
-    
-    //console.log("[INFO] Raw Mailjet config received:", rawConfig);
-    
-    // Get the current state to access user information
-    let userEmail = '';
-    let userName = '';
-    
-    // Try to access the global state if available
-    if (typeof window !== 'undefined' && window.state && window.state.user) {
-      userEmail = window.state.user.userEmail || '';
-      userName = window.state.user.userName || '';
-      console.log("[DEBUG] Using user info from global state:", { userEmail, userName });
-    }
-    
-    // Structure the config in the required format with auth property
-    // The raw config already has an auth property with apiKey and secret
-    const structuredConfig = {
-      auth: {
-        apiKey: rawConfig.auth?.apiKey || '',
-        secretKey: rawConfig.auth?.secret || '' // Rename secret to secretKey
-      },
-      senderEmail: userEmail || '',
-      senderName: userName || ''
-    };
-    
-    console.log("[DEBUG] Structured Mailjet config:", {
-      hasApiKey: !!structuredConfig.auth.apiKey,
-      hasSecretKey: !!structuredConfig.auth.secretKey,
-      apiKey: structuredConfig.auth.apiKey ? structuredConfig.auth.apiKey.substring(0, 5) + '...' : '',
-      secretKey: structuredConfig.auth.secretKey ? structuredConfig.auth.secretKey.substring(0, 5) + '...' : '',
-      senderEmail: structuredConfig.senderEmail,
-      senderName: structuredConfig.senderName
-    });
-    
-    return structuredConfig;
-  } catch (error) {
-    console.error('Error fetching Mailjet configuration:', error);
-    return {
-      auth: { apiKey: '', secretKey: '' },
-      senderEmail: '',
-      senderName: ''
-    };
-  }
+  console.error('[DEPRECATED] getMailJetConfig: FileMaker integration removed. Cannot fetch Mailjet config.');
+  return {
+    auth: { apiKey: '', secretKey: '' },
+    senderEmail: '',
+    senderName: ''
+  };
 }
 
 /**
  * Send an email with a PDF attachment using Mailjet
  *
+ * @deprecated FileMaker integration removed - needs backend API replacement
  * @param {Object} options - Email options
  * @param {string} options.to - Recipient email address
  * @param {string} options.subject - Email subject
@@ -83,7 +54,7 @@ async function getMailJetConfig() {
  * @param {string} options.customerName - Customer name for personalization
  * @param {string} options.senderEmail - Email address of the sender
  * @param {string} options.senderName - Name of the sender
- * @returns {Promise<Object>} - Response from Mailjet API
+ * @returns {Promise<Object>} - Response from Mailjet API (currently returns error)
  */
 export async function sendEmailWithAttachment(options) {
   try {
@@ -173,62 +144,13 @@ export async function sendEmailWithAttachment(options) {
     console.log("[DEBUG] Created script parameters for email");
     console.log("[DEBUG] Calling FileMaker script:", scriptParams.script);
     
-    try {
-      // Call FileMaker script with FMGofer
-      const responseJson = await FMGofer.PerformScript('JS * Fetch Data', JSON.stringify(scriptParams));
-      console.log("[DEBUG] FileMaker script response:", responseJson);
-      
-      // Parse the response if it's JSON
-      let responseData;
-      try {
-        responseData = JSON.parse(responseJson);
-        console.log("[DEBUG] Parsed response:", responseData);
-      } catch (parseError) {
-        // If it's not JSON, use the raw response
-        console.log("[DEBUG] Response is not JSON, using raw response");
-        responseData = {
-          success: responseJson !== null && responseJson !== undefined,
-          message: responseJson
-        };
-      }
-      
-      // Check for Mailjet API errors in the response
-      if (responseData && responseData.Messages && responseData.Messages[0] && responseData.Messages[0].Errors) {
-        // Extract error details from Mailjet response format
-        const errors = responseData.Messages[0].Errors;
-        const errorMessage = errors[0]?.ErrorMessage || 'Unknown Mailjet error';
-        const errorCode = errors[0]?.ErrorCode || '';
-        const errorDetails = errors[0]?.ErrorRelatedTo ? errors[0].ErrorRelatedTo.join(', ') : '';
-        
-        console.error("[ERROR] Mailjet API error:", { errorCode, errorMessage, errorDetails });
-        
-        return {
-          success: false,
-          error: `${errorMessage} (${errorCode})${errorDetails ? ` - Related to: ${errorDetails}` : ''}`
-        };
-      } else if (responseData && responseData.Status === "error") {
-        // Handle general error status
-        console.error("[ERROR] Mailjet general error:", responseData);
-        return {
-          success: false,
-          error: responseData.message || 'Unknown error from Mailjet API'
-        };
-      } else if (responseData && !responseData.error) {
-        console.log("[DEBUG] Email sent successfully");
-        return {
-          success: true,
-          data: responseData
-        };
-      } else {
-        throw new Error(responseData?.message || responseJson || 'Unknown error from Mailjet API');
-      }
-    } catch (error) {
-      console.error("[ERROR] FileMaker script error:", error);
-      return {
-        success: false,
-        error: error.message || 'Failed to send email'
-      };
-    }
+    // DEPRECATED: FileMaker integration removed (TSK0018)
+    // Email sending functionality needs backend API migration
+    console.error('[DEPRECATED] sendEmailWithAttachment: FileMaker integration removed. Email not sent.');
+    return {
+      success: false,
+      error: 'Email sending functionality is temporarily unavailable. FileMaker integration has been removed and backend API migration is pending.'
+    };
   } catch (error) {
     console.error('Error sending email with Mailjet:', error);
     return {
@@ -255,11 +177,12 @@ export function isValidEmail(email) {
 /**
  * Check if Mailjet service is properly configured
  *
- * @returns {Promise<boolean>} - True if Mailjet is configured, false otherwise
+ * @deprecated FileMaker integration removed - needs backend API replacement
+ * @returns {Promise<boolean>} - True if Mailjet is configured, false otherwise (currently always returns false)
  */
 export async function isMailjetConfigured() {
-  const config = await getMailJetConfig();
-  return !!(config.auth.apiKey && config.auth.secretKey);
+  console.warn('[DEPRECATED] isMailjetConfigured: FileMaker integration removed. Always returns false.');
+  return false;
 }
 
 /**

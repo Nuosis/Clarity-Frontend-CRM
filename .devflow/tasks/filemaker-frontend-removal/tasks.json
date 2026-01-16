@@ -362,7 +362,7 @@
       ],
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Successfully deleted src/api/fileMaker.js (444 lines) and src/api/fileMakerEdgeFunction.js (282 lines). Migrated generateBackendAuthHeader to dataService.js. Updated all imports and commented out FileMaker-dependent code. Build verified successful.",
-      "implementation_notes": "Deleted both FileMaker API files and migrated the reusable generateBackendAuthHeader function to dataService.js with export. Updated all dependent files including mailjet.js (switched to dataService import), QboTestPanel.jsx (commented out FileMaker features), prospects.js (deprecated conversion feature), customerActivity.js (deprecated), recordQueueManager.js (deprecated), ProjectContext.jsx (commented imports), and all test/example files. Marked several modules for future removal: customerActivity, recordQueueManager, FileMakerExample component. Build passes successfully. Created comprehensive completion summary documenting all changes, deprecated modules, and migration impacts.",
+      "implementation_notes": "Implemented removal of legacy FileMaker integration by deleting 'src/api/fileMaker.js' and 'src/api/fileMakerEdgeFunction.js', then updating the codebase to eliminate or stub all remaining imports and usage. Key changes included exporting 'generateBackendAuthHeader' from 'src/api/dataService.js' and switching 'src/api/mailjet.js' to use it, removing FileMaker exports from 'src/api/index.js', and commenting out FileMaker-dependent functionality in 'src/components/financial/QboTestPanel.jsx', 'src/api/prospects.js', 'src/services/recordQueueManager.js', and related example/test/context files (including 'src/context/ProjectContext.jsx'). FileMaker-specific modules still referenced by product flows (notably 'src/api/customerActivity.js' and the queue manager) were left in place but explicitly marked deprecated, and the build was re-run to confirm compilation succeeds before updating 'tasks.json' and documenting the work in 'TSK0017_COMPLETION_SUMMARY.md'.",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -371,7 +371,7 @@
       "id": "TSK0018",
       "title": "Remove fm-gofer dependency",
       "description": "Remove fm-gofer from package.json dependencies. Run npm install to update lock file. Verify build succeeds without it. Check for any remaining imports.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0017"
@@ -379,7 +379,12 @@
       "tags": [
         "dependencies",
         "cleanup"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-16T12:00:00.000Z",
+      "verification_notes": "Successfully removed fm-gofer package from dependencies. Deprecated mailjetService.js with clear error messages for all FileMaker-dependent functions. Build passes without fm-gofer. Email sending functionality temporarily unavailable pending backend API migration.",
+      "implementation_notes": "Removed fm-gofer npm package and deprecated mailjetService.js which was the only consumer. Updated getMailJetConfig, sendEmailWithAttachment, and isMailjetConfigured to return errors with clear deprecation messages. Removed fm-gofer from package.json dependencies and ran npm install (removed 1 package). Build verified successful (2.58s). Only remaining reference is commented import in mailjetService.js. Email sending for proposals and activity reports temporarily unavailable until backend /api/email/send endpoint is implemented. Created completion summary and quick reference docs."
     },
     {
       "id": "TSK0019",
