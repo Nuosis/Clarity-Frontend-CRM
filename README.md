@@ -1,28 +1,29 @@
 # ClarityFrontend CRM
 
-A React-based CRM system for managing customers, projects, teams, proposals, and time tracking with dual environment support (FileMaker WebViewer and standalone web application).
+A React-based CRM system for managing customers, projects, teams, proposals, and time tracking with Supabase authentication and backend API integration.
+
+> **Migration Completed (January 2026):** This application has been fully migrated from FileMaker WebViewer to a standalone web application architecture using Supabase + Backend API. All FileMaker integration code has been removed.
 
 ## Features
 
 - 🌓 Dark/Light mode support
 - 👥 Customer & Prospect management
 - 📋 Project tracking with team assignments
-- 👔 Team & Staff management (Supabase-backed)
+- 👔 Team & Staff management
 - ⏱️ Task timer with adjustments
 - 📝 Proposals with packages and deliverables
 - 📧 Marketing campaigns via Mailjet
 - 💰 QuickBooks integration for invoicing
-- 🔄 Dual environment support (FileMaker + Web App)
 - 🎯 Objective tracking
 - 📊 Resource management
+- 🔐 Multi-tenant with organization-scoped security
 
 ## Tech Stack
 
 - React 18
 - Tailwind CSS
 - Vite
-- Supabase (PostgreSQL, Authentication, Storage)
-- FileMaker Integration (fm-gofer) - Legacy support
+- Supabase (PostgreSQL, Authentication, Storage, RLS)
 - Backend API with HMAC authentication
 - Redux Toolkit (for complex state)
 - Context API (for global state)
@@ -31,8 +32,8 @@ A React-based CRM system for managing customers, projects, teams, proposals, and
 
 - Node.js (v16 or higher)
 - npm or yarn
-- Supabase account (for web app)
-- FileMaker Server (for legacy WebViewer support)
+- Supabase account and project
+- Backend API access (https://api.claritybusinesssolutions.ca)
 
 ## Installation
 
@@ -71,7 +72,6 @@ VITE_MAILJET_API_KEY=your-mailjet-key
 VITE_MAILJET_SECRET_KEY=your-mailjet-secret
 ```
 
-> **Migration Note:** If upgrading from a version with FileMaker support, you can safely remove the following environment variables from your `.env` file: `VITE_FM_URL`, `VITE_FM_DATABASE`, `VITE_FM_USER`, `VITE_FM_PASSWORD`. These are no longer used as of the FileMaker frontend removal.
 
 4. Start the development server:
 ```bash
@@ -155,58 +155,44 @@ src/
 - Quick save with CMD+stop
 - Add completion notes
 
-## Integration & Architecture
+## Architecture
 
-### Dual Environment Support
+### Application Architecture
 
-The application automatically detects its runtime environment:
-
-**FileMaker WebViewer (Legacy):**
-- Embedded in FileMaker Pro/Go via `fm-gofer` bridge
-- Uses FileMaker layouts for data operations
-- Limited to FileMaker-authenticated users
-
-**Standalone Web App (Primary):**
-- Independent web application
-- Supabase authentication and database
-- Multi-tenant with organization scoping
-- Direct backend API integration
+**Standalone Web Application:**
+- Independent SPA with Supabase authentication
+- Multi-tenant with organization-scoped security via RLS
+- Direct backend API integration with HMAC authentication
+- Real-time updates via Supabase subscriptions
 
 ### Data Sources
 
-**Supabase (Primary for new features):**
+**Supabase (Primary Database):**
+- Customers, Customer Contacts (emails, phones, addresses)
+- Projects, Tasks, Notes
 - Teams, Staff, Team Members
 - Prospects and Marketing Campaigns
 - Proposals (basic and extended)
 - Products and Sales
+- Financial Records
 - Authentication and user management
-
-**FileMaker (Legacy support):**
-- Customers (synced to Supabase)
-- Projects (synced to Supabase)
-- Tasks (synced to Supabase)
-- Time Records
+- File storage (staff images, documents)
 
 **Backend API:**
-- QuickBooks integration
+- CRUD operations for customers, projects, tasks, notes
+- QuickBooks integration for invoicing
 - Financial synchronization
 - Email campaigns (Mailjet)
-- Advanced business logic
-
-### Teams Migration
-
-Teams functionality has been migrated from FileMaker to Supabase:
-- **Old:** `devTeams`, `devStaff`, `devTeamMembers` layouts
-- **New:** `teams`, `staff`, `team_members` Supabase tables
-- **Status:** Frontend ready, awaiting backend deployment
-- **Documentation:** See `docs/TEAMS_MIGRATION_GUIDE.md`
+- Advanced business logic and data transformations
+- HMAC-SHA256 authentication for secure API access
 
 ### Data Flow
-1. Environment detection on app initialization
-2. Supabase authentication for web app users
-3. Organization-scoped data loading
-4. Real-time updates via Supabase subscriptions
-5. Dual-write for FileMaker compatibility (customers, projects, tasks)
+
+1. **Authentication**: Supabase Auth with JWT tokens
+2. **Organization Scoping**: All operations scoped to user's organization via RLS policies
+3. **Backend API**: CRUD operations with HMAC authentication
+4. **Direct Supabase**: Real-time subscriptions, file storage, financial records
+5. **Security**: Row Level Security (RLS) enforces data isolation between organizations
 
 ## Development
 
@@ -246,7 +232,7 @@ npm run build
    - Via CI/CD pipeline
    - Via cloud hosting (Vercel, Netlify, etc.)
 
-> **Migration Note:** FileMaker WebViewer deployment is no longer supported. The application now targets standard web hosting with Supabase + Backend API integration.
+3. Ensure environment variables are properly configured on your hosting platform.
 
 ## Documentation
 
@@ -258,17 +244,20 @@ npm run build
 - `BACKEND_INTEGRATION_GUIDE.md`: Backend API integration details
 - `PROPOSAL_SYSTEM_SUMMARY.md`: Proposal system overview
 - `DARK_MODE_IMPLEMENTATION.md`: Theme system documentation
+- `docs/CUSTOMER_API_INTEGRATION.md`: Customer backend integration guide
+- `docs/NOTES_BACKEND_INTEGRATION.md`: Notes backend API integration guide
+- `docs/FEATURE_FLAGS.md`: Feature flag system documentation
 
-### Teams Migration
-- `docs/TEAMS_MIGRATION_GUIDE.md`: Step-by-step migration instructions
-- `TEAMS_SUPABASE_IMPLEMENTATION_SUMMARY.md`: Teams architecture overview
-- `BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md`: Backend schema specification
-- `requirements/teams/`: Detailed requirements and specifications
+### Backend Integration Guides
+- `docs/TEAMS_MIGRATION_GUIDE.md`: Teams architecture overview
+- `docs/CUSTOMERS_BACKEND_API.md`: Customer API client reference
+- `docs/CUSTOMER_SERVICE_API.md`: Customer service layer reference
+- `requirements/customers/`: Customer migration requirements and specifications
+- `requirements/teams/`: Teams requirements and specifications
 
 ### Additional Resources
 - `.roo/rules/`: Development patterns and best practices
 - `docs/`: Technical documentation
-- `src/reference/`: Legacy implementation guides
 
 ## Contributing
 
@@ -285,31 +274,40 @@ MIT License - see LICENSE file for details
 ## Support
 
 For support, please refer to:
-- Documentation in the reference directory
-- FileMaker integration guides
-- Component documentation
+- `CLAUDE.md` for comprehensive project guidance
+- Documentation in the `docs/` directory
+- Backend API documentation at `https://api.claritybusinesssolutions.ca/docs`
+- Component documentation in source files
 
-## Migration Status
+## Migration History
 
-### ✅ Completed Migrations
-- Proposals system (Supabase-backed)
-- Prospects and marketing campaigns (Supabase-backed)
-- Products and sales (Supabase-backed)
-- Teams frontend refactor (Supabase-ready)
+### ✅ Completed (January 2026)
+- **FileMaker Frontend Removal**: All FileMaker integration code removed
+- **Customers**: Full backend API integration with nested contacts
+- **Projects**: Backend API integration with organization scoping
+- **Tasks**: Backend API integration with team assignments
+- **Notes**: Backend API integration with multi-entity support
+- **Teams**: Supabase-backed with staff management
+- **Proposals**: Supabase-backed with packages and deliverables
+- **Prospects**: Supabase-backed with marketing campaigns
+- **Products & Sales**: Supabase-backed
+- **Financial Records**: Direct Supabase integration
 
-### ⏳ In Progress
-- Teams backend deployment (awaiting schema deployment)
-- Data migration from FileMaker to Supabase
-
-### 📋 Planned
-- Complete FileMaker phase-out for customers/projects
-- Enhanced real-time collaboration
+### 🎯 Current Focus
+- Enhanced real-time collaboration features
 - Advanced analytics and reporting
+- Performance optimizations
+- Mobile-responsive improvements
+
+### 📋 Future Roadmap
 - Mobile app development
+- Advanced workflow automation
+- Enhanced QuickBooks integration
+- Third-party integrations (Slack, Zapier, etc.)
 
 ## Acknowledgments
 
-- FileMaker for backend integration
 - React team for the framework
+- Supabase for backend infrastructure
 - Tailwind CSS for styling
 - Vite for build tooling
