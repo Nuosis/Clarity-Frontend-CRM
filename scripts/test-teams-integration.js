@@ -21,9 +21,13 @@ import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import dotenv from 'dotenv'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, '..', '.env') })
 
 // Parse command line arguments
 const args = process.argv.slice(2)

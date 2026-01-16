@@ -36,7 +36,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') })
 // Parse command line arguments
 const args = process.argv.slice(2)
 const verbose = args.includes('--verbose')
-const generateReport = args.includes('--report')
+const shouldGenerateReport = args.includes('--report')
 
 // Configuration
 const config = {
@@ -128,9 +128,9 @@ async function recordTest(name, passed, error = null, details = null) {
 }
 
 // HMAC Authentication
-async function generateBackendAuthHeader(payload) {
-  const timestamp = Date.now()
-  const message = `${payload}${timestamp}`
+async function generateBackendAuthHeader(payload = '') {
+  const timestamp = Math.floor(Date.now() / 1000)
+  const message = `${timestamp}.${payload}`
 
   const hmac = crypto.createHmac('sha256', config.secretKey)
   hmac.update(message)
@@ -150,7 +150,8 @@ async function apiRequest(method, endpoint, data = null) {
       url: `${config.backendUrl}${endpoint}`,
       headers: {
         'Authorization': authHeader,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Organization-ID': config.testOrgId
       }
     }
 
@@ -253,7 +254,8 @@ async function checkPrerequisites() {
         params: { project_id: config.testProjectId },
         headers: {
           'Authorization': authHeader,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Organization-ID': config.testOrgId
         },
         timeout: 5000
       })
@@ -814,7 +816,7 @@ async function main() {
     await cleanupTestData()
 
     // Generate report if requested
-    if (generateReport) {
+    if (shouldGenerateReport) {
       generateReport()
     }
 
