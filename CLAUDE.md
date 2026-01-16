@@ -269,6 +269,91 @@ App (index.jsx)
 
 **Note:** Financial records now use direct Supabase RPC calls (`src/api/financialRecords.js`). The sync service is kept only for historical data migration scripts.
 
+## Feature Flag System
+
+**Status**: ✅ Fully Implemented (Feature rollout control system)
+
+The Feature Flag system provides centralized control for gradual migration from FileMaker to Backend API. It enables safe, incremental rollout of backend integrations while maintaining backward compatibility.
+
+### Architecture
+- **FeatureFlagContext** (`src/context/FeatureFlagContext.jsx`): Central flag state management with localStorage persistence
+- **useFeatureFlag Hook** (`src/hooks/useFeatureFlag.js`): Core hook with environment-aware helpers
+- **Integration**: FeatureFlagProvider wraps application in `src/main.jsx` (after AppStateProvider)
+
+### Usage Patterns
+
+**Basic check:**
+```jsx
+import { useFeatureFlag } from './hooks';
+
+const { isFeatureEnabled } = useFeatureFlag();
+if (isFeatureEnabled('use_backend_customers')) {
+  // Use backend API
+}
+```
+
+**Environment-aware (recommended):**
+```jsx
+import { useEnvironmentAwareFeatureFlag } from './hooks';
+
+const { shouldUseBackend } = useEnvironmentAwareFeatureFlag();
+if (shouldUseBackend('customers')) {
+  // Automatically handles environment + flag check
+}
+```
+
+**Declarative routing:**
+```jsx
+import { useFeatureRoute } from './hooks';
+
+const { route } = useFeatureRoute('customers');
+return route({
+  backend: () => backendAPI.fetch(),
+  filemaker: () => fileMakerAPI.fetch()
+});
+```
+
+### Available Flags
+
+Key feature flags (see `docs/FEATURE_FLAGS.md` for complete list):
+- `use_backend_customers`: Customer CRUD via backend API (default: `false`)
+- `use_backend_projects`: Project management via backend (default: `false`)
+- `use_backend_tasks`: Task management via backend (default: `false`)
+- `use_backend_project_notes`: Project notes via backend (default: `true` - migrated)
+- `use_backend_task_notes`: Task notes via backend (default: `true` - migrated)
+- `use_backend_teams`: Team management via Supabase (default: `true` - migrated)
+- `use_backend_proposals`: Proposals via backend (default: `true` - migrated)
+
+### Migration Strategy
+
+1. **Add flag** (default: `false`) to `DEFAULT_FLAGS` in `FeatureFlagContext.jsx`
+2. **Implement dual paths** - Backend + FileMaker with flag routing
+3. **Test in dev** - Enable flag, verify backend path works
+4. **Gradual rollout** - Enable for beta users → 50% → 100%
+5. **Monitor** - Watch error rates, performance, user feedback
+6. **Cleanup** - Remove FileMaker path after 2+ weeks of stable operation
+
+See `docs/FEATURE_FLAG_MIGRATION_EXAMPLE.md` for detailed walkthrough.
+
+### Debugging
+
+**View flags:**
+```javascript
+// Browser console
+const flags = JSON.parse(localStorage.getItem('clarity_feature_flags'));
+console.log(flags);
+```
+
+**Enable/disable flag:**
+```javascript
+const flags = JSON.parse(localStorage.getItem('clarity_feature_flags'));
+flags.use_backend_customers = true;
+localStorage.setItem('clarity_feature_flags', JSON.stringify(flags));
+location.reload();
+```
+
+**Important:** In FileMaker environment, backend flags are automatically disabled regardless of value. Use environment-aware hooks to ensure correct behavior.
+
 ## Backend Integration
 
 **Backend API:** `https://api.claritybusinesssolutions.ca`
@@ -680,6 +765,8 @@ Required variables in `.env`:
 - `PROPOSAL_SYSTEM_SUMMARY.md`: Complete proposal system overview
 - `PROPOSAL_UI_IMPLEMENTATION_SUMMARY.md`: UI components guide
 - `DARK_MODE_IMPLEMENTATION.md`: Theme implementation details
+- **`docs/FEATURE_FLAGS.md`**: Feature flag system documentation and API reference
+- **`docs/FEATURE_FLAG_MIGRATION_EXAMPLE.md`**: Step-by-step migration guide with examples
 - `docs/TEAMS_MIGRATION_GUIDE.md`: Teams migration from FileMaker to Supabase
 - `BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md`: Teams backend schema specification
 - **`docs/CUSTOMER_API_INTEGRATION.md`**: Comprehensive customer backend integration guide

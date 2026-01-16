@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import App from './index';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AppStateProvider } from './context/AppStateContext';
+import { FeatureFlagProvider } from './context/FeatureFlagContext';
 import { SnackBarProvider } from './context/SnackBarContext';
 import { TeamProvider } from './context/TeamContext';
 import { ProjectProvider } from './context/ProjectContext';
@@ -35,19 +36,21 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
     <Provider store={store}>
         <AppStateProvider>
-            <SnackBarProvider>
-                <TeamProvider>
-                    <ProjectProvider>
-                        <MarketingProvider>
-                            <ThemeProvider>
-                                <ErrorBoundary>
-                                    <App />
-                                </ErrorBoundary>
-                            </ThemeProvider>
-                        </MarketingProvider>
-                    </ProjectProvider>
-                </TeamProvider>
-            </SnackBarProvider>
+            <FeatureFlagProvider>
+                <SnackBarProvider>
+                    <TeamProvider>
+                        <ProjectProvider>
+                            <MarketingProvider>
+                                <ThemeProvider>
+                                    <ErrorBoundary>
+                                        <App />
+                                    </ErrorBoundary>
+                                </ThemeProvider>
+                            </MarketingProvider>
+                        </ProjectProvider>
+                    </TeamProvider>
+                </SnackBarProvider>
+            </FeatureFlagProvider>
         </AppStateProvider>
     </Provider>
 );
