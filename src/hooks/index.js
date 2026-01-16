@@ -12,7 +12,6 @@ export { useProductRelationships } from './useProductRelationships';
 export { useSales } from './useSales';
 export { useSalesActivity } from './useSalesActivity';
 export { useFinancialSync } from './useFinancialSync';
-export { useFeatureFlag, useEnvironmentAwareFeatureFlag, useFeatureRoute } from './useFeatureFlag';
 
 /**
  * Hook for managing loading and error states
