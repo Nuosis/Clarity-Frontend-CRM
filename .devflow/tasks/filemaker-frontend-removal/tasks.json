@@ -422,7 +422,7 @@
       ],
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Successfully removed FileMaker deployment scripts (upload, build:upload, deploy-to-fm) from package.json. Updated CLAUDE.md to remove Deployment section. Legacy scripts (scripts/upload.js, widget.config.js) preserved in git history. Build verified successful.",
-      "implementation_notes": "Removed three FileMaker deployment scripts ('upload', 'build:upload', 'deploy-to-fm') from package.json, simplifying deployment configuration to support only modern web hosting. Updated CLAUDE.md to remove the Deployment section that referenced FileMaker commands. Legacy script files (scripts/upload.js, widget.config.js) remain in repository for historical reference and audit trail. Build verification confirmed successful compilation with no missing script errors. Created TSK0020_COMPLETION_SUMMARY.md documenting changes, migration notes, and deployment architecture transition from dual (FileMaker + Web) to web-only deployment.",
+      "implementation_notes": "Implemented removal of legacy FileMaker deployment commands by deleting the 'upload', 'build:upload', and 'deploy-to-fm' scripts from 'package.json' while intentionally preserving 'scripts/upload.js' and 'widget.config.js' in the repo for historical reference. Updated docs to eliminate or replace FileMaker deployment guidance, with edits in 'CLAUDE.md', 'README.md', and 'AGENTS.md' to reflect a web-only deployment approach and include migration notes. Marked 'TSK0020' as done in 'tasks.json' with timestamp and verification notes, and added supporting artifacts 'TSK0020_COMPLETION_SUMMARY.md', 'TSK0020_QUICK_REFERENCE.md', and 'TSK0020_VERIFICATION_REPORT.md'. Verified the build still passes and confirmed the removed scripts no longer run or appear in the available script list.",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -431,14 +431,19 @@
       "id": "TSK0021",
       "title": "Update CLAUDE.md to remove FileMaker references",
       "description": "Update CLAUDE.md to remove all FileMaker-specific guidance. Update architecture section to reflect Supabase-first approach. Remove FileMaker integration section. Update development guidelines to remove FileMaker considerations. Keep migration history for reference.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0015"
       ],
       "tags": [
         "documentation"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-16T12:00:00.000Z",
+      "verification_notes": "Successfully updated CLAUDE.md to remove FileMaker references while preserving migration history. Updated Project Overview, Architecture sections, Feature Flag system documentation, External Integrations, Customer/Notes architecture sections, and Common Pitfalls. Removed dual-environment patterns and FileMaker-specific guidance. Build verified successful.",
+      "implementation_notes": "Implemented comprehensive update to CLAUDE.md documentation by removing all FileMaker-specific guidance and converting to Supabase-first architecture documentation. Key changes included: (1) Updated Project Overview to remove dual-environment references and add historical note about FileMaker removal; (2) Simplified Authentication Flow section to Supabase-only; (3) Updated API Layer and Key Services sections to remove FileMaker references; (4) Converted Feature Flag System documentation from migration-focused to future rollout-focused, with historical note about obsolete migration flags; (5) Removed FileMaker Integration section entirely, keeping only Supabase and other external integrations; (6) Updated Customer and Notes architecture sections to remove dual-environment patterns; (7) Simplified Common Pitfalls to remove FileMaker-specific warnings; (8) Removed FileMaker environment variable documentation. All changes maintain migration history for reference while clearly indicating current Supabase-only architecture. Build verified successful with no new errors."
     },
     {
       "id": "TSK0022",

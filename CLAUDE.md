@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Clarity CRM Frontend is a React-based customer relationship management system that operates in dual environments:
-- **FileMaker WebViewer**: Embedded in FileMaker with fm-gofer bridge (LEGACY - being phased out)
-- **Standalone Web App**: Independent web application with Supabase authentication (PRIMARY FOCUS)
+Clarity CRM Frontend is a React-based customer relationship management system built as a standalone web application with Supabase authentication and backend API integration.
 
 The application manages customers, projects, tasks, time tracking, proposals, marketing campaigns, and financial operations with QuickBooks integration.
 
-**IMPORTANT MIGRATION NOTICE:**
-- **New features should be Supabase-only** - Do not add FileMaker integration for new functionality
-- FileMaker support is maintained for backward compatibility only
-- Focus development on web app environment with direct Supabase + Backend API integration
+**Architecture:**
+- **Web Application**: Independent SPA with Supabase authentication
+- **Backend API**: RESTful API with HMAC authentication
+- **Database**: PostgreSQL via Supabase with Row Level Security (RLS)
+- **Storage**: Supabase Storage for file uploads (staff images, documents)
+
+**Historical Note:** This application was previously embedded in FileMaker WebViewer. FileMaker integration has been removed as of January 2026. All features now use Supabase + Backend API exclusively.
 
 ## ⚠️ CRITICAL: Backend Change Protocol
 
@@ -152,25 +153,21 @@ See `.roo/rules/SUPABASE_DATABASE_VERIFICATION.md` for full table list (69 table
 
 ## Architecture Overview
 
-### Environment Detection and Authentication Flow
+### Authentication Flow
 
-The application automatically detects its runtime environment on startup:
+The application uses Supabase for authentication:
 
 1. **SignIn Component** ([src/components/auth/SignIn.jsx](src/components/auth/SignIn.jsx))
-   - Detects FileMaker environment via `window.FileMaker` object
-   - Falls back to Supabase authentication for web app
-   - Sets environment context via `setEnvironmentContext()`
+   - Email/password authentication via Supabase Auth
+   - JWT token management with automatic refresh
+   - Organization context loaded from user metadata
+   - Sets authentication state via `setEnvironmentContext()`
 
-2. **Environment Types** ([src/services/dataService.js](src/services/dataService.js))
-   - `ENVIRONMENT_TYPES.FILEMAKER`: Running in FileMaker WebViewer
-   - `ENVIRONMENT_TYPES.WEBAPP`: Standalone web application
-   - `AUTH_METHODS.FILEMAKER`: FileMaker bridge authentication
-   - `AUTH_METHODS.SUPABASE`: Supabase authentication
-
-3. **Data Service Routing**
-   - All data operations route through environment-aware service layer
-   - FileMaker environment uses fm-gofer bridge
-   - Web app environment uses Supabase + Backend API
+2. **Data Service Routing** ([src/services/dataService.js](src/services/dataService.js))
+   - All data operations use Backend API or direct Supabase calls
+   - HMAC authentication for Backend API requests
+   - JWT authentication for Supabase operations
+   - Organization-scoped via RLS policies
 
 ### Application State Management
 
@@ -245,29 +242,29 @@ App (index.jsx)
    - Examples: `customerService`, `projectService`, `taskService`, `proposalService`
 
 6. **API Layer** ([src/api/](src/api/))
-   - Direct API communication
-   - Environment-aware routing (FileMaker vs Backend API)
+   - Direct API communication with Backend API
    - HMAC authentication for backend requests
-   - Examples: `customers.js`, `projects.js`, `proposals.js`
+   - Organization-scoped operations via JWT
+   - Examples: `customers.js`, `projects.js`, `proposals.js`, `notes.js`
 
 ### Key Services
 
-- **dataService.js**: Environment-aware data routing and HMAC authentication
-- **initializationService.js**: App startup, environment detection, user context
+- **dataService.js**: HMAC authentication and API communication utilities
+- **initializationService.js**: App startup, user context loading
 - **loadingStateManager.js**: Global loading states with progress messages
-- **~~dualWriteService.js~~**: **DEPRECATED** - Was for FileMaker→Supabase dual-write coordination, now obsolete (backend API handles all writes)
+- **customerService.js**: Customer data transformations and business logic
 - **teamService.js**: Team, staff, and team member management (Supabase-backed)
 - **proposalExtendedService.js**: Extended proposal system with packages/deliverables
-- **~~financialSyncService.js~~**: **DEPRECATED (TSK0012)** - All FileMaker reconciliation logic removed. Use Backend API (`src/api/financialRecords.js`) for all financial operations.
+- **noteService.js**: Notes data transformations and multi-entity support
 - **mailjetService.js**: Email campaign management
 
-**Note:** Financial records use Backend API endpoints exclusively. FileMaker reconciliation has been completely removed as of TSK0012. Timer entries go directly to Supabase via create_financial_record RPC.
+**Note:** Financial records use Backend API endpoints exclusively. Timer entries go directly to Supabase via create_financial_record RPC.
 
 ## Feature Flag System
 
 **Status**: ✅ Fully Implemented (Feature rollout control system)
 
-The Feature Flag system provides centralized control for gradual migration from FileMaker to Backend API. It enables safe, incremental rollout of backend integrations while maintaining backward compatibility.
+**Historical Note:** The Feature Flag system was used during the migration from FileMaker to Backend API. As of January 2026, FileMaker support has been removed, and all features use Backend API exclusively. Feature flags remain available for future feature rollouts and A/B testing.
 
 ### Architecture
 - **FeatureFlagContext** (`src/context/FeatureFlagContext.jsx`): Central flag state management with localStorage persistence
@@ -281,53 +278,41 @@ The Feature Flag system provides centralized control for gradual migration from 
 import { useFeatureFlag } from './hooks';
 
 const { isFeatureEnabled } = useFeatureFlag();
-if (isFeatureEnabled('use_backend_customers')) {
-  // Use backend API
+if (isFeatureEnabled('new_feature_rollout')) {
+  // Use new feature
 }
 ```
 
-**Environment-aware (recommended):**
+**Feature rollout:**
 ```jsx
-import { useEnvironmentAwareFeatureFlag } from './hooks';
+import { useFeatureFlag } from './hooks';
 
-const { shouldUseBackend } = useEnvironmentAwareFeatureFlag();
-if (shouldUseBackend('customers')) {
-  // Automatically handles environment + flag check
+const { isFeatureEnabled } = useFeatureFlag();
+if (isFeatureEnabled('experimental_ui')) {
+  return <NewUIComponent />;
 }
-```
-
-**Declarative routing:**
-```jsx
-import { useFeatureRoute } from './hooks';
-
-const { route } = useFeatureRoute('customers');
-return route({
-  backend: () => backendAPI.fetch(),
-  filemaker: () => fileMakerAPI.fetch()
-});
+return <LegacyUIComponent />;
 ```
 
 ### Available Flags
 
-Key feature flags (see `docs/FEATURE_FLAGS.md` for complete list):
-- `use_backend_customers`: Customer CRUD via backend API (default: `false`)
-- `use_backend_projects`: Project management via backend (default: `false`)
-- `use_backend_tasks`: Task management via backend (default: `false`)
-- `use_backend_project_notes`: Project notes via backend (default: `true` - migrated)
-- `use_backend_task_notes`: Task notes via backend (default: `true` - migrated)
-- `use_backend_teams`: Team management via Supabase (default: `true` - migrated)
-- `use_backend_proposals`: Proposals via backend (default: `true` - migrated)
+The system is configured for feature rollouts and A/B testing. See `docs/FEATURE_FLAGS.md` for current flags.
 
-### Migration Strategy
+**Historical Migration Flags (now obsolete):**
+- `use_backend_customers`, `use_backend_projects`, `use_backend_tasks`, `use_backend_notes`, `use_backend_teams`, `use_backend_proposals`
+- These flags controlled migration from FileMaker to Backend API (2025)
+- All features now use Backend API exclusively
+
+### Rollout Strategy
 
 1. **Add flag** (default: `false`) to `DEFAULT_FLAGS` in `FeatureFlagContext.jsx`
-2. **Implement dual paths** - Backend + FileMaker with flag routing
-3. **Test in dev** - Enable flag, verify backend path works
+2. **Implement feature** with flag check
+3. **Test in dev** - Enable flag, verify feature works
 4. **Gradual rollout** - Enable for beta users → 50% → 100%
 5. **Monitor** - Watch error rates, performance, user feedback
-6. **Cleanup** - Remove FileMaker path after 2+ weeks of stable operation
+6. **Cleanup** - Remove flag after stable rollout
 
-See `docs/FEATURE_FLAG_MIGRATION_EXAMPLE.md` for detailed walkthrough.
+See `docs/FEATURE_FLAGS.md` for detailed documentation.
 
 ### Debugging
 
@@ -341,12 +326,10 @@ console.log(flags);
 **Enable/disable flag:**
 ```javascript
 const flags = JSON.parse(localStorage.getItem('clarity_feature_flags'));
-flags.use_backend_customers = true;
+flags.new_feature = true;
 localStorage.setItem('clarity_feature_flags', JSON.stringify(flags));
 location.reload();
 ```
-
-**Important:** In FileMaker environment, backend flags are automatically disabled regardless of value. Use environment-aware hooks to ensure correct behavior.
 
 ## Backend Integration
 
@@ -366,21 +349,16 @@ location.reload();
 
 ## Customer API Integration
 
-**Status**: ✅ Fully Implemented (TSK0001-TSK0014 complete)
+**Status**: ✅ Fully Implemented
 
-The Customer feature has been fully integrated with the backend API, supporting dual-environment architecture:
+The Customer feature is fully integrated with the backend API:
 
 ### Architecture
-- **Environment-Aware Routing**: Automatic detection and routing based on runtime (FileMaker vs Web App)
 - **Backend API Endpoints**: `/api/customers/*` for all CRUD operations
-- **Data Transformation**: Bidirectional conversion between FileMaker flat and relational models
+- **Data Model**: Relational schema with nested entities
 - **Organization Scoping**: All operations scoped to user's organization via JWT + RLS
 
 ### Data Model
-**FileMaker** (flat structure):
-- Single table with fields: Name, Email, Phone, Address, City, State, etc.
-- Active status: `f_active` (string "1" or "0")
-
 **Backend API** (relational):
 - `customers` table (main record)
 - `customer_email` (1:many emails with type and primary flag)
@@ -398,8 +376,8 @@ The Customer feature has been fully integrated with the backend API, supporting 
 - ✅ 96%+ test coverage (unit + integration)
 
 ### Implementation Details
-**API Layer**: `src/api/customers.js` - Environment-aware routing
-**Services**: `src/services/customerService.js` - Transformations and processing
+**API Layer**: `src/api/customers.js` - Backend API communication
+**Services**: `src/services/customerService.js` - Data transformations and validation
 **Hooks**: `src/hooks/useCustomer.js` - State management with pagination
 **Components**:
 - `CustomerForm.jsx` - Multi-contact creation/editing
@@ -407,34 +385,19 @@ The Customer feature has been fully integrated with the backend API, supporting 
 - `PaginationControls.jsx` - Reusable pagination UI
 
 **Utilities**:
-- `transformFileMakerToBackend()` - Convert flat to relational
-- `transformBackendToFileMaker()` - Convert relational to flat
 - `processBackendCustomerList()` - Normalize list responses
 - `processBackendCustomerDetail()` - Normalize detail responses
 - `validateCustomerData()` - Pre-submission validation
+- `ensureSinglePrimary()` - Enforce single primary contact
 
 ### Testing
-- **Unit Tests**: `src/services/__tests__/customerTransformations.test.js`
+- **Unit Tests**: `src/services/__tests__/customerService.test.js`
 - **Integration Tests**: `src/api/__tests__/customers.test.js`
-- **Coverage**: Transformations (95%+), API client (96%+)
-
-### Migration Status
-- ✅ Phase 1: Dual-write (partial, legacy)
-- ✅ Phase 2: Backend API integration (complete)
-- ⏳ Phase 3: Data backfill (pending)
-- ⏳ Phase 4: Cutover to backend primary (future)
+- **Coverage**: 96%+
 
 **Detailed Documentation**: See `docs/CUSTOMER_API_INTEGRATION.md`
 
 ## External Integrations
-
-### FileMaker Integration (Legacy)
-- **Bridge:** fm-gofer library (`useFileMakerBridge` hook)
-- **Layouts:** devCustomers, devProjects, devTasks, devRecords
-- **Server:** `https://server.claritybusinesssolutions.ca/fmi/data/v1`
-- **Database:** clarityCRM
-- **Note:** Teams functionality (devTeams, devTeamMembers, devStaff) has been migrated to Supabase
-- **Note:** Customers now use backend API in web app, FileMaker maintained for backward compatibility
 
 ### Supabase Integration
 - **URL:** `https://supabase.claritybusinesssolutions.ca`
@@ -507,52 +470,45 @@ See `docs/TEAMS_MIGRATION_GUIDE.md` for migration details.
 
 ## Prospects vs Customers
 
-**Prospects** (Supabase-only):
-- Stored in `prospects` table
+**Prospects**:
+- Stored in `prospects` table (Supabase)
 - Managed via `useProspect` hook and `prospectService`
 - Marketing campaigns and email outreach
-- Can be converted to FileMaker customers
+- Can be converted to customers
 - Components: `ProspectDetails.jsx`, `ProspectForm.jsx`, `ConvertProspectModal.jsx`
 
-**Customers** (Dual-environment with Backend API):
-- **Backend API Integration**: Full CRUD via `/api/customers` endpoints (✅ Implemented)
+**Customers**:
+- **Backend API Integration**: Full CRUD via `/api/customers` endpoints
 - **Data Model**: Relational schema with nested emails/phones/addresses
-- **Environment-Aware**: Automatic routing between FileMaker and Backend API
-- **FileMaker Support**: Legacy `devCustomers` layout maintained for backward compatibility
 - **Supabase Tables**: `customers`, `customer_email`, `customer_phone`, `customer_address`
-- **Organization Scoping**: All operations scoped to user's organization via JWT
+- **Organization Scoping**: All operations scoped to user's organization via JWT + RLS
 - Components: `CustomerDetails.jsx`, `CustomerForm.jsx`, `CustomerHeader.jsx`
-- Hooks: `useCustomer` (environment-aware state management)
-- Services: `customerService` (transformations), API client: `src/api/customers.js`
+- Hooks: `useCustomer` (state management with pagination)
+- Services: `customerService`, API client: `src/api/customers.js`
 
 **Customer Data Flow:**
 ```
-FileMaker Environment:
-  → fm-gofer bridge → FileMaker DB
-
-Web App Environment:
-  → Backend API → Supabase DB
-  → JWT auth + HMAC
-  → Organization RLS policies
-  → Nested email/phone/address
+Component → Hook → Service → API Client → Backend API → Supabase DB
+  ↓ JWT auth + HMAC
+  ↓ Organization RLS policies
+  ↓ Nested email/phone/address
 ```
 
 **Key Features:**
-- ✅ Pagination & search (web app)
+- ✅ Pagination & search
 - ✅ Multiple emails/phones/addresses per customer
-- ✅ Data transformation between flat and relational models
+- ✅ Primary contact designation
 - ✅ Comprehensive error handling
 - ✅ Unit & integration tests (96%+ coverage)
 
 ## Notes Architecture
 
-**Status**: ✅ Fully Implemented (Backend API Integration Complete)
+**Status**: ✅ Fully Implemented
 
-The Notes feature has been fully migrated to the backend API, removing all FileMaker dependencies:
+The Notes feature uses the backend API for all operations:
 
 ### Architecture
-- **Backend API Only**: All note operations use `/api/projects/{id}/notes`, `/api/tasks/{id}/notes`, `/api/customers/{id}/notes` endpoints
-- **No FileMaker Support**: Legacy FileMaker code paths have been removed (as of TSK0013)
+- **Backend API**: All note operations use `/api/projects/{id}/notes`, `/api/tasks/{id}/notes`, `/api/customers/{id}/notes` endpoints
 - **Data Transformation**: Bidirectional conversion between backend snake_case and frontend camelCase
 - **Organization Scoping**: All operations scoped to user's organization via JWT + RLS
 - **Multi-Entity Support**: Notes can be attached to projects, tasks, or customers
@@ -626,14 +582,6 @@ Supabase Database (notes table)
 - Format: `paginationByEntity['project-{id}']` → `{ limit, offset, hasMore, total }`
 - "Load More" buttons appear when `hasMore === true`
 - Default: 50 notes per page
-
-### Migration Status
-- ✅ Phase 1: API client layer (notes.js) - Backend API only
-- ✅ Phase 2: Service layer (noteService.js) - Data transformations
-- ✅ Phase 3: Hook layer (useNote.js) - State management with pagination
-- ✅ Phase 4: Component updates - ProjectNotesTab and TaskList
-- ✅ Phase 5: FileMaker removal - All legacy code removed
-- ✅ Phase 6: Documentation - Complete
 
 **Detailed Documentation**: See `docs/NOTES_BACKEND_INTEGRATION.md`
 
@@ -712,46 +660,31 @@ Required variables in `.env`:
 
 **NEVER modify environment files without explicit permission.**
 
-**Note:** FileMaker environment variables (`VITE_FM_URL`, `VITE_FM_DATABASE`, `VITE_FM_USER`, `VITE_FM_PASSWORD`) have been removed as of the FileMaker frontend removal. These are no longer required.
-
 ## Common Pitfalls
 
-1. **SSH Access**: Never try local Docker commands - always SSH first
-2. **Environment Detection**: Wait for environment detection before making API calls
-3. **FileMaker Bridge**: Check `fmReady` status before FileMaker operations
-4. **Dual Environments**: Services must handle both FileMaker and web app contexts
-5. **Customer vs Prospect**: Different data sources and operations
-   - **Customers**: Dual-environment (FileMaker + Backend API) - use environment-aware API client
-   - **Prospects**: Supabase-only - direct Supabase calls
-6. **Teams Architecture**: Teams are Supabase-backed, NOT FileMaker-backed - do not attempt to use FileMaker bridge for teams
-7. **Notes Architecture**: Notes are Backend API ONLY - NO FileMaker support
-   - Do not add FileMaker code paths to notes functionality
-   - Use explicit foreign keys (`project_id`, `customer_id`, `task_id`), not polymorphic entity references
-   - Backend field is `note`, frontend transforms to `content`
-   - Always use `transformBackendNote()` for data transformation
-8. **Organization Scoping**: All backend API operations require organization_id in JWT claims
+1. **SSH Access**: Never try local Docker commands - always SSH to remote server first
+2. **Organization Scoping**: All backend API operations require organization_id in JWT claims
    - Missing org ID will cause "MISSING_ORG_ID" errors
    - Check `env.authentication.user.supabaseOrgID` exists before backend calls
-9. **Customer Data Transformation**:
+3. **Customer Data Model**:
    - Backend uses relational model (nested emails/phones/addresses)
-   - FileMaker uses flat model (single Email, Phone fields)
-   - Always use transformation utilities (`transformFileMakerToBackend`, `transformBackendToFileMaker`)
-   - Never manually convert - use provided utilities
-10. **Notes Data Transformation**:
+   - Always use service layer utilities for data processing
+   - Never manually construct nested structures
+4. **Notes Data Transformation**:
    - Backend uses snake_case (`note`, `created_at`, `created_by`)
    - Frontend uses camelCase (`content`, `createdAt`, `createdBy`)
    - Always use `transformBackendNote()` in `noteService.js`
    - Components receive transformed data - never access raw backend format
-11. **Primary Contact Flags**:
+5. **Primary Contact Flags**:
    - Exactly one email/phone/address must be marked `is_primary: true`
    - Use `ensureSinglePrimary()` utility to enforce
-12. **Authentication**: Backend requests require HMAC, Supabase requests use JWT
-13. **Loading States**: Use `loadingStateManager` for global loading feedback
-14. **State Updates**: Complex state updates should use `setTimeout(..., 0)` to avoid React render issues
-15. **Customer Pagination**: Only works in web app environment - FileMaker returns all records
-16. **Customer Search**: Web app uses `/api/customers/search` - FileMaker falls back to client-side filter
-17. **Notes Pagination**: Per-entity pagination state (not global) - use `getPagination(entityType, entityId)`
-18. **Multi-Entity Notes**: Exactly ONE parent FK (project_id OR customer_id OR task_id) - enforced by check constraint
+6. **Authentication**: Backend requests require HMAC, Supabase requests use JWT
+7. **Loading States**: Use `loadingStateManager` for global loading feedback
+8. **State Updates**: Complex state updates should use `setTimeout(..., 0)` to avoid React render issues
+9. **Pagination**: Per-entity pagination state for notes - use `getPagination(entityType, entityId)`
+10. **Multi-Entity Notes**: Exactly ONE parent FK (project_id OR customer_id OR task_id) - enforced by check constraint
+11. **Teams Architecture**: Teams are Supabase-backed with direct API calls
+12. **Backend Changes**: Always use Backend Change Request process - never modify database directly
 
 ## Documentation Resources
 
