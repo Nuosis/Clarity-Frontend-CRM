@@ -20,7 +20,6 @@ export const mockTask = {
     estimated_hours: '8.0',
     actual_hours: null,
     due_date: '2026-01-20',
-    filemaker_task_id: null,
     created_at: '2026-01-15T10:00:00Z',
     updated_at: '2026-01-15T10:00:00Z'
 };
@@ -40,7 +39,6 @@ export const mockCompletedTask = {
     estimated_hours: '2.0',
     actual_hours: '2.0',
     due_date: '2026-01-15',
-    filemaker_task_id: null,
     created_at: '2026-01-10T09:00:00Z',
     updated_at: '2026-01-15T14:00:00Z'
 };
@@ -103,23 +101,4 @@ export const mockTaskUpdatePayload = {
     priority: 1,
     status: 'active',
     estimated_hours: 6.0
-};
-
-// Legacy FileMaker format for backward compatibility testing
-export const mockFileMakerTask = {
-    recordId: 'fm-rec-123',
-    fieldData: {
-        __ID: '550e8400-e29b-41d4-a716-446655440000',
-        _projectID: 'aa0e8400-e29b-41d4-a716-446655440111',
-        _custID: 'bb0e8400-e29b-41d4-a716-446655440222',
-        _staffID: 'cc0e8400-e29b-41d4-a716-446655440333',
-        task: 'Implement user authentication',
-        notes: 'Add JWT-based authentication with refresh tokens',
-        type: 'feature',
-        f_priority: 'medium',
-        f_completed: '0',
-        due_date: '01/20/2026',
-        '~creationTimestamp': '2026-01-15T10:00:00Z',
-        '~modificationTimestamp': '2026-01-15T10:00:00Z'
-    }
 };

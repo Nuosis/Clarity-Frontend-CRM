@@ -7,7 +7,7 @@
  * - Link updates with GitHub metadata re-augmentation
  * - Link deletion
  * - GitHub URL detection and metadata augmentation
- * - Environment-aware responses (FileMaker vs Backend API)
+ * - Backend API responses
  * - Error handling and user feedback
  * - Loading state management
  *
@@ -26,7 +26,6 @@ jest.mock('../../services/linkService', () => ({
 jest.mock('../../services/dataService', () => ({
     getEnvironmentContext: jest.fn(),
     ENVIRONMENT_TYPES: {
-        FILEMAKER: 'filemaker',
         WEBAPP: 'webapp'
     }
 }));
@@ -197,20 +196,6 @@ describe('useLink Hook Integration Tests', () => {
             expect(env.authentication.user.supabaseOrgID).toBe('org-123');
         });
 
-        it('should detect FileMaker environment', () => {
-            dataService.getEnvironmentContext.mockReturnValue({
-                type: dataService.ENVIRONMENT_TYPES.FILEMAKER,
-                authentication: {
-                    isAuthenticated: true,
-                    method: 'filemaker'
-                }
-            });
-
-            const env = dataService.getEnvironmentContext();
-
-            expect(env.type).toBe(dataService.ENVIRONMENT_TYPES.FILEMAKER);
-            expect(env.authentication.method).toBe('filemaker');
-        });
     });
 
     describe('Error Handling', () => {
@@ -265,27 +250,6 @@ describe('useLink Hook Integration Tests', () => {
             expect(result).toEqual(mockBackendResponse);
         });
 
-        it('should handle FileMaker responses', async () => {
-            dataService.getEnvironmentContext.mockReturnValue({
-                type: dataService.ENVIRONMENT_TYPES.FILEMAKER,
-                authentication: {
-                    isAuthenticated: true,
-                    method: 'filemaker'
-                }
-            });
-
-            const mockFileMakerResponse = {
-                response: {
-                    recordId: 'rec-123'
-                }
-            };
-
-            linkService.createNewLink.mockResolvedValue(mockFileMakerResponse);
-
-            const result = await linkService.createNewLink('proj-123', 'https://example.com');
-
-            expect(result).toEqual(mockFileMakerResponse);
-        });
     });
 
     describe('URL Validation', () => {

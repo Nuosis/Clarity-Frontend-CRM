@@ -11,32 +11,21 @@
 
 import axios from 'axios';
 import * as tasksApi from '../api/tasks';
-// DEPRECATED (TSK0017): FileMaker integration removed
-// import * as fileMakerApi from '../api/fileMaker';
+import * as dataService from '../services/dataService';
 import { backendConfig } from '../config';
 
 // Mock axios
 jest.mock('axios');
 
-// Mock fileMaker module
-jest.mock('../api/fileMaker', () => ({
-    fetchDataFromFileMaker: jest.fn(),
-    handleFileMakerOperation: jest.fn((fn) => fn()),
-    validateParams: jest.fn(),
+// Mock dataService module
+jest.mock('../services/dataService', () => ({
     generateBackendAuthHeader: jest.fn().mockResolvedValue('Bearer test-signature.1234567890'),
-    Layouts: {
-        TASKS: 'devTasks',
-        PROJECTS: 'devProjects',
-        RECORDS: 'devRecords',
-        NOTES: 'devNotes',
-        LINKS: 'devLinks'
-    },
-    Actions: {
-        READ: 'READ',
-        CREATE: 'CREATE',
-        UPDATE: 'UPDATE',
-        DELETE: 'DELETE'
-    }
+    getOrganizationId: jest.fn().mockReturnValue('123e4567-e89b-12d3-a456-426614174000'),
+    hasOrganizationContext: jest.fn().mockReturnValue(true),
+    getAuthenticationContext: jest.fn().mockReturnValue({
+        isAuthenticated: true,
+        user: { supabaseOrgID: '123e4567-e89b-12d3-a456-426614174000' }
+    })
 }));
 
 // Mock config
@@ -69,7 +58,7 @@ describe('Tasks API', () => {
 
             await tasksApi.fetchTasksForProject('test-project-id');
 
-            expect(fileMakerApi.generateBackendAuthHeader).toHaveBeenCalledWith('');
+            expect(dataService.generateBackendAuthHeader).toHaveBeenCalledWith('');
             expect(axios.get).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.objectContaining({
@@ -87,7 +76,7 @@ describe('Tasks API', () => {
 
             await tasksApi.createTask(taskData);
 
-            expect(fileMakerApi.generateBackendAuthHeader).toHaveBeenCalledWith(
+            expect(dataService.generateBackendAuthHeader).toHaveBeenCalledWith(
                 JSON.stringify(taskData)
             );
             expect(axios.post).toHaveBeenCalledWith(
@@ -108,7 +97,7 @@ describe('Tasks API', () => {
 
             await tasksApi.updateTask('task-1', updateData);
 
-            expect(fileMakerApi.generateBackendAuthHeader).toHaveBeenCalledWith(
+            expect(dataService.generateBackendAuthHeader).toHaveBeenCalledWith(
                 JSON.stringify(updateData)
             );
             expect(axios.patch).toHaveBeenCalledWith(
@@ -128,7 +117,7 @@ describe('Tasks API', () => {
 
             await tasksApi.deleteTask('task-1');
 
-            expect(fileMakerApi.generateBackendAuthHeader).toHaveBeenCalledWith('');
+            expect(dataService.generateBackendAuthHeader).toHaveBeenCalledWith('');
             expect(axios.delete).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.objectContaining({
@@ -160,14 +149,6 @@ describe('Tasks API', () => {
                 );
             });
 
-            it('should validate required parameters', async () => {
-                await tasksApi.fetchTasksForProject('proj-1');
-
-                expect(fileMakerApi.validateParams).toHaveBeenCalledWith(
-                    { projectId: 'proj-1' },
-                    ['projectId']
-                );
-            });
         });
 
         describe('createTask', () => {
@@ -257,7 +238,7 @@ describe('Tasks API', () => {
 
                 await tasksApi.updateTaskStatus('task-1', true);
 
-                expect(fileMakerApi.generateBackendAuthHeader).toHaveBeenCalledWith('');
+                expect(dataService.generateBackendAuthHeader).toHaveBeenCalledWith('');
             });
         });
 
@@ -335,7 +316,7 @@ describe('Tasks API', () => {
                     staff_id: 'staff-1',
                     is_billable: true
                 });
-                expect(fileMakerApi.generateBackendAuthHeader).toHaveBeenCalledWith(expectedPayload);
+                expect(dataService.generateBackendAuthHeader).toHaveBeenCalledWith(expectedPayload);
             });
         });
 
@@ -431,19 +412,9 @@ describe('Tasks API', () => {
 
                 await tasksApi.pauseTimer('timer-1');
 
-                expect(fileMakerApi.generateBackendAuthHeader).toHaveBeenCalledWith('');
+                expect(dataService.generateBackendAuthHeader).toHaveBeenCalledWith('');
             });
 
-            it('should validate required parameters', async () => {
-                axios.post.mockResolvedValue({ data: {} });
-
-                await tasksApi.pauseTimer('timer-1');
-
-                expect(fileMakerApi.validateParams).toHaveBeenCalledWith(
-                    { entryId: 'timer-1' },
-                    ['entryId']
-                );
-            });
         });
 
         describe('resumeTimer', () => {
@@ -774,13 +745,4 @@ describe('Tasks API', () => {
         });
     });
 
-    describe('FileMaker Fallback (not tested in backend mode)', () => {
-        // Note: These tests verify that the code structure supports FileMaker fallback,
-        // but actual FileMaker operations are not tested when USE_BACKEND_API is true
-        it('should have FileMaker fallback code paths', () => {
-            // This is a structural test to ensure fallback exists
-            expect(fileMakerApi.handleFileMakerOperation).toBeDefined();
-            expect(fileMakerApi.fetchDataFromFileMaker).toBeDefined();
-        });
-    });
 });

@@ -79,24 +79,6 @@ export const mockFinancialRecordCreatePayload = {
     date: '2026-01-15'
 };
 
-// Legacy FileMaker format for backward compatibility testing
-export const mockFileMakerFinancialRecord = {
-    recordId: 'fm-fin-123',
-    fieldData: {
-        __ID: 'fin-001',
-        _custID: 'bb0e8400-e29b-41d4-a716-446655440222',
-        DateStart: '01/15/2026',
-        Billable_Time_Rounded: '5.5',
-        Hourly_Rate: '100.00',
-        'Customers::Name': 'Clarity Business Solutions',
-        'customers_Projects::projectName': 'Development Work',
-        f_billed: '0',
-        product_name: 'CLARITYBUSINESSSOLUTIONS:Development',
-        '~creationTimestamp': '2026-01-15T10:00:00Z',
-        '~modificationTimestamp': '2026-01-15T10:00:00Z'
-    }
-};
-
 // Financial record validation errors
 export const mockFinancialRecordValidationErrors = {
     detail: [

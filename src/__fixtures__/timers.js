@@ -23,7 +23,6 @@ export const mockActiveTimer = {
     is_billable: true,
     status: 'active',
     completed_at: null,
-    filemaker_record_id: null,
     created_at: '2026-01-15T10:30:00Z',
     updated_at: '2026-01-15T10:30:00Z'
 };
@@ -46,7 +45,6 @@ export const mockPausedTimer = {
     is_billable: true,
     status: 'paused',
     completed_at: null,
-    filemaker_record_id: null,
     created_at: '2026-01-15T10:30:00Z',
     updated_at: '2026-01-15T11:15:00Z'
 };
@@ -69,7 +67,6 @@ export const mockCompletedTimer = {
     is_billable: true,
     status: 'completed',
     completed_at: '2026-01-15T11:00:00Z',
-    filemaker_record_id: null,
     created_at: '2026-01-15T09:00:00Z',
     updated_at: '2026-01-15T11:00:00Z'
 };
@@ -94,8 +91,7 @@ export const mockTimersList = [
         is_billable: true,
         status: 'completed',
         completed_at: '2026-01-14T18:00:00Z',
-        filemaker_record_id: null,
-        created_at: '2026-01-14T14:00:00Z',
+            created_at: '2026-01-14T14:00:00Z',
         updated_at: '2026-01-14T18:00:00Z'
     }
 ];
@@ -135,27 +131,6 @@ export const mockStopTimerResponse = {
 export const mockStopTimerResponseFixedPrice = {
     time_entry: mockCompletedTimer,
     financial_record: null // No financial record for fixed-price projects
-};
-
-// Legacy FileMaker format for backward compatibility testing
-export const mockFileMakerTimer = {
-    recordId: 'fm-timer-123',
-    fieldData: {
-        __ID: '660e8400-e29b-41d4-a716-446655440000',
-        _taskID: '550e8400-e29b-41d4-a716-446655440000',
-        _staffID: 'cc0e8400-e29b-41d4-a716-446655440333',
-        _projectID: 'aa0e8400-e29b-41d4-a716-446655440111',
-        _custID: 'bb0e8400-e29b-41d4-a716-446655440222',
-        DateStart: '01/15/2026',
-        TimeStart: '10:30:00',
-        TimeEnd: '',
-        'Work Performed': '',
-        TimeAdjust: '0',
-        Billable_Time_Rounded: '',
-        Hourly_Rate: '100.00',
-        '~creationTimestamp': '2026-01-15T10:30:00Z',
-        '~modificationTimestamp': '2026-01-15T10:30:00Z'
-    }
 };
 
 // Timer concurrency error (409)
