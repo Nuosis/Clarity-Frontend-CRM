@@ -264,10 +264,10 @@ App (index.jsx)
 - **~~dualWriteService.js~~**: **DEPRECATED** - Was for FileMaker→Supabase dual-write coordination, now obsolete (backend API handles all writes)
 - **teamService.js**: Team, staff, and team member management (Supabase-backed)
 - **proposalExtendedService.js**: Extended proposal system with packages/deliverables
-- **~~financialSyncService.js~~**: **DEPRECATED** - Was for FileMaker→Supabase sync, now obsolete (timer goes direct to Supabase)
+- **~~financialSyncService.js~~**: **DEPRECATED (TSK0012)** - All FileMaker reconciliation logic removed. Use Backend API (`src/api/financialRecords.js`) for all financial operations.
 - **mailjetService.js**: Email campaign management
 
-**Note:** Financial records now use direct Supabase RPC calls (`src/api/financialRecords.js`). The sync service is kept only for historical data migration scripts.
+**Note:** Financial records use Backend API endpoints exclusively. FileMaker reconciliation has been completely removed as of TSK0012. Timer entries go directly to Supabase via create_financial_record RPC.
 
 ## Feature Flag System
 
