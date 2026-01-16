@@ -261,7 +261,7 @@ App (index.jsx)
 - **dataService.js**: Environment-aware data routing and HMAC authentication
 - **initializationService.js**: App startup, environment detection, user context
 - **loadingStateManager.js**: Global loading states with progress messages
-- **dualWriteService.js**: Synchronizes data between FileMaker and Supabase
+- **~~dualWriteService.js~~**: **DEPRECATED** - Was for FileMaker→Supabase dual-write coordination, now obsolete (backend API handles all writes)
 - **teamService.js**: Team, staff, and team member management (Supabase-backed)
 - **proposalExtendedService.js**: Extended proposal system with packages/deliverables
 - **~~financialSyncService.js~~**: **DEPRECATED** - Was for FileMaker→Supabase sync, now obsolete (timer goes direct to Supabase)

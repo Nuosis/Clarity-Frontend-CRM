@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-13T00:00:00.000Z",
+  "updated_at": "2026-01-15T12:00:00.000Z",
   "feature": {
     "name": "FileMaker Frontend Removal",
     "slug": "filemaker-frontend-removal",
@@ -213,13 +213,16 @@
       ],
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Successfully removed FileMaker initializeQuickBooks function and replaced with backend API integration. Added use_backend_quickbooks feature flag. Updated API exports. Build verified successful.",
-      "implementation_notes": "Removed the initializeQuickBooks FileMaker script execution function from src/api/fileMaker.js and replaced with deprecation notice. Added use_backend_quickbooks feature flag to FeatureFlagContext.jsx (default: true). Updated src/api/index.js to remove initializeQuickBooks export and add comprehensive QuickBooks backend API exports including getUnbilledRecords, createInvoiceFromRecords, syncInvoices, getQuickBooksStatus, getQuickBooksConfig, updateQuickBooksConfig, and searchQBOCustomers. Updated docs/FEATURE_FLAGS.md to document new flag. Verified build succeeds. Created TSK0010_COMPLETION_SUMMARY.md with migration guide."
+      "implementation_notes": "Implemented the QuickBooks migration by removing the unused FileMaker-based 'initializeQuickBooks' function from 'src/api/fileMaker.js' and dropping its export from 'src/api/index.js', replacing it with exports for the backend QuickBooks API (status, unbilled records, invoice creation, sync, config, and customer search). Added a new feature flag 'use_backend_quickbooks' (default true) in 'src/context/FeatureFlagContext.jsx' to control rollout, and documented it in 'docs/FEATURE_FLAGS.md'. Created a completion and migration guide in 'TSK0010_COMPLETION_SUMMARY.md' and marked the work complete in 'tasks.json', with a successful build confirming no breaking changes since the removed function had no callers.'",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null
     },
     {
       "id": "TSK0011",
       "title": "Update dualWriteService for Supabase-only mode",
       "description": "Refactor src/services/dualWriteService.js to remove FileMaker writes. Either deprecate entirely (if backend handles all writes) or update to single-write mode with logging. Add deprecation warnings. Document migration path.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0004",
@@ -229,7 +232,12 @@
       "tags": [
         "service",
         "cleanup"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T12:00:00.000Z",
+      "verification_notes": "Service deprecated with comprehensive warnings. All exported functions tagged with @deprecated JSDoc and console.warn() calls. Documentation created in DUAL_WRITE_SERVICE_DEPRECATION.md. CLAUDE.md updated. Build verified successful. No production code uses this service (verified via grep).",
+      "implementation_notes": "Deprecated dualWriteService.js by adding comprehensive deprecation notices to the file header explaining the service is obsolete now that backend API handles all writes (TSK0004-TSK0006 complete). Added @deprecated JSDoc tags and console.warn() calls to all exported functions: withDualWrite(), stopTimerWithDualWrite(), dualWriteConfig methods, and isDualWriteEnabled(). Created DUAL_WRITE_SERVICE_DEPRECATION.md with full migration paths showing how to use backend API endpoints instead. Updated CLAUDE.md to mark dualWriteService as deprecated. Verified via grep that no production code imports or uses this service. Build passes with npm run build. Service remains in codebase as deprecated reference until TSK0025 final cleanup."
     },
     {
       "id": "TSK0012",

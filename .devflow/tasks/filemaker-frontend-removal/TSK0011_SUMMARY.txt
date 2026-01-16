@@ -1,0 +1,95 @@
+================================================================================
+TSK0011: Update dualWriteService for Supabase-only mode
+================================================================================
+Status: ✅ COMPLETE
+Date: 2026-01-15
+================================================================================
+
+WHAT WAS DONE
+-------------
+Deprecated src/services/dualWriteService.js - a service originally designed to
+coordinate writes between FileMaker (primary) and Supabase (secondary) during
+migration. Now obsolete because backend API handles all writes.
+
+KEY CHANGES
+-----------
+1. Added comprehensive file-level deprecation notice with:
+   - Why deprecated (backend API integration complete)
+   - Migration paths for timer ops, data ops, sales records
+   - Timeline (deprecated 2026-01-15, removed TSK0025)
+
+2. Added @deprecated JSDoc tags + console.warn() to all exports:
+   - withDualWrite() → Use backend API endpoints
+   - stopTimerWithDualWrite() → Use stopTaskTimer() from src/api/tasks.js
+   - dualWriteConfig.* → No longer needed
+   - isDualWriteEnabled() → No longer needed
+
+3. Created documentation:
+   - DUAL_WRITE_SERVICE_DEPRECATION.md (comprehensive)
+   - TSK0011_COMPLETION_SUMMARY.md (detailed)
+   - TSK0011_QUICK_REFERENCE.md (developer cheat sheet)
+   - TSK0011_VERIFICATION_REPORT.md (verification evidence)
+
+4. Updated CLAUDE.md:
+   - Marked dualWriteService as deprecated
+   - Consistent with financialSyncService deprecation format
+
+5. Updated tasks.json:
+   - Status: in_progress → done
+   - Added completion timestamp, notes
+
+VERIFICATION
+------------
+✅ Build passes (npm run build)
+✅ No production code uses service (grep confirmed)
+✅ All functions still work (backward compatible)
+✅ No breaking changes
+✅ Dependencies satisfied (TSK0004-0006 complete)
+
+MIGRATION PATH
+--------------
+Timer Operations:
+  OLD: stopTimerWithDualWrite(params, orgId)
+  NEW: stopTaskTimer(params) // Backend auto-creates records
+
+Data Operations:
+  OLD: withDualWrite(fileMakerOp, options)
+  NEW: dataService.post('devCustomers', data) // Environment-aware
+
+Sales Records:
+  OLD: Manual createSaleFromFinancialRecord() after timer
+  NEW: Automatic via backend API
+
+WHY DEPRECATED
+--------------
+- Backend API integration complete (TSK0004-0006)
+- Service never used in production (verified)
+- Backend handles all write coordination
+- Dual-write pattern no longer needed
+
+IMPACT
+------
+- Zero breaking changes (service not used)
+- Zero performance impact (code path not executed)
+- Zero user impact (backend service only)
+
+FILES CHANGED
+-------------
+1. src/services/dualWriteService.js (deprecation notices)
+2. CLAUDE.md (service status update)
+3. .devflow/tasks/filemaker-frontend-removal/tasks.json (task status)
+4. .devflow/tasks/filemaker-frontend-removal/DUAL_WRITE_SERVICE_DEPRECATION.md (new)
+5. .devflow/tasks/filemaker-frontend-removal/TSK0011_COMPLETION_SUMMARY.md (new)
+6. .devflow/tasks/filemaker-frontend-removal/TSK0011_QUICK_REFERENCE.md (new)
+7. .devflow/tasks/filemaker-frontend-removal/TSK0011_VERIFICATION_REPORT.md (new)
+
+NEXT STEPS
+----------
+⏳ TSK0012: Remove FileMaker reconciliation from financialSyncService
+⏳ TSK0014: Remove FileMaker auth from SignIn component
+⏳ TSK0015: Simplify dataService to single routing path
+⏳ TSK0025: Complete removal of dualWriteService.js file
+
+================================================================================
+TASK COMPLETE - Ready to proceed with TSK0012
+================================================================================
