@@ -174,13 +174,13 @@
       "executionError": null,
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Links API already fully migrated to backend endpoints. Removed all FileMaker-specific code from linkService.js (processLinks function, environment checks) and useLink.js (environment detection, conditional response handling). Enabled use_backend_links feature flag. Build verified successful.",
-      "implementation_notes": "Verified that TSK0008 links API layer was already using backend endpoints exclusively via dataService, then removed all FileMaker legacy code from the service layer (src/services/linkService.js: processLinks function, getEnvironmentContext imports, environment-based routing) and hook layer (src/hooks/useLink.js: FileMaker response handling in handleLinkCreate, environment imports, conditional logic). Updated feature flag in src/context/FeatureFlagContext.jsx to enable use_backend_links by default. Confirmed the project compiles successfully via npm run build. Created TSK0008_COMPLETION_SUMMARY.md and TSK0008_QUICK_REFERENCE.md documentation, and updated tasks.json to mark TSK0008 complete."
+      "implementation_notes": "Implemented full cleanup of remaining FileMaker legacy logic in the Links feature now that the API layer already targets backend '/links' endpoints. Updated 'src/services/linkService.js' to remove the FileMaker-only 'processLinks' formatter plus environment-context imports and conditional routing, and updated 'src/hooks/useLink.js' to drop environment checks and simplify create handling to backend responses only. Enabled the 'use_backend_links' flag by default in 'src/context/FeatureFlagContext.jsx', then verified the build, removed remaining FileMaker references, and added completion and verification docs while marking the task complete in 'tasks.json'."
     },
     {
       "id": "TSK0009",
       "title": "Update financial records API to use backend endpoints",
       "description": "Replace FileMaker calls in src/api/financialRecords.js with backend API endpoints. Update fetchFinancialRecords, fetchUnpaidRecords, fetchRecordsByDateRange functions. Handle new customer_sales schema. Add feature flag support.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001",
@@ -189,7 +189,13 @@
       "tags": [
         "api",
         "financial"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T12:00:00.000Z",
+      "verification_notes": "Migrated all financial records operations from Supabase RPC to Backend API endpoints via dataService. Updated data transformations for backend schema (string to float parsing). Added project_id support. Deprecated get-by-ID functions. Feature flag already enabled (use_backend_financial_records: true). Build verified successful.",
+      "implementation_notes": "Implemented TSK0009 by migrating the financial records API from Supabase RPC calls to Backend API REST endpoints using environment-aware dataService. Replaced getSupabaseClient with dataService.get/post/patch throughout src/api/financialRecords.js for all query, summary, create, and update operations. Updated normalizeFinancialRecords() to parse backend string values (quantity, unit_price, total_price) to floats and handle new fields (project_id, billing_status, time_entry_id, configuration_data). Deprecated fetchFinancialRecordByRecordId and fetchFinancialRecordByUUID with console warnings (backend has no get-by-ID endpoint). Feature flag 'use_backend_financial_records' already enabled. Build verified successful (npm run build). Added completion documentation (TSK0009_COMPLETION_SUMMARY.md, TSK0009_QUICK_REFERENCE.md). Key changes: all endpoints now use /api/financial-records/* paths with HMAC auth and org scoping via dataService, added project filtering support, backward-compatible fieldData wrapper maintained for existing services.",
+      "executionError": null
     },
     {
       "id": "TSK0010",

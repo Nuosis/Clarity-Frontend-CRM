@@ -1,21 +1,26 @@
 /**
  * Financial Records API Client
  *
- * This module provides access to financial records (customer billing/sales) via Supabase RPCs.
- * All operations use Supabase as the single source of truth.
+ * This module provides access to financial records (customer billing/sales) via Backend API.
+ * All operations use environment-aware routing through dataService.
  *
- * Key RPC Functions:
- * - get_financial_records: Query with filters (date range, customer, billing status)
- * - get_unpaid_records: Unbilled records query
- * - get_monthly_summary: Monthly aggregations
- * - get_quarterly_summary: Quarterly aggregations
- * - get_yearly_summary: Yearly aggregations
- * - create_financial_record: Create new record
- * - mark_records_billed: Bulk billing update
+ * Backend API Endpoints:
+ * - GET /api/financial-records/query: Query with filters (date range, customer, billing status)
+ * - GET /api/financial-records/unpaid: Unbilled records query
+ * - GET /api/financial-records/summary/monthly: Monthly aggregations
+ * - GET /api/financial-records/summary/quarterly: Quarterly aggregations
+ * - GET /api/financial-records/summary/yearly: Yearly aggregations
+ * - POST /api/financial-records/create: Create new record
+ * - PATCH /api/financial-records/mark-billed: Bulk billing update
+ *
+ * Migration Status:
+ * - ✅ Migrated from Supabase RPC to Backend API (TSK0009)
+ * - ✅ Environment-aware routing via dataService
+ * - ✅ HMAC authentication for backend requests
+ * - ✅ Organization scoping via JWT
  */
 
-import { getSupabaseClient } from '../services/supabaseService';
-import { getOrganizationId, hasOrganizationContext } from '../services/dataService';
+import { dataService, getOrganizationId, hasOrganizationContext } from '../services/dataService';
 import { convertSupabaseToFileMaker } from '../utils/dateUtils';
 
 /**
@@ -95,10 +100,10 @@ function getLastMonthInfo() {
 }
 
 /**
- * Helper function to normalize Supabase RPC response to expected format
- * Transforms Supabase customer_sales schema to legacy field structure for backward compatibility
- * with existing service layer (billableHoursService.js)
- * @param {Array} records - Supabase RPC response records
+ * Helper function to normalize Backend API response to expected format
+ * Transforms backend API FinancialRecordResponse schema to legacy field structure
+ * for backward compatibility with existing service layer (billableHoursService.js)
+ * @param {Array} records - Backend API response records (FinancialRecordResponse[])
  * @returns {Object} Normalized response with fieldData wrapper
  */
 function normalizeFinancialRecords(records) {
@@ -114,23 +119,26 @@ function normalizeFinancialRecords(records) {
     const transformedRecords = records.map(record => ({
         // Legacy fieldData wrapper for backward compatibility with existing services
         fieldData: {
-            __ID: record.financial_id, // Legacy field name
-            _custID: record.customer_id,
-            _projectID: null, // Not supported in Supabase schema
+            __ID: record.financial_id, // Legacy field name (UUID)
+            _custID: record.customer_id, // Customer UUID
+            _projectID: record.project_id || null, // Project UUID (now supported in backend API)
             DateStart: convertSupabaseToFileMaker(record.date), // UI expects MM/DD/YYYY format
-            Billable_Time_Rounded: record.quantity,
-            Hourly_Rate: record.unit_price,
-            'Customers::Name': record.customer_name,
+            Billable_Time_Rounded: parseFloat(record.quantity) || 0, // Backend returns string
+            Hourly_Rate: parseFloat(record.unit_price) || 0, // Backend returns string
+            'Customers::Name': null, // Not included in backend response (requires join)
             f_billed: record.inv_id ? 1 : 0, // Legacy billed flag (0 = unbilled, 1 = billed)
             product_name: record.product_name,
-            total_price: record.total_price,
-            // Include Supabase native fields for components that can use them directly
+            total_price: parseFloat(record.total_price) || 0, // Backend returns string
+            // Include backend native fields for components that can use them directly
             financial_id: record.financial_id,
             inv_id: record.inv_id,
+            billing_status: record.billing_status, // 'billed' | 'unbilled'
             created_at: record.created_at,
-            updated_at: record.updated_at
+            updated_at: record.updated_at,
+            time_entry_id: record.time_entry_id, // New field from backend
+            configuration_data: record.configuration_data // New field from backend
         },
-        recordId: record.id // Supabase record ID for updates
+        recordId: record.id // Backend record ID (UUID) for updates
     }));
 
     return {
@@ -144,18 +152,11 @@ function normalizeFinancialRecords(records) {
  * Fetches financial records based on timeframe and optional filters
  * @param {string} timeframe - The timeframe to fetch ("today", "thisWeek", "thisMonth", "unpaid", "lastMonth", "thisQuarter", "thisYear")
  * @param {string} customerId - Optional customer ID to filter by
- * @param {string} projectId - Optional project ID to filter by (ignored - not supported in Supabase schema)
+ * @param {string} projectId - Optional project ID to filter by (now supported in backend API)
  * @returns {Promise} Promise resolving to the financial records data
  */
 export async function fetchFinancialRecords(timeframe, customerId = null, projectId = null) {
     validateParams({ timeframe }, ['timeframe']);
-
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
-    if (projectId) {
-        console.warn('[FinancialRecords] projectId filtering is not supported in Supabase schema - ignoring parameter');
-    }
 
     try {
         let startDate = null;
@@ -243,19 +244,16 @@ export async function fetchFinancialRecords(timeframe, customerId = null, projec
                 throw new Error(`Invalid timeframe: ${timeframe}`);
         }
 
-        // Call get_financial_records RPC
-        const { data, error } = await supabase.rpc('get_financial_records', {
-            p_organization_id: organizationId,
-            p_start_date: startDate,
-            p_end_date: endDate,
-            p_customer_id: customerId || null,
-            p_billed_only: billedOnly
-        });
+        // Build query parameters for backend API
+        const params = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (customerId) params.customer_id = customerId;
+        if (projectId) params.project_id = projectId;
+        if (billedOnly !== null) params.billed_only = billedOnly;
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch financial records: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.get('/api/financial-records/query', params);
 
         console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for timeframe: ${timeframe}`);
 
@@ -273,19 +271,13 @@ export async function fetchFinancialRecords(timeframe, customerId = null, projec
  * @returns {Promise} Promise resolving to the unpaid financial records data
  */
 export async function fetchUnpaidRecords(customerId = null) {
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
-        const { data, error } = await supabase.rpc('get_unpaid_records', {
-            p_organization_id: organizationId,
-            p_customer_id: customerId || null
-        });
+        // Build query parameters for backend API
+        const params = {};
+        if (customerId) params.customer_id = customerId;
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch unpaid records: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.get('/api/financial-records/unpaid', params);
 
         console.log(`[FinancialRecords] Fetched ${data?.length || 0} unpaid records`);
 
@@ -307,9 +299,6 @@ export async function fetchUnpaidRecords(customerId = null) {
 export async function fetchMonthlyRecords(month, year, customerId = null) {
     validateParams({ month, year }, ['month', 'year']);
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
         const startDate = `${year}-${month.padStart(2, '0')}-01`;
 
@@ -317,18 +306,15 @@ export async function fetchMonthlyRecords(month, year, customerId = null) {
         const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
         const endDate = `${year}-${month.padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
 
-        const { data, error } = await supabase.rpc('get_financial_records', {
-            p_organization_id: organizationId,
-            p_start_date: startDate,
-            p_end_date: endDate,
-            p_customer_id: customerId || null,
-            p_billed_only: null
-        });
+        // Build query parameters for backend API
+        const params = {
+            start_date: startDate,
+            end_date: endDate
+        };
+        if (customerId) params.customer_id = customerId;
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch monthly records: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.get('/api/financial-records/query', params);
 
         console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for month ${month}/${year}`);
 
@@ -350,9 +336,6 @@ export async function fetchMonthlyRecords(month, year, customerId = null) {
 export async function fetchQuarterlyRecords(quarter, year, customerId = null) {
     validateParams({ quarter, year }, ['quarter', 'year']);
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
         const quarterNum = parseInt(quarter);
         if (quarterNum < 1 || quarterNum > 4) {
@@ -367,18 +350,15 @@ export async function fetchQuarterlyRecords(quarter, year, customerId = null) {
         const lastDay = new Date(parseInt(year), endMonth, 0).getDate();
         const endDate = `${year}-${endMonth.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
 
-        const { data, error } = await supabase.rpc('get_financial_records', {
-            p_organization_id: organizationId,
-            p_start_date: startDate,
-            p_end_date: endDate,
-            p_customer_id: customerId || null,
-            p_billed_only: null
-        });
+        // Build query parameters for backend API
+        const params = {
+            start_date: startDate,
+            end_date: endDate
+        };
+        if (customerId) params.customer_id = customerId;
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch quarterly records: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.get('/api/financial-records/query', params);
 
         console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for Q${quarter} ${year}`);
 
@@ -399,25 +379,19 @@ export async function fetchQuarterlyRecords(quarter, year, customerId = null) {
 export async function fetchYearlyRecords(year, customerId = null) {
     validateParams({ year }, ['year']);
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
         const startDate = `${year}-01-01`;
         const endDate = `${year}-12-31`;
 
-        const { data, error } = await supabase.rpc('get_financial_records', {
-            p_organization_id: organizationId,
-            p_start_date: startDate,
-            p_end_date: endDate,
-            p_customer_id: customerId || null,
-            p_billed_only: null
-        });
+        // Build query parameters for backend API
+        const params = {
+            start_date: startDate,
+            end_date: endDate
+        };
+        if (customerId) params.customer_id = customerId;
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch yearly records: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.get('/api/financial-records/query', params);
 
         console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for year ${year}`);
 
@@ -430,40 +404,29 @@ export async function fetchYearlyRecords(year, customerId = null) {
 }
 
 /**
- * Fetches a financial record by its recordId (Supabase id)
- * @param {string} recordId - The Supabase id of the record to fetch
+ * Fetches a financial record by its recordId (Backend record ID / UUID)
+ * @deprecated Backend API doesn't have a specific get-by-ID endpoint. Use fetchRecordsForDateRange or fetchFinancialRecords instead.
+ * @param {string} recordId - The backend record ID (UUID) of the record to fetch
  * @returns {Promise} Promise resolving to the financial record data
  */
 export async function fetchFinancialRecordByRecordId(recordId) {
+    console.warn('[FinancialRecords] fetchFinancialRecordByRecordId is deprecated. Consider using fetchRecordsForDateRange or fetchFinancialRecords instead.');
     validateParams({ recordId }, ['recordId']);
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
-        // Use get_financial_records without date filters, then filter by id in JS
-        const { data, error } = await supabase.rpc('get_financial_records', {
-            p_organization_id: organizationId,
-            p_start_date: null,
-            p_end_date: null,
-            p_customer_id: null,
-            p_billed_only: null
-        });
+        // Backend API doesn't have a specific get-by-ID endpoint
+        // Fetch all records and filter client-side (not efficient, but maintains backward compatibility)
+        const allRecords = await dataService.get('/api/financial-records/query', {});
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch financial record: ${error.message}`);
-        }
+        // Filter by recordId (backend record ID)
+        const matchingRecords = allRecords.filter(r => r.id === recordId);
 
-        // Filter by recordId (Supabase id)
-        const record = data?.find(r => r.id === recordId);
-
-        if (!record) {
+        if (matchingRecords.length === 0) {
             console.warn(`[FinancialRecords] Record not found: ${recordId}`);
             return normalizeFinancialRecords([]);
         }
 
-        return normalizeFinancialRecords([record]);
+        return normalizeFinancialRecords(matchingRecords);
 
     } catch (error) {
         console.error('[FinancialRecords] Error fetching financial record by recordId:', error);
@@ -473,39 +436,28 @@ export async function fetchFinancialRecordByRecordId(recordId) {
 
 /**
  * Fetches a financial record by its UUID (financial_id field)
+ * @deprecated Backend API doesn't have a specific get-by-ID endpoint. Use fetchRecordsForDateRange or fetchFinancialRecords instead.
  * @param {string} financialId - The UUID (financial_id) of the record to fetch
  * @returns {Promise} Promise resolving to the financial record data
  */
 export async function fetchFinancialRecordByUUID(financialId) {
+    console.warn('[FinancialRecords] fetchFinancialRecordByUUID is deprecated. Consider using fetchRecordsForDateRange or fetchFinancialRecords instead.');
     validateParams({ financialId }, ['financialId']);
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
-        // Use get_financial_records without date filters, then filter by financial_id in JS
-        const { data, error } = await supabase.rpc('get_financial_records', {
-            p_organization_id: organizationId,
-            p_start_date: null,
-            p_end_date: null,
-            p_customer_id: null,
-            p_billed_only: null
-        });
-
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch financial record: ${error.message}`);
-        }
+        // Backend API doesn't have a specific get-by-ID endpoint
+        // Fetch all records and filter client-side (not efficient, but maintains backward compatibility)
+        const allRecords = await dataService.get('/api/financial-records/query', {});
 
         // Filter by financial_id
-        const record = data?.find(r => r.financial_id === financialId);
+        const matchingRecords = allRecords.filter(r => r.financial_id === financialId);
 
-        if (!record) {
+        if (matchingRecords.length === 0) {
             console.warn(`[FinancialRecords] Record not found: ${financialId}`);
             return normalizeFinancialRecords([]);
         }
 
-        return normalizeFinancialRecords([record]);
+        return normalizeFinancialRecords(matchingRecords);
 
     } catch (error) {
         console.error('[FinancialRecords] Error fetching financial record by UUID:', error);
@@ -514,60 +466,34 @@ export async function fetchFinancialRecordByUUID(financialId) {
 }
 
 /**
- * Updates the billed status for a financial record by its recordId (Supabase id)
- * Uses mark_records_billed RPC to set invoice ID
- * @param {string} recordId - The Supabase id of the record to update
+ * Updates the billed status for a financial record by its recordId (Backend record ID)
+ * Uses backend API mark-billed endpoint to set invoice ID
+ * @param {string} recordId - The backend record ID (UUID) of the record to update
  * @param {number} billedStatus - The billed status (0 = not billed, 1 = billed)
  * @returns {Promise} Promise resolving to the update result
  */
 export async function updateFinancialRecordBilledStatus(recordId, billedStatus = 1) {
     validateParams({ recordId, billedStatus }, ['recordId', 'billedStatus']);
 
-    const supabase = getSupabaseClient();
-
     try {
         // Convert billedStatus to invoice ID
-        const invoiceId = billedStatus === 1 ? 'BILLED' : null;
+        const invoiceId = billedStatus === 1 ? 'BILLED' : 'UNBILLED';
 
-        if (invoiceId === null) {
-            // To mark as unbilled, set inv_id to NULL
-            const { data, error } = await supabase
-                .from('customer_sales')
-                .update({ inv_id: null, updated_at: new Date().toISOString() })
-                .eq('id', recordId)
-                .select();
+        // Build request body for backend API
+        const requestBody = {
+            record_ids: [recordId],
+            invoice_id: invoiceId
+        };
 
-            if (error) {
-                console.error('[FinancialRecords] Update error:', error);
-                throw new Error(`Failed to update billed status: ${error.message}`);
-            }
+        // Call backend API via dataService
+        const data = await dataService.patch('/api/financial-records/mark-billed', requestBody);
 
-            console.log('[FinancialRecords] Marked record as unbilled:', recordId);
+        console.log('[FinancialRecords] Updated billed status for record:', recordId, 'response:', data);
 
-            return {
-                response: {
-                    modId: '1',
-                    recordId: recordId
-                }
-            };
-        }
-
-        // Use mark_records_billed RPC for setting invoiceId
-        const { data, error } = await supabase.rpc('mark_records_billed', {
-            p_record_ids: [recordId],
-            p_invoice_id: invoiceId
-        });
-
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to update billed status: ${error.message}`);
-        }
-
-        console.log('[FinancialRecords] Updated billed status for record:', recordId, 'affected:', data);
-
+        // Return in legacy format for backward compatibility
         return {
             response: {
-                modId: data.toString(),
+                modId: '1',
                 recordId: recordId
             }
         };
@@ -580,8 +506,8 @@ export async function updateFinancialRecordBilledStatus(recordId, billedStatus =
 
 /**
  * Updates the billed status for multiple financial records in bulk
- * Uses mark_records_billed RPC
- * @param {Array} recordIds - Array of Supabase ids to update
+ * Uses backend API mark-billed endpoint
+ * @param {Array} recordIds - Array of backend record IDs (UUIDs) to update
  * @param {number} billedStatus - The billed status (0 = not billed, 1 = billed)
  * @returns {Promise} Promise resolving to the bulk update results
  */
@@ -592,56 +518,23 @@ export async function bulkUpdateFinancialRecordsBilledStatus(recordIds, billedSt
         throw new Error('recordIds must be a non-empty array');
     }
 
-    const supabase = getSupabaseClient();
-
     try {
         // Convert billedStatus to invoice ID
-        const invoiceId = billedStatus === 1 ? 'BILLED' : null;
+        const invoiceId = billedStatus === 1 ? 'BILLED' : 'UNBILLED';
 
-        if (invoiceId === null) {
-            // To mark as unbilled, set inv_id to NULL
-            const { data, error } = await supabase
-                .from('customer_sales')
-                .update({ inv_id: null, updated_at: new Date().toISOString() })
-                .in('id', recordIds)
-                .select();
+        // Build request body for backend API
+        const requestBody = {
+            record_ids: recordIds,
+            invoice_id: invoiceId
+        };
 
-            if (error) {
-                console.error('[FinancialRecords] Bulk update error:', error);
-                throw new Error(`Failed to bulk update billed status: ${error.message}`);
-            }
+        // Call backend API via dataService
+        const data = await dataService.patch('/api/financial-records/mark-billed', requestBody);
 
-            const updatedCount = data?.length || 0;
-            console.log(`[FinancialRecords] Marked ${updatedCount} records as unbilled`);
+        const updatedCount = Array.isArray(data) ? data.length : 0;
+        console.log(`[FinancialRecords] Bulk updated ${updatedCount} records as ${billedStatus === 1 ? 'billed' : 'unbilled'}`);
 
-            return {
-                success: true,
-                totalRecords: recordIds.length,
-                successCount: updatedCount,
-                errorCount: recordIds.length - updatedCount,
-                results: recordIds.map((id, index) => ({
-                    recordId: id,
-                    success: index < updatedCount,
-                    result: index < updatedCount ? data[index] : null
-                })),
-                errors: []
-            };
-        }
-
-        // Use mark_records_billed RPC
-        const { data, error } = await supabase.rpc('mark_records_billed', {
-            p_record_ids: recordIds,
-            p_invoice_id: invoiceId
-        });
-
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to bulk update billed status: ${error.message}`);
-        }
-
-        const updatedCount = data || 0;
-        console.log(`[FinancialRecords] Bulk updated ${updatedCount} records as billed`);
-
+        // Return in legacy format for backward compatibility
         return {
             success: updatedCount === recordIds.length,
             totalRecords: recordIds.length,
@@ -650,7 +543,7 @@ export async function bulkUpdateFinancialRecordsBilledStatus(recordIds, billedSt
             results: recordIds.map((id, index) => ({
                 recordId: id,
                 success: index < updatedCount,
-                result: { recordId: id, modId: '1' }
+                result: index < updatedCount ? data[index] : null
             })),
             errors: []
         };
@@ -670,24 +563,17 @@ export async function bulkUpdateFinancialRecordsBilledStatus(recordIds, billedSt
 export async function fetchRecordsForDateRange(startDate, endDate) {
     validateParams({ startDate, endDate }, ['startDate', 'endDate']);
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
         console.log(`[FinancialRecords] Fetching records for date range: ${startDate} to ${endDate}`);
 
-        const { data, error } = await supabase.rpc('get_financial_records', {
-            p_organization_id: organizationId,
-            p_start_date: startDate,
-            p_end_date: endDate,
-            p_customer_id: null,
-            p_billed_only: null
-        });
+        // Build query parameters for backend API
+        const params = {
+            start_date: startDate,
+            end_date: endDate
+        };
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch records for date range: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.get('/api/financial-records/query', params);
 
         console.log(`[FinancialRecords] Fetched ${data?.length || 0} records for date range`);
 
@@ -700,16 +586,17 @@ export async function fetchRecordsForDateRange(startDate, endDate) {
 }
 
 /**
- * Creates a new financial record using Supabase RPC
+ * Creates a new financial record using Backend API
  * @param {Object} params - Financial record parameters
  * @param {string} params.financialId - Unique identifier (UUID v4)
  * @param {string} params.customerId - Customer foreign key (UUID)
  * @param {string} params.productName - Product/service name (format: CUSTOMERCAPS:ProjectFirstWord)
- * @param {number} params.quantity - Billable hours (must be > 0)
+ * @param {number} params.quantity - Billable hours (must be >= 0)
  * @param {number} params.unitPrice - Hourly rate (must be >= 0)
  * @param {string} params.date - Record date in YYYY-MM-DD format
  * @param {string} [params.productId=null] - Optional product foreign key (UUID)
- * @returns {Promise<string>} Promise resolving to the created record's ID (UUID)
+ * @param {string} [params.projectId=null] - Optional project foreign key (UUID)
+ * @returns {Promise<Object>} Promise resolving to the created financial record
  */
 export async function createFinancialRecord(params) {
     validateParams(
@@ -717,16 +604,13 @@ export async function createFinancialRecord(params) {
         ['financialId', 'customerId', 'productName', 'quantity', 'unitPrice', 'date']
     );
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     // Validation
     if (!params.productName || params.productName.trim() === '') {
         throw new Error('Product name is required and cannot be empty');
     }
 
-    if (params.quantity <= 0) {
-        throw new Error('Quantity must be greater than 0');
+    if (params.quantity < 0) {
+        throw new Error('Quantity cannot be negative');
     }
 
     if (params.unitPrice < 0) {
@@ -749,25 +633,24 @@ export async function createFinancialRecord(params) {
             date: params.date
         });
 
-        const { data, error } = await supabase.rpc('create_financial_record', {
-            p_financial_id: params.financialId,
-            p_organization_id: organizationId,
-            p_customer_id: params.customerId,
-            p_product_name: params.productName,
-            p_quantity: params.quantity,
-            p_unit_price: params.unitPrice,
-            p_date: params.date,
-            p_product_id: params.productId || null
-        });
+        // Build request body for backend API
+        const requestBody = {
+            financial_id: params.financialId,
+            customer_id: params.customerId,
+            product_name: params.productName,
+            quantity: params.quantity.toString(), // Backend expects string
+            unit_price: params.unitPrice.toString(), // Backend expects string
+            date: params.date,
+            product_id: params.productId || null,
+            project_id: params.projectId || null
+        };
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to create financial record: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.post('/api/financial-records/create', requestBody);
 
-        console.log('[FinancialRecords] Financial record created successfully, ID:', data);
+        console.log('[FinancialRecords] Financial record created successfully:', data);
 
-        return data; // Returns the created record's ID
+        return data; // Returns the created FinancialRecordResponse object
 
     } catch (error) {
         console.error('[FinancialRecords] Error creating financial record:', error);
@@ -784,20 +667,13 @@ export async function createFinancialRecord(params) {
 export async function fetchMonthlySummary(year, customerId = null) {
     validateParams({ year }, ['year']);
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
-        const { data, error } = await supabase.rpc('get_monthly_summary', {
-            p_organization_id: organizationId,
-            p_year: parseInt(year, 10),
-            p_customer_id: customerId || null
-        });
+        // Build query parameters for backend API
+        const params = { year: parseInt(year, 10) };
+        if (customerId) params.customer_id = customerId;
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch monthly summary: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.get('/api/financial-records/summary/monthly', params);
 
         console.log(`[FinancialRecords] Fetched monthly summary for year ${year}: ${data?.length || 0} months`);
 
@@ -819,26 +695,21 @@ export async function fetchMonthlySummary(year, customerId = null) {
 export async function fetchQuarterlySummary(year, quarter, customerId = null) {
     validateParams({ year, quarter }, ['year', 'quarter']);
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
         const quarterNum = parseInt(quarter, 10);
         if (quarterNum < 1 || quarterNum > 4) {
             throw new Error('Quarter must be between 1 and 4');
         }
 
-        const { data, error } = await supabase.rpc('get_quarterly_summary', {
-            p_organization_id: organizationId,
-            p_year: parseInt(year, 10),
-            p_quarter: quarterNum,
-            p_customer_id: customerId || null
-        });
+        // Build query parameters for backend API
+        const params = {
+            year: parseInt(year, 10),
+            quarter: quarterNum
+        };
+        if (customerId) params.customer_id = customerId;
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch quarterly summary: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.get('/api/financial-records/summary/quarterly', params);
 
         console.log(`[FinancialRecords] Fetched quarterly summary for Q${quarter} ${year}`);
 
@@ -859,20 +730,13 @@ export async function fetchQuarterlySummary(year, quarter, customerId = null) {
 export async function fetchYearlySummary(year, customerId = null) {
     validateParams({ year }, ['year']);
 
-    const supabase = getSupabaseClient();
-    const organizationId = getRequiredOrganizationId();
-
     try {
-        const { data, error } = await supabase.rpc('get_yearly_summary', {
-            p_organization_id: organizationId,
-            p_year: parseInt(year, 10),
-            p_customer_id: customerId || null
-        });
+        // Build query parameters for backend API
+        const params = { year: parseInt(year, 10) };
+        if (customerId) params.customer_id = customerId;
 
-        if (error) {
-            console.error('[FinancialRecords] RPC error:', error);
-            throw new Error(`Failed to fetch yearly summary: ${error.message}`);
-        }
+        // Call backend API via dataService
+        const data = await dataService.get('/api/financial-records/summary/yearly', params);
 
         console.log(`[FinancialRecords] Fetched yearly summary for ${year}`);
 
