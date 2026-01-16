@@ -693,6 +693,110 @@ export const syncInvoices = async (data) => {
   return await makeRequest('/sync-invoices', 'POST', data);
 };
 
+/**
+ * Configuration Operations
+ */
+
+/**
+ * Get QuickBooks configuration for the organization
+ *
+ * ⚠️ BACKEND INTEGRATION STATUS: PENDING
+ *
+ * This endpoint will be available once the organization_quickbooks_config table is deployed.
+ * See BACKEND_CHANGE_REQUEST_001_QUICKBOOKS_MIGRATION.md for details.
+ *
+ * Returns organization-specific QuickBooks settings including:
+ * - Tax codes (CAD vs non-CAD)
+ * - Item IDs by currency (CAD, USD, EUR)
+ * - Invoice number format
+ * - Default payment terms
+ * - Email delivery defaults
+ * - Auto-sync settings
+ *
+ * @param {string} organizationId - The organization UUID
+ * @returns {Promise<Object>} Configuration data
+ * @returns {boolean} return.success - Whether the request succeeded
+ * @returns {Object} return.data - Configuration data
+ * @returns {number} return.data.cad_tax_code - Tax code for CAD currency invoices
+ * @returns {number} return.data.non_cad_tax_code - Tax code for non-CAD currency invoices
+ * @returns {string} return.data.cad_item_id - QB Item ID for CAD development services
+ * @returns {string} return.data.cad_item_name - QB Item name for CAD development services
+ * @returns {string} return.data.usd_item_id - QB Item ID for USD development services
+ * @returns {string} return.data.usd_item_name - QB Item name for USD development services
+ * @returns {string} return.data.eur_item_id - QB Item ID for EUR development services
+ * @returns {string} return.data.eur_item_name - QB Item name for EUR development services
+ * @returns {string} return.data.default_currency - Default currency (CAD, USD, EUR)
+ * @returns {string} return.data.default_payment_terms - Default payment terms
+ * @returns {boolean} return.data.default_email_delivery - Send invoice emails by default
+ * @returns {string} return.data.invoice_number_format - Invoice number format pattern
+ * @returns {boolean} return.data.auto_sync_enabled - Auto-sync enabled flag
+ * @returns {number} return.data.sync_frequency_hours - Sync frequency in hours
+ *
+ * @throws {Error} If organization_id is missing or authentication fails
+ *
+ * @example
+ * const config = await getQuickBooksConfig('9816c057-b5d3-43a2-848f-99365ee6255e');
+ * console.log('CAD Tax Code:', config.data.cad_tax_code);
+ */
+export const getQuickBooksConfig = async (organizationId) => {
+  if (!organizationId) {
+    throw new Error('Organization ID is required for getQuickBooksConfig');
+  }
+  const endpoint = `/config?organization_id=${encodeURIComponent(organizationId)}`;
+  return await makeRequest(endpoint);
+};
+
+/**
+ * Update QuickBooks configuration for the organization
+ *
+ * ⚠️ BACKEND INTEGRATION STATUS: PENDING
+ *
+ * This endpoint will be available once the organization_quickbooks_config table is deployed.
+ * See BACKEND_CHANGE_REQUEST_001_QUICKBOOKS_MIGRATION.md for details.
+ *
+ * Updates organization-specific QuickBooks settings. Requires admin role.
+ *
+ * @param {string} organizationId - The organization UUID
+ * @param {Object} configData - Configuration data to update
+ * @param {number} [configData.cad_tax_code] - Tax code for CAD currency invoices
+ * @param {number} [configData.non_cad_tax_code] - Tax code for non-CAD currency invoices
+ * @param {string} [configData.cad_item_id] - QB Item ID for CAD development services
+ * @param {string} [configData.cad_item_name] - QB Item name for CAD development services
+ * @param {string} [configData.usd_item_id] - QB Item ID for USD development services
+ * @param {string} [configData.usd_item_name] - QB Item name for USD development services
+ * @param {string} [configData.eur_item_id] - QB Item ID for EUR development services
+ * @param {string} [configData.eur_item_name] - QB Item name for EUR development services
+ * @param {string} [configData.default_currency] - Default currency (CAD, USD, EUR)
+ * @param {string} [configData.default_payment_terms] - Default payment terms
+ * @param {boolean} [configData.default_email_delivery] - Send invoice emails by default
+ * @param {string} [configData.invoice_number_format] - Invoice number format pattern
+ * @param {boolean} [configData.auto_sync_enabled] - Auto-sync enabled flag
+ * @param {number} [configData.sync_frequency_hours] - Sync frequency in hours
+ * @returns {Promise<Object>} Updated configuration data
+ * @returns {boolean} return.success - Whether the request succeeded
+ * @returns {Object} return.data - Updated configuration data
+ *
+ * @throws {Error} If organization_id is missing, authentication fails, or user lacks admin role
+ *
+ * @example
+ * const updated = await updateQuickBooksConfig('9816c057-b5d3-43a2-848f-99365ee6255e', {
+ *   cad_tax_code: 5,
+ *   auto_sync_enabled: true,
+ *   sync_frequency_hours: 12
+ * });
+ * console.log('Configuration updated:', updated.data);
+ */
+export const updateQuickBooksConfig = async (organizationId, configData) => {
+  if (!organizationId) {
+    throw new Error('Organization ID is required for updateQuickBooksConfig');
+  }
+  const data = {
+    organization_id: organizationId,
+    ...configData
+  };
+  return await makeRequest('/config', 'PUT', data);
+};
+
 // Default export with all functions for backward compatibility
 export default {
   // Authorization
@@ -727,6 +831,10 @@ export default {
   getUnbilledRecords,
   createInvoiceFromRecords,
   syncInvoices,
+
+  // Configuration
+  getQuickBooksConfig,
+  updateQuickBooksConfig,
 
   // Bills
   listQBOBills,
