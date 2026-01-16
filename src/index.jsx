@@ -107,51 +107,22 @@ function AppContent() {
         setSelectedMarketingDomain(domain);
     }, []);
 
-    // Authentication handlers
-    const handleFileMakerDetected = useCallback(() => {
-        console.log('[App] FileMaker environment detected');
-        
-        // Set environment context
-        setEnvironment(ENVIRONMENT_TYPES.FILEMAKER);
-        setEnvironmentContext({
-            type: ENVIRONMENT_TYPES.FILEMAKER,
-            authentication: {
-                isAuthenticated: true,
-                method: AUTH_METHODS.FILEMAKER,
-                user: null // Will be set after user context is loaded
-            }
-        });
-        
-        // Set authentication state
-        setAuthentication({
-            isAuthenticated: true,
-            method: AUTH_METHODS.FILEMAKER,
-            user: null
-        });
-        
-        console.log('[App] FileMaker authentication set, starting initialization');
-    }, [setEnvironment, setAuthentication]);
-
+    // Authentication handler - Supabase only
     const handleSupabaseAuth = useCallback((authState) => {
         console.log('[App] Supabase authentication successful', authState);
-        
-        // Set environment context
+
+        // Set environment context - always web app now
         setEnvironment(ENVIRONMENT_TYPES.WEBAPP);
         setEnvironmentContext({
             type: ENVIRONMENT_TYPES.WEBAPP,
             authentication: authState
         });
-        
+
         // Set authentication state
         setAuthentication(authState);
-        
+
         console.log('[App] Supabase authentication set, starting initialization');
     }, [setEnvironment, setAuthentication]);
-
-    const handleDetectionComplete = useCallback(() => {
-        console.log('[App] Environment detection complete');
-        setEnvironmentDetectionComplete(true);
-    }, [setEnvironmentDetectionComplete]);
 
     // Initialization effect - only runs after authentication
     useEffect(() => {
@@ -461,9 +432,7 @@ function AppContent() {
     if (!appState.authentication.isAuthenticated) {
         return (
             <SignIn
-                onFileMakerDetected={handleFileMakerDetected}
                 onSupabaseAuth={handleSupabaseAuth}
-                onDetectionComplete={handleDetectionComplete}
             />
         );
     }

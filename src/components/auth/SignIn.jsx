@@ -1,75 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { signInWithEmail } from '../../services/supabaseService';
 
 /**
- * SignIn Component - Handles authentication for both FileMaker and web app environments
- * 
- * This component automatically detects the environment and provides appropriate authentication:
- * - FileMaker: Auto-detects and authenticates via FileMaker bridge (silent)
- * - Web App: Shows Supabase authentication form
- * 
+ * SignIn Component - Handles Supabase authentication for the web app
+ *
+ * This component provides Supabase email/password authentication.
+ * FileMaker authentication has been removed as part of the frontend FileMaker removal project.
+ *
  * @param {Object} props - Component props
- * @param {Function} props.onFileMakerDetected - Callback when FileMaker environment is detected
  * @param {Function} props.onSupabaseAuth - Callback when Supabase authentication succeeds
- * @param {Function} props.onDetectionComplete - Callback when environment detection is complete
  */
-const SignIn = ({ onFileMakerDetected, onSupabaseAuth, onDetectionComplete }) => {
+const SignIn = ({ onSupabaseAuth }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // FileMaker detection logic (silent in background)
-  const detectFileMaker = useCallback(() => {
-    console.log('[SignIn] Starting FileMaker detection...');
-    
-    // Check for FileMaker bridge availability
-    const checkFileMaker = () => {
-      const hasFMGofer = typeof window !== 'undefined' && window.FMGofer;
-      const hasFileMaker = typeof window !== 'undefined' && window.FileMaker;
-      
-      if (hasFMGofer || hasFileMaker) {
-        console.log('[SignIn] FileMaker environment detected');
-        onFileMakerDetected();
-        return true;
-      }
-      return false;
-    };
-
-    // Immediate check
-    if (checkFileMaker()) {
-      return;
-    }
-
-    // Wait for FileMaker bridge to load (up to 3 seconds)
-    let attempts = 0;
-    const maxAttempts = 30; // 3 seconds with 100ms intervals
-    
-    const interval = setInterval(() => {
-      attempts++;
-      
-      if (checkFileMaker()) {
-        clearInterval(interval);
-        return;
-      }
-      
-      if (attempts >= maxAttempts) {
-        console.log('[SignIn] FileMaker not detected, continuing with web app authentication');
-        clearInterval(interval);
-        onDetectionComplete();
-      }
-    }, 100);
-
-    // Cleanup function
-    return () => clearInterval(interval);
-  }, [onFileMakerDetected, onDetectionComplete]);
-
-  // Start detection on component mount
-  useEffect(() => {
-    const cleanup = detectFileMaker();
-    return cleanup;
-  }, [detectFileMaker]);
 
   // Handle Supabase authentication
   const handleSupabaseSignIn = useCallback(async (e) => {
@@ -185,9 +131,7 @@ const SignIn = ({ onFileMakerDetected, onSupabaseAuth, onDetectionComplete }) =>
 };
 
 SignIn.propTypes = {
-  onFileMakerDetected: PropTypes.func.isRequired,
-  onSupabaseAuth: PropTypes.func.isRequired,
-  onDetectionComplete: PropTypes.func.isRequired
+  onSupabaseAuth: PropTypes.func.isRequired
 };
 
 export default SignIn;
