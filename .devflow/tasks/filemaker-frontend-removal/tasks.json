@@ -320,7 +320,7 @@
       ],
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Successfully simplified dataService to single routing path. Removed all FileMaker code paths (~750 lines total across 12 files). Replaced dual-environment routing with simplified authentication context. Added backward compatibility exports. All API files updated to backend-only. Build verified successful.",
-      "implementation_notes": "Implemented TSK0015 by refactoring dataService.js to remove dual-environment routing and simplify to single Supabase + Backend API path, replacing ENVIRONMENT_TYPES with authentication-only context (setAuthenticationContext/getAuthenticationContext), stripping ~150 lines of FileMaker bridge code (convertToFileMakerCall, convertFileMakerParamsToHTTP, environmentAPI.fileMaker), and keeping backward-compatible deprecated exports for gradual transition. Updated 12 files including all API clients (customers, projects, tasks, notes, links, images) to use getAuthenticationContext and remove FileMaker code paths, simplified index.jsx and FeatureFlagContext to drop environment detection, and updated useProject hook and taskService to be backend-only. Fixed missing exports (fetchTaskLinks replaced with fetchLinks from links.js, removed fetchProjectRelatedData/fetchAllProjectData from index). Build verified successful (dist/index.html 2,131.59 kB, gzip 620.71 kB). Created TSK0015_COMPLETION_SUMMARY.md and marked task complete in tasks.json.",
+      "implementation_notes": "Implemented TSK0015 by refactoring the frontend to a single backend-only routing path using an authentication context pattern, removing FileMaker environment detection and related code paths. Key updates included changes to 'src/index.jsx', 'src/context/FeatureFlagContext.jsx', 'src/hooks/useProject.js', 'src/services/taskService.js', and cleanup in 'src/api/index.js' plus multiple API modules such as 'src/api/tasks.js', 'src/api/projects.js', and 'src/api/links.js' to resolve missing exports and replace 'fetchTaskLinks' with 'fetchLinks' using a task_id filter. Important decisions were to drop 'ENVIRONMENT_TYPES' usage, remove FileMaker-specific project data functions from the API surface, and keep the build green after fixing export mismatches, with completion documented in '.devflow/tasks/filemaker-frontend-removal/TSK0015_COMPLETION_SUMMARY.md' and the task marked complete in 'tasks.json'.",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -329,7 +329,7 @@
       "id": "TSK0016",
       "title": "Remove useFileMakerBridge hook",
       "description": "Delete useFileMakerBridge hook from src/hooks/index.js. Update any components still importing it. Ensure no components depend on FileMaker bridge functionality. Add deprecation notices before removal.",
-      "status": "queued",
+      "status": "done",
       "priority": "medium",
       "dependencies": [
         "TSK0015"
@@ -337,7 +337,13 @@
       "tags": [
         "hooks",
         "cleanup"
-      ]
+      ],
+      "completed_at": "2026-01-16T12:00:00.000Z",
+      "verification_notes": "Successfully removed useFileMakerBridge hook from src/hooks/index.js. Verified no components import or use the hook. Build passes successfully. Only remaining reference is a local variable name in fileMaker.js (unrelated to the React hook, will be removed in TSK0017).",
+      "implementation_notes": "Removed the complete useFileMakerBridge() function definition (62 lines) from src/hooks/index.js, including its state management for FileMaker bridge detection, connection status, retry logic, and error handling. Verified zero imports or usages of the hook across the codebase using grep. Confirmed the only remaining string match 'useFileMakerBridge' is a local boolean variable in src/api/fileMaker.js used for environment detection (not the React hook). Ran npm run build successfully with no new errors or warnings. Created TSK0016_COMPLETION_SUMMARY.md documenting the removal, verification process, and impact assessment. Updated tasks.json to mark TSK0016 complete.",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0017",
