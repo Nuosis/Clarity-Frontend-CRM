@@ -97,7 +97,7 @@
       "id": "TSK0005",
       "title": "Update projects API to use backend endpoints",
       "description": "Replace FileMaker calls in src/api/projects.js with backend API endpoints. Update fetchProjects, fetchProjectById, createProject, updateProject, archiveProject functions. Handle new schema for objectives, images, and related data. Add feature flag support.",
-      "status": "in_progress",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001",
@@ -107,14 +107,16 @@
         "api",
         "projects"
       ],
-      "executionPid": 13570,
-      "sessionId": "a9d13bfc-0914-4532-87a0-b21f451f3583"
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null,
+      "implementation_notes": "Implemented backend-ready projects API routing by updating the client in 'projects.js' to consistently use REST-style backend endpoints with the '/api' prefix (covering core project CRUD plus related objectives, steps, images, notes, status, and reorder operations) while retaining FileMaker fallback and existing org scoping and normalization. Fixed response handling in 'fetchProjectsForCustomers' to correctly unwrap array payloads when aggregating results across multiple customers. Deliberately kept feature flag logic out of the API layer after confirming hooks are not usable there, aligning with the established pattern in 'customers.js' where the 'use_backend_projects' rollout flag (default false) is enforced at the service or hook level. Added a completion note in '.devflow/tasks/projects-backend-integration/TSK0002_COMPLETION_SUMMARY.md' and verified changes via a successful build."
     },
     {
       "id": "TSK0006",
       "title": "Update tasks API to use backend endpoints",
       "description": "Replace FileMaker calls in src/api/tasks.js with backend API endpoints. Update fetchTasks, fetchTaskById, createTask, updateTask, updateTaskStatus functions. Handle timer operations (start/stop/pause) using new backend timer endpoints. Add feature flag support.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001",
@@ -124,7 +126,13 @@
         "api",
         "tasks",
         "timer"
-      ]
+      ],
+      "executionPid": null,
+      "sessionId": null,
+      "completed_at": "2026-01-15T12:00:00.000Z",
+      "verification_notes": "Updated all task and timer API endpoints to use environment-aware routing. Replaced hardcoded USE_BACKEND_API flag with getEnvironmentContext(). Task CRUD operations now use /api/tasks endpoints, timer operations use /time-entries endpoints. All functions maintain FileMaker fallback for backward compatibility. Build verified successful.",
+      "implementation_notes": "Migrated src/api/tasks.js from hardcoded backend flag to environment-aware routing pattern. Removed axios/backendConfig imports in favor of dataService. Updated all task CRUD functions (fetchTasksForProject, createTask, updateTask, updateTaskStatus, deleteTask) to use dataService.get/post/patch/delete with /api/tasks endpoints. Updated all timer functions (startTaskTimer, stopTaskTimer, pauseTimer, resumeTimer, getActiveTimer, fetchTaskTimers) to use /time-entries endpoints. Maintained full FileMaker fallback support for dual-environment compatibility. Build confirmed successful with no compilation errors.",
+      "executionError": null
     },
     {
       "id": "TSK0007",
