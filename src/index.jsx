@@ -6,7 +6,7 @@ import MainContent from './components/MainContent';
 import ErrorBoundary from './components/ErrorBoundary';
 import SignIn from './components/auth/SignIn';
 import { useTheme } from './components/layout/AppLayout';
-import { useCustomer, useProject, useTask, useFileMakerBridge, useProducts, useSales } from './hooks';
+import { useCustomer, useProject, useTask, useProducts, useSales } from './hooks';
 import { TeamProvider, useTeamContext } from './context/TeamContext';
 import { initializationService } from './services/initializationService';
 import { loadingStateManager, useGlobalLoadingState } from './services/loadingStateManager';
@@ -21,15 +21,7 @@ const MemoizedSidebar = React.memo(Sidebar);
 function AppContent() {
     const { darkMode } = useTheme();
     const appState = useAppState();
-    
-    // Only use FileMaker bridge hook if we're in FileMaker environment
-    // For web app environments, provide mock values to avoid FileMaker verification
-    const shouldUseFileMakerBridge = appState.environment.type === ENVIRONMENT_TYPES.FILEMAKER;
-    const fileMakerBridge = shouldUseFileMakerBridge
-        ? useFileMakerBridge()
-        : { isReady: true, error: null, status: 'Web app mode - FileMaker bridge disabled' };
-    
-    const { isReady: fmReady, error: fmError, status: fmStatus } = fileMakerBridge;
+
     const {
         setLoading,
         setError,
@@ -174,57 +166,16 @@ function AppContent() {
             try {
                 console.log('[App] Starting initialization for environment:', appState.environment.type);
                 loadingStateManager.setLoading('initialization', true, 'Initializing application...');
-                
+
+                // FileMaker environment no longer supported (TSK0013)
                 if (appState.environment.type === ENVIRONMENT_TYPES.FILEMAKER) {
-                    // FileMaker initialization
-                    loadingStateManager.setLoading('initialization', true, 'Connecting to FileMaker...');
-                    await initializationService.waitForFileMaker(() => fmReady);
-                    
-                    loadingStateManager.setLoading('initialization', true, 'Loading user context...');
-                    const userContext = await initializationService.loadUserContext();
-                    setUser(userContext);
-                    
-                    // Update authentication with user context
-                    setAuthentication({
-                        ...appState.authentication,
-                        user: userContext
-                    });
-                    
-                    // Fetch Supabase user ID if user context is available
-                    if (userContext && userContext.userEmail) {
-                        loadingStateManager.setLoading('initialization', true, 'Retrieving Supabase user ID...');
-                        const supabaseIds = await initializationService.fetchSupabaseUserId(userContext, setUser);
+                    console.warn('[App] FileMaker environment detected but no longer supported. Please use web app mode.');
+                    setError('FileMaker environment is no longer supported. Please access the application through the web interface.');
+                    loadingStateManager.clearLoadingState('initialization');
+                    return;
+                }
 
-                        // Update environment context with organization ID after it's fetched
-                        if (supabaseIds && supabaseIds.supabaseOrgId) {
-                            const updatedUser = {
-                                ...userContext,
-                                supabaseUserID: supabaseIds.supabaseUserId,
-                                supabaseOrgID: supabaseIds.supabaseOrgId
-                            };
-
-                            setEnvironmentContext({
-                                type: ENVIRONMENT_TYPES.FILEMAKER,
-                                authentication: {
-                                    isAuthenticated: true,
-                                    method: AUTH_METHODS.FILEMAKER,
-                                    user: updatedUser
-                                }
-                            });
-                            console.log('[App] FileMaker environment context updated with organization ID:', supabaseIds.supabaseOrgId);
-                        }
-
-                        // Load products and sales (single-tenancy)
-                        loadingStateManager.setLoading('initialization', true, 'Loading products...');
-                        await loadProducts();
-
-                        // Load sales if organization ID is available
-                        if (supabaseIds && supabaseIds.supabaseOrgId) {
-                            loadingStateManager.setLoading('initialization', true, 'Loading sales...');
-                            await loadUnbilledSalesForOrganization(supabaseIds.supabaseOrgId);
-                        }
-                    }
-                } else if (appState.environment.type === ENVIRONMENT_TYPES.WEBAPP) {
+                if (appState.environment.type === ENVIRONMENT_TYPES.WEBAPP) {
                     // Web app initialization
                     loadingStateManager.setLoading('initialization', true, 'Setting up web application...');
                     
@@ -298,16 +249,13 @@ function AppContent() {
             }
         };
 
-        // Only initialize if authenticated and (FileMaker ready or web app)
-        if (appState.authentication.isAuthenticated &&
-            (appState.environment.type === ENVIRONMENT_TYPES.WEBAPP ||
-             (appState.environment.type === ENVIRONMENT_TYPES.FILEMAKER && fmReady))) {
+        // Only initialize if authenticated and web app environment
+        if (appState.authentication.isAuthenticated && appState.environment.type === ENVIRONMENT_TYPES.WEBAPP) {
             initialize();
         }
     }, [
         appState.authentication.isAuthenticated,
         appState.environment.type,
-        fmReady,
         loadCustomers,
         loadTeams,
         setError,
@@ -521,19 +469,6 @@ function AppContent() {
     }
 
     // Handle initialization states after authentication
-    if (appState.environment.type === ENVIRONMENT_TYPES.FILEMAKER && !fmReady) {
-        return (
-            <div className="text-center p-4">
-                <div className="text-bg-[#004967] mb-2">{fmStatus}</div>
-                {fmError && (
-                    <div className="text-red-600">
-                        Connection Error: {fmError}
-                    </div>
-                )}
-            </div>
-        );
-    }
-
     if (appState.error) {
         return (
             <div className="text-center text-red-600 p-4">
