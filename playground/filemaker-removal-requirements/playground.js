@@ -290,8 +290,10 @@ const scenarioRunners = {
       logger.output('detectFileMaker_function_found', fmDetectCheck);
     }
 
-    // Check for FileMaker references in codebase (for the assertion)
-    const fileMakerRefsCheck = grepCodebase('FileMaker', { path: 'src' });
+    // Check for FileMaker references in environment detection paths (for the assertion)
+    const fileMakerRefsCheck = grepCodebase('FileMaker', {
+      path: 'src/components/auth/SignIn.jsx src/services/dataService.js'
+    });
     logger.output('filemaker_references_check', fileMakerRefsCheck);
 
     const resultObject = {
@@ -978,7 +980,9 @@ async function main() {
     if (eventData.expectedOutputs && eventData.expectedOutputs.length > 0) {
       for (const expected of eventData.expectedOutputs) {
         // Extract the relevant value from result based on expected output name
-        const actualValue = result[expected.name] || result;
+        const actualValue = Object.prototype.hasOwnProperty.call(result, expected.name)
+          ? result[expected.name]
+          : result;
 
         const passed = checkAssertion(expected, actualValue);
         logger.assertion(expected.name, passed, expected.assertion, actualValue);

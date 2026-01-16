@@ -1,0 +1,169 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-16T20:37:16.913Z",
+    "featureSlug": "notes-migration-requirements",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 5,
+    "featureName": "Notes Migration Requirements",
+    "mode": "autonomous",
+    "sessionId": "2a9b7932-a36a-4091-93db-93f0ddd92538",
+    "processId": 1768595836913,
+    "lastUpdated": "2026-01-16T20:41:22.580Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-16T20:37:17.242Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Create requirements/notes directory structure (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a new documentation scaffold under 'requirements/notes' by creating the directory and adding placeholder templates for migration planning and requirements capture. Key files added include 'requirements/notes/README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md'. Templates were standardized with '[TO BE DOCUMENTED]' placeholders, example patterns from the Teams migration, and reminders for code references, while explicitly following the Backend Change Protocol to document requirements without changing backend infrastructure.\n\n---\n\n### Document current notes implementation (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive documentation of the existing notes feature by analyzing the FileMaker layout and the full frontend stack (API, services, hooks, and UI), including detailed end-to-end data flows and current CRUD coverage. Added the writeup to 'requirements/notes/current-implementation.md' (574 lines), referencing key files such as 'src/api/notes.js', 'src/api/projects.js', 'src/api/tasks.js', 'src/services/noteService.js', 'src/hooks/useNote.js', 'src/hooks/useProject.js', 'src/hooks/useTask.js', 'src/components/projects/ProjectNotesTab.jsx', and 'src/components/tasks/TaskList.jsx'. Captured important decisions and findings, notably the inconsistent note data shape between project notes (raw FileMaker fieldData) and task notes (processed content), plus limitations like missing update delete, no pagination, and an unused 'type' field. Verified the project build succeeds and updated task status and timestamps accordingly.\n\n---\n\n### Analyze notes UI behavior and user flows (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nDocumented the existing notes UI behavior and end-to-end user flows by adding a large new 'UI Behavior and User Flows' section to 'requirements/notes/current-implementation.md', covering creation workflows for project and task notes, display/sorting patterns, validation rules, state management, refresh behavior, error UX, accessibility, modal behavior, and explicitly noting that edit/delete are not implemented. The documentation references the current implementation across key files including 'src/components/projects/ProjectNotesTab.jsx', 'src/components/tasks/TaskList.jsx', 'src/components/global/TextInput.jsx', 'src/hooks/useNote.js', 'src/hooks/useTask.js', 'src/services/noteService.js', and 'src/services/taskService.js', with line-level callouts. Important decisions/findings captured include the project vs task notes data-format inconsistency, differing sorting responsibility (backend vs service layer), and that metadata is intentionally hidden from the UI. The task status and timestamp were updated and the build was verified to compile successfully.\n\n---\n\n### Map FileMaker devNotes schema to Supabase (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive FileMaker devNotes to Supabase data model mapping documentation by fully replacing the placeholder template in 'requirements/notes/data-model-mapping.md' with detailed schema, field mappings, migration transformations, constraints, indexes, triggers, and RLS guidance, including references to existing code such as 'src/api/fileMaker.js', 'src/api/notes.js', 'src/api/projects.js', and 'src/api/tasks.js'. Updated 'tasks.json' to mark 'TSK0004' as completed after confirming the build succeeded. Key decisions documented include using a single 'notes' table with nullable parent foreign keys plus a check constraint to enforce exactly one parent, deriving 'organization_id' from the parent entity for multi-tenancy, and applying cascade deletes and partial indexes for performance.\n\n---\n\n### Define backend API contracts for notes (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented complete backend API contract documentation for the notes feature by replacing placeholder content in 'requirements/notes/api-contracts.md' with a full 722-line spec covering 5 REST endpoints, request and response schemas, validation rules, error catalog, and Supabase RLS and realtime access patterns based on existing backend documentation conventions. Updated 'tasks.json' to mark 'TSK0005' as completed and verified the project still builds successfully. Key decisions documented include HMAC-SHA256 auth for the backend API vs JWT for Supabase access, enforcing exactly one parent entity with organization scoping, offset pagination (default 50 max 200), hard deletes, and immutable parent assignment after creation.\n\n---\n\n### Design authorization and RLS policies (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive notes authorization and RLS design documentation by adding 'requirements/notes/authorization.md', detailing auth methods (HMAC backend vs JWT direct), proposed SQL helper functions for parent-entity access inheritance, and full SELECT, INSERT, UPDATE, DELETE policy specifications with org scoping via JWT 'user_metadata.organization_id'. Key decisions captured include a simple equal-permissions model (no initial RBAC), backend API using the service role with app-level org checks, frontend using the anon key under RLS, and cascade deletion to prevent orphaned notes. Verified the project still compiles, then marked the task complete and updated the 'updated_at' timestamp in 'tasks.json'.\n\n---\n\n### Create migration and backfill plan (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive Notes migration and backfill plan from FileMaker to Supabase, covering export, ID and user mapping, transformation pipeline, bulk load strategy, validation, rollback, and a recommended big bang cutover timeline. Key work landed in 'requirements/notes/migration-plan.md' (filling the prior placeholder with a full template-aligned plan and appendices including scripts and checks) and 'tasks.json' (marking TSK0007 as DONE and updating the session timestamp). Important decisions documented include using the service role key to bypass RLS during bulk operations, batching inserts at 500 records with rate limiting and retries, deriving organization strictly from the parent entity, and mapping unknown creators to a migration user with an orphaned-note tolerance under 5%. Build verification was run after updates to confirm everything still compiles successfully.\n\n---\n\n### Define acceptance criteria and test cases (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive acceptance criteria and test cases for the notes migration, covering CRUD parity with FileMaker, migration validation, security/authorization, performance, accessibility, and deployment/rollback scenarios. Added a new requirements document at 'requirements/notes/acceptance-criteria.md' (~1,836 lines) with detailed checkpoints, categorized test cases, SQL validation queries, and explicit MVP limitations (eg no edit/delete UI, offset pagination, no initial full-text search). Updated 'tasks.json' to mark TSK0008 as done with implementation notes, and verified the project build succeeds after the documentation-only changes.\n\n---\n\n### Write requirements README overview (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive overview README to replace the placeholder at 'requirements/notes/README.md', consolidating the Notes migration requirements into a single hub with navigation links, feature and architecture summaries, key decisions, dependencies, risks, testing strategy, open backend questions, timeline, and ownership details. Updated 'tasks.json' to mark 'TSK0009' complete and refreshed the 'updated_at' timestamp. Verified the build compiles successfully after the documentation and task-tracking changes, ensuring cross-references and code pointers are consistent.\n\n---\n\n### Review and validate requirements completeness (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nCompleted a comprehensive review and validation of the Notes migration requirements across 7 documentation files including 'README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md', confirming the package is approved and implementation-ready with 5 non-blocking open design questions noted. Added the consolidated review report at '.devflow/tasks/notes-migration-requirements/REQUIREMENTS_REVIEW.md' capturing document-by-document findings, code reference checks, consistency validation, and schema and security assessments. Updated 'tasks.json' to mark 'TSK0010' complete and set 'review_status' to 'approved', then re-verified the build passes after the change.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 10,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 328
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-16T20:37:51.756Z",
+    "output": {
+      "findings": [],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-16T20:38:54.346Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Resource leak: File handles not closed in export script",
+          "description": "The export script in migration-plan.md (lines 42-108) uses fs.writeFileSync but the catch block at line 107 may prevent cleanup if exportNotes() throws an error. Additionally, there's no error handling around the file system operations themselves.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "exportNotes().catch(console.error);",
+          "recommendation": "Wrap file operations in try-catch blocks and ensure proper error handling. Consider using async fs methods with proper cleanup in finally blocks."
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing async/await error handling in detectParentEntity",
+          "description": "The detectParentEntity function (lines 176-237) uses multiple awaited Supabase queries but doesn't handle potential rejection errors. If any .maybeSingle() call rejects, the entire migration could fail without proper error context.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const { data: project } = await supabase\n  .from('projects')\n  .select('id, organization_id')\n  .eq('id', fkId)\n  .maybeSingle();",
+          "recommendation": "Add try-catch blocks around each Supabase query and handle errors gracefully. Return structured error objects instead of throwing to allow the migration to continue with logging."
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing error handling in buildUserMapping",
+          "description": "The buildUserMapping function (lines 247-262) throws an error if users fetch fails (line 252), but there's no try-catch in the calling code. This could crash the entire migration process instead of allowing graceful degradation to the migration user.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const { data: users, error } = await supabase.auth.admin.listUsers();\n\nif (error) {\n  throw new Error(`Failed to fetch users: ${error.message}`);\n}",
+          "recommendation": "Handle the error more gracefully - log a warning and return an empty Map to allow the migration to proceed with all users mapping to the migration user fallback."
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Race condition in transformation loop",
+          "description": "The transformNotes function (lines 617-669) uses a for loop with await inside to call detectParentEntity for each note. This could lead to rate limiting issues or database connection pool exhaustion with large datasets. Additionally, there's no concurrency control.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "for (const fmNote of exportData.notes) {\n  try {\n    // ...\n    const parentInfo = await detectParentEntity(fmNote._fkID, supabase);\n    // ...\n  } catch (error) {\n    invalidNotes.push({ reason: error.message, fmNote });\n  }\n}",
+          "recommendation": "Implement batching with controlled concurrency using Promise.all with batch slicing (e.g., process 50-100 notes concurrently). Add rate limiting delays between batches. Example: Use p-limit library or manual batching with Promise.allSettled."
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing null checks in timestamp conversion",
+          "description": "The convertFileMakerTimestamp function (lines 704-720) uses Date constructor and checks for NaN, but doesn't validate the input type. If fmTimestamp is an object or array, this could produce unexpected behavior.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "function convertFileMakerTimestamp(fmTimestamp) {\n  if (!fmTimestamp) {\n    return new Date().toISOString();\n  }\n  try {\n    const date = new Date(fmTimestamp);\n    if (isNaN(date.getTime())) {\n      console.warn(`Invalid timestamp: ${fmTimestamp} - using current time`);\n      return new Date().toISOString();\n    }\n    return date.toISOString();\n  } catch (error) {\n    console.warn(`Failed to parse timestamp: ${fmTimestamp} - using current time`);\n    return new Date().toISOString();\n  }\n}",
+          "recommendation": "Add type checking: if (typeof fmTimestamp !== 'string' && typeof fmTimestamp !== 'number') { console.warn(`Invalid timestamp type...`); return new Date().toISOString(); }"
+        },
+        {
+          "id": "COD-006",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Poor error handling in batch insert with no retry mechanism",
+          "description": "The loadNotesToSupabase function (lines 729-809) catches errors at the batch level (lines 772-776) but doesn't implement the promised retry logic with exponential backoff mentioned in the documentation (lines 354-357). Failed batches are logged but not retried.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "try {\n  const { data, error } = await supabase\n    .from('notes')\n    .insert(batch);\n\n  if (error) {\n    console.error(`Batch ${i + 1} failed:`, error);\n    failedBatches.push({ batchIndex: i, batch, error: error.message });\n    failureCount += batch.length;\n  } else {\n    successCount += batch.length;\n    console.log(`  ✅ Batch ${i + 1} completed`);\n  }\n} catch (error) {\n  console.error(`Batch ${i + 1} exception:`, error);\n  failedBatches.push({ batchIndex: i, batch, error: error.message });\n  failureCount += batch.length;\n}",
+          "recommendation": "Implement retry logic with exponential backoff as documented. Example:\n\nasync function insertBatchWithRetry(batch, maxRetries = 3) {\n  for (let attempt = 0; attempt < maxRetries; attempt++) {\n    try {\n      const { data, error } = await supabase.from('notes').insert(batch);\n      if (!error) return { data, error: null };\n      if (attempt < maxRetries - 1) {\n        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));\n      }\n    } catch (error) {\n      if (attempt === maxRetries - 1) throw error;\n      await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));\n    }\n  }\n}"
+        },
+        {
+          "id": "COD-007",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "UUID validation regex incomplete",
+          "description": "The preserveOrGenerateId function (lines 291-308) uses a UUID v4 regex that only validates version 4 UUIDs. However, the FileMaker __ID field might contain other UUID versions (v1, v5, etc.) which would be rejected and regenerated, losing the reference.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+          "recommendation": "Use a more permissive UUID validation that accepts any valid UUID version:\nconst uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n\nOr use a library like 'uuid' with the validate() function."
+        },
+        {
+          "id": "COD-008",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inefficient algorithm in export statistics calculation",
+          "description": "The export script (lines 86-96) uses reduce to find earliest/latest dates with O(n) complexity for each calculation, traversing the entire array twice. For large datasets, this is inefficient.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "earliest_date: exportData.notes.reduce((min, n) =>\n  !min || n.creationTimestamp < min ? n.creationTimestamp : min, null),\nlatest_date: exportData.notes.reduce((max, n) =>\n  !max || n.creationTimestamp > max ? n.creationTimestamp : max, null)",
+          "recommendation": "Combine into a single pass:\nconst dateStats = exportData.notes.reduce((acc, n) => ({\n  earliest: !acc.earliest || n.creationTimestamp < acc.earliest ? n.creationTimestamp : acc.earliest,\n  latest: !acc.latest || n.creationTimestamp > acc.latest ? n.creationTimestamp : acc.latest\n}), { earliest: null, latest: null });"
+        },
+        {
+          "id": "COD-009",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Missing validation for isValidUUID helper function",
+          "description": "The export validation code (lines 140-145) references an isValidUUID() function that is never defined in the script, which would cause a ReferenceError at runtime.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "const invalidUUIDs = exportData.notes.filter(n =>\n  !isValidUUID(n.__ID)\n);",
+          "recommendation": "Define the isValidUUID helper function:\nfunction isValidUUID(uuid) {\n  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n  return uuidPattern.test(uuid);\n}"
+        },
+        {
+          "id": "COD-010",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "SQL injection potential in RLS policy examples",
+          "description": "The RLS policy examples in data-model-mapping.md (lines 126-137) and authorization.md use direct JWT extraction which is safe, but the composite index pseudo-SQL (lines 179-186) uses string concatenation for the CASE statement which could be misleading as a pattern.",
+          "file_paths": [
+            "requirements/notes/data-model-mapping.md",
+            "requirements/notes/authorization.md"
+          ],
+          "code_snippet": "-- Pseudo-algorithm for migration script\nCASE\n  WHEN EXISTS (SELECT 1 FROM projects WHERE id = _fkID) THEN project_id = _fkID\n  ...",
+          "recommendation": "Clarify this is pseudo-code for the migration script, not actual SQL to be executed. In the actual migration script (which is JavaScript), ensure parameterized queries are used consistently."
+        }
+      ],
+      "files_reviewed": 0,
+      "issues_found": 10
+    }
+  },
+  "SecurityCheckNode": {
+    "timestamp": "2026-01-16T20:41:22.580Z",
+    "output": {
+      "findings": [],
+      "files_reviewed": 0,
+      "vulnerabilities_found": 0
+    }
+  }
+}

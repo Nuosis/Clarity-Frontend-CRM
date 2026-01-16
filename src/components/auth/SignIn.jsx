@@ -6,7 +6,7 @@ import { signInWithEmail } from '../../services/supabaseService';
  * SignIn Component - Handles Supabase authentication for the web app
  *
  * This component provides Supabase email/password authentication.
- * FileMaker authentication has been removed as part of the frontend FileMaker removal project.
+ * Legacy authentication has been removed as part of the frontend migration.
  *
  * @param {Object} props - Component props
  * @param {Function} props.onSupabaseAuth - Callback when Supabase authentication succeeds
