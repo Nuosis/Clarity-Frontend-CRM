@@ -435,67 +435,10 @@ export const Actions = {
 };
 
 /**
- * Initializes QuickBooks for a specific customer
- * Sends unbilled records to QB for processing
+ * @deprecated This FileMaker script-based QuickBooks initialization has been removed.
+ * Use the new backend API functions instead:
+ * - getUnbilledRecords() from src/api/quickbooksApi.js
+ * - createInvoiceFromRecords() from src/api/quickbooksApi.js
  *
- * @param {Object|string} params - Either a customer ID string or an object with customer and record details
- * @param {string} params.custId - The ID of the customer to process in QuickBooks
- * @param {Array} [params.records] - Array of record IDs to process in QuickBooks (legacy format)
- * @param {Object} [params.recordsByProject] - Object mapping project IDs to arrays of record IDs
- * @returns {Promise} A promise that resolves when the script completes
+ * See BACKEND_CHANGE_REQUEST_001_QUICKBOOKS_MIGRATION.md for migration details.
  */
-export async function initializeQuickBooks(params) {
-    // Handle both string (backward compatibility) and object formats
-    const isObject = typeof params === 'object' && params !== null;
-    const customerId = isObject ? params.custId : params;
-    
-    console.log("QuickBooks initialization details:", {
-        customerId,
-        isObject,
-        paramsType: typeof params,
-        hasRecordsByProject: isObject && !!params.recordsByProject,
-        recordsByProjectKeys: isObject ? Object.keys(params.recordsByProject || {}) : []
-    });
-    
-    if (!customerId) {
-        throw new Error('Customer ID is required for QuickBooks initialization');
-    }
-    
-    return new Promise((resolve, reject) => {
-        try {
-            if (typeof FileMaker === "undefined" || !FileMaker.PerformScript) {
-                const error = new Error("FileMaker object is unavailable");
-                error.code = "FM_UNAVAILABLE";
-                reject(error);
-                return;
-            }
-            
-            // Prepare the payload based on the input format
-            let payload;
-            if (isObject) {
-                // New format: pass an object with customer ID and record IDs (grouped by project or flat)
-                payload = JSON.stringify(params);
-            } else {
-                // Legacy format: just pass the customer ID as a string
-                payload = customerId;
-            }
-            
-            console.log("Sending QuickBooks payload:", payload);
-            
-            try {
-                // Call the FileMaker script with the payload
-                FileMaker.PerformScript("Initialize QB via JS", payload);
-            } catch (scriptError) {
-                console.error("Error executing FileMaker script:", scriptError);
-                throw scriptError;
-            }
-            
-            // Since this is a fire-and-forget operation, resolve immediately
-            resolve({ status: "success", message: "QuickBooks initialization requested" });
-        } catch (error) {
-            console.error("Error initializing QuickBooks:", error);
-            error.code = "QB_INIT_ERROR";
-            reject(error);
-        }
-    });
-}

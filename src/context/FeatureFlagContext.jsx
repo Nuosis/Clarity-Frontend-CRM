@@ -69,6 +69,9 @@ const DEFAULT_FLAGS = {
     // Links
     use_backend_links: true, // Migrated to backend API
 
+    // QuickBooks
+    use_backend_quickbooks: true, // Migrated to backend API
+
     // Marketing (Supabase-only, no FileMaker equivalent)
     use_supabase_prospects: true,
     use_supabase_marketing: true

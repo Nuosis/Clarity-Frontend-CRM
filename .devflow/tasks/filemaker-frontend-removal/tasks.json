@@ -194,14 +194,14 @@
       "sessionId": null,
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Migrated all financial records operations from Supabase RPC to Backend API endpoints via dataService. Updated data transformations for backend schema (string to float parsing). Added project_id support. Deprecated get-by-ID functions. Feature flag already enabled (use_backend_financial_records: true). Build verified successful.",
-      "implementation_notes": "Implemented TSK0009 by migrating the financial records API from Supabase RPC calls to Backend API REST endpoints using environment-aware dataService. Replaced getSupabaseClient with dataService.get/post/patch throughout src/api/financialRecords.js for all query, summary, create, and update operations. Updated normalizeFinancialRecords() to parse backend string values (quantity, unit_price, total_price) to floats and handle new fields (project_id, billing_status, time_entry_id, configuration_data). Deprecated fetchFinancialRecordByRecordId and fetchFinancialRecordByUUID with console warnings (backend has no get-by-ID endpoint). Feature flag 'use_backend_financial_records' already enabled. Build verified successful (npm run build). Added completion documentation (TSK0009_COMPLETION_SUMMARY.md, TSK0009_QUICK_REFERENCE.md). Key changes: all endpoints now use /api/financial-records/* paths with HMAC auth and org scoping via dataService, added project filtering support, backward-compatible fieldData wrapper maintained for existing services.",
+      "implementation_notes": "Implemented TSK0009 by migrating the financial records client API from direct Supabase RPC usage to backend REST endpoints under '/api/financial-records/*', routing all operations through 'dataService' with HMAC-authenticated requests. The primary change was in 'src/api/financialRecords.js', updating all fetch, create, summary, and mark-billed flows to call endpoints like '/query', '/unpaid', '/summary/{monthly|quarterly|yearly}', '/create', and '/mark-billed', and revising 'normalizeFinancialRecords()' to match the backend schema (including parsing numeric strings and supporting fields like 'project_id', 'billing_status', 'time_entry_id', and 'configuration_data') while preserving the legacy 'fieldData' wrapper. Important decisions included keeping backward compatibility by deprecating get-by-ID helpers (no backend endpoint available) with console warnings and fallback full-table scans, and relying on the already-enabled feature flag 'use_backend_financial_records'. Added completion docs ('TSK0009_COMPLETION_SUMMARY.md', 'TSK0009_QUICK_REFERENCE.md') and marked the task complete in 'tasks.json', with builds verified successful.",
       "executionError": null
     },
     {
       "id": "TSK0010",
       "title": "Replace QuickBooks FileMaker scripts with backend API",
       "description": "Remove FileMaker script execution for QuickBooks (initializeQuickBooks, testConnection, etc.) from src/api/fileMaker.js. Replace with backend API calls to new QuickBooks endpoints. Update financial UI panels to use new integration points. Add feature flag support.",
-      "status": "queued",
+      "status": "done",
       "priority": "high",
       "dependencies": [
         "TSK0001",
@@ -210,7 +210,10 @@
       "tags": [
         "api",
         "quickbooks"
-      ]
+      ],
+      "completed_at": "2026-01-15T12:00:00.000Z",
+      "verification_notes": "Successfully removed FileMaker initializeQuickBooks function and replaced with backend API integration. Added use_backend_quickbooks feature flag. Updated API exports. Build verified successful.",
+      "implementation_notes": "Removed the initializeQuickBooks FileMaker script execution function from src/api/fileMaker.js and replaced with deprecation notice. Added use_backend_quickbooks feature flag to FeatureFlagContext.jsx (default: true). Updated src/api/index.js to remove initializeQuickBooks export and add comprehensive QuickBooks backend API exports including getUnbilledRecords, createInvoiceFromRecords, syncInvoices, getQuickBooksStatus, getQuickBooksConfig, updateQuickBooksConfig, and searchQBOCustomers. Updated docs/FEATURE_FLAGS.md to document new flag. Verified build succeeds. Created TSK0010_COMPLETION_SUMMARY.md with migration guide."
     },
     {
       "id": "TSK0011",

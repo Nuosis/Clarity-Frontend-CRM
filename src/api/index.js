@@ -4,8 +4,7 @@ export {
     handleFileMakerOperation,
     validateParams,
     Layouts,
-    Actions,
-    initializeQuickBooks
+    Actions
 } from './fileMaker';
 
 // Customer operations
@@ -123,51 +122,64 @@ export {
     handleQBOOAuthCallback,
     refreshQBOToken,
     validateQBOCredentials,
-    
+
     // Company
     getQBOCompanyInfo,
-    
+
+    // Connection & Status
+    getQuickBooksStatus,
+
     // Customers
     listQBOCustomers,
     getQBOCustomer,
     createQBOCustomer,
     updateQBOCustomer,
     deleteQBOCustomer,
-    
+    searchQBOCustomers,
+
     // Invoices
     listQBOInvoices,
     getQBOInvoice,
     createQBOInvoice,
     updateQBOInvoice,
     deleteQBOInvoice,
-    
+    sendQBOInvoiceEmail,
+
+    // Billing & Invoice Operations
+    getUnbilledRecords,
+    createInvoiceFromRecords,
+    syncInvoices,
+
+    // Configuration
+    getQuickBooksConfig,
+    updateQuickBooksConfig,
+
     // Bills
     listQBOBills,
     getQBOBill,
     createQBOBill,
     updateQBOBill,
     deleteQBOBill,
-    
+
     // Items & Vendors
     listQBOItems,
     listQBOVendors,
-    
+
     // Query
     executeQBOQuery,
-    
+
     // Webhooks
     getQBOWebhookStats,
     listQBOWebhookEvents,
     testQBOWebhook,
     clearQBOWebhookEvents,
-    
+
     // Legacy compatibility (deprecated)
     listQBOCustomerByName,
     getQBOInvoiceByQuery,
     getQBOItem,
     listQBOAccounts,
-    getQBOAccount,
-    sendQBOInvoiceEmail
+    getQBOAccount
 } from './quickbooksApi';
 
 // Marketing operations

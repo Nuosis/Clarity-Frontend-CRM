@@ -107,7 +107,10 @@ function fetchCustomers() {
 - `use_backend_proposals`: Use backend API for proposals (default: `true` - already migrated)
 
 ### Links
-- `use_backend_links`: Use backend API for links (default: `false`)
+- `use_backend_links`: Use backend API for links (default: `true` - already migrated)
+
+### QuickBooks
+- `use_backend_quickbooks`: Use backend API for QuickBooks integration (default: `true` - already migrated)
 
 ### Marketing (Supabase-only)
 - `use_supabase_prospects`: Use Supabase for prospects (default: `true` - no FileMaker equivalent)
