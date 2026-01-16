@@ -5,6 +5,28 @@
  * Tests HMAC authentication, endpoint construction, and error handling
  */
 
+// Mock import.meta before importing the module
+const mockEnv = {
+  VITE_SECRET_KEY: 'test-secret-key-for-hmac-authentication',
+  VITE_CLARITY_INTEGRATION_ORG_ID: '9816c057-b5d3-43a2-848f-99365ee6255e',
+  VITE_API_URL: 'https://api.claritybusinesssolutions.ca',
+  MODE: 'test'
+};
+
+jest.mock('../../api/quickbooksApi', () => {
+  // Mock import.meta.env
+  const originalModule = jest.requireActual('../../api/quickbooksApi');
+
+  // Since we can't actually use import.meta in Jest, we'll just return the actual module
+  // and mock fetch/crypto instead
+  return originalModule;
+});
+
+// Set environment variables before import
+Object.keys(mockEnv).forEach(key => {
+  process.env[key] = mockEnv[key];
+});
+
 import {
   getQBOAuthorizationUrl,
   handleQBOOAuthCallback,
@@ -31,18 +53,7 @@ import {
   updateQuickBooksConfig
 } from '../quickbooksApi';
 
-// Mock environment variables
-const originalEnv = import.meta.env;
-
 beforeEach(() => {
-  // Mock environment variables
-  import.meta.env = {
-    ...originalEnv,
-    VITE_SECRET_KEY: 'test-secret-key-for-hmac-authentication',
-    VITE_CLARITY_INTEGRATION_ORG_ID: '9816c057-b5d3-43a2-848f-99365ee6255e',
-    VITE_API_URL: 'https://api.claritybusinesssolutions.ca'
-  };
-
   // Mock fetch
   global.fetch = jest.fn();
 
@@ -57,7 +68,6 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.clearAllMocks();
-  import.meta.env = originalEnv;
 });
 
 describe('QuickBooks API Client - Authentication', () => {
@@ -746,13 +756,13 @@ describe('QuickBooks API Client - HMAC Authentication', () => {
   });
 
   test('should throw error if VITE_SECRET_KEY is missing', async () => {
-    delete import.meta.env.VITE_SECRET_KEY;
+    delete process.env.VITE_SECRET_KEY;
 
     await expect(getQBOCompanyInfo()).rejects.toThrow('VITE_SECRET_KEY not available');
   });
 
   test('should throw error if VITE_CLARITY_INTEGRATION_ORG_ID is missing', async () => {
-    delete import.meta.env.VITE_CLARITY_INTEGRATION_ORG_ID;
+    delete process.env.VITE_CLARITY_INTEGRATION_ORG_ID;
 
     await expect(getQBOCompanyInfo()).rejects.toThrow('VITE_CLARITY_INTEGRATION_ORG_ID not available');
   });
