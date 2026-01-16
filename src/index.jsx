@@ -13,7 +13,7 @@ import { loadingStateManager, useGlobalLoadingState } from './services/loadingSt
 import { AppStateProvider, useAppState, useAppStateOperations } from './context/AppStateContext';
 import { ProjectProvider } from './context/ProjectContext';
 import { calculateProjectDetailStats } from './services/projectService';
-import { setEnvironmentContext, ENVIRONMENT_TYPES, AUTH_METHODS } from './services/dataService';
+import { setAuthenticationContext } from './services/dataService';
 
 // Memoized sidebar for performance
 const MemoizedSidebar = React.memo(Sidebar);
@@ -111,18 +111,14 @@ function AppContent() {
     const handleSupabaseAuth = useCallback((authState) => {
         console.log('[App] Supabase authentication successful', authState);
 
-        // Set environment context - always web app now
-        setEnvironment(ENVIRONMENT_TYPES.WEBAPP);
-        setEnvironmentContext({
-            type: ENVIRONMENT_TYPES.WEBAPP,
-            authentication: authState
-        });
+        // Set authentication context in dataService
+        setAuthenticationContext(authState);
 
-        // Set authentication state
+        // Set authentication state in app
         setAuthentication(authState);
 
         console.log('[App] Supabase authentication set, starting initialization');
-    }, [setEnvironment, setAuthentication]);
+    }, [setAuthentication]);
 
     // Initialization effect - only runs after authentication
     useEffect(() => {
@@ -135,20 +131,11 @@ function AppContent() {
             }
             
             try {
-                console.log('[App] Starting initialization for environment:', appState.environment.type);
+                console.log('[App] Starting initialization');
                 loadingStateManager.setLoading('initialization', true, 'Initializing application...');
 
-                // FileMaker environment no longer supported (TSK0013)
-                if (appState.environment.type === ENVIRONMENT_TYPES.FILEMAKER) {
-                    console.warn('[App] FileMaker environment detected but no longer supported. Please use web app mode.');
-                    setError('FileMaker environment is no longer supported. Please access the application through the web interface.');
-                    loadingStateManager.clearLoadingState('initialization');
-                    return;
-                }
-
-                if (appState.environment.type === ENVIRONMENT_TYPES.WEBAPP) {
-                    // Web app initialization
-                    loadingStateManager.setLoading('initialization', true, 'Setting up web application...');
+                // Web app initialization
+                loadingStateManager.setLoading('initialization', true, 'Setting up web application...');
                     
                     // Set user from Supabase auth
                     if (appState.authentication.user) {
@@ -166,7 +153,7 @@ function AppContent() {
                         const supabaseIds = await initializationService.fetchSupabaseUserId(webAppUser, setUser);
                         console.log('[App] fetchSupabaseUserId result:', supabaseIds);
 
-                        // Update environment context with organization ID after it's fetched
+                        // Update authentication context with organization ID after it's fetched
                         if (supabaseIds && supabaseIds.supabaseOrgId) {
                             const updatedUser = {
                                 ...webAppUser,
@@ -174,15 +161,11 @@ function AppContent() {
                                 supabaseOrgID: supabaseIds.supabaseOrgId
                             };
 
-                            setEnvironmentContext({
-                                type: ENVIRONMENT_TYPES.WEBAPP,
-                                authentication: {
-                                    isAuthenticated: true,
-                                    method: AUTH_METHODS.SUPABASE,
-                                    user: updatedUser
-                                }
+                            setAuthenticationContext({
+                                isAuthenticated: true,
+                                user: updatedUser
                             });
-                            console.log('[App] Environment context updated with organization ID:', supabaseIds.supabaseOrgId);
+                            console.log('[App] Authentication context updated with organization ID:', supabaseIds.supabaseOrgId);
                         }
 
                         // Load products (single-tenancy)
@@ -201,8 +184,7 @@ function AppContent() {
                             });
                         }
                     }
-                }
-                
+
                 loadingStateManager.setLoading('initialization', true, 'Loading initial data...');
                 await initializationService.preloadData(async () => {
                     await loadCustomers();
@@ -220,13 +202,12 @@ function AppContent() {
             }
         };
 
-        // Only initialize if authenticated and web app environment
-        if (appState.authentication.isAuthenticated && appState.environment.type === ENVIRONMENT_TYPES.WEBAPP) {
+        // Only initialize if authenticated
+        if (appState.authentication.isAuthenticated) {
             initialize();
         }
     }, [
         appState.authentication.isAuthenticated,
-        appState.environment.type,
         loadCustomers,
         loadTeams,
         setError,

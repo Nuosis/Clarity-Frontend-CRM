@@ -1,4 +1,16 @@
-import { dataService, getEnvironmentContext } from '../services/dataService';
+import { dataService, getAuthenticationContext } from '../services/dataService';
+
+/**
+ * Check organization scope
+ * @param {Object} auth - Authentication context
+ * @param {string} operation - Operation name for error messages
+ * @throws {Error} If organization ID is missing
+ */
+function checkOrganizationScope({ authentication: auth }, operation) {
+    if (!auth?.user?.supabaseOrgID) {
+        throw new Error(`Organization context required for ${operation}. Please authenticate.`);
+    }
+}
 
 /**
  * Creates a new link via backend API
@@ -27,10 +39,8 @@ export async function createLink(data) {
     }
 
     // Check organization scope
-    const env = getEnvironmentContext();
-    if (!env.authentication?.user?.supabaseOrgID) {
-        throw new Error('Organization context required for creating links. Please authenticate.');
-    }
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'createLink');
 
     // Build payload matching backend schema
     // Note: Backend uses 'link' field, not 'url'

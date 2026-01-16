@@ -2,7 +2,6 @@ import {
     fetchTasksForProject,
     fetchTaskTimers,
     fetchTaskNotes,
-    fetchTaskLinks,
     createTask as createTaskAPI,
     updateTask as updateTaskAPI,
     updateTaskStatus as updateTaskStatusAPI,
@@ -12,6 +11,7 @@ import {
     resumeTimer as resumeTimerAPI,
     getActiveTimer as getActiveTimerAPI
 } from '../api/tasks';
+import { fetchLinks } from '../api/links';
 import { fetchFinancialRecordByRecordId, createFinancialRecord } from '../api/financialRecords';
 import { createSaleFromFinancialRecord } from './salesService';
 import { getSupabaseClient } from './supabaseService';
@@ -41,7 +41,7 @@ export async function loadTaskDetails(taskId) {
     const [timerResult, notesResult, linksResult] = await Promise.all([
         fetchTaskTimers(taskId),
         fetchTaskNotes(taskId),
-        fetchTaskLinks(taskId)
+        fetchLinks({ task_id: taskId })
     ]);
 
     return {

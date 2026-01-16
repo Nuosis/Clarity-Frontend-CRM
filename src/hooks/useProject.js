@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
     fetchProjectsForCustomer,
-    fetchProjectRelatedData,
     updateProjectStatus,
     createProject,
     updateProject,
@@ -33,7 +32,6 @@ import {
     processProjectValue,
     updateProjectRecordsBillableStatus
 } from '../services/projectService';
-import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 import { createSalesFromProjectValue } from '../services/salesService';
 
 /**
@@ -60,31 +58,27 @@ export function useProject(customerId = null) {
 
     /**
      * Loads projects for a customer
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const loadProjects = useCallback(async (custId) => {
         try {
             setLoading(true);
             setError(null);
 
-            const env = getEnvironmentContext();
-
             if (custId) {
                 // Fetch projects for specific customer
                 const projectResult = await fetchProjectsForCustomer(custId);
 
-                // Process based on environment
-                const source = env.type === ENVIRONMENT_TYPES.WEBAPP ? 'backend' : 'filemaker';
-                const processedProjects = processProjectData(projectResult, {}, source);
+                // Process backend data
+                const processedProjects = processProjectData(projectResult, {}, 'backend');
 
                 setProjects(processedProjects);
             } else {
                 // Load all projects when no customer ID provided
                 const projectResult = await fetchProjectsForCustomers([]);
 
-                // Process based on environment
-                const source = env.type === ENVIRONMENT_TYPES.WEBAPP ? 'backend' : 'filemaker';
-                const processedProjects = processProjectData(projectResult, {}, source);
+                // Process backend data
+                const processedProjects = processProjectData(projectResult, {}, 'backend');
 
                 setProjects(processedProjects);
             }
@@ -98,85 +92,42 @@ export function useProject(customerId = null) {
 
     /**
      * Loads detailed data for a specific project
-     * Environment-aware: Uses /projects/{id}/detail endpoint in webapp, parallel calls in FileMaker
+     * Uses backend API /projects/{id}/detail endpoint
      */
     const loadProjectDetails = useCallback(async (projectId) => {
         try {
-            const env = getEnvironmentContext();
+            // Backend API: Use single endpoint that returns nested data
+            const projectWithDetails = await fetchProjectWithDetails(projectId);
 
-            if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-                // Backend API: Use single endpoint that returns nested data
-                const projectWithDetails = await fetchProjectWithDetails(projectId);
+            // Process the backend response
+            const source = 'backend';
+            const processedImages = processProjectImages(projectWithDetails.images || [], projectId, source);
+            const processedLinks = processProjectLinks(projectWithDetails.links || [], projectId, source);
+            const processedObjectives = processProjectObjectives(
+                projectWithDetails.objectives || [],
+                projectId,
+                projectWithDetails.steps || [],
+                source
+            );
+            const processedNotes = projectWithDetails.notes || [];
 
-                // Process the backend response
-                const source = 'backend';
-                const processedImages = processProjectImages(projectWithDetails.images || [], projectId, source);
-                const processedLinks = processProjectLinks(projectWithDetails.links || [], projectId, source);
-                const processedObjectives = processProjectObjectives(
-                    projectWithDetails.objectives || [],
-                    projectId,
-                    projectWithDetails.steps || [],
-                    source
-                );
-                const processedNotes = projectWithDetails.notes || [];
+            const projectDetails = {
+                images: processedImages,
+                links: processedLinks,
+                objectives: processedObjectives,
+                notes: processedNotes
+            };
 
-                const projectDetails = {
-                    images: processedImages,
-                    links: processedLinks,
-                    objectives: processedObjectives,
-                    notes: processedNotes
-                };
+            // Update the project with the processed details
+            setProjects(prevProjects =>
+                prevProjects.map(p =>
+                    p.id === projectId
+                        ? { ...p, ...projectDetails }
+                        : p
+                )
+            );
 
-                // Update the project with the processed details
-                setProjects(prevProjects =>
-                    prevProjects.map(p =>
-                        p.id === projectId
-                            ? { ...p, ...projectDetails }
-                            : p
-                    )
-                );
-
-                return projectDetails;
-            } else {
-                // FileMaker: Use parallel calls to legacy endpoints
-                const [images, links, objectives, steps, notes] = await Promise.all([
-                    fetchProjectRelatedData([projectId], 'devProjectImages'),
-                    fetchProjectRelatedData([projectId], 'devProjectLinks'),
-                    fetchProjectRelatedData([projectId], 'devProjectObjectives'),
-                    fetchProjectRelatedData([projectId], 'devProjectObjSteps'),
-                    fetchProjectRelatedData([projectId], 'devNotes')
-                ]);
-
-                const source = 'filemaker';
-                // Process each type of data
-                const processedImages = processProjectImages(images, projectId, source);
-                const processedLinks = processProjectLinks(links, projectId, source);
-                const processedObjectives = processProjectObjectives(
-                    objectives,
-                    projectId,
-                    { response: { data: steps.response?.data || [] } },
-                    source
-                );
-                const processedNotes = notes.response?.data || [];
-
-                const projectDetails = {
-                    images: processedImages,
-                    links: processedLinks,
-                    objectives: processedObjectives,
-                    notes: processedNotes
-                };
-
-                // Update the project with the processed details
-                setProjects(prevProjects =>
-                    prevProjects.map(p =>
-                        p.id === projectId
-                            ? { ...p, ...projectDetails }
-                            : p
-                    )
-                );
-
-                return projectDetails;
-            }
+            return projectDetails;
         } catch (err) {
             console.error('Error loading project details:', err);
             throw err;
@@ -221,7 +172,7 @@ export function useProject(customerId = null) {
 
     /**
      * Creates a new project
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const handleProjectCreate = useCallback(async (projectData) => {
         try {
@@ -238,8 +189,6 @@ export function useProject(customerId = null) {
                 throw new Error(validation.errors.join(', '));
             }
 
-            const env = getEnvironmentContext();
-
             // Generate a UUID for the new project
             const projectId = uuidv4();
 
@@ -249,14 +198,12 @@ export function useProject(customerId = null) {
                 id: projectId
             };
 
-            // Format data based on environment
-            const formattedData = env.type === ENVIRONMENT_TYPES.WEBAPP
-                ? formatProjectForBackend(dataWithId)
-                : formatProjectForFileMaker(dataWithId);
+            // Format data for backend
+            const formattedData = formatProjectForBackend(dataWithId);
 
-            console.log(`Formatted data for ${env.type}:`, formattedData);
+            console.log('Formatted data for backend:', formattedData);
 
-            // Create project via environment-aware API
+            // Create project via backend API
             const result = await createProject(formattedData);
 
             // Process fixed price or subscription logic if applicable
@@ -328,14 +275,12 @@ export function useProject(customerId = null) {
 
     /**
      * Updates an existing project
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const handleProjectUpdate = useCallback(async (projectId, projectData) => {
         try {
             setLoading(true);
             setError(null);
-
-            const env = getEnvironmentContext();
 
             // Find the project in the state
             const project = projects.find(p => p.id === projectId);
@@ -348,16 +293,11 @@ export function useProject(customerId = null) {
                 throw new Error(validation.errors.join(', '));
             }
 
-            // Format data based on environment
-            const formattedData = env.type === ENVIRONMENT_TYPES.WEBAPP
-                ? formatProjectForBackend(projectData)
-                : formatProjectForFileMaker(projectData);
+            // Format data for backend
+            const formattedData = formatProjectForBackend(projectData);
 
-            // Update via environment-aware API
-            // In webapp: uses project.id (UUID)
-            // In FileMaker: uses project.recordId (FileMaker record ID)
-            const idToUse = env.type === ENVIRONMENT_TYPES.WEBAPP ? projectId : project.recordId;
-            const result = await updateProject(idToUse, formattedData);
+            // Update via backend API using project UUID
+            const result = await updateProject(projectId, formattedData);
 
             // Process fixed price or subscription logic if applicable
             // BUSINESS LOGIC: Process sales and billable status for special project types
@@ -439,8 +379,8 @@ export function useProject(customerId = null) {
 
     /**
      * Updates project status
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
-     * @param {string} projectId - The project ID (UUID in webapp, may be recordId in FileMaker)
+     * Uses backend API
+     * @param {string} projectId - The project ID (UUID)
      * @param {string} status - The new status value
      */
     const handleProjectStatusChange = useCallback(async (projectId, status) => {
@@ -448,33 +388,27 @@ export function useProject(customerId = null) {
             setLoading(true);
             setError(null);
 
-            const env = getEnvironmentContext();
-
             // Find the project in the state
-            // Try both id and recordId for backward compatibility
-            const project = projects.find(p => p.id === projectId || p.recordId === projectId);
+            const project = projects.find(p => p.id === projectId);
             if (!project) {
                 console.error('Project not found in state with ID:', projectId);
                 throw new Error('Project not found');
             }
 
-            // Determine which ID to use for the API call
-            // In webapp: uses project.id (UUID)
-            // In FileMaker: uses projectId as passed (may be recordId from ProjectDetails.jsx)
-            const idToUse = env.type === ENVIRONMENT_TYPES.WEBAPP ? project.id : projectId;
-            const result = await updateProjectStatus(idToUse, status);
+            // Update via backend API using project UUID
+            const result = await updateProjectStatus(projectId, status);
 
-            // Update local state using project.id for consistency
+            // Update local state
             setProjects(prevProjects =>
                 prevProjects.map(p =>
-                    p.id === project.id
+                    p.id === projectId
                         ? { ...p, status }
                         : p
                 )
             );
 
             // Update selected project if it's the one being updated
-            if (selectedProject?.id === project.id) {
+            if (selectedProject?.id === projectId) {
                 setSelectedProject(prevProject => ({ ...prevProject, status }));
             }
 
@@ -498,14 +432,12 @@ export function useProject(customerId = null) {
 
     /**
      * Deletes a project
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const handleProjectDelete = useCallback(async (projectId) => {
         try {
             setLoading(true);
             setError(null);
-
-            const env = getEnvironmentContext();
 
             // Find the project in the state
             const project = projects.find(p => p.id === projectId);
@@ -513,11 +445,8 @@ export function useProject(customerId = null) {
                 throw new Error('Project not found');
             }
 
-            // Delete via environment-aware API
-            // In webapp: uses project.id (UUID)
-            // In FileMaker: uses project.recordId (FileMaker record ID)
-            const idToUse = env.type === ENVIRONMENT_TYPES.WEBAPP ? projectId : project.recordId;
-            const result = await deleteProject(idToUse);
+            // Delete via backend API using project UUID
+            const result = await deleteProject(projectId);
 
             // Update local state by removing the deleted project
             setProjects(prevProjects =>
@@ -541,8 +470,8 @@ export function useProject(customerId = null) {
 
     /**
      * Updates a project's team assignment
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
-     * @param {string} projectId - The project ID (UUID in webapp, may be recordId in FileMaker)
+     * Uses backend API
+     * @param {string} projectId - The project ID (UUID)
      * @param {string} teamId - The team ID to assign
      */
     const handleProjectTeamChange = useCallback(async (projectId, teamId) => {
@@ -550,38 +479,30 @@ export function useProject(customerId = null) {
             setLoading(true);
             setError(null);
 
-            const env = getEnvironmentContext();
-
             // Find the project in the state
-            // Try both id and recordId for backward compatibility
-            const project = projects.find(p => p.id === projectId || p.recordId === projectId);
+            const project = projects.find(p => p.id === projectId);
             if (!project) {
                 console.error('Project not found in state with ID:', projectId);
                 throw new Error('Project not found');
             }
 
-            // Prepare update data based on environment
-            const updateData = env.type === ENVIRONMENT_TYPES.WEBAPP
-                ? { team_id: teamId }
-                : { _teamID: teamId };
+            // Prepare update data for backend
+            const updateData = { team_id: teamId };
 
-            // Update via environment-aware API
-            // In webapp: uses project.id (UUID)
-            // In FileMaker: uses projectId as passed (may be recordId)
-            const idToUse = env.type === ENVIRONMENT_TYPES.WEBAPP ? project.id : projectId;
-            const result = await updateProject(idToUse, updateData);
+            // Update via backend API using project UUID
+            const result = await updateProject(projectId, updateData);
 
-            // Update local state using project.id for consistency
+            // Update local state
             setProjects(prevProjects =>
                 prevProjects.map(p =>
-                    p.id === project.id
+                    p.id === projectId
                         ? { ...p, _teamID: teamId }
                         : p
                 )
             );
 
             // Update selected project if it's the one being updated
-            if (selectedProject?.id === project.id) {
+            if (selectedProject?.id === projectId) {
                 setSelectedProject(prevProject => ({ ...prevProject, _teamID: teamId }));
             }
 
@@ -597,35 +518,25 @@ export function useProject(customerId = null) {
 
     /**
      * Creates a new objective for a project
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const handleObjectiveCreate = useCallback(async (projectId, objectiveText) => {
         try {
             setLoading(true);
             setError(null);
 
-            const env = getEnvironmentContext();
+            // Prepare objective data for backend
+            const objectiveData = {
+                project_id: projectId,
+                objective: objectiveText,
+                status: "Open",
+                completed: false
+            };
 
-            // Prepare objective data based on environment
-            const objectiveData = env.type === ENVIRONMENT_TYPES.WEBAPP
-                ? {
-                    project_id: projectId,
-                    objective: objectiveText,
-                    status: "Open",
-                    completed: false
-                }
-                : {
-                    _projectID: projectId,
-                    projectObjective: objectiveText,
-                    status: "Open",
-                    f_completed: 0
-                };
-
-            // Create the objective via environment-aware API
+            // Create the objective via backend API
             const result = await createObjective(objectiveData);
 
             // Reload project details to get the updated objectives
-            // No delay needed - backend is atomic
             if (selectedProject && selectedProject.id === projectId) {
                 await loadProjectDetails(projectId);
             }
@@ -642,33 +553,23 @@ export function useProject(customerId = null) {
 
     /**
      * Updates an existing objective
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const handleObjectiveUpdate = useCallback(async (objectiveId, updateData) => {
         try {
             setLoading(true);
             setError(null);
 
-            const env = getEnvironmentContext();
+            // Format data for backend
+            const formattedData = {
+                objective: updateData.objective || updateData.projectObjective,
+                status: updateData.status,
+                completed: updateData.completed !== undefined
+                    ? updateData.completed
+                    : (updateData.f_completed === 1 || updateData.f_completed === "1")
+            };
 
-            // Format data based on environment
-            const formattedData = env.type === ENVIRONMENT_TYPES.WEBAPP
-                ? {
-                    objective: updateData.objective || updateData.projectObjective,
-                    status: updateData.status,
-                    completed: updateData.completed !== undefined
-                        ? updateData.completed
-                        : (updateData.f_completed === 1 || updateData.f_completed === "1")
-                }
-                : {
-                    projectObjective: updateData.projectObjective || updateData.objective,
-                    status: updateData.status,
-                    f_completed: updateData.f_completed !== undefined
-                        ? updateData.f_completed
-                        : (updateData.completed ? 1 : 0)
-                };
-
-            // Update via environment-aware API
+            // Update via backend API
             const result = await updateObjective(objectiveId, formattedData);
 
             // Update local state
@@ -705,7 +606,7 @@ export function useProject(customerId = null) {
 
     /**
      * Deletes a project objective
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      * Note: Backend cascades deletion to related steps automatically
      */
     const handleObjectiveDelete = useCallback(async (objectiveId) => {
@@ -713,7 +614,7 @@ export function useProject(customerId = null) {
             setLoading(true);
             setError(null);
 
-            // Delete via environment-aware API
+            // Delete via backend API
             const result = await deleteObjective(objectiveId);
 
             // Update local state
@@ -748,31 +649,22 @@ export function useProject(customerId = null) {
 
     /**
      * Creates a new step for an objective
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const handleStepCreate = useCallback(async (objectiveId, stepText) => {
         try {
             setLoading(true);
             setError(null);
 
-            const env = getEnvironmentContext();
+            // Prepare step data for backend
+            const stepData = {
+                objective_id: objectiveId,
+                step: stepText,
+                completed: false,
+                order_num: 0
+            };
 
-            // Prepare step data based on environment
-            const stepData = env.type === ENVIRONMENT_TYPES.WEBAPP
-                ? {
-                    objective_id: objectiveId,
-                    step: stepText,
-                    completed: false,
-                    order_num: 0
-                }
-                : {
-                    _objectiveID: objectiveId,
-                    projectObjectiveStep: stepText,
-                    f_completed: 0,
-                    sortOrder: 0
-                };
-
-            // Create the step via environment-aware API
+            // Create the step via backend API
             const result = await createStep(stepData);
 
             // Reload project details to get the updated objectives with steps
@@ -792,37 +684,25 @@ export function useProject(customerId = null) {
 
     /**
      * Updates an existing step
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const handleStepUpdate = useCallback(async (stepId, updateData) => {
         try {
             setLoading(true);
             setError(null);
 
-            const env = getEnvironmentContext();
+            // Format data for backend
+            const formattedData = {
+                step: updateData.step || updateData.projectObjectiveStep,
+                completed: updateData.completed !== undefined
+                    ? updateData.completed
+                    : (updateData.f_completed === 1 || updateData.f_completed === "1"),
+                order_num: updateData.order_num !== undefined
+                    ? updateData.order_num
+                    : updateData.sortOrder
+            };
 
-            // Format data based on environment
-            const formattedData = env.type === ENVIRONMENT_TYPES.WEBAPP
-                ? {
-                    step: updateData.step || updateData.projectObjectiveStep,
-                    completed: updateData.completed !== undefined
-                        ? updateData.completed
-                        : (updateData.f_completed === 1 || updateData.f_completed === "1"),
-                    order_num: updateData.order_num !== undefined
-                        ? updateData.order_num
-                        : updateData.sortOrder
-                }
-                : {
-                    projectObjectiveStep: updateData.projectObjectiveStep || updateData.step,
-                    f_completed: updateData.f_completed !== undefined
-                        ? updateData.f_completed
-                        : (updateData.completed ? 1 : 0),
-                    sortOrder: updateData.sortOrder !== undefined
-                        ? updateData.sortOrder
-                        : updateData.order_num
-                };
-
-            // Update via environment-aware API
+            // Update via backend API
             const result = await updateStep(stepId, formattedData);
 
             // Update local state
@@ -862,14 +742,14 @@ export function useProject(customerId = null) {
 
     /**
      * Deletes a step
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const handleStepDelete = useCallback(async (stepId) => {
         try {
             setLoading(true);
             setError(null);
 
-            // Delete via environment-aware API
+            // Delete via backend API
             const result = await deleteStep(stepId);
 
             // Update local state
@@ -905,59 +785,42 @@ export function useProject(customerId = null) {
 
     /**
      * Toggles step completion status
-     * Environment-aware: Uses backend API in webapp, FileMaker in legacy environment
+     * Uses backend API
      */
     const handleStepToggle = useCallback(async (stepId) => {
         try {
             setLoading(true);
             setError(null);
 
-            const env = getEnvironmentContext();
+            // Use dedicated toggle endpoint
+            const result = await toggleStepCompleted(stepId);
 
-            if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-                // Use dedicated toggle endpoint
-                const result = await toggleStepCompleted(stepId);
+            // Update local state with result
+            if (selectedProject && result) {
+                const updatedObjectives = selectedProject.objectives.map(obj => ({
+                    ...obj,
+                    steps: obj.steps.map(step =>
+                        step.id === stepId
+                            ? { ...step, completed: result.completed }
+                            : step
+                    )
+                }));
 
-                // Update local state with result
-                if (selectedProject && result) {
-                    const updatedObjectives = selectedProject.objectives.map(obj => ({
-                        ...obj,
-                        steps: obj.steps.map(step =>
-                            step.id === stepId
-                                ? { ...step, completed: result.completed }
-                                : step
-                        )
-                    }));
+                setSelectedProject(prev => ({
+                    ...prev,
+                    objectives: updatedObjectives
+                }));
 
-                    setSelectedProject(prev => ({
-                        ...prev,
-                        objectives: updatedObjectives
-                    }));
-
-                    setProjects(prevProjects =>
-                        prevProjects.map(p =>
-                            p.id === selectedProject.id
-                                ? { ...p, objectives: updatedObjectives }
-                                : p
-                        )
-                    );
-                }
-
-                return result;
-            } else {
-                // FileMaker: Find step, toggle, and update
-                const objective = selectedProject?.objectives.find(obj =>
-                    obj.steps.some(s => s.id === stepId)
+                setProjects(prevProjects =>
+                    prevProjects.map(p =>
+                        p.id === selectedProject.id
+                            ? { ...p, objectives: updatedObjectives }
+                            : p
+                    )
                 );
-                const step = objective?.steps.find(s => s.id === stepId);
-
-                if (!step) {
-                    throw new Error('Step not found');
-                }
-
-                const newCompleted = step.f_completed === 1 ? 0 : 1;
-                return await handleStepUpdate(stepId, { f_completed: newCompleted });
             }
+
+            return result;
         } catch (err) {
             setError(err.message);
             console.error('Error toggling step:', err);
@@ -965,7 +828,7 @@ export function useProject(customerId = null) {
         } finally {
             setLoading(false);
         }
-    }, [selectedProject, handleStepUpdate]);
+    }, [selectedProject]);
 
     return {
         // State

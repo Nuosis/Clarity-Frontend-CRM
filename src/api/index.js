@@ -42,11 +42,9 @@ export {
 // Project operations
 export {
     fetchProjectsForCustomer,
-    fetchProjectRelatedData,
     updateProjectStatus,
     createProject,
     updateProject,
-    fetchAllProjectData,
     fetchProjectsForCustomers,
     fetchProjectNotes,
     deleteProject,

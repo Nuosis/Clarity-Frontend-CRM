@@ -299,7 +299,7 @@
       ],
       "completed_at": "2026-01-16T00:00:00.000Z",
       "verification_notes": "Successfully removed all FileMaker authentication logic from SignIn component. Removed detectFileMaker(), FileMaker detection loop, and onFileMakerDetected/onDetectionComplete callbacks. Updated index.jsx to remove handleFileMakerDetected and handleDetectionComplete handlers. Component now supports Supabase authentication only. Build verified successful.",
-      "implementation_notes": "Implemented TSK0014 by removing all FileMaker authentication and environment detection logic from the SignIn component and its parent integration in index.jsx. Updated SignIn.jsx to strip the FileMaker detection function (detectFileMaker), its useEffect, and all related imports and callbacks (onFileMakerDetected, onDetectionComplete), leaving only Supabase email/password authentication. Updated index.jsx to remove the handleFileMakerDetected and handleDetectionComplete handlers, keeping only handleSupabaseAuth which now always sets ENVIRONMENT_TYPES.WEBAPP. Updated component props to require only onSupabaseAuth. Builds verified successful with npm run build. Task marked complete in tasks.json.",
+      "implementation_notes": "Implemented removal of FileMaker authentication and detection from the SignIn flow, leaving Supabase-only auth and aligning behavior with the feature flag context expectations. Updated 'src/components/SignIn.jsx' to drop detectFileMaker logic and related callback props, and updated 'src/index.jsx' to remove FileMaker handlers and simplify SignIn usage while ensuring Supabase auth sets the WEBAPP environment. Marked 'TSK0014' complete in 'tasks.json' and added supporting docs in 'TSK0014_COMPLETION_SUMMARY.md' and 'TSK0014_QUICK_REFERENCE.md', with the key decision to keep 'setEnvironmentDetectionComplete' in app state operations since it may be used elsewhere.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null
@@ -308,7 +308,7 @@
       "id": "TSK0015",
       "title": "Simplify dataService to single routing path",
       "description": "Refactor src/services/dataService.js to remove dual-environment routing. Remove ENVIRONMENT_TYPES.FILEMAKER and AUTH_METHODS.FILEMAKER constants. Remove environment context tracking. Simplify to single Supabase + Backend API path. Keep feature flag support for transition period.",
-      "status": "queued",
+      "status": "done",
       "priority": "critical",
       "dependencies": [
         "TSK0013",
@@ -317,7 +317,13 @@
       "tags": [
         "service",
         "core"
-      ]
+      ],
+      "completed_at": "2026-01-16T12:00:00.000Z",
+      "verification_notes": "Successfully simplified dataService to single routing path. Removed all FileMaker code paths (~750 lines total across 12 files). Replaced dual-environment routing with simplified authentication context. Added backward compatibility exports. All API files updated to backend-only. Build verified successful.",
+      "implementation_notes": "Implemented TSK0015 by refactoring dataService.js to remove dual-environment routing and simplify to single Supabase + Backend API path, replacing ENVIRONMENT_TYPES with authentication-only context (setAuthenticationContext/getAuthenticationContext), stripping ~150 lines of FileMaker bridge code (convertToFileMakerCall, convertFileMakerParamsToHTTP, environmentAPI.fileMaker), and keeping backward-compatible deprecated exports for gradual transition. Updated 12 files including all API clients (customers, projects, tasks, notes, links, images) to use getAuthenticationContext and remove FileMaker code paths, simplified index.jsx and FeatureFlagContext to drop environment detection, and updated useProject hook and taskService to be backend-only. Fixed missing exports (fetchTaskLinks replaced with fetchLinks from links.js, removed fetchProjectRelatedData/fetchAllProjectData from index). Build verified successful (dist/index.html 2,131.59 kB, gzip 620.71 kB). Created TSK0015_COMPLETION_SUMMARY.md and marked task complete in tasks.json.",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0016",

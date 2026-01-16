@@ -1,5 +1,4 @@
-import { dataService, getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
-import { handleFileMakerOperation, validateParams, Layouts, Actions } from './fileMaker';
+import { dataService, getAuthenticationContext } from '../services/dataService';
 import {
     withErrorHandling,
     checkOrganizationScope,
@@ -8,18 +7,12 @@ import {
 } from '../errors/customerErrors';
 
 /**
- * Normalize customer data based on environment
- * @param {Object} data - Raw customer data from either environment
- * @param {string} environment - Environment type
+ * Normalize customer data
+ * @param {Object} data - Raw customer data from backend
  * @returns {Object} Normalized customer data
  */
-function normalizeCustomerData(data, environment) {
-    if (environment === ENVIRONMENT_TYPES.FILEMAKER) {
-        // FileMaker data is already in expected format
-        return data;
-    }
-
-    // Backend API data - normalize to FileMaker-compatible format
+function normalizeCustomerData(data) {
+    // Backend API data - normalize to expected format
     if (Array.isArray(data)) {
         return data.map(customer => ({
             id: customer.id || customer.__ID,
@@ -36,7 +29,7 @@ function normalizeCustomerData(data, environment) {
 }
 
 /**
- * Fetches all customers (environment-aware)
+ * Fetches all customers
  * @param {Object} options - Fetch options
  * @param {number} options.limit - Number of records per page (default: 50, max: 200)
  * @param {number} options.offset - Pagination offset (default: 0)
@@ -49,323 +42,172 @@ function normalizeCustomerData(data, environment) {
  */
 export async function fetchCustomers(options = {}) {
     return withErrorHandling(async () => {
-        const env = getEnvironmentContext();
+        const auth = getAuthenticationContext();
 
-        // Check organization scope for web app environment
-        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-            checkOrganizationScope(env, 'fetchCustomers');
+        // Check organization scope
+        checkOrganizationScope({ authentication: auth }, 'fetchCustomers');
+
+        // Build query parameters
+        const queryParams = {
+            limit: options.limit || 50,
+            offset: options.offset || 0,
+            include_related: options.include_related !== false // Default true
+        };
+
+        // Add optional filters
+        if (options.active !== undefined) {
+            queryParams.active = options.active;
+        }
+        if (options.search) {
+            queryParams.search = options.search;
+        }
+        if (options.sort) {
+            queryParams.sort = options.sort;
+        }
+        if (options.order) {
+            queryParams.order = options.order;
         }
 
-        if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-            // FileMaker environment - use legacy method (no pagination)
-            return handleFileMakerOperation(async () => {
-                const params = {
-                    layout: Layouts.CUSTOMERS,
-                    action: Actions.READ,
-                    query: [{ "__ID": "*" }]
-                };
-
-                return await dataService.request(params);
-            });
-        } else {
-            // Web app environment - use backend API with pagination
-            const queryParams = {
-                limit: options.limit || 50,
-                offset: options.offset || 0,
-                include_related: options.include_related !== false // Default true
-            };
-
-            // Add optional filters
-            if (options.active !== undefined) {
-                queryParams.active = options.active;
-            }
-            if (options.search) {
-                queryParams.search = options.search;
-            }
-            if (options.sort) {
-                queryParams.sort = options.sort;
-            }
-            if (options.order) {
-                queryParams.order = options.order;
-            }
-
-            const response = await dataService.get('/api/customers', { params: queryParams });
-            return normalizeCustomerData(response.data || response, env.type);
-        }
+        const response = await dataService.get('/api/customers', { params: queryParams });
+        return normalizeCustomerData(response.data || response);
     }, 'fetchCustomers', { options });
 }
 
 /**
- * Fetches a specific customer by ID (environment-aware)
+ * Fetches a specific customer by ID
  * @param {string} customerId - The customer ID
  * @returns {Promise<Object>} Customer record
  */
 export async function fetchCustomerById(customerId) {
     return withErrorHandling(async () => {
-        validateParams({ customerId }, ['customerId']);
-        const env = getEnvironmentContext();
-
-        // Check organization scope for web app environment
-        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-            checkOrganizationScope(env, 'fetchCustomerById');
+        if (!customerId) {
+            throw new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
         }
 
-        if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-            // FileMaker environment
-            return handleFileMakerOperation(async () => {
-                const params = {
-                    layout: Layouts.CUSTOMERS,
-                    action: Actions.READ,
-                    query: [{ "__ID": customerId }]
-                };
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'fetchCustomerById');
 
-                return await dataService.request(params);
-            });
-        } else {
-            // Web app environment
-            const response = await dataService.get(`/api/customers/${customerId}`);
-            return normalizeCustomerData(response.data || response, env.type);
-        }
+        const response = await dataService.get(`/api/customers/${customerId}`);
+        return normalizeCustomerData(response.data || response);
     }, 'fetchCustomerById', { customerId });
 }
 
 /**
- * Updates a customer record (environment-aware)
+ * Updates a customer record
  * @param {string} customerId - The customer ID
  * @param {Object} data - The data to update
  * @returns {Promise<Object>} Updated customer record
  */
 export async function updateCustomer(customerId, data) {
     return withErrorHandling(async () => {
-        validateParams({ customerId, data }, ['customerId', 'data']);
-        const env = getEnvironmentContext();
-
-        // Check organization scope for web app environment
-        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-            checkOrganizationScope(env, 'updateCustomer');
+        if (!customerId || !data) {
+            throw new CustomerError('Customer ID and data are required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
         }
 
-        if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-            // FileMaker environment
-            return handleFileMakerOperation(async () => {
-                const params = {
-                    layout: Layouts.CUSTOMERS,
-                    action: Actions.UPDATE,
-                    recordId: customerId,
-                    fieldData: data
-                };
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'updateCustomer');
 
-                return await dataService.request(params);
-            });
-        } else {
-            // Web app environment
-            const response = await dataService.patch(`/api/customers/${customerId}`, data);
-            return normalizeCustomerData(response.data || response, env.type);
-        }
-    }, 'updateCustomer', { customerId, dataKeys: Object.keys(data) });
+        const response = await dataService.put(`/api/customers/${customerId}`, data);
+        return normalizeCustomerData(response.data || response);
+    }, 'updateCustomer', { customerId, data });
 }
 
 /**
- * Creates a new customer record (environment-aware)
+ * Creates a new customer record
  * @param {Object} data - The customer data
  * @returns {Promise<Object>} Created customer record
  */
 export async function createCustomer(data) {
     return withErrorHandling(async () => {
-        validateParams({ data }, ['data']);
-        const env = getEnvironmentContext();
-
-        // Check organization scope for web app environment
-        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-            checkOrganizationScope(env, 'createCustomer');
+        if (!data) {
+            throw new CustomerError('Customer data is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
         }
 
-        if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-            // FileMaker environment
-            return handleFileMakerOperation(async () => {
-                const params = {
-                    layout: Layouts.CUSTOMERS,
-                    action: Actions.CREATE,
-                    fieldData: data
-                };
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'createCustomer');
 
-                return await dataService.request(params);
-            });
-        } else {
-            // Web app environment
-            const response = await dataService.post('/api/customers', data);
-            return normalizeCustomerData(response.data || response, env.type);
-        }
-    }, 'createCustomer', { dataKeys: Object.keys(data) });
+        const response = await dataService.post('/api/customers', data);
+        return normalizeCustomerData(response.data || response);
+    }, 'createCustomer', { data });
 }
 
 /**
- * Toggles customer active status (environment-aware)
+ * Deletes a customer record (soft delete)
  * @param {string} customerId - The customer ID
- * @param {boolean} active - The new active status
- * @returns {Promise<Object>} Updated customer record
- */
-export async function toggleCustomerStatus(customerId, active) {
-    return withErrorHandling(async () => {
-        validateParams({ customerId }, ['customerId']);
-        const env = getEnvironmentContext();
-
-        // Check organization scope for web app environment
-        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-            checkOrganizationScope(env, 'toggleCustomerStatus');
-        }
-
-        if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-            // FileMaker environment
-            return handleFileMakerOperation(async () => {
-                const params = {
-                    layout: Layouts.CUSTOMERS,
-                    action: Actions.UPDATE,
-                    recordId: customerId,
-                    fieldData: {
-                        f_active: active ? "1" : "0"
-                    }
-                };
-
-                return await dataService.request(params);
-            });
-        } else {
-            // Web app environment
-            const response = await dataService.patch(`/api/customers/${customerId}/status`, {
-                is_active: active
-            });
-            return normalizeCustomerData(response.data || response, env.type);
-        }
-    }, 'toggleCustomerStatus', { customerId, active });
-}
-
-/**
- * Fetches active customers (environment-aware)
- * @returns {Promise<Array>} Array of active customer records
- */
-export async function fetchActiveCustomers() {
-    return withErrorHandling(async () => {
-        const env = getEnvironmentContext();
-
-        // Check organization scope for web app environment
-        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-            checkOrganizationScope(env, 'fetchActiveCustomers');
-        }
-
-        if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-            // FileMaker environment
-            return handleFileMakerOperation(async () => {
-                const params = {
-                    layout: Layouts.CUSTOMERS,
-                    action: Actions.READ,
-                    query: [{ "f_active": "1" }]
-                };
-
-                return await dataService.request(params);
-            });
-        } else {
-            // Web app environment
-            const response = await dataService.get('/api/customers', { params: { active: true } });
-            return normalizeCustomerData(response.data || response, env.type);
-        }
-    }, 'fetchActiveCustomers');
-}
-
-/**
- * Deletes a customer record (environment-aware)
- * @param {string} customerId - The customer ID
- * @returns {Promise<Object>} Result of the delete operation
+ * @returns {Promise<Object>} Deletion result
  */
 export async function deleteCustomer(customerId) {
     return withErrorHandling(async () => {
-        validateParams({ customerId }, ['customerId']);
-        const env = getEnvironmentContext();
-
-        // Check organization scope for web app environment
-        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-            checkOrganizationScope(env, 'deleteCustomer');
+        if (!customerId) {
+            throw new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
         }
 
-        if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-            // FileMaker environment
-            return handleFileMakerOperation(async () => {
-                const params = {
-                    layout: Layouts.CUSTOMERS,
-                    action: Actions.DELETE,
-                    recordId: customerId
-                };
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'deleteCustomer');
 
-                return await dataService.request(params);
-            });
-        } else {
-            // Web app environment
-            const response = await dataService.delete(`/api/customers/${customerId}`);
-            return response.data || response;
-        }
+        const response = await dataService.delete(`/api/customers/${customerId}`);
+        return response.data || response;
     }, 'deleteCustomer', { customerId });
 }
 
 /**
- * Searches customers by query string (environment-aware)
- * @param {string} query - Search query string (min 1 character)
+ * Toggles customer status (active/inactive)
+ * @param {string} customerId - The customer ID
+ * @returns {Promise<Object>} Updated customer record
+ */
+export async function toggleCustomerStatus(customerId) {
+    return withErrorHandling(async () => {
+        if (!customerId) {
+            throw new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
+        }
+
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'toggleCustomerStatus');
+
+        const response = await dataService.patch(`/api/customers/${customerId}/toggle-status`);
+        return normalizeCustomerData(response.data || response);
+    }, 'toggleCustomerStatus', { customerId });
+}
+
+/**
+ * Searches customers by query
+ * @param {string} query - Search query
  * @param {Object} options - Search options
- * @param {number} options.limit - Maximum number of results (default: 20, max: 100)
- * @returns {Promise<Array>} Array of matching customer records
+ * @param {number} options.limit - Number of results (default: 50)
+ * @param {number} options.offset - Pagination offset (default: 0)
+ * @returns {Promise<Object>} Search results with pagination
  */
 export async function searchCustomers(query, options = {}) {
     return withErrorHandling(async () => {
-        validateParams({ query }, ['query']);
-        const env = getEnvironmentContext();
-
-        // Validate query length
-        if (!query || query.trim().length < 1) {
-            throw new CustomerError(
-                'Search query must be at least 1 character',
-                CustomerErrorCodes.VALIDATION_ERROR,
-                { query, minLength: 1 }
-            );
+        if (!query) {
+            throw new CustomerError('Search query is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
         }
 
-        // Check organization scope for web app environment
-        if (env.type === ENVIRONMENT_TYPES.WEBAPP) {
-            checkOrganizationScope(env, 'searchCustomers');
-        }
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'searchCustomers');
 
-        if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
-            // FileMaker environment - fetch all and filter client-side
-            const allCustomers = await fetchCustomers();
-            const searchTerm = query.toLowerCase().trim();
+        const queryParams = {
+            q: query,
+            limit: options.limit || 50,
+            offset: options.offset || 0,
+            include_related: options.include_related !== false
+        };
 
-            // Filter using the same logic as local search
-            const filtered = allCustomers.response?.data?.filter(customer => {
-                const fieldData = customer.fieldData || {};
-                const name = (fieldData.Name || '').toLowerCase();
-                const email = (fieldData.Email || '').toLowerCase();
-                const phone = (fieldData.Phone || '').toLowerCase();
-                const contactPerson = (fieldData.ContactPerson || '').toLowerCase();
-
-                return name.includes(searchTerm) ||
-                       email.includes(searchTerm) ||
-                       phone.includes(searchTerm) ||
-                       contactPerson.includes(searchTerm);
-            }) || [];
-
-            // Apply limit if specified
-            const limit = options.limit || 20;
-            return {
-                response: {
-                    data: filtered.slice(0, limit)
-                }
-            };
-        } else {
-            // Web app environment - use backend search endpoint
-            const queryParams = {
-                q: query.trim(),
-                limit: Math.min(options.limit || 20, 100) // Max 100
-            };
-
-            const response = await dataService.get('/api/customers/search', { params: queryParams });
-            return normalizeCustomerData(response.data || response, env.type);
-        }
+        const response = await dataService.get('/api/customers/search', { params: queryParams });
+        return normalizeCustomerData(response.data || response);
     }, 'searchCustomers', { query, options });
+}
+
+/**
+ * Fetches customer statistics
+ * @returns {Promise<Object>} Customer statistics
+ */
+export async function fetchCustomerStats() {
+    return withErrorHandling(async () => {
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'fetchCustomerStats');
+
+        const response = await dataService.get('/api/customers/stats');
+        return response.data || response;
+    }, 'fetchCustomerStats');
 }

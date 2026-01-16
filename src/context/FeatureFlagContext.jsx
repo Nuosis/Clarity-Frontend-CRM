@@ -1,20 +1,19 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { ENVIRONMENT_TYPES } from '../services/dataService';
 
 /**
  * Feature Flag Context
  *
- * Provides a centralized system for controlling feature rollouts during
- * the migration from FileMaker to Backend API. Feature flags allow safe,
- * incremental migration by controlling which data source is used for each feature.
+ * Provides a centralized system for controlling feature rollouts and
+ * experimental features. Feature flags allow safe, incremental deployment
+ * of new functionality.
  *
  * Usage:
  *   const { isFeatureEnabled, enableFeature, disableFeature } = useFeatureFlag();
  *
- *   if (isFeatureEnabled('use_backend_customers')) {
- *     // Use backend API
+ *   if (isFeatureEnabled('use_new_feature')) {
+ *     // Use new implementation
  *   } else {
- *     // Use FileMaker
+ *     // Use legacy implementation
  *   }
  */
 
@@ -147,19 +146,10 @@ export function FeatureFlagProvider({ children, initialFlags = {} }) {
         // Get flag value
         const flagValue = flags[flagName];
 
-        // If environment override is provided, apply environment-specific logic
-        if (options.environment) {
-            // In FileMaker environment, backend flags are always false
-            if (options.environment === ENVIRONMENT_TYPES.FILEMAKER &&
-                flagName.startsWith('use_backend_')) {
-                return false;
-            }
-
-            // In web app environment, FileMaker flags are always false
-            if (options.environment === ENVIRONMENT_TYPES.WEBAPP &&
-                flagName.startsWith('use_filemaker_')) {
-                return false;
-            }
+        // FileMaker flags are no longer supported
+        if (flagName.startsWith('use_filemaker_')) {
+            console.warn(`[FeatureFlags] FileMaker flags are deprecated: ${flagName}`);
+            return false;
         }
 
         return Boolean(flagValue);
