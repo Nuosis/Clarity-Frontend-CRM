@@ -161,7 +161,7 @@
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented Supabase data shape compatibility for FinancialActivity by updating the useSalesActivity hook to normalize date formats (adding normalizeDateToISO to convert MM/DD/YYYY or YYYY-MM-DD to ISO before comparisons) and fixing customer name field access to use camelCase 'customerName' with snake_case fallback. Updated all date-handling functions (filterRecordsByTimeframe, prepareChartData, calculateMonthlyTotals, parseRecordDate) to ensure both legacy and Supabase formats work without breaking. The FinancialActivity component required no changes and continues to work properly. Build verified successfully, and documentation added to FINANCIAL_ACTIVITY_UPDATE_SUMMARY.md."
+      "implementation_notes": "Implemented updates to make FinancialActivity work with the new Supabase-derived sales record shapes by fixing data handling in 'src/hooks/useSalesActivity.js' rather than changing the component itself. Key fixes included normalizing record dates to ISO via a new helper so filtering, chart prep, monthly totals, and selected-month calculations work with both 'MM/DD/YYYY' and 'YYYY-MM-DD' inputs, and updating customer grouping to prefer 'customerName' with fallback to 'customer_name' for backward compatibility. Documentation and task tracking were updated in 'FINANCIAL_ACTIVITY_UPDATE_SUMMARY.md', '.devflow/tasks/financial-records-backend-integration/tasks.json', and '.devflow/tasks/financial-records-backend-integration/TSK0007_COMPLETION_SUMMARY.md', with the build verified as successful."
     },
     {
       "id": "TSK0008",

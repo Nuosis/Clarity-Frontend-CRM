@@ -8,6 +8,7 @@ import CustomerList from './CustomerList';
 import CustomerSalesTable from './CustomerSalesTable';
 import RecordModal from './RecordModal';
 import FinancialSyncPanel from './FinancialSyncPanel';
+import QuickBooksConnectionPanel from './QuickBooksConnectionPanel';
 
 /**
  * Financial Activity component for displaying sales data
@@ -167,7 +168,8 @@ function FinancialActivity({ darkMode = false }) {
         `}>
           {[
             { id: 'activity', label: 'Financial Activity' },
-            { id: 'sync', label: 'Data Synchronization' }
+            { id: 'sync', label: 'Data Synchronization' },
+            { id: 'quickbooks', label: 'QuickBooks Connection' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -357,6 +359,13 @@ function FinancialActivity({ darkMode = false }) {
           <FinancialSyncPanel
             darkMode={darkMode}
             onSyncComplete={handleSyncComplete}
+          />
+        )}
+
+        {/* QuickBooks Connection Tab Content */}
+        {activeTab === 'quickbooks' && (
+          <QuickBooksConnectionPanel
+            darkMode={darkMode}
           />
         )}
       </div>
