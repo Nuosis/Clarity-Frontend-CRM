@@ -402,7 +402,7 @@
       ],
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Removed FileMaker environment variables (VITE_FM_URL, VITE_FM_DATABASE, VITE_FM_USER, VITE_FM_PASSWORD) from documentation. Updated CLAUDE.md and README.md to remove these variables from required configuration lists. Added migration note to README.md informing users they can safely remove these variables from their .env files. Verified no code references to these environment variables exist. Build passes successfully.",
-      "implementation_notes": "Removed FileMaker environment variables from project documentation by updating CLAUDE.md to remove the four FM-specific variables from the required environment variables list and adding a migration note explaining their removal. Updated README.md to remove the FileMaker configuration section from the .env example and added a migration note for users upgrading from FileMaker-enabled versions. Verified no code actually uses these environment variables (grep searches returned no matches for import.meta.env.VITE_FM_* or process.env.VITE_FM_*). Build verified successful. Task marked complete in tasks.json.",
+      "implementation_notes": "Implemented removal of FileMaker environment variable documentation after confirming via repo-wide searches that no code referenced them. Updated '/CLAUDE.md' and '/README.md' to drop the FileMaker variable/config sections and add a migration note indicating legacy vars can be removed. Marked the corresponding task as done in '.devflow/tasks/filemaker-frontend-removal/tasks.json' (noting the task appeared as TSK0019 rather than TSK0016) and verified the changes by running 'npm run build' with only pre-existing warnings.",
       "executionPid": null,
       "sessionId": null,
       "executionError": null
@@ -411,7 +411,7 @@
       "id": "TSK0020",
       "title": "Remove FileMaker deployment scripts",
       "description": "Remove or deprecate npm run deploy-to-fm and npm run upload scripts from package.json. Update deployment documentation. Keep scripts in git history for reference.",
-      "status": "queued",
+      "status": "done",
       "priority": "low",
       "dependencies": [
         "TSK0015"
@@ -419,7 +419,13 @@
       "tags": [
         "deployment",
         "cleanup"
-      ]
+      ],
+      "completed_at": "2026-01-16T12:00:00.000Z",
+      "verification_notes": "Successfully removed FileMaker deployment scripts (upload, build:upload, deploy-to-fm) from package.json. Updated CLAUDE.md to remove Deployment section. Legacy scripts (scripts/upload.js, widget.config.js) preserved in git history. Build verified successful.",
+      "implementation_notes": "Removed three FileMaker deployment scripts ('upload', 'build:upload', 'deploy-to-fm') from package.json, simplifying deployment configuration to support only modern web hosting. Updated CLAUDE.md to remove the Deployment section that referenced FileMaker commands. Legacy script files (scripts/upload.js, widget.config.js) remain in repository for historical reference and audit trail. Build verification confirmed successful compilation with no missing script errors. Created TSK0020_COMPLETION_SUMMARY.md documenting changes, migration notes, and deployment architecture transition from dual (FileMaker + Web) to web-only deployment.",
+      "executionPid": null,
+      "sessionId": null,
+      "executionError": null
     },
     {
       "id": "TSK0021",

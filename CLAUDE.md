@@ -75,12 +75,6 @@ npm run test:supabase          # Test Supabase service
 npm run test:edge-function     # Test edge functions
 ```
 
-### Deployment
-```bash
-npm run deploy-to-fm           # Build and upload to FileMaker server
-npm run upload                 # Upload built files to server
-```
-
 ### Documentation
 ```bash
 npm run docs                   # Generate documentation

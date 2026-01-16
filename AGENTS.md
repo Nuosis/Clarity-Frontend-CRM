@@ -4,7 +4,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Build & Test Commands
 - `npm test` - Run Jest tests (requires jsdom environment, transforms jspdf packages)
-- `npm run build:upload` or `npm run deploy-to-fm` - Build and deploy to FileMaker via widget.config
+- `npm run build` - Build for production (outputs to dist/index.html)
 - Dev server runs on port 1235 (not 3000) - check with `curl -s -o /dev/null -w "%{http_code}" http://localhost:1235`
 - Single test file: `npm test -- path/to/test.js`
 

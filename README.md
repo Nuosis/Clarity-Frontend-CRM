@@ -215,7 +215,7 @@ Teams functionality has been migrated from FileMaker to Supabase:
 - `npm run dev`: Start development server
 - `npm run build`: Build for production
 - `npm run preview`: Preview production build
-- `npm run deploy-to-fm`: Deploy to FileMaker server
+- `npm test`: Run test suite
 
 ### Code Style
 
@@ -233,15 +233,20 @@ npm test
 
 ## Deployment
 
+### Web Application Deployment
+
 1. Build the project:
 ```bash
 npm run build
 ```
 
-2. Deploy to FileMaker:
-```bash
-npm run deploy-to-fm
-```
+2. Deploy the `dist/index.html` file to your web server:
+   - Via FTP/SFTP
+   - Via SSH/SCP
+   - Via CI/CD pipeline
+   - Via cloud hosting (Vercel, Netlify, etc.)
+
+> **Migration Note:** FileMaker WebViewer deployment is no longer supported. The application now targets standard web hosting with Supabase + Backend API integration.
 
 ## Documentation
 
