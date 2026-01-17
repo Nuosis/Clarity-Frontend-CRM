@@ -175,11 +175,15 @@ console.log('✅ Export validation passed');
 // ID mapping and parent detection
 async function detectParentEntity(fkId, supabase) {
   // Strategy 1: Check projects first (most common)
-  const { data: project } = await supabase
+  const { data: project, error: projectError } = await supabase
     .from('projects')
     .select('id, organization_id')
     .eq('id', fkId)
     .maybeSingle();
+
+  if (projectError) {
+    throw new Error(`Failed to query projects: ${projectError.message}`);
+  }
 
   if (project) {
     return {
@@ -192,11 +196,15 @@ async function detectParentEntity(fkId, supabase) {
   }
 
   // Strategy 2: Check tasks
-  const { data: task } = await supabase
+  const { data: task, error: taskError } = await supabase
     .from('tasks')
     .select('id, project_id, projects!inner(organization_id)')
     .eq('id', fkId)
     .maybeSingle();
+
+  if (taskError) {
+    throw new Error(`Failed to query tasks: ${taskError.message}`);
+  }
 
   if (task) {
     return {
@@ -209,11 +217,15 @@ async function detectParentEntity(fkId, supabase) {
   }
 
   // Strategy 3: Check customers
-  const { data: customer } = await supabase
+  const { data: customer, error: customerError } = await supabase
     .from('customers')
     .select('id, organization_id')
     .eq('id', fkId)
     .maybeSingle();
+
+  if (customerError) {
+    throw new Error(`Failed to query customers: ${customerError.message}`);
+  }
 
   if (customer) {
     return {
