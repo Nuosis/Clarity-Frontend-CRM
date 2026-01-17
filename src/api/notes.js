@@ -95,6 +95,10 @@ export async function fetchNotesByProject(projectId, options = {}) {
         throw new Error('Project ID is required');
     }
 
+    // Check organization scope
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'fetchNotesByProject');
+
     // Backend API: GET /projects/{project_id}/notes
     const queryParams = {};
     if (options.limit) queryParams.limit = options.limit;
@@ -118,6 +122,10 @@ export async function fetchNotesByTask(taskId, options = {}) {
         throw new Error('Task ID is required');
     }
 
+    // Check organization scope
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'fetchNotesByTask');
+
     // Backend API: GET /tasks/{task_id}/notes
     const queryParams = {};
     if (options.limit) queryParams.limit = options.limit;
@@ -140,6 +148,10 @@ export async function fetchNotesByCustomer(customerId, options = {}) {
     if (!customerId) {
         throw new Error('Customer ID is required');
     }
+
+    // Check organization scope
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'fetchNotesByCustomer');
 
     // Backend API: GET /customers/{customer_id}/notes
     const queryParams = {};
@@ -178,6 +190,10 @@ export async function updateNote(noteId, data) {
         throw new Error('Update data is required');
     }
 
+    // Check organization scope
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'updateNote');
+
     // Backend API: PATCH /projects/notes/{note_id}
     const payload = {};
     if (data.note || data.content) {
@@ -201,6 +217,10 @@ export async function deleteNote(noteId) {
     if (!noteId) {
         throw new Error('Note ID is required');
     }
+
+    // Check organization scope
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'deleteNote');
 
     // Backend API: DELETE /projects/notes/{note_id}
     const response = await dataService.delete(`/projects/notes/${noteId}`);
