@@ -858,11 +858,18 @@ All backend API requests automatically include HMAC authentication via `dataServ
 ```javascript
 import { dataService } from '@/services/dataService';
 
-// dataService.request() automatically:
-// 1. Generates HMAC signature using VITE_SECRET_KEY
-// 2. Adds Authorization header: Bearer {signature}.{timestamp}
-// 3. Sets Content-Type: application/json
-// 4. Handles JSON parsing and error responses
+// Semantic dataService methods (get, post, patch, delete) automatically:
+// 1. Generate HMAC signature using VITE_SECRET_KEY
+// 2. Add Authorization header: Bearer {signature}.{timestamp}
+// 3. Set Content-Type: application/json
+// 4. Handle JSON parsing and error responses
+// 5. Stringify request body (no need for JSON.stringify())
+
+// Examples:
+await dataService.get('/api/notes', { params: queryParams });
+await dataService.post('/api/notes', noteData);
+await dataService.patch(`/api/notes/${noteId}`, updates);
+await dataService.delete(`/api/notes/${noteId}`);
 ```
 
 See `src/services/dataService.js:generateBackendAuthHeader()` for implementation details.
