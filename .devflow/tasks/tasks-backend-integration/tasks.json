@@ -1,12 +1,58 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-17T00:36:12.661Z",
+  "updated_at": "2026-01-17T00:37:14.051Z",
   "feature": {
     "name": "Tasks Backend Integration",
     "slug": "tasks-backend-integration",
     "description": "Integrate tasks and timer features with new Supabase-backed backend APIs, replacing FileMaker implementation",
-    "review_status": "pending",
-    "review_iteration": 1
+    "review_status": "blocked",
+    "review_iteration": 2,
+    "last_review": {
+      "feature_slug": "tasks-backend-integration",
+      "reviewed_at": "2026-01-17T00:36:12.662Z",
+      "status": "blocked",
+      "iteration": 2,
+      "mode": "autonomous",
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing try-catch around JSON.parse in localStorage initialization",
+          "description": "In useTask.js line 31-48, the timer state initialization uses JSON.parse(savedTimer) without error handling. If the localStorage data is corrupted or malformed JSON, this will throw an uncaught exception and crash the hook on mount.\n\nCode snippet:\n",
+          "file_paths": [],
+          "code_snippet": null,
+          "recommendation": "Wrap JSON.parse in a try/catch (or safe parser) and fall back to a sane default (e.g., null/initial timer state). If parsing fails, clear or ignore the corrupted localStorage entry and log the error for diagnostics."
+        },
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "major",
+          "title": "HMAC Secret Key Exposed in Client-Side Code",
+          "description": "The HMAC-SHA256 secret key (VITE_SECRET_KEY) is embedded in the client-side JavaScript bundle via import.meta.env, making it accessible to anyone who inspects the browser's JavaScript files. This completely compromises the HMAC authentication scheme.\n\nIn dataService.js line 61:\n",
+          "file_paths": [],
+          "code_snippet": null,
+          "recommendation": "Remove the shared secret from all client-side code. Move request signing to a trusted backend (server-to-server) or use a different auth mechanism suitable for clients (e.g., Supabase JWT/session). Rotate the compromised secret immediately and audit any endpoints relying on it."
+        },
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent Error Handling Pattern - Missing withErrorHandling Wrapper",
+          "description": "The tasks API module (src/api/tasks.js) does not use the established error handling pattern that other API modules follow. The customers API uses withErrorHandling() wrapper from customerErrors.js, which provides:\n- Consistent error transformation\n- User-friendly error messages\n- Structured error codes\n- Automatic error logging with context\n- Type-safe CustomerError class\n\nHowever, tasks.js implements its own handleApiError() function (lines 21-58) with duplicate logic that doesn't follow the established pattern.\n\nComparison:\nCustomers API (established pattern):\n",
+          "file_paths": [],
+          "code_snippet": null,
+          "recommendation": "Refactor src/api/tasks.js to use the same established error handling wrapper pattern (e.g., withErrorHandling) and shared error types/utilities. Remove duplicate handleApiError logic, ensure consistent error codes/messages across modules, and align logging/telemetry with the existing standard."
+        }
+      ],
+      "tasks_created": [
+        "TASK016",
+        "TASK017",
+        "TASK018"
+      ],
+      "summary": "Found 3 issue(s) requiring remediation - created 3 task(s)"
+    },
+    "updatedAt": "2026-01-17T00:37:14.053Z"
   },
   "standing_constraints": [
     "Do NOT modify backend infrastructure or database schema",
@@ -26,8 +72,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Find all components that use tasks, timers, and related functionality. Identify which files need updates for the new API integration. Document current data flow and state management patterns.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -41,8 +93,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Create mapper functions to transform between FileMaker data shapes and new backend API shapes. Handle ID conversions (recordId/__ID → UUID), field name changes, type conversions (string booleans → real booleans), and timestamp formats.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -56,8 +114,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Replace FileMaker API calls with new backend endpoint calls for: fetchTasksForProject, createTask, updateTask, updateTaskStatus, deleteTask. Use dataService.generateBackendAuthHeader() for HMAC auth. Add proper error handling for new error response format.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -71,8 +135,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Implement new timer endpoints: startTaskTimer (with idempotency check), stopTaskTimer (with financial record creation), pauseTimer, resumeTimer, fetchTaskTimers, getActiveTimer. Handle concurrency control and atomic operations.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -86,8 +156,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update service layer functions to use new API shapes and handle new business logic: timer idempotency, concurrency control (one active timer per staff), financial record generation on stop (with fixed-price detection), pause/resume accumulation, adjustment validations (6-minute increments).",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -101,8 +177,14 @@
       "priority": "medium",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update TASK_FIELDS validation in taskService.js to match new backend schema. Update field names, add new required fields, remove deprecated fields. Ensure validation errors match backend error messages.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -116,8 +198,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update all task list components to use new data shapes. Handle pagination, filtering, and sorting with new API parameters. Update loading states and error displays. Verify task grouping (active vs completed) still works correctly.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -131,8 +219,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update task detail views to display new fields and handle new data shapes. Update timer display to show pause/resume state. Add better error messages for timer concurrency conflicts.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -146,8 +240,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update task creation and edit forms to match new schema. Update field validation to use new backend rules. Handle new error response format with field-level errors. Update success/error messaging.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -161,8 +261,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update timer components to support pause/resume functionality. Add UI for adjustment in 6-minute increments. Display active timer state on app load. Handle timer concurrency errors gracefully (show existing active timer).",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -176,8 +282,14 @@
       "priority": "high",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update stopTimer logic to handle financial record creation atomically. Implement fixed-price project detection. Handle partial failures (timer stops but financial record fails). Add retry logic for financial record creation. Log all operations for debugging.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -191,8 +303,14 @@
       "priority": "medium",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update all task-related mocks to match new backend API responses. Create fixtures with new data shapes. Update mock implementations to simulate new business logic (idempotency, concurrency checks, etc.).",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -206,8 +324,14 @@
       "priority": "medium",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update tests for src/api/tasks.js to cover new endpoints. Add tests for HMAC authentication. Add tests for error handling. Add tests for request/response mapping.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -221,9 +345,15 @@
       "priority": "medium",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Update tests for src/services/taskService.js to cover new business logic. Add tests for timer idempotency. Add tests for concurrency control. Add tests for financial record generation. Add tests for pause/resume calculations. Add tests for adjustment validations.",
       "completedAt": "2026-01-15T14:46:05Z",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -237,8 +367,14 @@
       "priority": "medium",
       "requirements": [],
       "constraints": [],
+      "context": {
+        "reference_files": [],
+        "dependencies": [],
+        "role_in_system": ""
+      },
       "status": "done",
       "description": "Create end-to-end tests for: create task → start timer → stop timer → verify financial record. Test fixed-price project (no financial record). Test concurrent timer scenarios. Test error recovery paths.",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -248,19 +384,22 @@
     {
       "id": "TASK016",
       "feature": "tasks-backend-integration",
-      "name": "[REVIEW] Missing try-catch around JSON.parse in localStorage initialization",
       "title": "[REVIEW] Missing try-catch around JSON.parse in localStorage initialization",
       "priority": "high",
       "requirements": [
         "In useTask.js line 31-48, the timer state initialization uses JSON.parse(savedTimer) without error handling. If the localStorage data is corrupted or malformed JSON, this will throw an uncaught exception and crash the hook on mount.\n\nCode snippet:\n",
         "",
-        "**Recommendation:** undefined"
+        "**Recommendation:** Wrap JSON.parse in try/catch and fall back to a default timer state; consider removing the corrupted localStorage key and logging the parse failure."
       ],
       "constraints": [],
       "context": {
+        "reference_files": [],
+        "dependencies": [],
         "role_in_system": "Remediate review finding COD-001 from iteration 1"
       },
       "status": "pending",
+      "description": "",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -269,19 +408,22 @@
     {
       "id": "TASK017",
       "feature": "tasks-backend-integration",
-      "name": "[REVIEW] HMAC Secret Key Exposed in Client-Side Code",
       "title": "[REVIEW] HMAC Secret Key Exposed in Client-Side Code",
       "priority": "high",
       "requirements": [
         "The HMAC-SHA256 secret key (VITE_SECRET_KEY) is embedded in the client-side JavaScript bundle via import.meta.env, making it accessible to anyone who inspects the browser's JavaScript files. This completely compromises the HMAC authentication scheme.\n\nIn dataService.js line 61:\n",
         "",
-        "**Recommendation:** undefined"
+        "**Recommendation:** Remove the secret from the client; move signing/auth to a server or replace with client-safe auth (e.g., Supabase JWT). Rotate the exposed secret and audit affected endpoints."
       ],
       "constraints": [],
       "context": {
+        "reference_files": [],
+        "dependencies": [],
         "role_in_system": "Remediate review finding SEC-001 from iteration 1"
       },
       "status": "pending",
+      "description": "",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -290,19 +432,22 @@
     {
       "id": "TASK018",
       "feature": "tasks-backend-integration",
-      "name": "[REVIEW] Inconsistent Error Handling Pattern - Missing withErrorHandling Wrapper",
       "title": "[REVIEW] Inconsistent Error Handling Pattern - Missing withErrorHandling Wrapper",
       "priority": "high",
       "requirements": [
         "The tasks API module (src/api/tasks.js) does not use the established error handling pattern that other API modules follow. The customers API uses withErrorHandling() wrapper from customerErrors.js, which provides:\n- Consistent error transformation\n- User-friendly error messages\n- Structured error codes\n- Automatic error logging with context\n- Type-safe CustomerError class\n\nHowever, tasks.js implements its own handleApiError() function (lines 21-58) with duplicate logic that doesn't follow the established pattern.\n\nComparison:\nCustomers API (established pattern):\n",
         "",
-        "**Recommendation:** undefined"
+        "**Recommendation:** Refactor tasks API to use the established withErrorHandling wrapper and shared error types/utilities; remove duplicate handleApiError logic and align logging and error codes/messages with other modules."
       ],
       "constraints": [],
       "context": {
+        "reference_files": [],
+        "dependencies": [],
         "role_in_system": "Remediate review finding ARC-001 from iteration 1"
       },
       "status": "pending",
+      "description": "",
+      "verification": {},
       "executionError": null,
       "executionPid": null,
       "sessionId": null,

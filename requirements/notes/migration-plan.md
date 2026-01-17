@@ -802,111 +802,21 @@ transformNotes().catch(console.error);
 
 ### Load Script
 
-```javascript
-// scripts/load-notes-to-supabase.js
-/**
- * ⚠️ SECURITY WARNING ⚠️
- *
- * This script uses SUPABASE_SERVICE_ROLE_KEY which bypasses ALL Row-Level
- * Security (RLS) policies and grants UNRESTRICTED DATABASE ACCESS.
- *
- * CRITICAL: This script MUST ONLY run in secure backend environments.
- * NEVER run in browser/frontend contexts or publicly accessible servers.
- *
- * For security requirements, see: docs/MIGRATION_SCRIPTS_SECURITY.md
- */
+**Implementation:** `scripts/load-notes-to-supabase.js`
 
-// SECURITY: Prevent execution in browser contexts
-if (typeof window !== 'undefined') {
-  throw new Error(
-    'SECURITY ERROR: Migration scripts cannot run in browser environments. ' +
-    'Service role key exposure would grant unrestricted database access.'
-  );
-}
+**Key Features:**
+- ✅ Retry logic with exponential backoff (3 retries, 2^attempt seconds)
+- ✅ Batch processing (500 records per batch)
+- ✅ Rate limiting (1 second pause between batches)
+- ✅ Comprehensive error logging and failed batch tracking
+- ✅ Browser execution prevention (security guard)
 
-async function loadNotesToSupabase() {
-  console.log('Starting Supabase load...');
+**Retry Strategy:**
+- Attempts: Up to 3 retries per failed batch
+- Backoff delays: 2s (1st retry), 4s (2nd retry), 8s (3rd retry)
+- Only persistent failures are logged after all retries exhausted
 
-  const transformResult = JSON.parse(fs.readFileSync('migration-data/notes-transformed.json'));
-  const notes = transformResult.notes;
-
-  // SECURITY: This client has unrestricted access - use only in backend
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-
-  // Batch configuration
-  const BATCH_SIZE = 500;
-  const batches = [];
-  for (let i = 0; i < notes.length; i += BATCH_SIZE) {
-    batches.push(notes.slice(i, i + BATCH_SIZE));
-  }
-
-  console.log(`Processing ${notes.length} notes in ${batches.length} batches`);
-
-  // Process batches sequentially
-  let successCount = 0;
-  let failureCount = 0;
-  const failedBatches = [];
-
-  for (let i = 0; i < batches.length; i++) {
-    const batch = batches[i];
-    console.log(`Processing batch ${i + 1}/${batches.length} (${batch.length} records)...`);
-
-    try {
-      const { data, error } = await supabase
-        .from('notes')
-        .insert(batch);
-
-      if (error) {
-        console.error(`Batch ${i + 1} failed:`, error);
-        failedBatches.push({ batchIndex: i, batch, error: error.message });
-        failureCount += batch.length;
-      } else {
-        successCount += batch.length;
-        console.log(`  ✅ Batch ${i + 1} completed`);
-      }
-
-    } catch (error) {
-      console.error(`Batch ${i + 1} exception:`, error);
-      failedBatches.push({ batchIndex: i, batch, error: error.message });
-      failureCount += batch.length;
-    }
-
-    // Rate limiting - pause between batches
-    if (i < batches.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 1000));  // 1 second pause
-    }
-  }
-
-  // Save load results
-  const loadResult = {
-    loaded_at: new Date().toISOString(),
-    total_records: notes.length,
-    successful_inserts: successCount,
-    failed_inserts: failureCount,
-    batches_processed: batches.length,
-    failed_batches: failedBatches
-  };
-
-  fs.writeFileSync('migration-data/notes-load-result.json',
-    JSON.stringify(loadResult, null, 2));
-
-  console.log(`\nLoad Summary:`);
-  console.log(`  ✅ Successful: ${successCount}`);
-  console.log(`  ❌ Failed: ${failureCount}`);
-  console.log(`  Success Rate: ${((successCount / notes.length) * 100).toFixed(2)}%`);
-
-  if (failureCount > 0) {
-    throw new Error(`Load completed with ${failureCount} failures`);
-  }
-
-  return loadResult;
-}
-
-loadNotesToSupabase().catch(console.error);
-```
+**See:** `scripts/load-notes-to-supabase.js` for complete implementation
 
 ---
 

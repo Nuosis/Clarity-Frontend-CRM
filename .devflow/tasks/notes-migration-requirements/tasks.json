@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-17T00:28:45.517Z",
+  "updated_at": "2026-01-16T00:42:30.000Z",
   "feature": {
     "name": "Notes Migration Requirements",
     "slug": "notes-migration-requirements",
@@ -109,8 +109,7 @@
         "TASK017"
       ],
       "summary": "Found 7 issue(s) requiring remediation - created 7 task(s)"
-    },
-    "updatedAt": "2026-01-17T00:28:45.518Z"
+    }
   },
   "standing_constraints": [
     "DO NOT modify backend infrastructure - only create documentation",
@@ -286,10 +285,12 @@
       "context": {
         "role_in_system": "Remediate review finding COD-001 from iteration 6"
       },
-      "status": "queued",
+      "status": "done",
+      "completedAt": "2026-01-16T00:42:00.000Z",
       "executionError": null,
-      "executionPid": null,
-      "sessionId": null,
+      "executionPid": 52683,
+      "sessionId": "1e9b5262-0a8d-4655-a4ba-0b7023fec834",
+      "implementation_notes": "Implemented retry logic with exponential backoff in the notes migration bulk insert script as documented in requirements. Created 'scripts/load-notes-to-supabase.js' with a reusable 'retryWithBackoff()' function that wraps batch inserts with up to 3 retry attempts and exponential delays (2s, 4s, 8s) as specified in the migration plan. Updated 'requirements/notes/migration-plan.md' to reference the implemented script and document the retry strategy features. Verified the script syntax is valid and updated task status to complete.",
       "depends_on": []
     },
     {
@@ -349,10 +350,12 @@
       "context": {
         "role_in_system": "Remediate review finding SEC-001 from iteration 6"
       },
-      "status": "in_progress",
+      "status": "done",
+      "completedAt": "2026-01-17T00:36:20.173Z",
       "executionError": null,
       "executionPid": 51039,
       "sessionId": "513241bd-c6ea-4f09-971a-c2cbc916dea3",
+      "implementation_notes": "Implemented security hardening for migration scripts to mitigate Supabase service role key exposure, including browser-execution guards, stronger key validation messaging, and prominent warnings in script headers. Added comprehensive guidance in 'docs/MIGRATION_SCRIPTS_SECURITY.md' and propagated security requirements, checklists, and incident response steps across 'scripts/README.md', 'requirements/notes/migration-plan.md' (including a pre-cutover checklist), and 'CLAUDE.md'. Updated '.gitignore' to exclude migration data and output artifacts to prevent accidental commits, and verified the project still builds successfully. Key decision: treat the service role key as strictly server-only, documenting mandatory key rotation and response procedures if exposure occurs.",
       "depends_on": []
     },
     {
