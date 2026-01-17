@@ -604,52 +604,254 @@ const subscription = supabaseService.client
 ### Service Layer Pattern
 **File:** `src/api/notes.js`
 
-Expected API wrapper functions:
+Expected API wrapper functions with comprehensive error handling:
+
 ```javascript
-// Fetch notes for a project
-export const fetchProjectNotes = async (projectId, options = {}) => {
-  const params = new URLSearchParams({
-    project_id: projectId,
-    sort_order: 'desc',
-    limit: options.limit || 50,
-    ...options
-  });
-  return dataService.request(`/api/notes?${params}`, { method: 'GET' });
-};
+import { dataService, getAuthenticationContext } from '../services/dataService';
+import {
+    withErrorHandling,
+    checkOrganizationScope,
+    NoteErrorCodes,
+    NoteError
+} from '../errors/noteErrors';
 
-// Fetch notes for a task
-export const fetchTaskNotes = async (taskId, options = {}) => {
-  const params = new URLSearchParams({
-    task_id: taskId,
-    sort_order: 'desc',
-    ...options
-  });
-  return dataService.request(`/api/notes?${params}`, { method: 'GET' });
-};
+/**
+ * Normalize note data from backend API
+ * @param {Object|Array} data - Raw note data from backend
+ * @returns {Object|Array} Normalized note data
+ */
+function normalizeNoteData(data) {
+    if (Array.isArray(data)) {
+        return data.map(note => ({
+            id: note.id || note.__ID,
+            __ID: note.id || note.__ID,
+            ...note
+        }));
+    }
 
-// Create a note
-export const createNote = async (noteData) => {
-  return dataService.request('/api/notes', {
-    method: 'POST',
-    body: JSON.stringify(noteData)
-  });
-};
+    return {
+        id: data.id || data.__ID,
+        __ID: data.id || data.__ID,
+        ...data
+    };
+}
 
-// Update a note
-export const updateNote = async (noteId, updates) => {
-  return dataService.request(`/api/notes/${noteId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(updates)
-  });
-};
+/**
+ * Fetch notes for a project
+ * @param {string} projectId - The project ID
+ * @param {Object} options - Fetch options
+ * @param {number} options.limit - Number of records per page (default: 50, max: 200)
+ * @param {number} options.offset - Pagination offset (default: 0)
+ * @param {string} options.sort_order - Sort order: 'asc' or 'desc' (default: 'desc')
+ * @param {string} options.type - Filter by note type (optional)
+ * @returns {Promise<Object>} Note list with pagination
+ */
+export async function fetchProjectNotes(projectId, options = {}) {
+    return withErrorHandling(async () => {
+        if (!projectId) {
+            throw new NoteError('Project ID is required', NoteErrorCodes.MISSING_REQUIRED_FIELD);
+        }
 
-// Delete a note
-export const deleteNote = async (noteId) => {
-  return dataService.request(`/api/notes/${noteId}`, {
-    method: 'DELETE'
-  });
-};
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'fetchProjectNotes');
+
+        const queryParams = {
+            project_id: projectId,
+            limit: options.limit || 50,
+            offset: options.offset || 0,
+            sort_order: options.sort_order || 'desc'
+        };
+
+        if (options.type) {
+            queryParams.type = options.type;
+        }
+
+        const response = await dataService.get('/api/notes', { params: queryParams });
+        return normalizeNoteData(response.data || response);
+    }, 'fetchProjectNotes', { projectId, options });
+}
+
+/**
+ * Fetch notes for a task
+ * @param {string} taskId - The task ID
+ * @param {Object} options - Fetch options
+ * @param {number} options.limit - Number of records per page (default: 50, max: 200)
+ * @param {number} options.offset - Pagination offset (default: 0)
+ * @param {string} options.sort_order - Sort order: 'asc' or 'desc' (default: 'desc')
+ * @param {string} options.type - Filter by note type (optional)
+ * @returns {Promise<Object>} Note list with pagination
+ */
+export async function fetchTaskNotes(taskId, options = {}) {
+    return withErrorHandling(async () => {
+        if (!taskId) {
+            throw new NoteError('Task ID is required', NoteErrorCodes.MISSING_REQUIRED_FIELD);
+        }
+
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'fetchTaskNotes');
+
+        const queryParams = {
+            task_id: taskId,
+            limit: options.limit || 50,
+            offset: options.offset || 0,
+            sort_order: options.sort_order || 'desc'
+        };
+
+        if (options.type) {
+            queryParams.type = options.type;
+        }
+
+        const response = await dataService.get('/api/notes', { params: queryParams });
+        return normalizeNoteData(response.data || response);
+    }, 'fetchTaskNotes', { taskId, options });
+}
+
+/**
+ * Fetch notes for a customer
+ * @param {string} customerId - The customer ID
+ * @param {Object} options - Fetch options
+ * @param {number} options.limit - Number of records per page (default: 50, max: 200)
+ * @param {number} options.offset - Pagination offset (default: 0)
+ * @param {string} options.sort_order - Sort order: 'asc' or 'desc' (default: 'desc')
+ * @param {string} options.type - Filter by note type (optional)
+ * @returns {Promise<Object>} Note list with pagination
+ */
+export async function fetchCustomerNotes(customerId, options = {}) {
+    return withErrorHandling(async () => {
+        if (!customerId) {
+            throw new NoteError('Customer ID is required', NoteErrorCodes.MISSING_REQUIRED_FIELD);
+        }
+
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'fetchCustomerNotes');
+
+        const queryParams = {
+            customer_id: customerId,
+            limit: options.limit || 50,
+            offset: options.offset || 0,
+            sort_order: options.sort_order || 'desc'
+        };
+
+        if (options.type) {
+            queryParams.type = options.type;
+        }
+
+        const response = await dataService.get('/api/notes', { params: queryParams });
+        return normalizeNoteData(response.data || response);
+    }, 'fetchCustomerNotes', { customerId, options });
+}
+
+/**
+ * Create a new note
+ * @param {Object} noteData - The note data
+ * @param {string} noteData.note - Note content
+ * @param {string} noteData.type - Note type (e.g., 'general', 'internal', 'customer')
+ * @param {string} noteData.project_id - Project ID (one of project_id, task_id, customer_id required)
+ * @param {string} noteData.task_id - Task ID (one of project_id, task_id, customer_id required)
+ * @param {string} noteData.customer_id - Customer ID (one of project_id, task_id, customer_id required)
+ * @returns {Promise<Object>} Created note record
+ */
+export async function createNote(noteData) {
+    return withErrorHandling(async () => {
+        if (!noteData || !noteData.note) {
+            throw new NoteError('Note content is required', NoteErrorCodes.MISSING_REQUIRED_FIELD);
+        }
+
+        if (!noteData.project_id && !noteData.task_id && !noteData.customer_id) {
+            throw new NoteError(
+                'One of project_id, task_id, or customer_id is required',
+                NoteErrorCodes.MISSING_REQUIRED_FIELD
+            );
+        }
+
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'createNote');
+
+        const response = await dataService.post('/api/notes', noteData);
+        return normalizeNoteData(response.data || response);
+    }, 'createNote', { noteData });
+}
+
+/**
+ * Update a note
+ * @param {string} noteId - The note ID
+ * @param {Object} updates - The data to update
+ * @param {string} updates.note - Updated note content
+ * @param {string} updates.type - Updated note type
+ * @returns {Promise<Object>} Updated note record
+ */
+export async function updateNote(noteId, updates) {
+    return withErrorHandling(async () => {
+        if (!noteId || !updates) {
+            throw new NoteError('Note ID and updates are required', NoteErrorCodes.MISSING_REQUIRED_FIELD);
+        }
+
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'updateNote');
+
+        const response = await dataService.patch(`/api/notes/${noteId}`, updates);
+        return normalizeNoteData(response.data || response);
+    }, 'updateNote', { noteId, updates });
+}
+
+/**
+ * Delete a note
+ * @param {string} noteId - The note ID
+ * @returns {Promise<void>} Success indicator
+ */
+export async function deleteNote(noteId) {
+    return withErrorHandling(async () => {
+        if (!noteId) {
+            throw new NoteError('Note ID is required', NoteErrorCodes.MISSING_REQUIRED_FIELD);
+        }
+
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'deleteNote');
+
+        await dataService.delete(`/api/notes/${noteId}`);
+        return { success: true };
+    }, 'deleteNote', { noteId });
+}
 ```
+
+### Error Handling Module
+
+The notes API requires a dedicated error handling module following the established customer pattern.
+
+**File:** `src/errors/noteErrors.js` (to be created by backend team)
+
+This module must include:
+
+1. **NoteErrorCodes** - Comprehensive error code enumeration including:
+   - Authentication & Authorization codes (AUTH_FAILED, AUTH_TOKEN_EXPIRED, PERMISSION_DENIED, ORG_SCOPE_MISSING)
+   - Network & Connectivity codes (NETWORK_ERROR, TIMEOUT_ERROR, CONNECTION_ERROR)
+   - Data & Validation codes (NOT_FOUND, INVALID_NOTE_DATA, REQUIRED_FIELD_MISSING)
+   - Operation specific codes (CREATE_FAILED, UPDATE_FAILED, DELETE_FAILED, FETCH_FAILED)
+
+2. **NoteError** - Custom error class extending `ServiceError` with:
+   - Timestamp tracking
+   - User-friendly message generation
+   - Context preservation
+
+3. **withErrorHandling()** - Wrapper function providing:
+   - Centralized try-catch handling
+   - Error type detection and normalization
+   - Logging with operation name and context
+   - Re-throwing of typed errors
+
+4. **checkOrganizationScope()** - Validates organization context:
+   - Checks for `env.authentication.user.supabaseOrgID`
+   - Throws `ORG_SCOPE_MISSING` error if not found
+   - Required for all API operations
+
+5. **parseHttpError()** - HTTP error normalization:
+   - Maps HTTP status codes to error codes
+   - Extracts validation errors from response
+   - Handles 401 (auth), 403 (permission), 404 (not found), 400/422 (validation)
+
+6. **User-friendly error messages** - Maps error codes to readable messages
+
+**Reference Implementation:** See `src/errors/customerErrors.js` (lines 1-400) for the complete established pattern.
 
 ### HMAC Authentication
 All backend API requests automatically include HMAC authentication via `dataService`:
