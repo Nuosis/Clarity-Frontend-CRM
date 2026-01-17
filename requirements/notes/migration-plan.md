@@ -252,6 +252,11 @@ async function buildUserMapping(supabase) {
     throw new Error(`Failed to fetch users: ${error.message}`);
   }
 
+  // Validate response structure before accessing nested properties
+  if (!users || !users.users || !Array.isArray(users.users)) {
+    throw new Error('Failed to retrieve user list: Invalid API response structure');
+  }
+
   const emailToUUID = new Map();
   users.users.forEach(user => {
     emailToUUID.set(user.email.toLowerCase(), user.id);
