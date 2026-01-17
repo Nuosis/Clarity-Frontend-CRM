@@ -4,11 +4,26 @@
  * Migrates teams, staff, and team_members data from FileMaker to Supabase,
  * preserving all relationships and data integrity.
  *
+ * ⚠️ SECURITY WARNING ⚠️
+ *
+ * This script uses VITE_SUPABASE_SERVICE_ROLE_KEY which bypasses ALL Row-Level
+ * Security (RLS) policies and grants UNRESTRICTED DATABASE ACCESS across all
+ * organizations.
+ *
+ * CRITICAL SECURITY REQUIREMENTS:
+ * - ❌ NEVER run this script in browser/frontend contexts
+ * - ❌ NEVER commit this script with hardcoded service role keys
+ * - ❌ NEVER deploy this script to publicly accessible environments
+ * - ✅ ONLY run in secure backend environments (SSH, local dev, CI/CD)
+ * - ✅ ALWAYS use environment variables for service role key
+ * - ✅ ROTATE service role key after migration completes
+ *
  * Prerequisites:
  * - Backend team must have deployed the teams schema (BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md)
  * - Tables must exist: teams, staff, team_members
  * - Supabase Storage bucket 'staff-images' must be created
  * - RLS policies and triggers must be in place
+ * - Service role key must be in .env file (NOT committed to git)
  *
  * Usage:
  *   node scripts/migrate-teams-data.js <organization_id> [options]
@@ -22,7 +37,25 @@
  *   node scripts/migrate-teams-data.js "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
  *   node scripts/migrate-teams-data.js "a1b2c3d4-e5f6-7890-abcd-ef1234567890" --dry-run
  *   node scripts/migrate-teams-data.js "a1b2c3d4-e5f6-7890-abcd-ef1234567890" --skip-images --batch-size=100
+ *
+ * For detailed security requirements, see: docs/MIGRATION_SCRIPTS_SECURITY.md
  */
+
+// SECURITY: Prevent execution in browser contexts
+if (typeof window !== 'undefined') {
+  throw new Error(
+    'SECURITY ERROR: Migration scripts cannot run in browser environments. ' +
+    'Service role key exposure would grant unrestricted database access. ' +
+    'Run this script in a secure backend environment only.'
+  );
+}
+
+// SECURITY: Verify Node.js environment
+if (typeof process === 'undefined' || !process.env) {
+  throw new Error(
+    'SECURITY ERROR: Migration scripts must run in Node.js environment with environment variables.'
+  );
+}
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
@@ -69,8 +102,12 @@ if (!organizationId) {
   process.exit(1);
 }
 
+// SECURITY: Validate service role key exists and warn about security implications
 if (!SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('❌ Error: VITE_SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+  console.error('❌ SECURITY ERROR: VITE_SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+  console.error('   This key grants unrestricted database access and bypasses all RLS policies.');
+  console.error('   The key MUST be stored in .env file (not committed to git).');
+  console.error('   See docs/MIGRATION_SCRIPTS_SECURITY.md for security requirements.');
   process.exit(1);
 }
 

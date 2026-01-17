@@ -46,7 +46,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented comprehensive documentation of the current environment detection and routing architecture by adding '/requirements/platform-filemaker-removal/ENVIRONMENT_DETECTION_AND_ROUTING_ARCHITECTURE.md'. The doc captures the end-to-end initialization and request routing flow across FileMaker and WebApp environments, including detailed file and line references for key logic in 'SignIn.jsx', 'dataService.js', and the FileMaker bridge wrapper. It also records key decisions and implications for migration, emphasizing centralized routing via axios interceptors, UI-layer transparency, and a phased path to move API usage from FileMaker-first wrappers to 'dataService' calls."
+      "implementation_notes": "Implemented comprehensive documentation of the current environment detection and routing architecture by adding '/requirements/platform-filemaker-removal/ENVIRONMENT_DETECTION_AND_ROUTING_ARCHITECTURE.md'. The doc captures the end-to-end initialization and request routing flow across FileMaker and WebApp environments, including detailed file and line references for key logic in 'SignIn.jsx', 'dataService.js', and the FileMaker bridge wrapper. It also records key decisions and implications for migration, emphasizing centralized routing via axios interceptors, UI-layer transparency, and a phased path to move API usage from FileMaker-first wrappers to 'dataService' calls.",
+      "feature": "filemaker-removal-requirements"
     },
     {
       "id": "TSK0002",
@@ -65,7 +66,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented comprehensive architecture documentation for the FileMaker bridge, added as 'requirements/platform-filemaker-removal/architecture.md', detailing initialization and environment detection, module-level context management, axios interceptors, HTTP-to-FileMaker call conversion via the single 'JS * Fetch Data' script, and HMAC auth plus end-to-end request flows and legacy API patterns. Verified the project still builds successfully via 'npm run build' (no new warnings) and updated task status to 'done' in '.devflow/tasks/filemaker-removal-requirements/tasks.json'. Key decision captured in the doc: rely on existing backend endpoints and focus Phase 2 on removing detection logic and migrating legacy API calls, since interceptor-based routing keeps components unchanged."
+      "implementation_notes": "Implemented comprehensive architecture documentation for the FileMaker bridge, added as 'requirements/platform-filemaker-removal/architecture.md', detailing initialization and environment detection, module-level context management, axios interceptors, HTTP-to-FileMaker call conversion via the single 'JS * Fetch Data' script, and HMAC auth plus end-to-end request flows and legacy API patterns. Verified the project still builds successfully via 'npm run build' (no new warnings) and updated task status to 'done' in '.devflow/tasks/filemaker-removal-requirements/tasks.json'. Key decision captured in the doc: rely on existing backend endpoints and focus Phase 2 on removing detection logic and migrating legacy API calls, since interceptor-based routing keeps components unchanged.",
+      "feature": "filemaker-removal-requirements"
     },
     {
       "id": "TSK0003",
@@ -88,7 +90,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a comprehensive inventory of all FileMaker integration touchpoints across the codebase and captured them in 'requirements/platform-filemaker-removal/inventory.md' (64KB, 1,000+ lines). The document enumerates 100+ locations across 8 categories, highlighting key bridge and routing files including 'src/api/fileMaker.js', 'src/services/dataService.js', and 'src/hooks/index.js', plus extensive API usage via 'fetchDataFromFileMaker' and direct 'FMGofer.PerformScript' calls. Important decisions included organizing findings by integration pattern (window.FileMaker checks, ENVIRONMENT_TYPES.FILEMAKER references, axios interceptor flags, layout and action constants) and providing a removal impact summary with a recommended sequential removal order. Verified the work by completing a successful build with only unrelated missing export warnings."
+      "implementation_notes": "Implemented a comprehensive inventory of all FileMaker integration touchpoints across the codebase and captured them in 'requirements/platform-filemaker-removal/inventory.md' (64KB, 1,000+ lines). The document enumerates 100+ locations across 8 categories, highlighting key bridge and routing files including 'src/api/fileMaker.js', 'src/services/dataService.js', and 'src/hooks/index.js', plus extensive API usage via 'fetchDataFromFileMaker' and direct 'FMGofer.PerformScript' calls. Important decisions included organizing findings by integration pattern (window.FileMaker checks, ENVIRONMENT_TYPES.FILEMAKER references, axios interceptor flags, layout and action constants) and providing a removal impact summary with a recommended sequential removal order. Verified the work by completing a successful build with only unrelated missing export warnings.",
+      "feature": "filemaker-removal-requirements"
     },
     {
       "id": "TSK0004",
@@ -107,7 +110,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a comprehensive backend API requirements spec to replace FileMaker usage by auditing 60+ operations across 9 API modules and mapping them to existing and needed endpoints, noting the backend already exposes '/filemaker/{layout}/records' proxies that should be converted to query Supabase while preserving HMAC-SHA256 auth and response compatibility. Added the main deliverable 'requirements/platform-filemaker-removal/BACKEND_API_REQUIREMENTS.md' (about 85KB) detailing CRUD/query patterns per resource plus backend change requests (BCR-001 through BCR-005) and open questions around 'dapiRecords' table and related project tables. Updated 'tasks.json' to mark the work complete and verified the project still builds successfully via 'npm run build'."
+      "implementation_notes": "Implemented a comprehensive backend API requirements spec to replace FileMaker usage by auditing 60+ operations across 9 API modules and mapping them to existing and needed endpoints, noting the backend already exposes '/filemaker/{layout}/records' proxies that should be converted to query Supabase while preserving HMAC-SHA256 auth and response compatibility. Added the main deliverable 'requirements/platform-filemaker-removal/BACKEND_API_REQUIREMENTS.md' (about 85KB) detailing CRUD/query patterns per resource plus backend change requests (BCR-001 through BCR-005) and open questions around 'dapiRecords' table and related project tables. Updated 'tasks.json' to mark the work complete and verified the project still builds successfully via 'npm run build'.",
+      "feature": "filemaker-removal-requirements"
     },
     {
       "id": "TSK0005",
@@ -127,7 +131,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created comprehensive documentation to support FileMaker authentication removal by producing an API contracts deliverable and verifying it against the existing backend requirements and architecture context. Key work centered on authoring and validating requirements in 'requirements-platform-filemaker-removal-authentication-requirements-md' (including verified file:line references like 'src-services-dataService-js' and 'src-components-auth-SignIn-jsx') and drafting 'api-contracts-md' with concrete endpoint request-response examples to guide Phase 2 implementation. Important decisions documented include removing 'AUTH_METHODS-FILEMAKER' and the 3-second FileMaker auto-detection and simplifying the app to a Supabase-only authentication flow to eliminate dual-path startup complexity. Build verification was completed after documentation changes, and references were checked to avoid hallucinated functions, endpoints, or paths."
+      "implementation_notes": "Created comprehensive documentation to support FileMaker authentication removal by producing an API contracts deliverable and verifying it against the existing backend requirements and architecture context. Key work centered on authoring and validating requirements in 'requirements-platform-filemaker-removal-authentication-requirements-md' (including verified file:line references like 'src-services-dataService-js' and 'src-components-auth-SignIn-jsx') and drafting 'api-contracts-md' with concrete endpoint request-response examples to guide Phase 2 implementation. Important decisions documented include removing 'AUTH_METHODS-FILEMAKER' and the 3-second FileMaker auto-detection and simplifying the app to a Supabase-only authentication flow to eliminate dual-path startup complexity. Build verification was completed after documentation changes, and references were checked to avoid hallucinated functions, endpoints, or paths.",
+      "feature": "filemaker-removal-requirements"
     },
     {
       "id": "TSK0006",
@@ -145,7 +150,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a comprehensive FileMaker removal migration plan to move the frontend to a single Supabase plus Backend API routing path and eliminate dual-environment FileMaker logic. Added the main deliverable at 'requirements/platform-filemaker-removal/MIGRATION_PLAN.md' detailing 7 sequential phases, file-by-file conversion guidance, testing and rollback procedures, and key decisions like a clean-break approach while preserving existing endpoint paths for compatibility. Updated 'tasks.json' to mark the work complete and verified the project still builds successfully after the documentation changes."
+      "implementation_notes": "Implemented a comprehensive FileMaker removal migration plan to move the frontend to a single Supabase plus Backend API routing path and eliminate dual-environment FileMaker logic. Added the main deliverable at 'requirements/platform-filemaker-removal/MIGRATION_PLAN.md' detailing 7 sequential phases, file-by-file conversion guidance, testing and rollback procedures, and key decisions like a clean-break approach while preserving existing endpoint paths for compatibility. Updated 'tasks.json' to mark the work complete and verified the project still builds successfully after the documentation changes.",
+      "feature": "filemaker-removal-requirements"
     },
     {
       "id": "TSK0007",
@@ -159,7 +165,8 @@
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented a comprehensive acceptance criteria document for the FileMaker removal project at 'requirements/platform-filemaker-removal/acceptance-criteria.md', defining 40 criteria across 8 categories with verification commands, an automated 'verify-filemaker-removal.sh' script, and a pass fail decision matrix including thresholds and deferrable items. Updated 'tasks.json' to mark the task complete and verified the project still builds cleanly after the documentation changes. Key decisions included setting a 38/40 minimum pass score, allowing only two deferrable items, and enforcing zero tolerance for critical auth, data operations, and backend readiness requirements.",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-removal-requirements"
     },
     {
       "id": "TSK0008",
@@ -173,7 +180,8 @@
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented a comprehensive rollout plan for the FileMaker removal project, documenting a controlled big-bang deployment with a 7-day verification timeline, detailed monitoring and alerting, rollback procedures, user communication templates, risk mitigation, and deployment checklists. Key file added was 'requirements/platform-filemaker-removal/rollout-plan.md', created after reviewing 'MIGRATION_PLAN.md' and related requirement docs to align with the migration strategy. An important decision captured was not using feature flags because FileMaker environment detection and routing are binary, making gradual migration impractical, so the plan emphasizes intensive early monitoring and fast rollback (under 5 minutes for frontend). Build was verified as successful with no new issues introduced.",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-removal-requirements"
     }
   ]
 }

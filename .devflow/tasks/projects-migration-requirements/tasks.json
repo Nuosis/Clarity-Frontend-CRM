@@ -40,34 +40,37 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Enhanced the Projects migration documentation by updating 'requirements/projects/README.md' to fully align with the 7-file template, adding key terminology, expanded FileMaker field and layout details, and end-to-end user flow coverage (create, update, status changes, delete, objectives and steps, and time records). Corrected prior inaccuracies by clarifying that core business logic is implemented, documenting the decision that Supabase sync is currently creation-only (no updates or deletes), and calling out the important ID mismatch risk between FileMaker 'recordId' and UUID '__ID'. Updated the hooks and internal services sections to reflect actual usage, added precise code references and line ranges (notably in 'useProject.js'), validated documentation against the codebase, confirmed the docs build succeeded, and marked the task complete in 'tasks.json'."
+      "implementation_notes": "Enhanced the Projects migration documentation by updating 'requirements/projects/README.md' to fully align with the 7-file template, adding key terminology, expanded FileMaker field and layout details, and end-to-end user flow coverage (create, update, status changes, delete, objectives and steps, and time records). Corrected prior inaccuracies by clarifying that core business logic is implemented, documenting the decision that Supabase sync is currently creation-only (no updates or deletes), and calling out the important ID mismatch risk between FileMaker 'recordId' and UUID '__ID'. Updated the hooks and internal services sections to reflect actual usage, added precise code references and line ranges (notably in 'useProject.js'), validated documentation against the codebase, confirmed the docs build succeeded, and marked the task complete in 'tasks.json'.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0002",
       "title": "Document current implementation",
-      "description": "Create requirements/projects/current-implementation.md documenting: frontend call graph from UI → hooks → services → API, all relevant files (components, hooks, services, API), FileMaker layouts used, data flow diagrams, and current state management patterns",
+      "description": "Create requirements/projects/current-implementation.md documenting: frontend call graph from UI \u2192 hooks \u2192 services \u2192 API, all relevant files (components, hooks, services, API), FileMaker layouts used, data flow diagrams, and current state management patterns",
       "status": "done",
       "priority": "high",
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented comprehensive Projects feature documentation by analyzing the frontend call graph, components, hooks, services, API integrations, and FileMaker layouts, then consolidating findings into a new doc. Added a detailed 'current-implementation.md' documenting 10 end-to-end workflows, 13+ components, the 582-line 'useProject' hook, 'projectService.js' (19 functions), and the FileMaker API and layout mappings (10 API functions, 7 layouts). Key decisions included capturing parallel data-fetch behavior (5 concurrent calls for project details), mapping business logic differences for fixed-price vs subscription projects, and explicitly listing 10 major known gaps to guide migration planning."
+      "implementation_notes": "Implemented comprehensive Projects feature documentation by analyzing the frontend call graph, components, hooks, services, API integrations, and FileMaker layouts, then consolidating findings into a new doc. Added a detailed 'current-implementation.md' documenting 10 end-to-end workflows, 13+ components, the 582-line 'useProject' hook, 'projectService.js' (19 functions), and the FileMaker API and layout mappings (10 API functions, 7 layouts). Key decisions included capturing parallel data-fetch behavior (5 concurrent calls for project details), mapping business logic differences for fixed-price vs subscription projects, and explicitly listing 10 major known gaps to guide migration planning.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0003",
       "title": "Map core Projects data model",
-      "description": "In requirements/projects/data-model-mapping.md, document FileMaker devProjects layout fields → Supabase projects table mapping. Include: field types, constraints, status enum values, pricing fields (f_fixedPrice, f_subscription, value), date fields, team/customer relationships, and UUID vs recordId handling",
+      "description": "In requirements/projects/data-model-mapping.md, document FileMaker devProjects layout fields \u2192 Supabase projects table mapping. Include: field types, constraints, status enum values, pricing fields (f_fixedPrice, f_subscription, value), date fields, team/customer relationships, and UUID vs recordId handling",
       "status": "done",
       "priority": "high",
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Updated the FileMaker to Supabase Projects data model documentation by verifying the live Supabase schema and aligning mappings, constraints, and enum conversions accordingly in 'requirements/projects/data-model-mapping.md'. Documented confirmed tables ('projects', 'links', 'customer_sales') and explicitly called out missing tables ('project_objectives', 'project_objective_steps', 'project_images', 'notes'), plus key schema gaps like missing 'organization_id', 'team_id', and pricing flags with decisions to derive link titles from URLs and keep time tracking in FileMaker. Added concrete API contract examples and business logic references (notably fixed price and subscription handling in 'src/services/projectService.js' and related usage in 'src/api/projects.js' and 'src/hooks/useProject.js'), then validated the docs build cleanly and produced a completion summary and action items list for migration planning."
+      "implementation_notes": "Updated the FileMaker to Supabase Projects data model documentation by verifying the live Supabase schema and aligning mappings, constraints, and enum conversions accordingly in 'requirements/projects/data-model-mapping.md'. Documented confirmed tables ('projects', 'links', 'customer_sales') and explicitly called out missing tables ('project_objectives', 'project_objective_steps', 'project_images', 'notes'), plus key schema gaps like missing 'organization_id', 'team_id', and pricing flags with decisions to derive link titles from URLs and keep time tracking in FileMaker. Added concrete API contract examples and business logic references (notably fixed price and subscription handling in 'src/services/projectService.js' and related usage in 'src/api/projects.js' and 'src/hooks/useProject.js'), then validated the docs build cleanly and produced a completion summary and action items list for migration planning.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0004",
       "title": "Map Project Objectives data model",
-      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjectives layout → Supabase project_objectives table mapping. Include: objective text, status, order, completed flag, project_id foreign key, and relationship to objective steps",
+      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjectives layout \u2192 Supabase project_objectives table mapping. Include: objective text, status, order, completed flag, project_id foreign key, and relationship to objective steps",
       "status": "done",
       "priority": "high",
       "completedAt": "2026-01-10T20:35:00.000Z",
@@ -75,12 +78,13 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented a comprehensive FileMaker to Supabase mapping for the Project Objectives data model by enhancing 'requirements/projects/data-model-mapping.md' with a full field inventory for the FileMaker 'devProjectObjectives' layout, business rules, API operations, frontend transformation details, and a proposed Supabase 'project_objectives' table definition including indexes, foreign keys, and type conversions. Validated the mapping against existing code references in 'projectService.js', 'useProject.js', and 'projects.js', and verified via SSH that 'project_objectives' does not yet exist in Supabase, documenting this as a blocking migration dependency (projects to project_objectives to project_objective_steps). Confirmed the build compiles successfully and updated 'tasks.json' to mark the work complete, with an explicit decision to rename the Supabase field 'order' to 'order_num' to avoid SQL keyword conflicts and to convert FileMaker 'f_completed' from '0' or '1' strings to boolean."
+      "implementation_notes": "Implemented a comprehensive FileMaker to Supabase mapping for the Project Objectives data model by enhancing 'requirements/projects/data-model-mapping.md' with a full field inventory for the FileMaker 'devProjectObjectives' layout, business rules, API operations, frontend transformation details, and a proposed Supabase 'project_objectives' table definition including indexes, foreign keys, and type conversions. Validated the mapping against existing code references in 'projectService.js', 'useProject.js', and 'projects.js', and verified via SSH that 'project_objectives' does not yet exist in Supabase, documenting this as a blocking migration dependency (projects to project_objectives to project_objective_steps). Confirmed the build compiles successfully and updated 'tasks.json' to mark the work complete, with an explicit decision to rename the Supabase field 'order' to 'order_num' to avoid SQL keyword conflicts and to convert FileMaker 'f_completed' from '0' or '1' strings to boolean.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0005",
       "title": "Map Objective Steps data model",
-      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjSteps layout → Supabase project_objective_steps table mapping. Include: step text, order, completed flag, objective_id foreign key, and nested relationship structure",
+      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjSteps layout \u2192 Supabase project_objective_steps table mapping. Include: step text, order, completed flag, objective_id foreign key, and nested relationship structure",
       "status": "done",
       "priority": "medium",
       "completedAt": "2026-01-10T20:45:00.000Z",
@@ -88,12 +92,13 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented a comprehensive Objective Steps data-model mapping by expanding the existing Objective Steps sections in 'requirements/projects/data-model-mapping.md' to fully document the FileMaker 'devProjectObjSteps' layout fields, business rules, fetch and processing behavior, and the proposed Supabase 'project_objective_steps' schema with constraints, indexes, and query patterns. Validated usage and behavior via code references in 'projectService.js', 'useProject.js', 'projects.js', and 'requirements/projects/current-implementation.md', and captured key decisions including renaming 'order' to 'order_num', converting 'f_completed' string flags to a boolean 'completed', preserving FileMaker '__ID' as the Supabase 'id', and enforcing cascade deletes to prevent orphaned steps. Confirmed the build compiles cleanly and updated 'tasks.json' to mark the work complete with notes on migration dependency order (projects then objectives then steps)."
+      "implementation_notes": "Implemented a comprehensive Objective Steps data-model mapping by expanding the existing Objective Steps sections in 'requirements/projects/data-model-mapping.md' to fully document the FileMaker 'devProjectObjSteps' layout fields, business rules, fetch and processing behavior, and the proposed Supabase 'project_objective_steps' schema with constraints, indexes, and query patterns. Validated usage and behavior via code references in 'projectService.js', 'useProject.js', 'projects.js', and 'requirements/projects/current-implementation.md', and captured key decisions including renaming 'order' to 'order_num', converting 'f_completed' string flags to a boolean 'completed', preserving FileMaker '__ID' as the Supabase 'id', and enforcing cascade deletes to prevent orphaned steps. Confirmed the build compiles cleanly and updated 'tasks.json' to mark the work complete with notes on migration dependency order (projects then objectives then steps).",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0006",
       "title": "Map Project Images data model",
-      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectImages layout → Supabase project_images table mapping. Include: image URL, title, description, project_id foreign key, and any storage considerations",
+      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectImages layout \u2192 Supabase project_images table mapping. Include: image URL, title, description, project_id foreign key, and any storage considerations",
       "status": "done",
       "priority": "medium",
       "completedAt": "2026-01-10T21:00:00.000Z",
@@ -101,7 +106,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive FileMaker to Supabase mapping for Project Images, documenting the full devProjectImages field set, frontend query patterns, and a proposed Supabase 'project_images' schema (UUID id preserved from '__ID', FK 'project_id' with CASCADE, required 'url', optional metadata, indexes, and audit fields) in 'requirements/projects/data-model-mapping.md'. Key decision was to treat 'url' as the primary storage reference (despite FileMaker binary container fields), and to call out migration considerations for URL preservation vs potential binary extraction into Supabase Storage. Updated the Known Schema Gaps entry to be more specific about the URL based discrepancy, and marked the task complete in 'tasks.json'; also noted a likely bug in 'projectService.js' where code filters on '_projectID' but the FileMaker field is '_fkID'."
+      "implementation_notes": "Implemented comprehensive FileMaker to Supabase mapping for Project Images, documenting the full devProjectImages field set, frontend query patterns, and a proposed Supabase 'project_images' schema (UUID id preserved from '__ID', FK 'project_id' with CASCADE, required 'url', optional metadata, indexes, and audit fields) in 'requirements/projects/data-model-mapping.md'. Key decision was to treat 'url' as the primary storage reference (despite FileMaker binary container fields), and to call out migration considerations for URL preservation vs potential binary extraction into Supabase Storage. Updated the Known Schema Gaps entry to be more specific about the URL based discrepancy, and marked the task complete in 'tasks.json'; also noted a likely bug in 'projectService.js' where code filters on '_projectID' but the FileMaker field is '_fkID'.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0007",
@@ -114,7 +120,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Documented how FileMaker's 'devProjectLinks' maps into Supabase's existing 'links' table, including FK requirements (required 'customer_id', optional 'project_id' and 'organization_id'), the missing 'title' column decision (derive from URL hostname), and migration constraints like the 2048 URL limit, in 'requirements/projects/data-model-mapping.md'. Added schema gaps and action items plus a links-specific validation section to the main migration checklist, and captured frontend behavior and code references such as 'processProjectLinks', 'projectService.js', and 'ProjectLinksTab.jsx' (including GitHub URL handling and optimistic updates). Marked the task complete in 'tasks.json' and verified the build succeeds."
+      "implementation_notes": "Documented how FileMaker's 'devProjectLinks' maps into Supabase's existing 'links' table, including FK requirements (required 'customer_id', optional 'project_id' and 'organization_id'), the missing 'title' column decision (derive from URL hostname), and migration constraints like the 2048 URL limit, in 'requirements/projects/data-model-mapping.md'. Added schema gaps and action items plus a links-specific validation section to the main migration checklist, and captured frontend behavior and code references such as 'processProjectLinks', 'projectService.js', and 'ProjectLinksTab.jsx' (including GitHub URL handling and optimistic updates). Marked the task complete in 'tasks.json' and verified the build succeeds.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0008",
@@ -127,7 +134,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Documented the FileMaker devNotes layout and its polymorphic relationship to projects in 'requirements/projects/data-model-mapping.md', including field inventory, business rules, API usage, and current frontend behavior with concrete code references (notably 'noteService.js', 'notes.js', 'projects.js', 'useProject.js', and 'ProjectNotesTab.jsx'). Proposed a Supabase notes schema using an 'entity_type' plus 'entity_id' polymorphic pattern, capturing mappings, constraints, indexes, query patterns, and a migration strategy that derives entity type and organization via joins and handles orphaned records. Updated task status in 'tasks.json' and verified the build compiles successfully, with the key decision to recommend the polymorphic notes table over a dedicated project_notes table to match FileMaker and reduce duplication."
+      "implementation_notes": "Documented the FileMaker devNotes layout and its polymorphic relationship to projects in 'requirements/projects/data-model-mapping.md', including field inventory, business rules, API usage, and current frontend behavior with concrete code references (notably 'noteService.js', 'notes.js', 'projects.js', 'useProject.js', and 'ProjectNotesTab.jsx'). Proposed a Supabase notes schema using an 'entity_type' plus 'entity_id' polymorphic pattern, capturing mappings, constraints, indexes, query patterns, and a migration strategy that derives entity type and organization via joins and handles orphaned records. Updated task status in 'tasks.json' and verified the build compiles successfully, with the key decision to recommend the polymorphic notes table over a dedicated project_notes table to match FileMaker and reduce duplication.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0009",
@@ -140,7 +148,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive documentation of the FileMaker Time Records relationship by adding a new dapiRecords time tracking section to requirements/projects/data-model-mapping.md, covering core and lookup fields, billable and unbilled hours rules, API operations, aggregation functions, and QuickBooks billed status updates with explicit code references (notably billableHoursService.js and fileMaker.js). Updated the Supabase time tracking mapping in the same doc to clarify that there is no time_entries table and that customer_sales is for sales transactions rather than time entry data, documenting the decision to keep time records FileMaker-only while outlining a proposed future time_entries schema and migration approach. Marked the task complete in tasks.json and verified the build still compiles successfully."
+      "implementation_notes": "Implemented comprehensive documentation of the FileMaker Time Records relationship by adding a new dapiRecords time tracking section to requirements/projects/data-model-mapping.md, covering core and lookup fields, billable and unbilled hours rules, API operations, aggregation functions, and QuickBooks billed status updates with explicit code references (notably billableHoursService.js and fileMaker.js). Updated the Supabase time tracking mapping in the same doc to clarify that there is no time_entries table and that customer_sales is for sales transactions rather than time entry data, documenting the decision to keep time records FileMaker-only while outlining a proposed future time_entries schema and migration approach. Marked the task complete in tasks.json and verified the build still compiles successfully.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0010",
@@ -153,7 +162,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Updated and expanded 'requirements/projects/api-contracts.md' to align documented Projects API endpoints with the actual Supabase schema, explicitly noting that only 'projects' (and shared 'links') exist while 'project_objectives', 'project_objective_steps', 'project_images', and 'notes' are still missing. Revised the List Projects, Get Project Detail, and Create Project contracts with accurate field mappings and clear placeholders or empty-array behavior where missing tables prevent full responses, and added a large implementation notes section covering UUID preservation (FileMaker '__ID' to Supabase 'id'), status/date/boolean conversions, error handling, performance, and a testing checklist with concrete code file references (e.g., 'projectService.js', 'projects.js', 'useProject.js', 'fileMaker.js'). Marked backend gaps and key decisions (pricing flags absent, links missing 'title' so derive from URL, org scoping derived from customer) and completed task status update in '.devflow/tasks/projects-migration-requirements/tasks.json' after confirming 'npm run build' succeeds."
+      "implementation_notes": "Updated and expanded 'requirements/projects/api-contracts.md' to align documented Projects API endpoints with the actual Supabase schema, explicitly noting that only 'projects' (and shared 'links') exist while 'project_objectives', 'project_objective_steps', 'project_images', and 'notes' are still missing. Revised the List Projects, Get Project Detail, and Create Project contracts with accurate field mappings and clear placeholders or empty-array behavior where missing tables prevent full responses, and added a large implementation notes section covering UUID preservation (FileMaker '__ID' to Supabase 'id'), status/date/boolean conversions, error handling, performance, and a testing checklist with concrete code file references (e.g., 'projectService.js', 'projects.js', 'useProject.js', 'fileMaker.js'). Marked backend gaps and key decisions (pricing flags absent, links missing 'title' so derive from URL, org scoping derived from customer) and completed task status update in '.devflow/tasks/projects-migration-requirements/tasks.json' after confirming 'npm run build' succeeds.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0011",
@@ -166,7 +176,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Verified that the objectives and steps API contracts were already fully defined in 'requirements/projects/api-contracts.md' (sections 7-17), including step handling via the 'include_steps' parameter and nested 'steps' responses, plus all CRUD, toggle completion, and reorder endpoints for objectives and steps. Cross-checked the contracts against 'data-model-mapping.md' to confirm schema alignment (notably using 'order_num' and boolean 'completed', and correct UUID FK relationships), and confirmed the schema status notes that 'project_objectives' and 'project_objective_steps' tables do not yet exist. Updated 'tasks.json' to mark TSK0011 as done with a completion timestamp, and verified the change set by running 'npm run build' with only pre-existing warnings."
+      "implementation_notes": "Verified that the objectives and steps API contracts were already fully defined in 'requirements/projects/api-contracts.md' (sections 7-17), including step handling via the 'include_steps' parameter and nested 'steps' responses, plus all CRUD, toggle completion, and reorder endpoints for objectives and steps. Cross-checked the contracts against 'data-model-mapping.md' to confirm schema alignment (notably using 'order_num' and boolean 'completed', and correct UUID FK relationships), and confirmed the schema status notes that 'project_objectives' and 'project_objective_steps' tables do not yet exist. Updated 'tasks.json' to mark TSK0011 as done with a completion timestamp, and verified the change set by running 'npm run build' with only pre-existing warnings.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0012",
@@ -179,7 +190,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented a dedicated objective steps listing contract by adding new Endpoint 13, 'POST /rpc/get_objective_steps', to the API requirements document, including ordered results, validation, error cases, auth rules, and request response examples. Renumbered subsequent endpoints and updated all related links and image references to keep numbering consistent, shifting step endpoints to 13-18 and adjusting later sections accordingly. Updated 'tasks.json' to mark TSK0012 as done and verified the documentation-only changes by running 'npm run build', noting any warnings were pre-existing."
+      "implementation_notes": "Implemented a dedicated objective steps listing contract by adding new Endpoint 13, 'POST /rpc/get_objective_steps', to the API requirements document, including ordered results, validation, error cases, auth rules, and request response examples. Renumbered subsequent endpoints and updated all related links and image references to keep numbering consistent, shifting step endpoints to 13-18 and adjusting later sections accordingly. Updated 'tasks.json' to mark TSK0012 as done and verified the documentation-only changes by running 'npm run build', noting any warnings were pre-existing.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0013",
@@ -192,7 +204,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented and documented six new API contract endpoints for project images and project links in 'requirements/projects/api-contracts.md', including request and response examples, validation rules, error cases, business logic, and code references. Renumbered existing endpoints for consistency, updated the overview to reflect 23 total endpoints, and added a dedicated summary and verification section. Key decisions and findings captured were that images are URL references (not binary storage) and are blocked pending creation of a new 'project_images' table, while links are ready but have an optional schema improvement to add a 'title' column. Verified 'npm run build' succeeds and marked the task complete in 'tasks.json'."
+      "implementation_notes": "Implemented and documented six new API contract endpoints for project images and project links in 'requirements/projects/api-contracts.md', including request and response examples, validation rules, error cases, business logic, and code references. Renumbered existing endpoints for consistency, updated the overview to reflect 23 total endpoints, and added a dedicated summary and verification section. Key decisions and findings captured were that images are URL references (not binary storage) and are blocked pending creation of a new 'project_images' table, while links are ready but have an optional schema improvement to add a 'title' column. Verified 'npm run build' succeeds and marked the task complete in 'tasks.json'.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0014",
@@ -203,7 +216,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a complete Team Assignment API contract by expanding the existing section and adding Endpoint 24, 'POST /rpc/update_project_team', in 'requirements/projects/api-contracts.md', including request and response examples for assign and remove flows, validation rules, business logic, error codes, and references to related team endpoints. Updated the document header endpoint count from 23 to 24 and added detailed notes on the teams relationship (teams and team_members schemas), field mapping from FileMaker '_teamID' to Supabase 'team_id', and frontend and SQL integration references based on 'teamService.js', 'ProjectTeamTab.jsx', and 'TeamContext.jsx'. Documented a key decision and blocker: the Supabase schema currently lacks 'projects.team_id', recommending adding it as a UUID FK to teams with 'ON DELETE SET NULL' plus an index, and verified the build succeeded after the documentation changes."
+      "implementation_notes": "Implemented a complete Team Assignment API contract by expanding the existing section and adding Endpoint 24, 'POST /rpc/update_project_team', in 'requirements/projects/api-contracts.md', including request and response examples for assign and remove flows, validation rules, business logic, error codes, and references to related team endpoints. Updated the document header endpoint count from 23 to 24 and added detailed notes on the teams relationship (teams and team_members schemas), field mapping from FileMaker '_teamID' to Supabase 'team_id', and frontend and SQL integration references based on 'teamService.js', 'ProjectTeamTab.jsx', and 'TeamContext.jsx'. Documented a key decision and blocker: the Supabase schema currently lacks 'projects.team_id', recommending adding it as a UUID FK to teams with 'ON DELETE SET NULL' plus an index, and verified the build succeeded after the documentation changes.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0015",
@@ -216,7 +230,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive documentation for fixed-price project business logic by expanding the 'Business Logic Requirements' section in 'api-contracts.md' with the 50-50 revenue recognition flow, field mappings from FileMaker to Supabase, idempotency SQL guidance, edge cases, validation rules, proposed schema notes, and a testing checklist. Added a cross-referenced summary in 'data-model-mapping.md' to capture the split timing and the non-billable time record requirement and link back to the detailed rules. Verified the docs build succeeds and updated 'tasks.json' to mark task 'TSK0015' as DONE with completion notes and timestamp.'"
+      "implementation_notes": "Implemented comprehensive documentation for fixed-price project business logic by expanding the 'Business Logic Requirements' section in 'api-contracts.md' with the 50-50 revenue recognition flow, field mappings from FileMaker to Supabase, idempotency SQL guidance, edge cases, validation rules, proposed schema notes, and a testing checklist. Added a cross-referenced summary in 'data-model-mapping.md' to capture the split timing and the non-billable time record requirement and link back to the detailed rules. Verified the docs build succeeds and updated 'tasks.json' to mark task 'TSK0015' as DONE with completion notes and timestamp.'",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0016",
@@ -229,7 +244,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive subscription project business logic documentation in 'requirements/projects/data-model-mapping.md' by expanding the previously brief mention into a detailed section aligned with the existing fixed-price documentation (covering validation rules, monthly sales entry generation and structure, idempotency, edge cases, background job needs, and testing guidance). Confirmed the subscription rules were already specified in 'requirements/projects/api-contracts.md' and cross-referenced related implementation locations for clarity. Updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark TSK0016 complete and verified the build succeeds before finalizing the task status."
+      "implementation_notes": "Implemented comprehensive subscription project business logic documentation in 'requirements/projects/data-model-mapping.md' by expanding the previously brief mention into a detailed section aligned with the existing fixed-price documentation (covering validation rules, monthly sales entry generation and structure, idempotency, edge cases, background job needs, and testing guidance). Confirmed the subscription rules were already specified in 'requirements/projects/api-contracts.md' and cross-referenced related implementation locations for clarity. Updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark TSK0016 complete and verified the build succeeds before finalizing the task status.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0017",
@@ -240,12 +256,13 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Enhanced the projects authorization requirements documentation by expanding the existing 'requirements/projects/authorization.md' to match the customers doc level of detail, adding/expanding sections for JWT claims, organization scoping, role definitions, backend service-role access patterns, frontend authorization logic (including new hook specs like 'useProjectPermissions' and 'useTeamProjectPermissions'), edge cases, RLS testing scripts, and comprehensive audit logging guidance. Updated task tracking in 'tasks.json' and validated the changes by running a successful build. Key decision: keep the existing RLS policy structure but significantly deepen the spec with concrete SQL and frontend/backend usage patterns so it is implementation-ready for the Supabase migration.'''"
+      "implementation_notes": "Enhanced the projects authorization requirements documentation by expanding the existing 'requirements/projects/authorization.md' to match the customers doc level of detail, adding/expanding sections for JWT claims, organization scoping, role definitions, backend service-role access patterns, frontend authorization logic (including new hook specs like 'useProjectPermissions' and 'useTeamProjectPermissions'), edge cases, RLS testing scripts, and comprehensive audit logging guidance. Updated task tracking in 'tasks.json' and validated the changes by running a successful build. Key decision: keep the existing RLS policy structure but significantly deepen the spec with concrete SQL and frontend/backend usage patterns so it is implementation-ready for the Supabase migration.'''",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0018",
       "title": "Create migration plan for projects",
-      "description": "Create requirements/projects/migration-plan.md documenting: data backfill approach for devProjects → projects table, UUID preservation strategy, recordId handling, relationship integrity checks, and cutover plan",
+      "description": "Create requirements/projects/migration-plan.md documenting: data backfill approach for devProjects \u2192 projects table, UUID preservation strategy, recordId handling, relationship integrity checks, and cutover plan",
       "status": "done",
       "priority": "high",
       "completedAt": "2026-01-10T20:45:00.000Z",
@@ -253,7 +270,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented completion of TSK0018 by expanding 'migration-plan.md' for projects from ~897 to ~2609 lines, adding a new Executive Summary up front and appending missing production-critical sections to match the customers migration plan depth. Key additions included a dedicated Data Backfill Strategy (export transform import scripts and reconciliation), explicit recordId vs UUID handling and frontend cleanup notes (including references to 'src/api/projects.js' and 'src/hooks/useProject.js'), plus new Performance Benchmarks, Risk Assessment Matrix, Post-Migration Monitoring, and Team Responsibilities sections. Verified the build via 'npm run build' and updated 'tasks.json' to mark TSK0018 complete, resolving the prior in_progress error state."
+      "implementation_notes": "Implemented completion of TSK0018 by expanding 'migration-plan.md' for projects from ~897 to ~2609 lines, adding a new Executive Summary up front and appending missing production-critical sections to match the customers migration plan depth. Key additions included a dedicated Data Backfill Strategy (export transform import scripts and reconciliation), explicit recordId vs UUID handling and frontend cleanup notes (including references to 'src/api/projects.js' and 'src/hooks/useProject.js'), plus new Performance Benchmarks, Risk Assessment Matrix, Post-Migration Monitoring, and Team Responsibilities sections. Verified the build via 'npm run build' and updated 'tasks.json' to mark TSK0018 complete, resolving the prior in_progress error state.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0019",
@@ -264,7 +282,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a comprehensive related-entities migration strategy in the projects migration documentation by updating 'migration-plan.md' with detailed objectives, sequencing, foreign key reconciliation, order preservation for objectives and steps, orphan-handling policies, and polymorphic note FK resolution, plus expanded checklist and validation queries. Enhanced the validation script to cover all related entity types with relationship integrity checks, duplicate order detection, orphan counting, URL length validation, and a warnings system, and added documentation for transformation logic including links and notes handling. Key decisions included preserving FileMaker UUIDs as Supabase primary keys, enforcing a strict migration order to avoid FK failures, and recommending a defined approach for orphaned records and notes FK resolution. Verified changes compile successfully via a clean build."
+      "implementation_notes": "Implemented a comprehensive related-entities migration strategy in the projects migration documentation by updating 'migration-plan.md' with detailed objectives, sequencing, foreign key reconciliation, order preservation for objectives and steps, orphan-handling policies, and polymorphic note FK resolution, plus expanded checklist and validation queries. Enhanced the validation script to cover all related entity types with relationship integrity checks, duplicate order detection, orphan counting, URL length validation, and a warnings system, and added documentation for transformation logic including links and notes handling. Key decisions included preserving FileMaker UUIDs as Supabase primary keys, enforcing a strict migration order to avoid FK failures, and recommending a defined approach for orphaned records and notes FK resolution. Verified changes compile successfully via a clean build.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0020",
@@ -277,7 +296,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented expanded core-operations acceptance coverage by enhancing 'requirements/projects/acceptance-criteria.md' with four new test suites (status transitions, team assignment, customer relationship integrity, and UUID consistency) totaling 30 Given-When-Then test cases, and renumbered subsequent suites to keep the document consistent. Verified the project still builds via 'npm run build' (no new warnings) and updated 'tasks.json' to mark 'TSK0020' complete with timestamp and notes. Key decisions included making UUID preservation from FileMaker '__ID' to Supabase 'id' explicit and adding dedicated suites for status transition edge cases, RLS implications of team reassignment, and customer FK and scoping scenarios.'"
+      "implementation_notes": "Implemented expanded core-operations acceptance coverage by enhancing 'requirements/projects/acceptance-criteria.md' with four new test suites (status transitions, team assignment, customer relationship integrity, and UUID consistency) totaling 30 Given-When-Then test cases, and renumbered subsequent suites to keep the document consistent. Verified the project still builds via 'npm run build' (no new warnings) and updated 'tasks.json' to mark 'TSK0020' complete with timestamp and notes. Key decisions included making UUID preservation from FileMaker '__ID' to Supabase 'id' explicit and adding dedicated suites for status transition edge cases, RLS implications of team reassignment, and customer FK and scoping scenarios.'",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0021",
@@ -290,7 +310,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive acceptance criteria for related entities in the projects migration requirements by adding Test Suites 12-18 covering objectives, steps, images, links, notes filtering/display, completion percentage calculation, and ordering/reordering behaviors. The primary change was expanding 'requirements/projects/acceptance-criteria.md' from 1371 to 2425 lines with 125 Given-When-Then test cases including CRUD, edge/error cases, RLS/authorization expectations, and key decisions like step-based weighting for completion and clarifying storage vs database deletion for images. Updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark 'TSK0021' as done. Verified the documentation build still succeeds via 'npm run build' with only pre-existing warnings."
+      "implementation_notes": "Implemented comprehensive acceptance criteria for related entities in the projects migration requirements by adding Test Suites 12-18 covering objectives, steps, images, links, notes filtering/display, completion percentage calculation, and ordering/reordering behaviors. The primary change was expanding 'requirements/projects/acceptance-criteria.md' from 1371 to 2425 lines with 125 Given-When-Then test cases including CRUD, edge/error cases, RLS/authorization expectations, and key decisions like step-based weighting for completion and clarifying storage vs database deletion for images. Updated '.devflow/tasks/projects-migration-requirements/tasks.json' to mark 'TSK0021' as done. Verified the documentation build still succeeds via 'npm run build' with only pre-existing warnings.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0022",
@@ -303,7 +324,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Expanded the projects migration acceptance criteria by adding Test Suites 19-24 (56 new Given-When-Then cases) to cover fixed-price 50/50 sales generation, monthly subscription sales creation, billable status changes, date and project-type edge cases, and sales entry idempotency/data integrity in 'requirements/projects/acceptance-criteria.md'. Documented key behavioral decisions including split timing (start_date and end_date), monthly anniversary rules, idempotency via unique (project_id, date), no auto-regeneration on value changes, and generally blocking pricing-model changes after creation. Marked the work item complete in '.devflow/tasks/projects-migration-requirements/tasks.json' (TSK0022) and confirmed the build still passes via 'npm run build' with only pre-existing warnings."
+      "implementation_notes": "Expanded the projects migration acceptance criteria by adding Test Suites 19-24 (56 new Given-When-Then cases) to cover fixed-price 50/50 sales generation, monthly subscription sales creation, billable status changes, date and project-type edge cases, and sales entry idempotency/data integrity in 'requirements/projects/acceptance-criteria.md'. Documented key behavioral decisions including split timing (start_date and end_date), monthly anniversary rules, idempotency via unique (project_id, date), no auto-regeneration on value changes, and generally blocking pricing-model changes after creation. Marked the work item complete in '.devflow/tasks/projects-migration-requirements/tasks.json' (TSK0022) and confirmed the build still passes via 'npm run build' with only pre-existing warnings.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0023",
@@ -316,7 +338,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented comprehensive workflow documentation by adding 'requirements/projects/workflows.md' containing five Mermaid diagrams covering project creation, objective and step management, fixed-price value processing, subscription sales generation, and status change flows, plus an ER diagram and integration notes. The work was informed by reviewing existing project hooks, services, data model mappings, and README acceptance criteria, and the documentation includes concrete code and FileMaker layout references plus key decisions around dual-write FileMaker to Supabase behavior and idempotency and error handling. Updated 'tasks.json' to mark 'TSK0023' complete and verified the build passes with 'npm run build'."
+      "implementation_notes": "Implemented comprehensive workflow documentation by adding 'requirements/projects/workflows.md' containing five Mermaid diagrams covering project creation, objective and step management, fixed-price value processing, subscription sales generation, and status change flows, plus an ER diagram and integration notes. The work was informed by reviewing existing project hooks, services, data model mappings, and README acceptance criteria, and the documentation includes concrete code and FileMaker layout references plus key decisions around dual-write FileMaker to Supabase behavior and idempotency and error handling. Updated 'tasks.json' to mark 'TSK0023' complete and verified the build passes with 'npm run build'.",
+      "feature": "projects-migration-requirements"
     },
     {
       "id": "TSK0024",
@@ -329,7 +352,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented a comprehensive documentation validation for the Projects migration requirements by reviewing all 7 docs plus key sections in 'acceptance-criteria.md' and 'workflows.md', confirming completeness, consistency, and accuracy across FileMaker layouts, API contracts, RLS/authorization, migration plan, and test coverage. Key decision was to approve the requirements as production-ready for backend implementation, noting only expected Supabase schema gaps (missing tables and columns) that were already clearly flagged in the docs. Updated task tracking by setting the task to 'done' with completion notes in 'tasks.json' and marking the feature review status as 'approved' (review_iteration: 1). Verified the project build succeeded as a final gate before closing the session."
+      "implementation_notes": "Implemented a comprehensive documentation validation for the Projects migration requirements by reviewing all 7 docs plus key sections in 'acceptance-criteria.md' and 'workflows.md', confirming completeness, consistency, and accuracy across FileMaker layouts, API contracts, RLS/authorization, migration plan, and test coverage. Key decision was to approve the requirements as production-ready for backend implementation, noting only expected Supabase schema gaps (missing tables and columns) that were already clearly flagged in the docs. Updated task tracking by setting the task to 'done' with completion notes in 'tasks.json' and marking the feature review status as 'approved' (review_iteration: 1). Verified the project build succeeded as a final gate before closing the session.",
+      "feature": "projects-migration-requirements"
     }
   ]
 }

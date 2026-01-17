@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-15T09:00:00.000Z",
+  "updated_at": "2026-01-17T00:36:12.661Z",
   "feature": {
     "name": "Tasks Backend Integration",
     "slug": "tasks-backend-integration",
     "description": "Integrate tasks and timer features with new Supabase-backed backend APIs, replacing FileMaker implementation",
     "review_status": "pending",
-    "review_iteration": 0
+    "review_iteration": 1
   },
   "standing_constraints": [
     "Do NOT modify backend infrastructure or database schema",
@@ -21,301 +21,292 @@
   "tasks": [
     {
       "id": "TSK0001",
+      "feature": "tasks-backend-integration",
       "title": "Audit current task component usage",
-      "description": "Find all components that use tasks, timers, and related functionality. Identify which files need updates for the new API integration. Document current data flow and state management patterns.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [],
-      "completed_at": "2026-01-15T05:31:00.000Z",
-      "deliverables": [
-        ".devflow/tasks/tasks-backend-integration/AUDIT_COMPONENT_USAGE.md"
-      ],
-      "notes": "Comprehensive audit completed covering 25+ files across components, hooks, services, and API layers. Documented current FileMaker-centric implementation, identified all integration points, estimated 85-125 hours of development effort for full backend migration. Created detailed file-by-file analysis with field mappings, data flow diagrams, risk assessment, and recommended backend API specification.",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Find all components that use tasks, timers, and related functionality. Identify which files need updates for the new API integration. Document current data flow and state management patterns.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Completed a comprehensive audit of task component usage to prepare for the new backend API integration and documented the findings in '.devflow/tasks/tasks-backend-integration/AUDIT_COMPONENT_USAGE.md'. The audit identifies key integration points across components, hooks, services, and the FileMaker bridge layer, highlighting that 'useTask.js' is the primary routing hook and that 'taskService.js', 'salesService.js', and 'tasks.js' will require the largest refactors or a full rewrite. Important decisions and guidance were captured, including a proposed target backend data flow and endpoint specification, plus a migration strategy recommending dual-write with feature flags and a rollback plan. Task status was updated to complete and the build was verified to compile successfully via 'npm run build'."
+      "implementation_notes": "Completed a comprehensive audit of task component usage to prepare for the new backend API integration and documented the findings in '.devflow/tasks/tasks-backend-integration/AUDIT_COMPONENT_USAGE.md'. The audit identifies key integration points across components, hooks, services, and the FileMaker bridge layer, highlighting that 'useTask.js' is the primary routing hook and that 'taskService.js', 'salesService.js', and 'tasks.js' will require the largest refactors or a full rewrite. Important decisions and guidance were captured, including a proposed target backend data flow and endpoint specification, plus a migration strategy recommending dual-write with feature flags and a rollback plan. Task status was updated to complete and the build was verified to compile successfully via 'npm run build'.",
+      "depends_on": []
     },
     {
       "id": "TSK0002",
+      "feature": "tasks-backend-integration",
       "title": "Create API request/response mappers",
-      "description": "Create mapper functions to transform between FileMaker data shapes and new backend API shapes. Handle ID conversions (recordId/__ID → UUID), field name changes, type conversions (string booleans → real booleans), and timestamp formats.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0001"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Create mapper functions to transform between FileMaker data shapes and new backend API shapes. Handle ID conversions (recordId/__ID → UUID), field name changes, type conversions (string booleans → real booleans), and timestamp formats.",
+      "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "executionError": null,
-      "implementation_notes": "Implemented bidirectional API request and response mappers to translate between FileMaker record shapes and the new backend API schema, including field renames, ID mapping, type coercions (booleans and numbers), date format conversions, computed fields, batch helpers, and validation utilities. Key files added or updated include 'src/utils/dataMappers.js' (core mapper module), 'src/utils/__tests__/dataMappers.test.js' (22 test cases), 'src/utils/verifyMappers.js' (standalone node verification runner), 'docs/DATA_MAPPERS_GUIDE.md', 'docs/MAPPER_IMPLEMENTATION_SUMMARY.md', and 'src/examples/mappersUsageExample.js'. An important fix was made to 'formatProductName' to ensure it uppercases correctly (not only capturing existing uppercase letters), and the work was verified via passing tests and successful project builds."
+      "implementation_notes": "Implemented bidirectional API request and response mappers to translate between FileMaker record shapes and the new backend API schema, including field renames, ID mapping, type coercions (booleans and numbers), date format conversions, computed fields, batch helpers, and validation utilities. Key files added or updated include 'src/utils/dataMappers.js' (core mapper module), 'src/utils/__tests__/dataMappers.test.js' (22 test cases), 'src/utils/verifyMappers.js' (standalone node verification runner), 'docs/DATA_MAPPERS_GUIDE.md', 'docs/MAPPER_IMPLEMENTATION_SUMMARY.md', and 'src/examples/mappersUsageExample.js'. An important fix was made to 'formatProductName' to ensure it uppercases correctly (not only capturing existing uppercase letters), and the work was verified via passing tests and successful project builds.",
+      "depends_on": []
     },
     {
       "id": "TSK0003",
+      "feature": "tasks-backend-integration",
       "title": "Implement new task endpoints in api/tasks.js",
-      "description": "Replace FileMaker API calls with new backend endpoint calls for: fetchTasksForProject, createTask, updateTask, updateTaskStatus, deleteTask. Use dataService.generateBackendAuthHeader() for HMAC auth. Add proper error handling for new error response format.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0002"
-      ],
-      "completed_at": "2026-01-14T00:00:00.000Z",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Replace FileMaker API calls with new backend endpoint calls for: fetchTasksForProject, createTask, updateTask, updateTaskStatus, deleteTask. Use dataService.generateBackendAuthHeader() for HMAC auth. Add proper error handling for new error response format.",
+      "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "executionError": null,
-      "implementation_notes": "Implemented new backend-based task endpoints in 'src/api/tasks.js', replacing FileMaker calls for 'fetchTasksForProject', 'createTask', 'updateTask', and 'updateTaskStatus', and adding a new 'deleteTask' function mapped to 'GET or POST or PATCH or DELETE' routes per the OpenAPI spec including 'POST /tasks/{taskId}/toggle-completion'. Integrated HMAC auth by reusing 'generateBackendAuthHeader' from 'src/api/fileMaker.js', added a 'USE_BACKEND_API' feature flag to keep FileMaker fallback for backward compatibility, and introduced centralized error handling and '[Tasks API]' logging for consistent diagnostics. Verified endpoint alignment against 'https://api.claritybusinesssolutions.ca/openapi.json' and confirmed builds pass with no syntax or import issues."
+      "implementation_notes": "Implemented new backend-based task endpoints in 'src/api/tasks.js', replacing FileMaker calls for 'fetchTasksForProject', 'createTask', 'updateTask', and 'updateTaskStatus', and adding a new 'deleteTask' function mapped to 'GET or POST or PATCH or DELETE' routes per the OpenAPI spec including 'POST /tasks/{taskId}/toggle-completion'. Integrated HMAC auth by reusing 'generateBackendAuthHeader' from 'src/api/fileMaker.js', added a 'USE_BACKEND_API' feature flag to keep FileMaker fallback for backward compatibility, and introduced centralized error handling and '[Tasks API]' logging for consistent diagnostics. Verified endpoint alignment against 'https://api.claritybusinesssolutions.ca/openapi.json' and confirmed builds pass with no syntax or import issues.",
+      "depends_on": []
     },
     {
       "id": "TSK0004",
+      "feature": "tasks-backend-integration",
       "title": "Implement timer endpoints in api/tasks.js",
-      "description": "Implement new timer endpoints: startTaskTimer (with idempotency check), stopTaskTimer (with financial record creation), pauseTimer, resumeTimer, fetchTaskTimers, getActiveTimer. Handle concurrency control and atomic operations.",
-      "status": "completed",
       "priority": "high",
-      "dependencies": [
-        "TSK0002"
-      ],
-      "completed_at": "2026-01-15T06:00:00.000Z",
-      "deliverables": [
-        ".devflow/tasks/tasks-backend-integration/TIMER_ENDPOINTS_IMPLEMENTATION.md"
-      ],
-      "notes": "Implemented all timer endpoints in src/api/tasks.js with backend API integration and FileMaker fallback. Added startTaskTimer (POST /time-entries/start), stopTaskTimer (POST /time-entries/{id}/stop with atomic financial record creation), pauseTimer, resumeTimer, getActiveTimer (GET /time-entries/active), and updated fetchTaskTimers with advanced filtering. All endpoints use HMAC authentication, comprehensive error handling, and detailed logging. Backend handles idempotency, concurrency control (one active timer per staff), and atomic operations. Pause/resume only supported in backend mode. Build verified successfully.",
-      "implementation_notes": "Implemented full timer endpoint support in 'src/api/tasks.js' based on the OpenAPI time-entries spec, adding new functions for 'pauseTimer', 'resumeTimer', and 'getActiveTimer' and enhancing existing timer operations to match backend integration patterns with HMAC auth, validation, logging, and robust error handling (including graceful 404 to null for no active timer). Kept FileMaker fallback compatibility for all relevant operations while explicitly making pause and resume backend-only (FileMaker throws), and ensured filtering and pagination improvements for 'fetchTaskTimers' without breaking existing callers. Added documentation deliverables 'TIMER_ENDPOINTS_IMPLEMENTATION.md', 'TIMER_API_QUICK_REFERENCE.md', and 'TSK0004_VERIFICATION.md', verified build and exports, and updated task status in '.devflow/tasks/tasks-backend-integration/tasks.json' to done with completion metadata.",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Implement new timer endpoints: startTaskTimer (with idempotency check), stopTaskTimer (with financial record creation), pauseTimer, resumeTimer, fetchTaskTimers, getActiveTimer. Handle concurrency control and atomic operations.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "implementation_notes": "Implemented full timer endpoint support in 'src/api/tasks.js' based on the OpenAPI time-entries spec, adding new functions for 'pauseTimer', 'resumeTimer', and 'getActiveTimer' and enhancing existing timer operations to match backend integration patterns with HMAC auth, validation, logging, and robust error handling (including graceful 404 to null for no active timer). Kept FileMaker fallback compatibility for all relevant operations while explicitly making pause and resume backend-only (FileMaker throws), and ensured filtering and pagination improvements for 'fetchTaskTimers' without breaking existing callers. Added documentation deliverables 'TIMER_ENDPOINTS_IMPLEMENTATION.md', 'TIMER_API_QUICK_REFERENCE.md', and 'TSK0004_VERIFICATION.md', verified build and exports, and updated task status in '.devflow/tasks/tasks-backend-integration/tasks.json' to done with completion metadata.",
+      "depends_on": []
     },
     {
       "id": "TSK0005",
+      "feature": "tasks-backend-integration",
       "title": "Update taskService.js business logic",
-      "description": "Update service layer functions to use new API shapes and handle new business logic: timer idempotency, concurrency control (one active timer per staff), financial record generation on stop (with fixed-price detection), pause/resume accumulation, adjustment validations (6-minute increments).",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0003",
-        "TSK0004"
-      ],
-      "completed_at": "2026-01-15T06:30:00.000Z",
-      "deliverables": [
-        ".devflow/tasks/tasks-backend-integration/TSK0005_IMPLEMENTATION.md"
-      ],
-      "notes": "Updated taskService.js to handle new backend API shapes and implement timer business logic including idempotency, concurrency control, atomic financial record generation, pause/resume functionality, and 6-minute adjustment validation. Added new functions: pauseTimer, resumeTimer, getActiveTimer. Enhanced processTimerRecords and processTaskData to handle both backend (array) and FileMaker (object) response formats. Added comprehensive logging with [Task Service] prefix, user-friendly error messages, and helper functions for financial record extraction and timer statistics. Maintained FileMaker backward compatibility. Build verified successfully.",
-      "implementation_notes": "Implemented updated timer business logic and new backend API shapes in 'taskService.js', including enhanced 'startTimer' and 'stopTimer' (active-timer concurrency checks, dual backend/FileMaker response handling, financial record extraction, and consistent '[Task Service]' logging) plus new timer methods 'pauseTimer', 'resumeTimer', and 'getActiveTimer'. Added 6-minute (360-second) adjustment validation and rounding helpers, and updated data processing ('processTimerRecords', 'processTaskData') to support both array-based backend and object-based FileMaker payloads while capturing new fields like status, pause duration, and adjustment seconds. Introduced helper utilities to extract and format financial records and compute timer stats, and verified compatibility and builds via 'npm run build'. Updated 'tasks.json' status and timestamps and added documentation deliverables 'TSK0005_IMPLEMENTATION.md', 'TASK_SERVICE_QUICK_REFERENCE.md', and 'TSK0005_VERIFICATION.md' to capture decisions, usage, and verification notes.'",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update service layer functions to use new API shapes and handle new business logic: timer idempotency, concurrency control (one active timer per staff), financial record generation on stop (with fixed-price detection), pause/resume accumulation, adjustment validations (6-minute increments).",
+      "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "implementation_notes": "Implemented updated timer business logic and new backend API shapes in 'taskService.js', including enhanced 'startTimer' and 'stopTimer' (active-timer concurrency checks, dual backend/FileMaker response handling, financial record extraction, and consistent '[Task Service]' logging) plus new timer methods 'pauseTimer', 'resumeTimer', and 'getActiveTimer'. Added 6-minute (360-second) adjustment validation and rounding helpers, and updated data processing ('processTimerRecords', 'processTaskData') to support both array-based backend and object-based FileMaker payloads while capturing new fields like status, pause duration, and adjustment seconds. Introduced helper utilities to extract and format financial records and compute timer stats, and verified compatibility and builds via 'npm run build'. Updated 'tasks.json' status and timestamps and added documentation deliverables 'TSK0005_IMPLEMENTATION.md', 'TASK_SERVICE_QUICK_REFERENCE.md', and 'TSK0005_VERIFICATION.md' to capture decisions, usage, and verification notes.'",
+      "depends_on": []
     },
     {
       "id": "TSK0006",
+      "feature": "tasks-backend-integration",
       "title": "Update task validation rules",
-      "description": "Update TASK_FIELDS validation in taskService.js to match new backend schema. Update field names, add new required fields, remove deprecated fields. Ensure validation errors match backend error messages.",
-      "status": "done",
       "priority": "medium",
-      "dependencies": [
-        "TSK0003"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update TASK_FIELDS validation in taskService.js to match new backend schema. Update field names, add new required fields, remove deprecated fields. Ensure validation errors match backend error messages.",
+      "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "completed_at": "2026-01-15T06:05:34.000Z",
-      "deliverables": [
-        ".devflow/tasks/tasks-backend-integration/TSK0006_IMPLEMENTATION.md"
-      ],
-      "notes": "Updated TASK_FIELDS validation in taskService.js to match new backend schema from TaskCreate API model. Changed field names (task→title, _projectID→project_id, f_completed→is_completed, f_priority→priority), added UUID validation for ID fields, updated priority from string to integer (1-5), added status enum validation, and implemented backward compatibility in createNewTask. Enhanced error messages to match backend validation. Build verified successfully.",
       "implementation_notes": "Implemented updated task validation and creation logic to align with the new backend TaskCreate schema, including field renames (task to title, _projectID to project_id, _staffID to staff_id, f_completed to is_completed, f_priority to priority, type to task_type), new status enum validation, UUID checks, and support for optional fields like notes and hours. Updated 'validateTaskData' to enforce the new types and rules while preserving backward compatibility and skipping immutable fields on updates, and revised 'createNewTask' to accept both legacy and new field names, convert legacy priority values to integers, and build the correct payload without 'organization_id' since it is inferred by auth. Key changes were made in 'src/services/taskService.js', and the work was verified via 'npm run build' plus documentation in 'TSK0006_IMPLEMENTATION.md' and a completion update in 'tasks.json'.",
-      "executionError": null
+      "depends_on": []
     },
     {
       "id": "TSK0007",
+      "feature": "tasks-backend-integration",
       "title": "Update task list components",
-      "description": "Update all task list components to use new data shapes. Handle pagination, filtering, and sorting with new API parameters. Update loading states and error displays. Verify task grouping (active vs completed) still works correctly.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0005",
-        "TSK0001"
-      ],
-      "completed_at": "2026-01-14T00:00:00.000Z",
-      "deliverables": [
-        ".devflow/tasks/tasks-backend-integration/TSK0007_IMPLEMENTATION.md"
-      ],
-      "notes": "Updated TaskList component to use new backend data shapes (title, project_id, is_completed) while maintaining backward compatibility with FileMaker fields (task, _projectID, f_completed). Enhanced processTaskData in taskService.js to populate both field sets. Updated task creation to use new schema with proper type conversions. Verified task grouping (active vs completed) works correctly. Build successful with no errors. No pagination/filtering/sorting UI implemented (backend supports it, but out of scope for this task - UI enhancements deferred to future tasks).",
-      "implementation_notes": "Implemented updates to task list UI and data normalization to support the new backend task schema while preserving FileMaker compatibility, including updating TaskList display and creation logic to use 'title', 'project_id', and 'staff_id' with fallback to legacy fields. Key changes were made in 'src/components/tasks/TaskList.jsx' (field usage, PropTypes, create payload) and 'src/services/taskService.js' (fixing 'processTaskData' to populate both 'title' and 'task', and aligning FileMaker processing for consistent internal shape). Verified grouping by completion status and existing sorting behavior continued to work via the normalized 'isCompleted' field, and confirmed builds succeeded with only pre-existing unrelated warnings. Documented the work and marked completion by updating 'tasks.json' and adding 'TSK0007_IMPLEMENTATION.md', 'TSK0007_QUICK_REFERENCE.md', and 'TSK0007_VERIFICATION.md', while explicitly deciding not to implement pagination, filtering, or extended sorting UI in this task scope.",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update all task list components to use new data shapes. Handle pagination, filtering, and sorting with new API parameters. Update loading states and error displays. Verify task grouping (active vs completed) still works correctly.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "implementation_notes": "Implemented updates to task list UI and data normalization to support the new backend task schema while preserving FileMaker compatibility, including updating TaskList display and creation logic to use 'title', 'project_id', and 'staff_id' with fallback to legacy fields. Key changes were made in 'src/components/tasks/TaskList.jsx' (field usage, PropTypes, create payload) and 'src/services/taskService.js' (fixing 'processTaskData' to populate both 'title' and 'task', and aligning FileMaker processing for consistent internal shape). Verified grouping by completion status and existing sorting behavior continued to work via the normalized 'isCompleted' field, and confirmed builds succeeded with only pre-existing unrelated warnings. Documented the work and marked completion by updating 'tasks.json' and adding 'TSK0007_IMPLEMENTATION.md', 'TSK0007_QUICK_REFERENCE.md', and 'TSK0007_VERIFICATION.md', while explicitly deciding not to implement pagination, filtering, or extended sorting UI in this task scope.",
+      "depends_on": []
     },
     {
       "id": "TSK0008",
+      "feature": "tasks-backend-integration",
       "title": "Update task detail components",
-      "description": "Update task detail views to display new fields and handle new data shapes. Update timer display to show pause/resume state. Add better error messages for timer concurrency conflicts.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0005",
-        "TSK0001"
-      ],
-      "completed_at": "2026-01-15T07:00:00.000Z",
-      "deliverables": [
-        ".devflow/tasks/tasks-backend-integration/TSK0008_IMPLEMENTATION.md"
-      ],
-      "notes": "Updated TaskTimer component to display new backend timer fields (status, pause_duration_seconds, adjustment_seconds) with visual indicators (RUNNING/PAUSED). Enhanced useTask hook to integrate pause/resume backend APIs with graceful FileMaker fallback. Added user-friendly error messages for timer concurrency conflicts. Updated TaskList to show active/paused timer status. All changes maintain backward compatibility with FileMaker. Build verified successfully.",
-      "implementation_notes": "Implemented TSK0008 updates to surface new backend timer fields and clearer timer state in the UI, including RUNNING and PAUSED indicators and improved, user-friendly error handling for concurrency and invalid state transitions. Key changes were made in 'src/components/tasks/TaskTimer.jsx' (dual support for backend fields like 'status', 'start_time', 'pause_duration_seconds', 'adjustment_seconds' plus legacy fields, updated initialization, time calculations, and PropTypes), 'src/hooks/useTask.js' (integrated 'pauseTimer', 'resumeTimer', 'getActiveTimer', refactored pause behavior, and enhanced start handling to detect 409 concurrency conflicts with a specific message while preserving FileMaker fallback), and 'src/components/tasks/TaskList.jsx' (added status indicators in the list). Important decisions included maintaining full backward compatibility with FileMaker mode via graceful degradation and populating both backend and legacy fields, plus adding supporting docs ('TSK0008_IMPLEMENTATION.md', 'TSK0008_QUICK_REFERENCE.md', 'TSK0008_VERIFICATION.md') and marking completion in 'tasks.json' after successful builds.",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update task detail views to display new fields and handle new data shapes. Update timer display to show pause/resume state. Add better error messages for timer concurrency conflicts.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "implementation_notes": "Implemented TSK0008 updates to surface new backend timer fields and clearer timer state in the UI, including RUNNING and PAUSED indicators and improved, user-friendly error handling for concurrency and invalid state transitions. Key changes were made in 'src/components/tasks/TaskTimer.jsx' (dual support for backend fields like 'status', 'start_time', 'pause_duration_seconds', 'adjustment_seconds' plus legacy fields, updated initialization, time calculations, and PropTypes), 'src/hooks/useTask.js' (integrated 'pauseTimer', 'resumeTimer', 'getActiveTimer', refactored pause behavior, and enhanced start handling to detect 409 concurrency conflicts with a specific message while preserving FileMaker fallback), and 'src/components/tasks/TaskList.jsx' (added status indicators in the list). Important decisions included maintaining full backward compatibility with FileMaker mode via graceful degradation and populating both backend and legacy fields, plus adding supporting docs ('TSK0008_IMPLEMENTATION.md', 'TSK0008_QUICK_REFERENCE.md', 'TSK0008_VERIFICATION.md') and marking completion in 'tasks.json' after successful builds.",
+      "depends_on": []
     },
     {
       "id": "TSK0009",
+      "feature": "tasks-backend-integration",
       "title": "Update task form components",
-      "description": "Update task creation and edit forms to match new schema. Update field validation to use new backend rules. Handle new error response format with field-level errors. Update success/error messaging.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0006",
-        "TSK0001"
-      ],
-      "completed_at": "2026-01-14T00:00:00.000Z",
-      "deliverables": [
-        "src/components/tasks/TaskForm.jsx",
-        ".devflow/tasks/tasks-backend-integration/TSK0009_IMPLEMENTATION.md",
-        ".devflow/tasks/tasks-backend-integration/TSK0009_QUICK_REFERENCE.md"
-      ],
-      "notes": "Created comprehensive TaskForm component with full backend schema support, field-level validation, and error display. Updated TaskList to use new TaskForm. Supports both create and edit modes. Maintains backward compatibility with FileMaker. Build verified successfully.",
-      "implementation_notes": "Implemented a new reusable task form component at 'src/components/tasks/TaskForm.jsx' that supports the full backend schema (title, priority, status, task_type, notes, estimated_hours, due_date), includes create and edit modes, performs client-side validation aligned with backend rules, and parses FastAPI-style validation errors for field-level messaging while remaining backward compatible by sending legacy field names. Updated 'src/components/tasks/TaskList.jsx' to replace the inline TextInput flow with TaskForm, add customer_id resolution (from props or selectedProject), wire create and edit handlers with improved error state management, and refresh PropTypes. Added supporting docs ('TSK0009_IMPLEMENTATION.md', 'TSK0009_QUICK_REFERENCE.md', 'TSK0009_VERIFICATION.md') and marked completion in 'tasks.json', with builds verified successfully as the final validation step.",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update task creation and edit forms to match new schema. Update field validation to use new backend rules. Handle new error response format with field-level errors. Update success/error messaging.",
+      "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "implementation_notes": "Implemented a new reusable task form component at 'src/components/tasks/TaskForm.jsx' that supports the full backend schema (title, priority, status, task_type, notes, estimated_hours, due_date), includes create and edit modes, performs client-side validation aligned with backend rules, and parses FastAPI-style validation errors for field-level messaging while remaining backward compatible by sending legacy field names. Updated 'src/components/tasks/TaskList.jsx' to replace the inline TextInput flow with TaskForm, add customer_id resolution (from props or selectedProject), wire create and edit handlers with improved error state management, and refresh PropTypes. Added supporting docs ('TSK0009_IMPLEMENTATION.md', 'TSK0009_QUICK_REFERENCE.md', 'TSK0009_VERIFICATION.md') and marked completion in 'tasks.json', with builds verified successfully as the final validation step.",
+      "depends_on": []
     },
     {
       "id": "TSK0010",
+      "feature": "tasks-backend-integration",
       "title": "Update timer UI components",
-      "description": "Update timer components to support pause/resume functionality. Add UI for adjustment in 6-minute increments. Display active timer state on app load. Handle timer concurrency errors gracefully (show existing active timer).",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0004",
-        "TSK0001"
-      ],
-      "completed_at": "2026-01-15T08:00:00.000Z",
-      "deliverables": [
-        "src/components/tasks/TaskTimer.jsx",
-        "src/hooks/useTask.js"
-      ],
-      "notes": "Updated TaskTimer component with improved pause/resume UI, clear time adjustment controls in 6-minute increments, and fixed CSS bugs (bg-bg- typos). Added active timer restoration on app load in useTask hook - fetches active timer from backend and restores state automatically. Implemented graceful concurrency error handling that fetches and restores the existing active timer when conflicts occur. All features maintain backward compatibility with FileMaker. Build verified successfully with no errors.",
-      "implementation_notes": "Implemented TSK0010 timer UI enhancements including improved pause/resume button styling with clear visual states, enhanced time adjustment controls with descriptive labels and tooltips for 6-minute increments, automatic active timer restoration on mount via useEffect in useTask hook (fetches from backend and syncs to localStorage), and graceful concurrency error handling that automatically fetches and restores existing active timers when 409 conflicts occur. Key changes were made in 'src/components/tasks/TaskTimer.jsx' (fixed bg-bg- CSS typos, improved adjustment UI with labels, enhanced button states) and 'src/hooks/useTask.js' (added restoreActiveTimer effect on mount, enhanced handleTimerStart to fetch and restore existing timer on conflict). All changes maintain full backward compatibility with FileMaker mode. Build verified successfully with npm run build showing no errors (only pre-existing unrelated warnings in proposalService.js).",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update timer components to support pause/resume functionality. Add UI for adjustment in 6-minute increments. Display active timer state on app load. Handle timer concurrency errors gracefully (show existing active timer).",
+      "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "implementation_notes": "Implemented TSK0010 timer UI enhancements including improved pause/resume button styling with clear visual states, enhanced time adjustment controls with descriptive labels and tooltips for 6-minute increments, automatic active timer restoration on mount via useEffect in useTask hook (fetches from backend and syncs to localStorage), and graceful concurrency error handling that automatically fetches and restores existing active timers when 409 conflicts occur. Key changes were made in 'src/components/tasks/TaskTimer.jsx' (fixed bg-bg- CSS typos, improved adjustment UI with labels, enhanced button states) and 'src/hooks/useTask.js' (added restoreActiveTimer effect on mount, enhanced handleTimerStart to fetch and restore existing timer on conflict). All changes maintain full backward compatibility with FileMaker mode. Build verified successfully with npm run build showing no errors (only pre-existing unrelated warnings in proposalService.js).",
+      "depends_on": []
     },
     {
       "id": "TSK0011",
+      "feature": "tasks-backend-integration",
       "title": "Implement financial record integration on timer stop",
-      "description": "Update stopTimer logic to handle financial record creation atomically. Implement fixed-price project detection. Handle partial failures (timer stops but financial record fails). Add retry logic for financial record creation. Log all operations for debugging.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0004",
-        "TSK0005"
-      ],
-      "completed_at": "2026-01-15T09:00:00.000Z",
-      "deliverables": [
-        ".devflow/tasks/tasks-backend-integration/TSK0011_IMPLEMENTATION.md",
-        ".devflow/tasks/tasks-backend-integration/TSK0011_QUICK_REFERENCE.md",
-        ".devflow/tasks/tasks-backend-integration/TSK0011_VERIFICATION.md"
-      ],
-      "notes": "Enhanced stopTimer function with comprehensive logging, retry logic (2 retries with exponential backoff), fixed-price project detection, and partial failure handling. Backend API handles financial record creation atomically - frontend now properly logs and handles the response. Added 35+ log statements with visual indicators (✓, ⚠, ✗) for easy debugging. Retry logic handles transient network errors with 1s and 2s backoff. Fixed-price detection checks project's f_fixedPrice field and skips sales record creation. Partial failures (timer stops but financial record fails) are logged but don't prevent timer stop success. All errors include stack traces. Maintains backward compatibility with FileMaker legacy mode. Build verified successfully.",
-      "implementation_notes": "Implemented financial record integration on timer stop by updating the frontend stop timer flow to rely on the backend atomic financial record creation response and removing the legacy separate sales record creation attempts, while preserving FileMaker legacy mode behavior. Enhanced 'src/services/taskService.js' (stopTimer) with retry logic (3 attempts with 1s and 2s backoff), fixed-price project detection via 'f_fixedPrice', best-effort partial failure handling, and extensive structured logging including stack traces. Added supporting deliverables: 'TSK0011_IMPLEMENTATION.md', 'TSK0011_QUICK_REFERENCE.md', 'TSK0011_VERIFICATION.md', 'TSK0011_SUMMARY.md', updated 'tasks.json', and created 'verify-tsk0011.sh' to automate verification and confirm builds pass.",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update stopTimer logic to handle financial record creation atomically. Implement fixed-price project detection. Handle partial failures (timer stops but financial record fails). Add retry logic for financial record creation. Log all operations for debugging.",
+      "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "implementation_notes": "Implemented financial record integration on timer stop by updating the frontend stop timer flow to rely on the backend atomic financial record creation response and removing the legacy separate sales record creation attempts, while preserving FileMaker legacy mode behavior. Enhanced 'src/services/taskService.js' (stopTimer) with retry logic (3 attempts with 1s and 2s backoff), fixed-price project detection via 'f_fixedPrice', best-effort partial failure handling, and extensive structured logging including stack traces. Added supporting deliverables: 'TSK0011_IMPLEMENTATION.md', 'TSK0011_QUICK_REFERENCE.md', 'TSK0011_VERIFICATION.md', 'TSK0011_SUMMARY.md', updated 'tasks.json', and created 'verify-tsk0011.sh' to automate verification and confirm builds pass.",
+      "depends_on": []
     },
     {
       "id": "TSK0012",
+      "feature": "tasks-backend-integration",
       "title": "Update API mocks and fixtures",
-      "description": "Update all task-related mocks to match new backend API responses. Create fixtures with new data shapes. Update mock implementations to simulate new business logic (idempotency, concurrency checks, etc.).",
-      "status": "done",
       "priority": "medium",
-      "dependencies": [
-        "TSK0003",
-        "TSK0004"
-      ],
-      "completed_at": "2026-01-15T09:30:00.000Z",
-      "deliverables": [
-        "src/__fixtures__/tasks.js",
-        "src/__fixtures__/timers.js",
-        "src/__fixtures__/financialRecords.js",
-        "src/__fixtures__/index.js",
-        "src/__mocks__/tasksApi.js",
-        "src/__mocks__/axios.js",
-        "src/__mocks__/testUtils.js",
-        "src/__tests__/tasksApi.mock.test.js",
-        ".devflow/tasks/tasks-backend-integration/TSK0012_IMPLEMENTATION.md",
-        ".devflow/tasks/tasks-backend-integration/TSK0012_VERIFICATION.md"
-      ],
-      "notes": "Created comprehensive fixtures matching backend OpenAPI spec exactly (TaskResponse, TimeEntryResponse, FinancialRecordResponse). Updated all field types to match spec: Decimal fields as strings, added missing fields (duration_minutes, billable_amount, completed_at, billing_status, project_id, time_entry_id). Implemented full mock API with business logic simulation: idempotency checks, concurrency control (one active timer per staff), atomic financial record generation, pause/resume accumulation, status transition validation, and FastAPI-compatible error responses. Created comprehensive test suite with 20+ test cases covering CRUD operations, timer lifecycle, error handling, and edge cases. All fixtures verified against OpenAPI spec. Build successful with no new errors.",
-      "implementation_notes": "Implemented TSK0012 by creating comprehensive API mocks and fixtures that exactly match the backend OpenAPI specification. Created fixture files in src/__fixtures__/ (tasks.js, timers.js, financialRecords.js, index.js) with all new backend data shapes including proper field types (Decimal strings for numeric values, proper nullable fields). Updated all fixtures to include backend-specific fields like duration_minutes, billable_amount, completed_at, billing_status, project_id, time_entry_id, and filemaker_record_id. Created mock implementations in src/__mocks__/ including tasksApi.js (full business logic simulation with in-memory state, idempotency, concurrency control, atomic operations), axios.js (intercepts API calls and routes to mock functions), and testUtils.js (helper utilities for setup, cleanup, assertions, error factories). Implemented all backend business logic: timer start with concurrency check (409 if staff has active timer), timer stop with atomic financial record creation (skips for fixed-price projects), pause/resume with duration accumulation, status transition validation, input validation with FastAPI error format, UUID generation, and network delay simulation. Created comprehensive test suite in src/__tests__/tasksApi.mock.test.js with 20+ test cases covering task CRUD, timer lifecycle, concurrency, financial records, validations, and error scenarios. Verified all fixtures match OpenAPI spec by comparing field names and types. Build verified successfully with npm run build. Updated tasks.json with completion status and comprehensive documentation in TSK0012_IMPLEMENTATION.md and TSK0012_VERIFICATION.md.",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update all task-related mocks to match new backend API responses. Create fixtures with new data shapes. Update mock implementations to simulate new business logic (idempotency, concurrency checks, etc.).",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "implementation_notes": "Implemented TSK0012 by creating comprehensive API mocks and fixtures that exactly match the backend OpenAPI specification. Created fixture files in src/__fixtures__/ (tasks.js, timers.js, financialRecords.js, index.js) with all new backend data shapes including proper field types (Decimal strings for numeric values, proper nullable fields). Updated all fixtures to include backend-specific fields like duration_minutes, billable_amount, completed_at, billing_status, project_id, time_entry_id, and filemaker_record_id. Created mock implementations in src/__mocks__/ including tasksApi.js (full business logic simulation with in-memory state, idempotency, concurrency control, atomic operations), axios.js (intercepts API calls and routes to mock functions), and testUtils.js (helper utilities for setup, cleanup, assertions, error factories). Implemented all backend business logic: timer start with concurrency check (409 if staff has active timer), timer stop with atomic financial record creation (skips for fixed-price projects), pause/resume with duration accumulation, status transition validation, input validation with FastAPI error format, UUID generation, and network delay simulation. Created comprehensive test suite in src/__tests__/tasksApi.mock.test.js with 20+ test cases covering task CRUD, timer lifecycle, concurrency, financial records, validations, and error scenarios. Verified all fixtures match OpenAPI spec by comparing field names and types. Build verified successfully with npm run build. Updated tasks.json with completion status and comprehensive documentation in TSK0012_IMPLEMENTATION.md and TSK0012_VERIFICATION.md.",
+      "depends_on": []
     },
     {
       "id": "TSK0013",
+      "feature": "tasks-backend-integration",
       "title": "Update unit tests for API layer",
-      "description": "Update tests for src/api/tasks.js to cover new endpoints. Add tests for HMAC authentication. Add tests for error handling. Add tests for request/response mapping.",
-      "status": "done",
       "priority": "medium",
-      "dependencies": [
-        "TSK0003",
-        "TSK0004",
-        "TSK0012"
-      ],
-      "completed_at": "2026-01-15T10:00:00.000Z",
-      "deliverables": [
-        "src/__tests__/tasksApi.test.js",
-        ".devflow/tasks/tasks-backend-integration/TSK0013_TESTS_SUMMARY.md"
-      ],
-      "notes": "Created comprehensive unit tests for src/api/tasks.js covering all new endpoints (pause/resume/getActiveTimer/fetchTaskTimers), HMAC authentication for all request types, extensive error handling (10+ scenarios), request/response mapping, and console logging. Total of 45 tests all passing. Updated babel.config.js to enable module transformation for Jest (removed modules: false). Build verified successfully with no compilation errors.",
-      "implementation_notes": "Implemented comprehensive Jest unit tests for the real API module in 'src/api/tasks.js' by adding 'src/__tests__/tasksApi.test.js' with 45 cases covering new timer endpoints (pause, resume, getActiveTimer with 404 returning null, fetchTaskTimers), HMAC auth header construction across methods, error handling formats, and request response mapping. Fixed the test environment by updating 'babel.config.js' to allow ES module transformation (removing 'modules: false' from preset-env) so Jest could run the new tests. Added supporting documentation in '.devflow/tasks/tasks-backend-integration' (TSK0013_TESTS_SUMMARY.md, TSK0013_QUICK_REFERENCE.md, TSK0013_VERIFICATION.md) and marked completion in '.devflow/tasks/tasks-backend-integration/tasks.json'. Verified all tests passing and build success as a final validation step.",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update tests for src/api/tasks.js to cover new endpoints. Add tests for HMAC authentication. Add tests for error handling. Add tests for request/response mapping.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "implementation_notes": "Implemented comprehensive Jest unit tests for the real API module in 'src/api/tasks.js' by adding 'src/__tests__/tasksApi.test.js' with 45 cases covering new timer endpoints (pause, resume, getActiveTimer with 404 returning null, fetchTaskTimers), HMAC auth header construction across methods, error handling formats, and request response mapping. Fixed the test environment by updating 'babel.config.js' to allow ES module transformation (removing 'modules: false' from preset-env) so Jest could run the new tests. Added supporting documentation in '.devflow/tasks/tasks-backend-integration' (TSK0013_TESTS_SUMMARY.md, TSK0013_QUICK_REFERENCE.md, TSK0013_VERIFICATION.md) and marked completion in '.devflow/tasks/tasks-backend-integration/tasks.json'. Verified all tests passing and build success as a final validation step.",
+      "depends_on": []
     },
     {
       "id": "TSK0014",
+      "feature": "tasks-backend-integration",
       "title": "Update unit tests for service layer",
-      "description": "Update tests for src/services/taskService.js to cover new business logic. Add tests for timer idempotency. Add tests for concurrency control. Add tests for financial record generation. Add tests for pause/resume calculations. Add tests for adjustment validations.",
-      "status": "done",
       "priority": "medium",
-      "dependencies": [
-        "TSK0005",
-        "TSK0012"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Update tests for src/services/taskService.js to cover new business logic. Add tests for timer idempotency. Add tests for concurrency control. Add tests for financial record generation. Add tests for pause/resume calculations. Add tests for adjustment validations.",
       "completedAt": "2026-01-15T14:46:05Z",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented a comprehensive Jest unit test suite for the service layer focused on timer and task business logic, adding 72 passing tests covering idempotent timer starts, concurrency checks, pause and resume time calculations, financial record generation, retry and backoff behavior, and adjustment and task field validations. Key files added and updated were 'src/services/__tests__/taskService.test.js' and 'src/services/__tests__/README.md', with important dependency mocks introduced for modules like 'fileMakerApi' (to avoid 'import.meta' issues) and 'supabaseService' alongside API mocks for task and financial operations. Test expectations were aligned to actual implementation details, including numeric return types, default parameter behavior, negative zero comparisons, UUID validation, legacy field names, and rounding rules for negative adjustments."
+      "implementation_notes": "Implemented a comprehensive Jest unit test suite for the service layer focused on timer and task business logic, adding 72 passing tests covering idempotent timer starts, concurrency checks, pause and resume time calculations, financial record generation, retry and backoff behavior, and adjustment and task field validations. Key files added and updated were 'src/services/__tests__/taskService.test.js' and 'src/services/__tests__/README.md', with important dependency mocks introduced for modules like 'fileMakerApi' (to avoid 'import.meta' issues) and 'supabaseService' alongside API mocks for task and financial operations. Test expectations were aligned to actual implementation details, including numeric return types, default parameter behavior, negative zero comparisons, UUID validation, legacy field names, and rounding rules for negative adjustments.",
+      "depends_on": []
     },
     {
       "id": "TSK0015",
+      "feature": "tasks-backend-integration",
       "title": "Add integration tests for complete task lifecycle",
-      "description": "Create end-to-end tests for: create task → start timer → stop timer → verify financial record. Test fixed-price project (no financial record). Test concurrent timer scenarios. Test error recovery paths.",
-      "status": "done",
       "priority": "medium",
-      "dependencies": [
-        "TSK0011",
-        "TSK0012"
-      ],
-      "completed_at": "2026-01-15T10:30:00.000Z",
-      "deliverables": [
-        "scripts/test-task-lifecycle-integration.js",
-        "docs/TASK_LIFECYCLE_INTEGRATION_TESTS.md",
-        ".devflow/tasks/tasks-backend-integration/TSK0013_INTEGRATION_TESTS.md"
-      ],
-      "notes": "Created comprehensive integration test script covering complete task lifecycle workflows: create task, start timer, stop timer, verify financial record generation. Tests include hourly projects (with financial records), fixed-price projects (no financial records), concurrent timer prevention, pause/resume functionality with time exclusion, timer adjustments in 6-minute increments, and error recovery paths. Script includes HMAC authentication, automatic test data cleanup, verbose logging mode, JSON report generation, and prerequisite checks. Added npm scripts: test:task-lifecycle, test:task-lifecycle:verbose, test:task-lifecycle:report. Total of 28 test assertions across 6 test suites. Build verified successfully.",
-      "implementation_notes": "Implemented a comprehensive end-to-end integration test covering the full task lifecycle (create task, start stop pause resume timers, validate financial record creation and calculations, enforce concurrent timer prevention, validate adjustments, and exercise error paths), following the existing pattern from the teams integration test. Added the main test runner script at 'scripts/test-task-lifecycle-integration.js' with HMAC-SHA256 request signing, automatic test data cleanup, verbose logging, and optional JSON report generation. Updated 'package.json' to include 'test:task-lifecycle', 'test:task-lifecycle:verbose', and 'test:task-lifecycle:report' scripts, and documented usage and prerequisites in 'docs/TASK_LIFECYCLE_INTEGRATION_TESTS.md' plus an implementation summary at '.devflow/tasks/tasks-backend-integration/TSK0013_INTEGRATION_TESTS.md'; also marked the task complete in 'tasks.json' after verifying 'npm run build' succeeds.",
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Create end-to-end tests for: create task → start timer → stop timer → verify financial record. Test fixed-price project (no financial record). Test concurrent timer scenarios. Test error recovery paths.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "implementation_notes": "Implemented a comprehensive end-to-end integration test covering the full task lifecycle (create task, start stop pause resume timers, validate financial record creation and calculations, enforce concurrent timer prevention, validate adjustments, and exercise error paths), following the existing pattern from the teams integration test. Added the main test runner script at 'scripts/test-task-lifecycle-integration.js' with HMAC-SHA256 request signing, automatic test data cleanup, verbose logging, and optional JSON report generation. Updated 'package.json' to include 'test:task-lifecycle', 'test:task-lifecycle:verbose', and 'test:task-lifecycle:report' scripts, and documented usage and prerequisites in 'docs/TASK_LIFECYCLE_INTEGRATION_TESTS.md' plus an implementation summary at '.devflow/tasks/tasks-backend-integration/TSK0013_INTEGRATION_TESTS.md'; also marked the task complete in 'tasks.json' after verifying 'npm run build' succeeds.",
+      "depends_on": []
+    },
+    {
+      "id": "TASK016",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Missing try-catch around JSON.parse in localStorage initialization",
+      "title": "[REVIEW] Missing try-catch around JSON.parse in localStorage initialization",
+      "priority": "high",
+      "requirements": [
+        "In useTask.js line 31-48, the timer state initialization uses JSON.parse(savedTimer) without error handling. If the localStorage data is corrupted or malformed JSON, this will throw an uncaught exception and crash the hook on mount.\n\nCode snippet:\n",
+        "",
+        "**Recommendation:** undefined"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-001 from iteration 1"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK017",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] HMAC Secret Key Exposed in Client-Side Code",
+      "title": "[REVIEW] HMAC Secret Key Exposed in Client-Side Code",
+      "priority": "high",
+      "requirements": [
+        "The HMAC-SHA256 secret key (VITE_SECRET_KEY) is embedded in the client-side JavaScript bundle via import.meta.env, making it accessible to anyone who inspects the browser's JavaScript files. This completely compromises the HMAC authentication scheme.\n\nIn dataService.js line 61:\n",
+        "",
+        "**Recommendation:** undefined"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding SEC-001 from iteration 1"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK018",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Inconsistent Error Handling Pattern - Missing withErrorHandling Wrapper",
+      "title": "[REVIEW] Inconsistent Error Handling Pattern - Missing withErrorHandling Wrapper",
+      "priority": "high",
+      "requirements": [
+        "The tasks API module (src/api/tasks.js) does not use the established error handling pattern that other API modules follow. The customers API uses withErrorHandling() wrapper from customerErrors.js, which provides:\n- Consistent error transformation\n- User-friendly error messages\n- Structured error codes\n- Automatic error logging with context\n- Type-safe CustomerError class\n\nHowever, tasks.js implements its own handleApiError() function (lines 21-58) with duplicate logic that doesn't follow the established pattern.\n\nComparison:\nCustomers API (established pattern):\n",
+        "",
+        "**Recommendation:** undefined"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-001 from iteration 1"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
     }
   ]
 }

@@ -1,0 +1,490 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T00:22:54.338Z",
+    "featureSlug": "notes-migration-requirements",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 6,
+    "featureName": "Notes Migration Requirements",
+    "mode": "autonomous",
+    "sessionId": "6bba70b6-5445-4c39-8541-cc064c4f60dc",
+    "processId": 1768609374337,
+    "lastUpdated": "2026-01-17T00:28:45.517Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-17T00:22:54.814Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Create requirements/notes directory structure (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a new documentation scaffold under 'requirements/notes' by creating the directory and adding placeholder templates for migration planning and requirements capture. Key files added include 'requirements/notes/README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md'. Templates were standardized with '[TO BE DOCUMENTED]' placeholders, example patterns from the Teams migration, and reminders for code references, while explicitly following the Backend Change Protocol to document requirements without changing backend infrastructure.\n\n---\n\n### Document current notes implementation (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive documentation of the existing notes feature by analyzing the FileMaker layout and the full frontend stack (API, services, hooks, and UI), including detailed end-to-end data flows and current CRUD coverage. Added the writeup to 'requirements/notes/current-implementation.md' (574 lines), referencing key files such as 'src/api/notes.js', 'src/api/projects.js', 'src/api/tasks.js', 'src/services/noteService.js', 'src/hooks/useNote.js', 'src/hooks/useProject.js', 'src/hooks/useTask.js', 'src/components/projects/ProjectNotesTab.jsx', and 'src/components/tasks/TaskList.jsx'. Captured important decisions and findings, notably the inconsistent note data shape between project notes (raw FileMaker fieldData) and task notes (processed content), plus limitations like missing update delete, no pagination, and an unused 'type' field. Verified the project build succeeds and updated task status and timestamps accordingly.\n\n---\n\n### Analyze notes UI behavior and user flows (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nDocumented the existing notes UI behavior and end-to-end user flows by adding a large new 'UI Behavior and User Flows' section to 'requirements/notes/current-implementation.md', covering creation workflows for project and task notes, display/sorting patterns, validation rules, state management, refresh behavior, error UX, accessibility, modal behavior, and explicitly noting that edit/delete are not implemented. The documentation references the current implementation across key files including 'src/components/projects/ProjectNotesTab.jsx', 'src/components/tasks/TaskList.jsx', 'src/components/global/TextInput.jsx', 'src/hooks/useNote.js', 'src/hooks/useTask.js', 'src/services/noteService.js', and 'src/services/taskService.js', with line-level callouts. Important decisions/findings captured include the project vs task notes data-format inconsistency, differing sorting responsibility (backend vs service layer), and that metadata is intentionally hidden from the UI. The task status and timestamp were updated and the build was verified to compile successfully.\n\n---\n\n### Map FileMaker devNotes schema to Supabase (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive FileMaker devNotes to Supabase data model mapping documentation by fully replacing the placeholder template in 'requirements/notes/data-model-mapping.md' with detailed schema, field mappings, migration transformations, constraints, indexes, triggers, and RLS guidance, including references to existing code such as 'src/api/fileMaker.js', 'src/api/notes.js', 'src/api/projects.js', and 'src/api/tasks.js'. Updated 'tasks.json' to mark 'TSK0004' as completed after confirming the build succeeded. Key decisions documented include using a single 'notes' table with nullable parent foreign keys plus a check constraint to enforce exactly one parent, deriving 'organization_id' from the parent entity for multi-tenancy, and applying cascade deletes and partial indexes for performance.\n\n---\n\n### Define backend API contracts for notes (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented complete backend API contract documentation for the notes feature by replacing placeholder content in 'requirements/notes/api-contracts.md' with a full 722-line spec covering 5 REST endpoints, request and response schemas, validation rules, error catalog, and Supabase RLS and realtime access patterns based on existing backend documentation conventions. Updated 'tasks.json' to mark 'TSK0005' as completed and verified the project still builds successfully. Key decisions documented include HMAC-SHA256 auth for the backend API vs JWT for Supabase access, enforcing exactly one parent entity with organization scoping, offset pagination (default 50 max 200), hard deletes, and immutable parent assignment after creation.\n\n---\n\n### Design authorization and RLS policies (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive notes authorization and RLS design documentation by adding 'requirements/notes/authorization.md', detailing auth methods (HMAC backend vs JWT direct), proposed SQL helper functions for parent-entity access inheritance, and full SELECT, INSERT, UPDATE, DELETE policy specifications with org scoping via JWT 'user_metadata.organization_id'. Key decisions captured include a simple equal-permissions model (no initial RBAC), backend API using the service role with app-level org checks, frontend using the anon key under RLS, and cascade deletion to prevent orphaned notes. Verified the project still compiles, then marked the task complete and updated the 'updated_at' timestamp in 'tasks.json'.\n\n---\n\n### Create migration and backfill plan (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive Notes migration and backfill plan from FileMaker to Supabase, covering export, ID and user mapping, transformation pipeline, bulk load strategy, validation, rollback, and a recommended big bang cutover timeline. Key work landed in 'requirements/notes/migration-plan.md' (filling the prior placeholder with a full template-aligned plan and appendices including scripts and checks) and 'tasks.json' (marking TSK0007 as DONE and updating the session timestamp). Important decisions documented include using the service role key to bypass RLS during bulk operations, batching inserts at 500 records with rate limiting and retries, deriving organization strictly from the parent entity, and mapping unknown creators to a migration user with an orphaned-note tolerance under 5%. Build verification was run after updates to confirm everything still compiles successfully.\n\n---\n\n### Define acceptance criteria and test cases (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive acceptance criteria and test cases for the notes migration, covering CRUD parity with FileMaker, migration validation, security/authorization, performance, accessibility, and deployment/rollback scenarios. Added a new requirements document at 'requirements/notes/acceptance-criteria.md' (~1,836 lines) with detailed checkpoints, categorized test cases, SQL validation queries, and explicit MVP limitations (eg no edit/delete UI, offset pagination, no initial full-text search). Updated 'tasks.json' to mark TSK0008 as done with implementation notes, and verified the project build succeeds after the documentation-only changes.\n\n---\n\n### Write requirements README overview (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive overview README to replace the placeholder at 'requirements/notes/README.md', consolidating the Notes migration requirements into a single hub with navigation links, feature and architecture summaries, key decisions, dependencies, risks, testing strategy, open backend questions, timeline, and ownership details. Updated 'tasks.json' to mark 'TSK0009' complete and refreshed the 'updated_at' timestamp. Verified the build compiles successfully after the documentation and task-tracking changes, ensuring cross-references and code pointers are consistent.\n\n---\n\n### Review and validate requirements completeness (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nCompleted a comprehensive review and validation of the Notes migration requirements across 7 documentation files including 'README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md', confirming the package is approved and implementation-ready with 5 non-blocking open design questions noted. Added the consolidated review report at '.devflow/tasks/notes-migration-requirements/REQUIREMENTS_REVIEW.md' capturing document-by-document findings, code reference checks, consistency validation, and schema and security assessments. Updated 'tasks.json' to mark 'TSK0010' complete and set 'review_status' to 'approved', then re-verified the build passes after the change.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 10,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 475
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-17T00:23:23.665Z",
+    "output": {
+      "findings": [],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-17T00:24:45.192Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing retry logic despite documented requirement",
+          "description": "The bulk insert implementation in load-notes-to-supabase.js does not include the retry logic with exponential backoff that is explicitly documented in the requirements (section 'Bulk Insert Approach' states '3 retry attempts per failed batch' and 'Exponential backoff: 2^attempt seconds'). The current implementation logs failures but continues processing without retrying failed batches.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "// Current implementation (lines 758-776)\ntry {\n  const { data, error } = await supabase\n    .from('notes')\n    .insert(batch);\n\n  if (error) {\n    console.error(`Batch ${i + 1} failed:`, error);\n    failedBatches.push({ batchIndex: i, batch, error: error.message });\n    failureCount += batch.length;\n  } else {\n    successCount += batch.length;\n    console.log(`  ✅ Batch ${i + 1} completed`);\n  }\n} catch (error) {\n  console.error(`Batch ${i + 1} exception:`, error);\n  failedBatches.push({ batchIndex: i, batch, error: error.message });\n  failureCount += batch.length;\n}",
+          "recommendation": "Implement retry logic with exponential backoff as documented. Wrap the batch insert in a retry function that attempts up to 3 times with delays of 2, 4, and 8 seconds between attempts."
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Potential null pointer in buildUserMapping",
+          "description": "The buildUserMapping function (lines 248-262) assumes that supabase.auth.admin.listUsers() returns a 'users' property containing a 'users' array (accessed as users.users). If the API returns null or the structure is different, this will cause a runtime error when calling forEach on undefined.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "async function buildUserMapping(supabase) {\n  const { data: users, error } = await supabase.auth.admin.listUsers();\n\n  if (error) {\n    throw new Error(`Failed to fetch users: ${error.message}`);\n  }\n\n  const emailToUUID = new Map();\n  users.users.forEach(user => {  // Risk: users could be null\n    emailToUUID.set(user.email.toLowerCase(), user.id);\n  });\n\n  console.log(`Built user mapping for ${emailToUUID.size} users`);\n  return emailToUUID;\n}",
+          "recommendation": "Add null check: if (!users || !users.users) { throw new Error('Failed to retrieve user list'); } before accessing users.users"
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing error handling in detectParentEntity",
+          "description": "The detectParentEntity function (lines 176-237) does not handle Supabase query errors. If any of the three database queries fail, the error is silently ignored and the function continues, potentially treating database errors as 'entity not found' scenarios.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "async function detectParentEntity(fkId, supabase) {\n  // Strategy 1: Check projects first (most common)\n  const { data: project } = await supabase\n    .from('projects')\n    .select('id, organization_id')\n    .eq('id', fkId)\n    .maybeSingle();\n  // No error handling - continues if query fails",
+          "recommendation": "Destructure the error from each query and check it: const { data: project, error: projectError } = await supabase... if (projectError) { throw new Error(`Failed to query projects: ${projectError.message}`); }"
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inefficient N+1 query pattern in transformation",
+          "description": "The transform script (lines 617-669) calls detectParentEntity() inside a for loop for each note individually. This creates an N+1 query problem where thousands of notes will trigger thousands of separate database queries. With the documented batch size of 500 notes and sequential processing, this could take hours.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "for (const fmNote of exportData.notes) {\n  try {\n    // ...\n    const parentInfo = await detectParentEntity(fmNote._fkID, supabase);\n    // This executes 3 queries per note in worst case\n  }\n}",
+          "recommendation": "Pre-fetch all parent entities at the start of transformation into Maps indexed by ID, then do in-memory lookups instead of individual queries for each note."
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Race condition in file write operations",
+          "description": "Multiple writeFileSync calls throughout the scripts write to the migration-data directory without checking if previous writes completed or if the directory exists. While fs.mkdirSync is called in the export script (line 80), subsequent scripts assume the directory exists.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "fs.writeFileSync('migration-data/notes-transformed.json',\n  JSON.stringify(transformResult, null, 2));\n// No directory existence check",
+          "recommendation": "Add fs.mkdirSync('migration-data', { recursive: true }); at the start of each script that writes to migration-data/"
+        },
+        {
+          "id": "COD-006",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Missing user email validation",
+          "description": "The mapCreator function (line 270) calls toLowerCase() on the email without checking if the email is null/undefined first, only after toLowerCase() is called. If createdByEmail is an empty string, it will pass the initial null check but trim() on line 270 could still return empty string.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "function mapCreator(createdByEmail, emailToUUID, migrationUserId) {\n  if (!createdByEmail) {\n    return migrationUserId;\n  }\n\n  const normalizedEmail = createdByEmail.toLowerCase().trim();\n  // If createdByEmail is empty string, normalizedEmail will be empty\n  const userId = emailToUUID.get(normalizedEmail);\n}",
+          "recommendation": "Add validation: const normalizedEmail = createdByEmail.toLowerCase().trim(); if (!normalizedEmail) { return migrationUserId; }"
+        }
+      ],
+      "files_reviewed": 0,
+      "issues_found": 6
+    }
+  },
+  "SecurityCheckNode": {
+    "timestamp": "2026-01-17T00:26:50.700Z",
+    "output": {
+      "findings": [
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "critical",
+          "title": "Service role key exposure risk in migration scripts",
+          "description": "The migration scripts (transform-notes.js and load-notes-to-supabase.js) use process.env.SUPABASE_SERVICE_ROLE_KEY which bypasses ALL Row-Level Security policies. If these scripts are accidentally deployed to a frontend environment or committed with hardcoded values, attackers could gain unrestricted database access across all organizations. The documentation doesn't warn about the critical security implications or provide safeguards against accidental exposure.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "// lines 598-602\nconst supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY  // BYPASSES ALL RLS!\n);\n\n// lines 735-738\nconst supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY\n);",
+          "recommendation": "Add explicit security warnings in the migration documentation: 1) These scripts MUST ONLY run in secure backend environments, NEVER in frontend/browser contexts. 2) Add environment validation: if (typeof window !== 'undefined') { throw new Error('Migration scripts cannot run in browser'); } 3) Document that service role key should be rotated after migration. 4) Add .gitignore verification for migration-data/ directory containing sensitive outputs. 5) Consider using Supabase database webhooks or backend API to perform migration instead of client-side scripts."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "high",
+          "title": "Missing input sanitization for search parameter",
+          "description": "The API specification includes a 'search' query parameter for full-text search (line 31: 'search | string | No | Full-text search in note content') but provides no documentation on how search input is sanitized. Without proper sanitization, this could be vulnerable to SQL injection if the backend constructs raw SQL queries, or performance attacks via regex DoS if using pattern matching. No length limits or character restrictions are specified.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Line 31\n| `search` | string | No | Full-text search in note content |\n\n// Line 83\nGET /api/notes?search=demo&limit=20",
+          "recommendation": "Document input validation requirements for the search parameter: 1) Maximum length limit (e.g., 100 characters) to prevent resource exhaustion. 2) Character whitelist or sanitization strategy (escape special characters if using SQL LIKE, limit regex metacharacters if using pattern matching). 3) Specify that backend MUST use parameterized queries or Supabase's built-in .textSearch() method which handles sanitization. 4) Add rate limiting specifically for search queries (lower limit than regular queries). 5) Document that search should use PostgreSQL full-text search (to_tsquery) with proper text sanitization, not raw LIKE queries."
+        },
+        {
+          "id": "SEC-003",
+          "category": "security",
+          "severity": "high",
+          "title": "No rate limiting implementation documented",
+          "description": "While the authorization document mentions that 'Backend should implement rate limiting' (line 789) as a recommendation, there are no mandatory requirements, acceptance criteria, or security test cases for rate limiting. This leaves the API vulnerable to: 1) DoS attacks via rapid note creation flooding the database, 2) Brute force attacks on organization IDs, 3) Resource exhaustion from expensive search queries. The acceptance criteria explicitly states 'No rate limiting (rely on infrastructure-level controls)' (line 1827), which is insufficient for application-layer protection.",
+          "file_paths": [
+            "requirements/notes/authorization.md",
+            "requirements/notes/acceptance-criteria.md"
+          ],
+          "code_snippet": "// authorization.md lines 789-803\n**Recommendation:** Backend should implement rate limiting\n**Suggested Limits:**\n- **Per User:**\n  - 100 requests per minute (prevent abuse)\n  - 500 notes created per day (prevent spam)\n\n// acceptance-criteria.md line 1827\n- No rate limiting (rely on infrastructure-level controls)",
+          "recommendation": "Upgrade rate limiting from 'recommendation' to 'mandatory requirement': 1) Add explicit rate limiting acceptance criteria that must pass before deployment. 2) Document specific rate limits: 10 requests/second per user for read operations, 1 request/second for write operations, 5 searches/minute per user. 3) Require HTTP 429 Too Many Requests responses with Retry-After headers. 4) Add security test cases that verify rate limiting blocks excessive requests. 5) Document rate limiting at both application level (per-user) and infrastructure level (per-IP). 6) Consider implementing exponential backoff for repeated violations."
+        },
+        {
+          "id": "SEC-004",
+          "category": "security",
+          "severity": "high",
+          "title": "SECURITY DEFINER functions create privilege escalation risk",
+          "description": "The authorization helper functions (auth.has_customer_access, auth.has_project_access, auth.has_task_access) use SECURITY DEFINER which executes with the privileges of the function owner, not the caller. While the documentation notes this is 'necessary because RLS policies use these functions', this creates a risk: if these functions have any SQL injection vulnerabilities or logic flaws, attackers could bypass RLS by calling them directly. The functions accept user-controlled UUID parameters without documented input validation.",
+          "file_paths": [
+            "requirements/notes/authorization.md"
+          ],
+          "code_snippet": "// Lines 132-142\nCREATE OR REPLACE FUNCTION auth.has_customer_access(p_customer_id UUID)\nRETURNS BOOLEAN\nLANGUAGE sql\nSTABLE SECURITY DEFINER  -- Runs with elevated privileges!\nAS $$\n  SELECT EXISTS (\n    SELECT 1 FROM public.customers\n    WHERE id = p_customer_id\n    AND organization_id = auth.current_organization_id()\n  );\n$$;",
+          "recommendation": "Strengthen SECURITY DEFINER function security: 1) Add explicit input validation: IF p_customer_id IS NULL THEN RETURN FALSE; END IF; 2) Add SECURITY INVOKER to the calling RLS policies where possible to reduce attack surface. 3) Document that these functions should NOT be callable directly by users (revoke EXECUTE permissions from public role). 4) Add security test cases that attempt to call these functions directly with malicious UUIDs. 5) Consider using SECURITY INVOKER with explicit permission checks instead of SECURITY DEFINER where possible. 6) Add SQL injection test cases even though UUID type provides some protection."
+        },
+        {
+          "id": "SEC-005",
+          "category": "security",
+          "severity": "medium",
+          "title": "Missing content length validation enables resource exhaustion",
+          "description": "The note content field is defined as 'TEXT' (unlimited length in PostgreSQL) with validation only for 'Min 1 char (after trim), max unlimited' (api-contracts.md line 154). This allows users to create notes with gigabytes of content, potentially exhausting: 1) Database storage, 2) Network bandwidth, 3) Application memory when loading notes, 4) Response payload size. No maximum length limit is documented in the schema, API contracts, or validation rules.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md",
+            "requirements/notes/data-model-mapping.md"
+          ],
+          "code_snippet": "// api-contracts.md line 154\n| `note` | string | Yes | Min 1 char (after trim), max unlimited, NOT NULL |\n\n// data-model-mapping.md line 109\nCOMMENT ON COLUMN public.notes.note IS 'Note content (plain text, future: rich text support)';",
+          "recommendation": "Add maximum content length validation: 1) Set reasonable limit (e.g., 10,000 characters for plain text, 50,000 for rich text). 2) Enforce at multiple layers: Frontend validation (warn user before submission), Backend API validation (reject with 400 Bad Request), Database constraint (optional CHECK constraint). 3) Document the limit in api-contracts.md validation rules. 4) Add test case for oversized content rejection. 5) Consider separate limits for different note types. 6) Monitor average note size in production to tune limits appropriately."
+        },
+        {
+          "id": "SEC-006",
+          "category": "security",
+          "severity": "medium",
+          "title": "Organization ID derivation logic not fully documented for edge cases",
+          "description": "The migration plan states that organization_id is 'derived from parent entity' (line 166) and the backend should 'NOT trust organization_id from frontend request body' (line 654). However, the exact derivation logic for edge cases is not specified: What happens if a parent entity has NULL organization_id? What if parent entity organization_id doesn't match the user's JWT organization? This ambiguity could lead to inconsistent security enforcement between backend implementations.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md",
+            "requirements/notes/authorization.md"
+          ],
+          "code_snippet": "// migration-plan.md lines 654-656\n**Critical Points:**\n- Backend MUST NOT trust `organization_id` from frontend request body\n- Backend derives `organization_id` from authenticated user context\n- Backend validates parent entity access before creating note",
+          "recommendation": "Document complete organization_id derivation algorithm with edge case handling: 1) Primary: Derive from parent entity's organization_id. 2) Validation: Verify parent organization_id matches user's JWT organization (reject if mismatch). 3) Edge case: If parent organization_id is NULL, reject with clear error (data integrity issue). 4) Document that organization_id MUST be set in a database-level DEFAULT or backend code before INSERT. 5) Add test cases for all edge cases: mismatched org IDs, NULL org IDs, invalid org IDs. 6) Consider adding a database constraint: CHECK (organization_id = (SELECT organization_id FROM projects WHERE id = project_id)) for projects (similar for tasks/customers)."
+        },
+        {
+          "id": "SEC-007",
+          "category": "security",
+          "severity": "medium",
+          "title": "Cascade deletion could enable data destruction attacks",
+          "description": "The schema uses ON DELETE CASCADE for all parent foreign keys (customers, projects, tasks). While documented as preventing orphaned notes, this means deleting a single project could cascade delete thousands of notes. If an attacker compromises an account with project deletion privileges or exploits a vulnerability in project deletion logic, they could destroy large amounts of data. There's no soft-delete option, audit trail of cascade deletions, or documentation of recovery procedures.",
+          "file_paths": [
+            "requirements/notes/data-model-mapping.md",
+            "requirements/notes/authorization.md"
+          ],
+          "code_snippet": "// data-model-mapping.md lines 83-87\ncustomer_id UUID REFERENCES public.customers(id) ON DELETE CASCADE,\nproject_id UUID REFERENCES public.projects(id) ON DELETE CASCADE,\ntask_id UUID REFERENCES public.tasks(id) ON DELETE CASCADE,\n\n// authorization.md lines 430-440\n**Behavior:**\n- Deleting a customer → All customer notes deleted\n- Deleting a project → All project notes deleted\n- Deleting a task → All task notes deleted",
+          "recommendation": "Add safeguards for cascade deletion: 1) Document that parent deletion permissions must be strictly controlled (require admin role or confirmation dialog). 2) Consider soft-delete approach: Add 'deleted_at' timestamp to notes table, filter deleted notes in queries, implement hard-delete cleanup job. 3) Add audit logging for cascade deletions: trigger that logs to audit table before deletion. 4) Document backup/recovery procedures for accidental cascade deletions. 5) Add acceptance criteria test: 'Deleting parent entity prompts user with count of child notes that will be deleted'. 6) Consider ON DELETE RESTRICT for initial deployment, require explicit note cleanup before parent deletion."
+        },
+        {
+          "id": "SEC-008",
+          "category": "security",
+          "severity": "low",
+          "title": "JWT claims extraction vulnerable to malformed tokens",
+          "description": "The RLS policy extracts organization_id using: (auth.jwt() -> 'user_metadata' ->> 'organization_id')::UUID (data-model-mapping.md line 131). If the JWT is malformed, missing user_metadata, or organization_id is not a valid UUID, this could throw database errors. While Supabase Auth should validate tokens, defense-in-depth suggests handling malformed claims gracefully.",
+          "file_paths": [
+            "requirements/notes/data-model-mapping.md",
+            "requirements/notes/authorization.md"
+          ],
+          "code_snippet": "// data-model-mapping.md line 131\nUSING (organization_id = (auth.jwt() -> 'user_metadata' ->> 'organization_id')::UUID);\n\n// authorization.md lines 106-115\nCREATE OR REPLACE FUNCTION auth.current_organization_id()\nRETURNS UUID\nAS $$\n  SELECT COALESCE(\n    (current_setting('request.jwt.claims', true)::json->'user_metadata'->>'organization_id')::uuid,\n    NULL\n  );\n$$;",
+          "recommendation": "Improve JWT claims handling robustness: 1) Use the auth.current_organization_id() helper function consistently instead of inline JWT extraction. 2) In the helper function, wrap UUID cast in TRY/CATCH: BEGIN RETURN (...)::uuid; EXCEPTION WHEN OTHERS THEN RETURN NULL; END; 3) Document that NULL organization_id from helper function will cause RLS policy to deny access (safe failure mode). 4) Add test cases for malformed JWTs: missing user_metadata, invalid UUID format, null organization_id. 5) Log warnings when JWT parsing fails for security monitoring."
+        }
+      ],
+      "files_reviewed": 0,
+      "vulnerabilities_found": 8
+    }
+  },
+  "ArchitectureCheckNode": {
+    "timestamp": "2026-01-17T00:28:45.499Z",
+    "output": {
+      "findings": [
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing error handling wrapper pattern",
+          "description": "The proposed API layer in api-contracts.md (lines 608-651) uses raw dataService.request() calls without the withErrorHandling wrapper that is standard across the codebase. The existing customer API implementation (src/api/customers.js) consistently wraps all API calls with withErrorHandling() for centralized error handling, logging, and error code normalization. The notes documentation proposes a simpler pattern without this wrapper.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Proposed (lines 610-618)\nexport const fetchProjectNotes = async (projectId, options = {}) => {\n  const params = new URLSearchParams({\n    project_id: projectId,\n    sort_order: 'desc',\n    limit: options.limit || 50,\n    ...options\n  });\n  return dataService.request(`/api/notes?${params}`, { method: 'GET' });\n};\n\n// Expected pattern from src/api/customers.js:42-73\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        const auth = getAuthenticationContext();\n        checkOrganizationScope({ authentication: auth }, 'fetchCustomers');\n        \n        const queryParams = { /* ... */ };\n        const response = await dataService.get('/api/customers', { params: queryParams });\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomers', { options });\n}",
+          "recommendation": "Update api-contracts.md to follow the established error handling pattern: 1) Import withErrorHandling, checkOrganizationScope, and getAuthenticationContext from the appropriate modules. 2) Wrap all API functions with withErrorHandling(). 3) Add organization scope checks with checkOrganizationScope(). 4) Include function name and parameters in error context. 5) Add data normalization function similar to normalizeCustomerData(). Example should match the pattern in src/api/customers.js lines 42-73, 81-93, 101-113."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent HTTP method pattern with dataService",
+          "description": "The proposed API uses dataService.request() with explicit method parameter (lines 617, 633, 641, 649) instead of the semantic dataService.get(), dataService.post(), dataService.put(), dataService.patch(), dataService.delete() methods that are standard across the codebase. The customer API (src/api/customers.js:71, 90, 110, 129, 148, 167) consistently uses semantic methods. Using .request() is more verbose and doesn't follow the established pattern.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Proposed (non-standard)\nreturn dataService.request('/api/notes', {\n  method: 'POST',\n  body: JSON.stringify(noteData)\n});\n\n// Expected pattern from src/api/customers.js\nconst response = await dataService.get('/api/customers', { params: queryParams });\nconst response = await dataService.post('/api/customers', data);\nconst response = await dataService.put(`/api/customers/${customerId}`, data);\nconst response = await dataService.patch(`/api/customers/${customerId}/toggle-status`);\nconst response = await dataService.delete(`/api/customers/${customerId}`);",
+          "recommendation": "Update all API examples in api-contracts.md (lines 608-651) to use semantic dataService methods: dataService.get() for fetches, dataService.post() for creates, dataService.patch() for updates, dataService.delete() for deletes. This improves code readability and consistency with existing patterns. The dataService methods handle JSON stringification and content-type headers automatically, so body: JSON.stringify() can be removed."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing organization scope validation",
+          "description": "The proposed API layer does not include organization scope validation via checkOrganizationScope() before making backend requests. Every customer API function (src/api/customers.js:47, 88, 108, 127, 146, 165) validates that the user has organization context before proceeding. This is a critical security check that ensures users cannot make requests without proper organization assignment. The notes documentation omits this pattern entirely.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Proposed (missing organization check)\nexport const fetchProjectNotes = async (projectId, options = {}) => {\n  const params = new URLSearchParams({ /* ... */ });\n  return dataService.request(`/api/notes?${params}`, { method: 'GET' });\n};\n\n// Expected pattern from src/api/customers.js:42-73\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        const auth = getAuthenticationContext();\n        checkOrganizationScope({ authentication: auth }, 'fetchCustomers'); // REQUIRED\n        \n        const queryParams = { /* ... */ };\n        const response = await dataService.get('/api/customers', { params: queryParams });\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomers', { options });\n}",
+          "recommendation": "Add organization scope validation to all API functions in the documentation: 1) Import getAuthenticationContext and checkOrganizationScope. 2) Call const auth = getAuthenticationContext() at the start of each function. 3) Call checkOrganizationScope({ authentication: auth }, 'functionName') before any API request. 4) Document this pattern in api-contracts.md as a mandatory security requirement. 5) Reference the customer implementation as the pattern to follow."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Missing data normalization layer",
+          "description": "The proposed API does not include a data normalization function to transform backend responses into a consistent frontend format. The customer API (src/api/customers.js:13-28) has normalizeCustomerData() that ensures all responses have consistent field names (id vs __ID). This normalization layer is critical for handling dual-format responses from the backend and ensuring components receive predictable data shapes. The notes documentation returns raw backend responses.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Proposed (no normalization)\nreturn dataService.request(`/api/notes?${params}`, { method: 'GET' });\n\n// Expected pattern from src/api/customers.js:13-28, 71-72\nfunction normalizeCustomerData(data) {\n    if (Array.isArray(data)) {\n        return data.map(customer => ({\n            id: customer.id || customer.__ID,\n            __ID: customer.id || customer.__ID,\n            ...customer\n        }));\n    }\n    return {\n        id: data.id || data.__ID,\n        __ID: data.id || data.__ID,\n        ...data\n    };\n}\n\nconst response = await dataService.get('/api/customers', { params: queryParams });\nreturn normalizeCustomerData(response.data || response);",
+          "recommendation": "Add a normalizeNoteData() function to the API layer documentation: 1) Document the function that handles both array and single object responses. 2) Ensure consistent id/__ID field mapping for backward compatibility. 3) Handle response.data vs response variations. 4) Apply normalization to all API function return values. 5) Document the expected input/output formats. Add this to api-contracts.md section 'Frontend Integration' with code example."
+        },
+        {
+          "id": "ARC-005",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Missing input validation pattern",
+          "description": "The proposed API layer does not include parameter validation before making requests. The customer API (src/api/customers.js:83-85, 103-105, 122-124, 141-143, 160-162) validates required parameters and throws descriptive errors before attempting API calls. This client-side validation provides better error messages and prevents unnecessary network requests. The notes documentation assumes all parameters are valid.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Proposed (no validation)\nexport const fetchProjectNotes = async (projectId, options = {}) => {\n  const params = new URLSearchParams({\n    project_id: projectId,  // No validation if projectId is null/undefined\n    // ...\n  });\n  return dataService.request(`/api/notes?${params}`, { method: 'GET' });\n};\n\n// Expected pattern from src/api/customers.js:81-93\nexport async function fetchCustomerById(customerId) {\n    return withErrorHandling(async () => {\n        if (!customerId) {\n            throw new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);\n        }\n        \n        const auth = getAuthenticationContext();\n        checkOrganizationScope({ authentication: auth }, 'fetchCustomerById');\n        \n        const response = await dataService.get(`/api/customers/${customerId}`);\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomerById', { customerId });\n}",
+          "recommendation": "Add parameter validation to all API functions: 1) Create a NoteError class and NoteErrorCodes enum following the pattern in src/errors/customerErrors.js. 2) Validate required parameters (noteId, projectId, taskId, noteData) at the start of each function. 3) Throw descriptive errors with error codes for missing/invalid parameters. 4) Document the validation pattern in api-contracts.md. 5) Include error handling examples showing how components should catch and display validation errors."
+        },
+        {
+          "id": "ARC-006",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Architectural decision conflicts with FileMaker removal",
+          "description": "The notes migration documentation plans a direct migration from FileMaker to Supabase backend API (CLAUDE.md confirms 'FileMaker integration has been removed as of January 2026'). However, the current-implementation.md extensively documents FileMaker-specific implementation details and suggests preserving FileMaker patterns. This conflicts with the architectural direction that customers have already fully migrated to backend API without FileMaker dual-environment support. Notes should follow the post-FileMaker architecture pattern.",
+          "file_paths": [
+            "requirements/notes/current-implementation.md",
+            "requirements/notes/README.md"
+          ],
+          "code_snippet": "// current-implementation.md extensively documents FileMaker API calls:\n// src/api/notes.js - FileMaker API wrapper\n// src/api/fileMaker.js - FileMaker bridge\n\n// But CLAUDE.md states:\n\"Historical Note: This application was previously embedded in FileMaker WebViewer. FileMaker integration has been removed as of January 2026. All features now use Supabase + Backend API exclusively.\"\n\n// Customer migration followed direct Supabase pattern:\n// No FileMaker dual-write, direct backend API integration",
+          "recommendation": "Align the notes migration architecture with the post-FileMaker reality: 1) Update current-implementation.md to clearly state that FileMaker patterns are historical and will not be preserved. 2) Remove any suggestions of dual-write or FileMaker compatibility layers. 3) Follow the customer migration pattern which went directly to backend API. 4) Update README.md to state this is a 'FileMaker to Backend API' migration, not 'FileMaker to Supabase'. 5) Clarify that frontend will use backend API exclusively (no direct Supabase calls except for realtime subscriptions). 6) Document that src/api/notes.js will be completely rewritten to match src/api/customers.js pattern."
+        },
+        {
+          "id": "ARC-007",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "URLSearchParams usage inconsistent with customer API",
+          "description": "The proposed notes API uses URLSearchParams for query parameter construction (line 611-616), but the customer API uses plain object params that dataService.get() handles automatically (src/api/customers.js:50-68, 71). While both approaches work, using plain objects is simpler and more consistent with the established pattern.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Proposed (manual URLSearchParams)\nconst params = new URLSearchParams({\n  project_id: projectId,\n  sort_order: 'desc',\n  limit: options.limit || 50,\n  ...options\n});\nreturn dataService.request(`/api/notes?${params}`, { method: 'GET' });\n\n// Expected pattern from src/api/customers.js:49-71\nconst queryParams = {\n    limit: options.limit || 50,\n    offset: options.offset || 0,\n    include_related: options.include_related !== false\n};\nif (options.search) {\n    queryParams.search = options.search;\n}\nconst response = await dataService.get('/api/customers', { params: queryParams });",
+          "recommendation": "Update API examples to use plain object params instead of URLSearchParams: 1) Build queryParams as a plain object. 2) Conditionally add optional parameters using if statements. 3) Pass queryParams via { params: queryParams } to dataService.get(). 4) Let dataService handle URL encoding and serialization. This matches the customer API pattern and is more readable."
+        }
+      ],
+      "patterns_reviewed": 0,
+      "violations_found": 7
+    }
+  },
+  "JudgeNode": {
+    "timestamp": "2026-01-17T00:28:45.500Z",
+    "output": {
+      "total_findings": 21,
+      "kept_findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing retry logic despite documented requirement",
+          "description": "The bulk insert implementation in load-notes-to-supabase.js does not include the retry logic with exponential backoff that is explicitly documented in the requirements (section 'Bulk Insert Approach' states '3 retry attempts per failed batch' and 'Exponential backoff: 2^attempt seconds'). The current implementation logs failures but continues processing without retrying failed batches.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "// Current implementation (lines 758-776)\ntry {\n  const { data, error } = await supabase\n    .from('notes')\n    .insert(batch);\n\n  if (error) {\n    console.error(`Batch ${i + 1} failed:`, error);\n    failedBatches.push({ batchIndex: i, batch, error: error.message });\n    failureCount += batch.length;\n  } else {\n    successCount += batch.length;\n    console.log(`  ✅ Batch ${i + 1} completed`);\n  }\n} catch (error) {\n  console.error(`Batch ${i + 1} exception:`, error);\n  failedBatches.push({ batchIndex: i, batch, error: error.message });\n  failureCount += batch.length;\n}",
+          "recommendation": "Implement retry logic with exponential backoff as documented. Wrap the batch insert in a retry function that attempts up to 3 times with delays of 2, 4, and 8 seconds between attempts."
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Potential null pointer in buildUserMapping",
+          "description": "The buildUserMapping function (lines 248-262) assumes that supabase.auth.admin.listUsers() returns a 'users' property containing a 'users' array (accessed as users.users). If the API returns null or the structure is different, this will cause a runtime error when calling forEach on undefined.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "async function buildUserMapping(supabase) {\n  const { data: users, error } = await supabase.auth.admin.listUsers();\n\n  if (error) {\n    throw new Error(`Failed to fetch users: ${error.message}`);\n  }\n\n  const emailToUUID = new Map();\n  users.users.forEach(user => {  // Risk: users could be null\n    emailToUUID.set(user.email.toLowerCase(), user.id);\n  });\n\n  console.log(`Built user mapping for ${emailToUUID.size} users`);\n  return emailToUUID;\n}",
+          "recommendation": "Add null check: if (!users || !users.users) { throw new Error('Failed to retrieve user list'); } before accessing users.users"
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing error handling in detectParentEntity",
+          "description": "The detectParentEntity function (lines 176-237) does not handle Supabase query errors. If any of the three database queries fail, the error is silently ignored and the function continues, potentially treating database errors as 'entity not found' scenarios.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "async function detectParentEntity(fkId, supabase) {\n  // Strategy 1: Check projects first (most common)\n  const { data: project } = await supabase\n    .from('projects')\n    .select('id, organization_id')\n    .eq('id', fkId)\n    .maybeSingle();\n  // No error handling - continues if query fails",
+          "recommendation": "Destructure the error from each query and check it: const { data: project, error: projectError } = await supabase... if (projectError) { throw new Error(`Failed to query projects: ${projectError.message}`); }"
+        },
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "critical",
+          "title": "Service role key exposure risk in migration scripts",
+          "description": "The migration scripts (transform-notes.js and load-notes-to-supabase.js) use process.env.SUPABASE_SERVICE_ROLE_KEY which bypasses ALL Row-Level Security policies. If these scripts are accidentally deployed to a frontend environment or committed with hardcoded values, attackers could gain unrestricted database access across all organizations. The documentation doesn't warn about the critical security implications or provide safeguards against accidental exposure.",
+          "file_paths": [
+            "requirements/notes/migration-plan.md"
+          ],
+          "code_snippet": "// lines 598-602\nconst supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY  // BYPASSES ALL RLS!\n);\n\n// lines 735-738\nconst supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY\n);",
+          "recommendation": "Add explicit security warnings in the migration documentation: 1) These scripts MUST ONLY run in secure backend environments, NEVER in frontend/browser contexts. 2) Add environment validation: if (typeof window !== 'undefined') { throw new Error('Migration scripts cannot run in browser'); } 3) Document that service role key should be rotated after migration. 4) Add .gitignore verification for migration-data/ directory containing sensitive outputs. 5) Consider using Supabase database webhooks or backend API to perform migration instead of client-side scripts."
+        },
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing error handling wrapper pattern",
+          "description": "The proposed API layer in api-contracts.md (lines 608-651) uses raw dataService.request() calls without the withErrorHandling wrapper that is standard across the codebase. The existing customer API implementation (src/api/customers.js) consistently wraps all API calls with withErrorHandling() for centralized error handling, logging, and error code normalization. The notes documentation proposes a simpler pattern without this wrapper.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Proposed (lines 610-618)\nexport const fetchProjectNotes = async (projectId, options = {}) => {\n  const params = new URLSearchParams({\n    project_id: projectId,\n    sort_order: 'desc',\n    limit: options.limit || 50,\n    ...options\n  });\n  return dataService.request(`/api/notes?${params}`, { method: 'GET' });\n};\n\n// Expected pattern from src/api/customers.js:42-73\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        const auth = getAuthenticationContext();\n        checkOrganizationScope({ authentication: auth }, 'fetchCustomers');\n        \n        const queryParams = { /* ... */ };\n        const response = await dataService.get('/api/customers', { params: queryParams });\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomers', { options });\n}",
+          "recommendation": "Update api-contracts.md to follow the established error handling pattern: 1) Import withErrorHandling, checkOrganizationScope, and getAuthenticationContext from the appropriate modules. 2) Wrap all API functions with withErrorHandling(). 3) Add organization scope checks with checkOrganizationScope(). 4) Include function name and parameters in error context. 5) Add data normalization function similar to normalizeCustomerData(). Example should match the pattern in src/api/customers.js lines 42-73, 81-93, 101-113."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent HTTP method pattern with dataService",
+          "description": "The proposed API uses dataService.request() with explicit method parameter (lines 617, 633, 641, 649) instead of the semantic dataService.get(), dataService.post(), dataService.put(), dataService.patch(), dataService.delete() methods that are standard across the codebase. The customer API (src/api/customers.js:71, 90, 110, 129, 148, 167) consistently uses semantic methods. Using .request() is more verbose and doesn't follow the established pattern.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Proposed (non-standard)\nreturn dataService.request('/api/notes', {\n  method: 'POST',\n  body: JSON.stringify(noteData)\n});\n\n// Expected pattern from src/api/customers.js\nconst response = await dataService.get('/api/customers', { params: queryParams });\nconst response = await dataService.post('/api/customers', data);\nconst response = await dataService.put(`/api/customers/${customerId}`, data);\nconst response = await dataService.patch(`/api/customers/${customerId}/toggle-status`);\nconst response = await dataService.delete(`/api/customers/${customerId}`);",
+          "recommendation": "Update all API examples in api-contracts.md (lines 608-651) to use semantic dataService methods: dataService.get() for fetches, dataService.post() for creates, dataService.patch() for updates, dataService.delete() for deletes. This improves code readability and consistency with existing patterns. The dataService methods handle JSON stringification and content-type headers automatically, so body: JSON.stringify() can be removed."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing organization scope validation",
+          "description": "The proposed API layer does not include organization scope validation via checkOrganizationScope() before making backend requests. Every customer API function (src/api/customers.js:47, 88, 108, 127, 146, 165) validates that the user has organization context before proceeding. This is a critical security check that ensures users cannot make requests without proper organization assignment. The notes documentation omits this pattern entirely.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md"
+          ],
+          "code_snippet": "// Proposed (missing organization check)\nexport const fetchProjectNotes = async (projectId, options = {}) => {\n  const params = new URLSearchParams({ /* ... */ });\n  return dataService.request(`/api/notes?${params}`, { method: 'GET' });\n};\n\n// Expected pattern from src/api/customers.js:42-73\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        const auth = getAuthenticationContext();\n        checkOrganizationScope({ authentication: auth }, 'fetchCustomers'); // REQUIRED\n        \n        const queryParams = { /* ... */ };\n        const response = await dataService.get('/api/customers', { params: queryParams });\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomers', { options });\n}",
+          "recommendation": "Add organization scope validation to all API functions in the documentation: 1) Import getAuthenticationContext and checkOrganizationScope. 2) Call const auth = getAuthenticationContext() at the start of each function. 3) Call checkOrganizationScope({ authentication: auth }, 'functionName') before any API request. 4) Document this pattern in api-contracts.md as a mandatory security requirement. 5) Reference the customer implementation as the pattern to follow."
+        }
+      ],
+      "dropped_findings": [
+        "COD-004",
+        "COD-005",
+        "COD-006",
+        "ARC-007"
+      ],
+      "merged_findings": [],
+      "decisions": [
+        {
+          "finding_id": "COD-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-001",
+          "action": "keep",
+          "reason": "critical severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-006",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-007",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        }
+      ],
+      "summary": "Judge phase complete: 21 findings reviewed, 7 kept (critical/major), 4 dropped (minor/suggestion), 0 merged (duplicates)"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T00:28:45.517Z",
+    "output": {
+      "review_status": "blocked",
+      "tasks_created": [
+        "TASK011",
+        "TASK012",
+        "TASK013",
+        "TASK014",
+        "TASK015",
+        "TASK016",
+        "TASK017"
+      ],
+      "summary": "Found 7 issue(s) requiring remediation - created 7 task(s)",
+      "findings_count": 7
+    }
+  }
+}

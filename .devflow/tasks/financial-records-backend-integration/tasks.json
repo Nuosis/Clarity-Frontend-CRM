@@ -14,7 +14,7 @@
     "Preserve all QuickBooks integration behavior",
     "Use Supabase RPC calls only - no direct table access for financial records",
     "Include organization_id in all RPC calls for proper RLS enforcement",
-    "Handle date format conversions properly (MM/DD/YYYY → YYYY-MM-DD)",
+    "Handle date format conversions properly (MM/DD/YYYY \u2192 YYYY-MM-DD)",
     "Handle missing customer references gracefully (log warning, don't crash)",
     "Add proper error handling for all Supabase RPC calls",
     "Update tests to use Supabase response shapes, not FileMaker shapes"
@@ -30,12 +30,13 @@
       "files": [
         "src/api/financialRecords.js"
       ],
-      "notes": "✅ COMPLETED: All functions updated to use Supabase RPCs. Response normalization layer added for backward compatibility. Date conversion utilities included. Organization ID validation enforced. Build verified successful.",
+      "notes": "\u2705 COMPLETED: All functions updated to use Supabase RPCs. Response normalization layer added for backward compatibility. Date conversion utilities included. Organization ID validation enforced. Build verified successful.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented a full migration of the financialRecords API client to Supabase by rewriting 'src/api/financialRecords.js' to replace all FileMaker dependencies with Supabase RPC calls (including 'get_financial_records', 'get_unpaid_records', and 'mark_records_billed') while preserving existing function signatures. Added a compatibility layer via 'normalizeFinancialRecords()' plus date conversion helpers to keep UI expectations intact, and introduced 'getRequiredOrganizationId()' to enforce organization scoping on every RPC with clear validation errors. Updated '.devflow/tasks/financial-records-backend-integration/tasks.json' to mark TSK0001 complete and added a completion summary document, with a key decision to keep FileMaker references only as comments for backward-compatibility documentation."
+      "implementation_notes": "Implemented a full migration of the financialRecords API client to Supabase by rewriting 'src/api/financialRecords.js' to replace all FileMaker dependencies with Supabase RPC calls (including 'get_financial_records', 'get_unpaid_records', and 'mark_records_billed') while preserving existing function signatures. Added a compatibility layer via 'normalizeFinancialRecords()' plus date conversion helpers to keep UI expectations intact, and introduced 'getRequiredOrganizationId()' to enforce organization scoping on every RPC with clear validation errors. Updated '.devflow/tasks/financial-records-backend-integration/tasks.json' to mark TSK0001 complete and added a completion summary document, with a key decision to keep FileMaker references only as comments for backward-compatibility documentation.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0002",
@@ -49,12 +50,13 @@
       "files": [
         "src/services/billableHoursService.js"
       ],
-      "notes": "✅ COMPLETED: Updated processFinancialData() to handle Supabase customer_sales schema. Updated field mappings to use financial_id, customer_name (from joined data), inv_id for billed status. Added required field validation with warnings for missing data. Updated formatFinancialRecordForFileMaker() to output Supabase format (deprecated but maintained for backward compatibility). Updated validateFinancialRecordData() to remove projectId requirement and add date format validation. Build verified successful.",
+      "notes": "\u2705 COMPLETED: Updated processFinancialData() to handle Supabase customer_sales schema. Updated field mappings to use financial_id, customer_name (from joined data), inv_id for billed status. Added required field validation with warnings for missing data. Updated formatFinancialRecordForFileMaker() to output Supabase format (deprecated but maintained for backward compatibility). Updated validateFinancialRecordData() to remove projectId requirement and add date format validation. Build verified successful.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented TSK0002 by updating 'src/services/billableHoursService.js' to process Supabase 'customer_sales' normalized records (eg 'financial_id', 'customer_id', 'product_name', 'quantity', 'unit_price', 'total_price', 'date', 'inv_id') instead of FileMaker fields, including revised month year extraction and non-breaking output to keep existing UI compatibility. Deprecated but retained 'formatFinancialRecordForFileMaker' while changing its mapping to emit Supabase-shaped data for backward compatibility, and updated 'validateFinancialRecordData' to drop the obsolete 'projectId' requirement while adding stronger date and hours validation with warning-based graceful degradation. Marked the task complete in '.devflow/tasks/financial-records-backend-integration/tasks.json' and added documentation in '.devflow/tasks/financial-records-backend-integration/TSK0002_COMPLETION_SUMMARY.md', with builds re-run to confirm the changes compile successfully."
+      "implementation_notes": "Implemented TSK0002 by updating 'src/services/billableHoursService.js' to process Supabase 'customer_sales' normalized records (eg 'financial_id', 'customer_id', 'product_name', 'quantity', 'unit_price', 'total_price', 'date', 'inv_id') instead of FileMaker fields, including revised month year extraction and non-breaking output to keep existing UI compatibility. Deprecated but retained 'formatFinancialRecordForFileMaker' while changing its mapping to emit Supabase-shaped data for backward compatibility, and updated 'validateFinancialRecordData' to drop the obsolete 'projectId' requirement while adding stronger date and hours validation with warning-based graceful degradation. Marked the task complete in '.devflow/tasks/financial-records-backend-integration/tasks.json' and added documentation in '.devflow/tasks/financial-records-backend-integration/TSK0002_COMPLETION_SUMMARY.md', with builds re-run to confirm the changes compile successfully.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0003",
@@ -69,17 +71,18 @@
       "files": [
         "src/services/salesService.js"
       ],
-      "notes": "✅ COMPLETED: Updated all fetch functions to use financialRecords API (fetchFinancialRecords, fetchUnpaidRecords). Added transformFinancialRecordsToSales() to convert API response format to sales service format. Replaced direct Supabase queries with RPC calls. Updated createSalesFromUnbilledFinancials() to handle new API response. Maintained backward compatibility with existing hooks (useSales, useSalesActivity). Build verified successful.",
+      "notes": "\u2705 COMPLETED: Updated all fetch functions to use financialRecords API (fetchFinancialRecords, fetchUnpaidRecords). Added transformFinancialRecordsToSales() to convert API response format to sales service format. Replaced direct Supabase queries with RPC calls. Updated createSalesFromUnbilledFinancials() to handle new API response. Maintained backward compatibility with existing hooks (useSales, useSalesActivity). Build verified successful.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented migration of 'src/services/salesService.js' from direct Supabase table queries against 'customer_sales' to the new RPC-based financial records API, updating all fetch methods (org, customer, current month, unbilled) and 'createSalesFromUnbilledFinancials' to use 'fetchFinancialRecords()' and 'fetchUnpaidRecords()' with the new response shape. Added a transformation layer ('transformFinancialRecordsToSales') to map normalized financial record fields (for example 'financial_id', '_custID', 'Billable_Time_Rounded') into the sales-service contract while keeping all existing function signatures intact for hook and component compatibility. Key decision was to preserve backward compatibility by retaining deprecated 'organizationId' parameters (now sourced from JWT context) and performing customer filtering client-side where needed; build verified successfully and documentation/task notes were updated (tasks.json and 'TSK0003_COMPLETION_SUMMARY.md')."
+      "implementation_notes": "Implemented migration of 'src/services/salesService.js' from direct Supabase table queries against 'customer_sales' to the new RPC-based financial records API, updating all fetch methods (org, customer, current month, unbilled) and 'createSalesFromUnbilledFinancials' to use 'fetchFinancialRecords()' and 'fetchUnpaidRecords()' with the new response shape. Added a transformation layer ('transformFinancialRecordsToSales') to map normalized financial record fields (for example 'financial_id', '_custID', 'Billable_Time_Rounded') into the sales-service contract while keeping all existing function signatures intact for hook and component compatibility. Key decision was to preserve backward compatibility by retaining deprecated 'organizationId' parameters (now sourced from JWT context) and performing customer filtering client-side where needed; build verified successfully and documentation/task notes were updated (tasks.json and 'TSK0003_COMPLETION_SUMMARY.md').",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0004",
       "title": "Simplify or deprecate financialSyncService",
-      "description": "Review src/services/financialSyncService.js and determine if dual-write sync logic is still needed now that Supabase is the primary source. If timer creates records directly in Supabase via create_financial_record RPC, the sync service may be obsolete. Either remove the service or simplify to one-way FileMaker → Supabase migration tool for historical data only.",
+      "description": "Review src/services/financialSyncService.js and determine if dual-write sync logic is still needed now that Supabase is the primary source. If timer creates records directly in Supabase via create_financial_record RPC, the sync service may be obsolete. Either remove the service or simplify to one-way FileMaker \u2192 Supabase migration tool for historical data only.",
       "status": "done",
       "priority": "low",
       "dependencies": [
@@ -93,12 +96,13 @@
         "CLAUDE.md",
         "FINANCIAL_SYNC_SERVICE_DEPRECATION.md"
       ],
-      "notes": "✅ COMPLETED: Service marked as DEPRECATED with clear documentation. Analysis shows timer creates records directly via create_financial_record RPC, making sync service obsolete. Added deprecation warnings to service, hook, and UI component. Created comprehensive deprecation analysis document. Updated CLAUDE.md to indicate service is deprecated. Service kept only for historical data migration scripts (sync-missing-records.js, sync-december.mjs). No breaking changes - service not in critical path.",
+      "notes": "\u2705 COMPLETED: Service marked as DEPRECATED with clear documentation. Analysis shows timer creates records directly via create_financial_record RPC, making sync service obsolete. Added deprecation warnings to service, hook, and UI component. Created comprehensive deprecation analysis document. Updated CLAUDE.md to indicate service is deprecated. Service kept only for historical data migration scripts (sync-missing-records.js, sync-december.mjs). No breaking changes - service not in critical path.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Analyzed current financial record data flow and determined 'financialSyncService' is obsolete since the timer writes directly to Supabase via the 'create_financial_record' RPC, making dual-write and FileMaker sync unnecessary. Implemented a deprecation pass by adding warnings to 'src/services/financialSyncService.js', 'src/hooks/useFinancialSync.js', and 'src/components/financial/FinancialSyncPanel.jsx', and documented the decision in the newly created 'FINANCIAL_SYNC_SERVICE_DEPRECATION.md' plus an update to 'CLAUDE.md'. Marked TSK0004 complete in '.devflow/tasks/financial-records-backend-integration/tasks.json' and added '.devflow/tasks/financial-records-backend-integration/TSK0004_COMPLETION_SUMMARY.md', with the key decision to avoid breaking changes and leave the service only for historical migration scripts while verifying the build still passes."
+      "implementation_notes": "Analyzed current financial record data flow and determined 'financialSyncService' is obsolete since the timer writes directly to Supabase via the 'create_financial_record' RPC, making dual-write and FileMaker sync unnecessary. Implemented a deprecation pass by adding warnings to 'src/services/financialSyncService.js', 'src/hooks/useFinancialSync.js', and 'src/components/financial/FinancialSyncPanel.jsx', and documented the decision in the newly created 'FINANCIAL_SYNC_SERVICE_DEPRECATION.md' plus an update to 'CLAUDE.md'. Marked TSK0004 complete in '.devflow/tasks/financial-records-backend-integration/tasks.json' and added '.devflow/tasks/financial-records-backend-integration/TSK0004_COMPLETION_SUMMARY.md', with the key decision to avoid breaking changes and leave the service only for historical migration scripts while verifying the build still passes.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0005",
@@ -118,7 +122,8 @@
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented Supabase-based financial record creation on timer stop by adding a new `createFinancialRecord` API wrapper that calls the `create_financial_record` RPC and validating required inputs in `src/api/financialRecords.js`. Updated `src/services/taskService.js` to format the required product name, derive billable quantity from the stopped time entry, fetch missing customer and project names from Supabase, and create a financial record via the RPC only when the backend does not return one and the entry is billable. Key decision: keep backward compatibility by preferring an existing backend-returned financial record and treating RPC creation failures as non-blocking so the timer stop still succeeds. Also added supporting docs and task status updates via `TSK0005_COMPLETION_SUMMARY.md`, `TSK0005_QUICK_REFERENCE.md`, and `tasks.json`.",
-      "executionError": null
+      "executionError": null,
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0006",
@@ -134,12 +139,13 @@
         "src/components/financial/CustomerSalesTable.jsx",
         "src/hooks/useSalesActivity.js"
       ],
-      "notes": "✅ COMPLETED: Updated customer name references to use customer_name field with fallback to relation. Replaced FileMaker billable hours update logic with direct mark_records_billed RPC call using actual QuickBooks invoice ID. Updated useSalesActivity hook to use customer_name field. Removed all FileMaker UUID lookup and update code. Build verified successful.",
+      "notes": "\u2705 COMPLETED: Updated customer name references to use customer_name field with fallback to relation. Replaced FileMaker billable hours update logic with direct mark_records_billed RPC call using actual QuickBooks invoice ID. Updated useSalesActivity hook to use customer_name field. Removed all FileMaker UUID lookup and update code. Build verified successful.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Updated CustomerSalesTable component and useSalesActivity hook to work with Supabase data shapes by replacing customers?.business_name relation access with customer_name field (with fallback for backward compatibility). Removed obsolete FileMaker billable hours update logic that used fetchFinancialRecordByUUID() and updateFinancialRecordBilledStatus() with FileMaker recordId - replaced with direct Supabase RPC call to mark_records_billed passing actual QuickBooks invoice ID for all records in a single batch operation. Key decision: call mark_records_billed RPC directly from component instead of using wrapper function to ensure actual QB invoice ID is stored (not generic 'BILLED' string). Build verified successful with no compilation errors."
+      "implementation_notes": "Updated CustomerSalesTable component and useSalesActivity hook to work with Supabase data shapes by replacing customers?.business_name relation access with customer_name field (with fallback for backward compatibility). Removed obsolete FileMaker billable hours update logic that used fetchFinancialRecordByUUID() and updateFinancialRecordBilledStatus() with FileMaker recordId - replaced with direct Supabase RPC call to mark_records_billed passing actual QuickBooks invoice ID for all records in a single batch operation. Key decision: call mark_records_billed RPC directly from component instead of using wrapper function to ensure actual QB invoice ID is stored (not generic 'BILLED' string). Build verified successful with no compilation errors.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0007",
@@ -156,12 +162,13 @@
         "src/hooks/useSalesActivity.js",
         "FINANCIAL_ACTIVITY_UPDATE_SUMMARY.md"
       ],
-      "notes": "✅ COMPLETED: Updated useSalesActivity hook to handle both MM/DD/YYYY (FileMaker) and YYYY-MM-DD (Supabase) date formats. Added normalizeDateToISO() helper function to convert dates to ISO format for consistent filtering. Updated customer name field access to use camelCase 'customerName' (from salesService) with fallback to snake_case for backward compatibility. Updated all date-dependent functions: filterRecordsByTimeframe(), prepareChartData(), calculateMonthlyTotals(), and parseRecordDate(). FinancialActivity component requires no changes - works correctly with updated hook. Build verified successful.",
+      "notes": "\u2705 COMPLETED: Updated useSalesActivity hook to handle both MM/DD/YYYY (FileMaker) and YYYY-MM-DD (Supabase) date formats. Added normalizeDateToISO() helper function to convert dates to ISO format for consistent filtering. Updated customer name field access to use camelCase 'customerName' (from salesService) with fallback to snake_case for backward compatibility. Updated all date-dependent functions: filterRecordsByTimeframe(), prepareChartData(), calculateMonthlyTotals(), and parseRecordDate(). FinancialActivity component requires no changes - works correctly with updated hook. Build verified successful.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented updates to make FinancialActivity work with the new Supabase-derived sales record shapes by fixing data handling in 'src/hooks/useSalesActivity.js' rather than changing the component itself. Key fixes included normalizing record dates to ISO via a new helper so filtering, chart prep, monthly totals, and selected-month calculations work with both 'MM/DD/YYYY' and 'YYYY-MM-DD' inputs, and updating customer grouping to prefer 'customerName' with fallback to 'customer_name' for backward compatibility. Documentation and task tracking were updated in 'FINANCIAL_ACTIVITY_UPDATE_SUMMARY.md', '.devflow/tasks/financial-records-backend-integration/tasks.json', and '.devflow/tasks/financial-records-backend-integration/TSK0007_COMPLETION_SUMMARY.md', with the build verified as successful."
+      "implementation_notes": "Implemented updates to make FinancialActivity work with the new Supabase-derived sales record shapes by fixing data handling in 'src/hooks/useSalesActivity.js' rather than changing the component itself. Key fixes included normalizing record dates to ISO via a new helper so filtering, chart prep, monthly totals, and selected-month calculations work with both 'MM/DD/YYYY' and 'YYYY-MM-DD' inputs, and updating customer grouping to prefer 'customerName' with fallback to 'customer_name' for backward compatibility. Documentation and task tracking were updated in 'FINANCIAL_ACTIVITY_UPDATE_SUMMARY.md', '.devflow/tasks/financial-records-backend-integration/tasks.json', and '.devflow/tasks/financial-records-backend-integration/TSK0007_COMPLETION_SUMMARY.md', with the build verified as successful.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0008",
@@ -177,12 +184,13 @@
         "src/components/financial/FinancialChart.jsx",
         "src/api/financialRecords.js"
       ],
-      "notes": "✅ COMPLETED: Added aggregation RPC functions to API client (fetchMonthlySummary, fetchQuarterlySummary, fetchYearlySummary). Updated FinancialChart component to support aggregated data with billed/unbilled breakdown. Chart now detects aggregated data format and automatically enables stacking and legend display. Maintains backward compatibility with existing client-side aggregated data. Build verified successful.",
+      "notes": "\u2705 COMPLETED: Added aggregation RPC functions to API client (fetchMonthlySummary, fetchQuarterlySummary, fetchYearlySummary). Updated FinancialChart component to support aggregated data with billed/unbilled breakdown. Chart now detects aggregated data format and automatically enables stacking and legend display. Maintains backward compatibility with existing client-side aggregated data. Build verified successful.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented Supabase aggregation RPC support by adding API client functions in 'src/api/financialRecords.js' for 'fetchMonthlySummary', 'fetchQuarterlySummary', and 'fetchYearlySummary' with org scoping via JWT, validation, error handling, and logging. Updated 'src/components/financial/FinancialChart.jsx' to auto-detect aggregated responses (billed and unbilled amounts), render multiple datasets with stacked bars and legends when appropriate, while remaining backward compatible with the existing single-dataset client-side aggregation flow. Documented the work in '.devflow/tasks/financial-records-backend-integration/TSK0008_COMPLETION_SUMMARY.md' and 'TSK0008_AGGREGATION_RPC_GUIDE.md', and marked status updates in '.devflow/tasks/financial-records-backend-integration/tasks.json' after successful builds."
+      "implementation_notes": "Implemented Supabase aggregation RPC support by adding API client functions in 'src/api/financialRecords.js' for 'fetchMonthlySummary', 'fetchQuarterlySummary', and 'fetchYearlySummary' with org scoping via JWT, validation, error handling, and logging. Updated 'src/components/financial/FinancialChart.jsx' to auto-detect aggregated responses (billed and unbilled amounts), render multiple datasets with stacked bars and legends when appropriate, while remaining backward compatible with the existing single-dataset client-side aggregation flow. Documented the work in '.devflow/tasks/financial-records-backend-integration/TSK0008_COMPLETION_SUMMARY.md' and 'TSK0008_AGGREGATION_RPC_GUIDE.md', and marked status updates in '.devflow/tasks/financial-records-backend-integration/tasks.json' after successful builds.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0009",
@@ -202,7 +210,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented Supabase-compatible updates for the sales modals by fixing field mappings and ID usage in 'RecordModal.jsx' and 'RecordDetailsModal.jsx' to align with 'customer_sales' (using 'record.id' as the primary identifier, 'customers.business_name' for customer display, and 'inv_id' semantics with 'BILLED'). Refactored 'RecordDetailsModal.jsx' to remove the incorrect enrichment path that called 'fetchFinancialRecordByUUID' (which expected 'financial_id'), instead relying on the complete data returned from the RPC and updating bulk invoice actions to target the correct IDs. Improved date handling and update payload construction in 'RecordModal.jsx', and cleaned up unused imports plus added clearer component-scoped logging and error handling. Verified changes by running a successful build and adding a test to validate behavior with Supabase-shaped records."
+      "implementation_notes": "Implemented Supabase-compatible updates for the sales modals by fixing field mappings and ID usage in 'RecordModal.jsx' and 'RecordDetailsModal.jsx' to align with 'customer_sales' (using 'record.id' as the primary identifier, 'customers.business_name' for customer display, and 'inv_id' semantics with 'BILLED'). Refactored 'RecordDetailsModal.jsx' to remove the incorrect enrichment path that called 'fetchFinancialRecordByUUID' (which expected 'financial_id'), instead relying on the complete data returned from the RPC and updating bulk invoice actions to target the correct IDs. Improved date handling and update payload construction in 'RecordModal.jsx', and cleaned up unused imports plus added clearer component-scoped logging and error handling. Verified changes by running a successful build and adding a test to validate behavior with Supabase-shaped records.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0010",
@@ -217,12 +226,13 @@
       "files": [
         "src/hooks/useBillableHours.js"
       ],
-      "notes": "✅ COMPLETED: Updated documentation to reflect Supabase data source. Improved logging with Supabase-specific messages and [useBillableHours] prefix. Updated saveRecord() function to document that record updates are not implemented (only billed status updates via updateBilledStatus()). Hook was already compatible with new API - only needed documentation and logging updates. Build verified successful. Hook not actively used in production but remains functional for future features.",
+      "notes": "\u2705 COMPLETED: Updated documentation to reflect Supabase data source. Improved logging with Supabase-specific messages and [useBillableHours] prefix. Updated saveRecord() function to document that record updates are not implemented (only billed status updates via updateBilledStatus()). Hook was already compatible with new API - only needed documentation and logging updates. Build verified successful. Hook not actively used in production but remains functional for future features.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Updated useBillableHours hook for Supabase compatibility by revising JSDoc to clarify data source (Supabase customer_sales via get_financial_records RPC), updating all console logs to use [useBillableHours] prefix and reference Supabase instead of FileMaker, and documenting the saveRecord() function as unsupported (record updates not in API, only billed status changes via mark_records_billed). Key finding: hook was already fully compatible since it uses updated API client (TSK0001) and service layer (TSK0002) - changes were documentation and logging only. Verified build successful and added completion summary in TSK0010_COMPLETION_SUMMARY.md documenting data flow, hook usage analysis, and known limitations."
+      "implementation_notes": "Updated useBillableHours hook for Supabase compatibility by revising JSDoc to clarify data source (Supabase customer_sales via get_financial_records RPC), updating all console logs to use [useBillableHours] prefix and reference Supabase instead of FileMaker, and documenting the saveRecord() function as unsupported (record updates not in API, only billed status changes via mark_records_billed). Key finding: hook was already fully compatible since it uses updated API client (TSK0001) and service layer (TSK0002) - changes were documentation and logging only. Verified build successful and added completion summary in TSK0010_COMPLETION_SUMMARY.md documenting data flow, hook usage analysis, and known limitations.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0011",
@@ -237,12 +247,13 @@
         "src/utils/index.js",
         "docs/DATE_UTILITIES.md"
       ],
-      "notes": "✅ COMPLETED: Installed date-fns library. Created comprehensive date conversion utilities with convertFileMakerToSupabase() and convertSupabaseToFileMaker(). Updated parseDate() to use date-fns for robust parsing. Added validation functions isValidFileMakerDate() and isValidSupabaseDate(). Fixed bug in formatDateCanadian() (was DD/MM/YYYY, now MM/DD/YYYY). Replaced inline conversion functions in financialRecords.js with centralized utilities. All functions include error handling and validation. Created comprehensive test suite - all tests pass. Build verified successful. Documentation created at docs/DATE_UTILITIES.md.",
+      "notes": "\u2705 COMPLETED: Installed date-fns library. Created comprehensive date conversion utilities with convertFileMakerToSupabase() and convertSupabaseToFileMaker(). Updated parseDate() to use date-fns for robust parsing. Added validation functions isValidFileMakerDate() and isValidSupabaseDate(). Fixed bug in formatDateCanadian() (was DD/MM/YYYY, now MM/DD/YYYY). Replaced inline conversion functions in financialRecords.js with centralized utilities. All functions include error handling and validation. Created comprehensive test suite - all tests pass. Build verified successful. Documentation created at docs/DATE_UTILITIES.md.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented robust date format conversion utilities using the newly added date-fns dependency, centralizing FileMaker (MM/DD/YYYY) and Supabase (YYYY-MM-DD) parsing, formatting, and validation in 'src/utils/dateUtils.js' (including fixing the prior incorrect DD/MM/YYYY assumption in 'formatDateCanadian'). Replaced inline conversion helpers in 'src/api/financialRecords.js' and updated 'src/utils/index.js' to export the new utilities for consistent reuse. Added documentation in 'docs/DATE_UTILITIES.md' and 'docs/DATE_UTILITIES_QUICK_REFERENCE.md', and marked the work complete in '.devflow/tasks/financial-records-backend-integration/tasks.json' with a supporting completion summary."
+      "implementation_notes": "Implemented robust date format conversion utilities using the newly added date-fns dependency, centralizing FileMaker (MM/DD/YYYY) and Supabase (YYYY-MM-DD) parsing, formatting, and validation in 'src/utils/dateUtils.js' (including fixing the prior incorrect DD/MM/YYYY assumption in 'formatDateCanadian'). Replaced inline conversion helpers in 'src/api/financialRecords.js' and updated 'src/utils/index.js' to export the new utilities for consistent reuse. Added documentation in 'docs/DATE_UTILITIES.md' and 'docs/DATE_UTILITIES_QUICK_REFERENCE.md', and marked the work complete in '.devflow/tasks/financial-records-backend-integration/tasks.json' with a supporting completion summary.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0012",
@@ -262,12 +273,13 @@
         "src/__tests__/tasksApi.mock.test.js",
         "src/utils/__tests__/dataMappers.test.js"
       ],
-      "notes": "✅ COMPLETED: Updated taskService.test.js to use Supabase format for all financial record and timer mocks. Replaced FileMaker response structures (response.data[0].fieldData) with Supabase format (time_entry, financial_record objects). Updated field references: financial_id, billing_status, inv_id, proper snake_case. Verified fixtures already updated. All dataMapper tests passing (31/31). Build verified successful.",
+      "notes": "\u2705 COMPLETED: Updated taskService.test.js to use Supabase format for all financial record and timer mocks. Replaced FileMaker response structures (response.data[0].fieldData) with Supabase format (time_entry, financial_record objects). Updated field references: financial_id, billing_status, inv_id, proper snake_case. Verified fixtures already updated. All dataMapper tests passing (31/31). Build verified successful.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented Supabase-shaped test data usage by updating 'src/services/__tests__/taskService.test.js' to replace legacy FileMaker response structures with direct 'time_entry' and 'financial_record' objects, including field renames like '__ID' to 'financial_id' and 'f_billed' to 'billing_status', and adding 'inv_id'. Confirmed existing fixtures and mocks in 'src/__fixtures__/financialRecords.js', 'src/__fixtures__/timers.js', and 'src/__mocks__/tasksApi.js' were already in Supabase format, while keeping 'src/utils/__tests__/dataMappers.test.js' intentionally mixed to validate transformation logic. Validated changes by running mapper tests (31 passing) and ensuring the project build succeeded, noting Jest limitations with import.meta for the broader suite."
+      "implementation_notes": "Implemented Supabase-shaped test data usage by updating 'src/services/__tests__/taskService.test.js' to replace legacy FileMaker response structures with direct 'time_entry' and 'financial_record' objects, including field renames like '__ID' to 'financial_id' and 'f_billed' to 'billing_status', and adding 'inv_id'. Confirmed existing fixtures and mocks in 'src/__fixtures__/financialRecords.js', 'src/__fixtures__/timers.js', and 'src/__mocks__/tasksApi.js' were already in Supabase format, while keeping 'src/utils/__tests__/dataMappers.test.js' intentionally mixed to validate transformation logic. Validated changes by running mapper tests (31 passing) and ensuring the project build succeeded, noting Jest limitations with import.meta for the broader suite.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0013",
@@ -284,12 +296,13 @@
         "test-qb-invoice-flow.js",
         "QB_INVOICE_TEST_RESULTS.md"
       ],
-      "notes": "✅ COMPLETED: Created comprehensive end-to-end test script (test-qb-invoice-flow.js) covering all 7 steps of invoice flow. Successfully verified Step 1 (fetch unbilled records via get_unpaid_records RPC - 350 records found) and Step 2 (QuickBooks API connectivity and authentication working). Steps 3-7 could not be fully tested due to test environment limitations (no matching customers in QB sandbox), but code analysis confirms all components are properly integrated. Created detailed test results document (QB_INVOICE_TEST_RESULTS.md) with production readiness assessment. High confidence in production functionality based on: 1) All RPC functions working correctly, 2) HMAC authentication verified, 3) Data transformation layers in place, 4) Comprehensive error handling, 5) Existing QboTestPanel component provides UI-based testing path. Recommendation: Manual testing in production with real customer data.",
+      "notes": "\u2705 COMPLETED: Created comprehensive end-to-end test script (test-qb-invoice-flow.js) covering all 7 steps of invoice flow. Successfully verified Step 1 (fetch unbilled records via get_unpaid_records RPC - 350 records found) and Step 2 (QuickBooks API connectivity and authentication working). Steps 3-7 could not be fully tested due to test environment limitations (no matching customers in QB sandbox), but code analysis confirms all components are properly integrated. Created detailed test results document (QB_INVOICE_TEST_RESULTS.md) with production readiness assessment. High confidence in production functionality based on: 1) All RPC functions working correctly, 2) HMAC authentication verified, 3) Data transformation layers in place, 4) Comprehensive error handling, 5) Existing QboTestPanel component provides UI-based testing path. Recommendation: Manual testing in production with real customer data.",
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented an end-to-end QuickBooks invoice generation test harness in 'test-qb-invoice-flow.js' covering the full flow (fetch via 'get_unpaid_records', create invoice in QBO, bill via 'mark_records_billed', and verify 'inv_id' plus exclusion from the unbilled list), including HMAC auth, Supabase RPC calls, and robust logging. Updated the test to account for the fact that 'get_unpaid_records' does not return 'customer_name' by fetching or enriching customer names separately, matching the frontend normalization behavior. Improved QuickBooks request error visibility by fixing serialization and handling of error objects in 'makeQBRequest', enabling clearer diagnosis of QBO search and customer existence issues. Added supporting documentation in 'QB_INVOICE_TEST_RESULTS.md' and 'TSK0013_COMPLETION_SUMMARY.md', and recorded completion in the task status file, noting the key decision to create or select existing QBO customers due to sandbox data mismatches preventing full automated completion of steps 3-7."
+      "implementation_notes": "Implemented an end-to-end QuickBooks invoice generation test harness in 'test-qb-invoice-flow.js' covering the full flow (fetch via 'get_unpaid_records', create invoice in QBO, bill via 'mark_records_billed', and verify 'inv_id' plus exclusion from the unbilled list), including HMAC auth, Supabase RPC calls, and robust logging. Updated the test to account for the fact that 'get_unpaid_records' does not return 'customer_name' by fetching or enriching customer names separately, matching the frontend normalization behavior. Improved QuickBooks request error visibility by fixing serialization and handling of error objects in 'makeQBRequest', enabling clearer diagnosis of QBO search and customer existence issues. Added supporting documentation in 'QB_INVOICE_TEST_RESULTS.md' and 'TSK0013_COMPLETION_SUMMARY.md', and recorded completion in the task status file, noting the key decision to create or select existing QBO customers due to sandbox data mismatches preventing full automated completion of steps 3-7.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0014",
@@ -310,12 +323,13 @@
         "test-user-session-org-id.js",
         "ORGANIZATION_SCOPING_VERIFICATION_REPORT.md"
       ],
-      "notes": "✅ COMPLETED: Comprehensive verification performed. Created 3 verification scripts (verify-organization-scoping.js, test-rls-isolation.js, test-user-session-org-id.js) - all passed. Verified: 1) All 7 RPC calls include organization_id parameter (or use JWT-based current_org_id()), 2) All 14 API functions call getRequiredOrganizationId(), 3) Organization ID retrieved from user session during initialization, 4) Complete data flow from login → environment context → RPC calls, 5) Error handling for missing organization context, 6) RLS policies enforce organization isolation at database level, 7) No bypass paths detected. Security guarantee: Users from Organization A CANNOT access records from Organization B. Created comprehensive verification report: ORGANIZATION_SCOPING_VERIFICATION_REPORT.md.",
+      "notes": "\u2705 COMPLETED: Comprehensive verification performed. Created 3 verification scripts (verify-organization-scoping.js, test-rls-isolation.js, test-user-session-org-id.js) - all passed. Verified: 1) All 7 RPC calls include organization_id parameter (or use JWT-based current_org_id()), 2) All 14 API functions call getRequiredOrganizationId(), 3) Organization ID retrieved from user session during initialization, 4) Complete data flow from login \u2192 environment context \u2192 RPC calls, 5) Error handling for missing organization context, 6) RLS policies enforce organization isolation at database level, 7) No bypass paths detected. Security guarantee: Users from Organization A CANNOT access records from Organization B. Created comprehensive verification report: ORGANIZATION_SCOPING_VERIFICATION_REPORT.md.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented a full audit of Supabase RPC usage for financial records to confirm strict organization_id scoping and RLS isolation, validating the end-to-end flow from login and initializationService through environment context and dataService into RPC calls. Added three verification scripts: 'verify-organization-scoping.js' (RPC org scoping checks, with a regex adjustment after a false positive), 'test-rls-isolation.js' (RLS enforcement), and 'test-user-session-org-id.js' (session org_id propagation), and confirmed all checks pass. Verified 'mark_records_billed' intentionally omits 'p_organization_id' because it relies on DB-side 'current_org_id()' from the JWT for non-spoofable scoping, and confirmed RLS policies are correctly configured. Updated documentation in 'ORGANIZATION_SCOPING_VERIFICATION_REPORT.md' and 'TSK0014_COMPLETION_SUMMARY.md', marked the task complete in 'tasks.json', and verified the build still compiles successfully."
+      "implementation_notes": "Implemented a full audit of Supabase RPC usage for financial records to confirm strict organization_id scoping and RLS isolation, validating the end-to-end flow from login and initializationService through environment context and dataService into RPC calls. Added three verification scripts: 'verify-organization-scoping.js' (RPC org scoping checks, with a regex adjustment after a false positive), 'test-rls-isolation.js' (RLS enforcement), and 'test-user-session-org-id.js' (session org_id propagation), and confirmed all checks pass. Verified 'mark_records_billed' intentionally omits 'p_organization_id' because it relies on DB-side 'current_org_id()' from the JWT for non-spoofable scoping, and confirmed RLS policies are correctly configured. Updated documentation in 'ORGANIZATION_SCOPING_VERIFICATION_REPORT.md' and 'TSK0014_COMPLETION_SUMMARY.md', marked the task complete in 'tasks.json', and verified the build still compiles successfully.",
+      "feature": "financial-records-backend-integration"
     },
     {
       "id": "TSK0015",
@@ -342,12 +356,13 @@
         "src/services/index.js",
         "CLAUDE.md"
       ],
-      "notes": "✅ COMPLETED: Removed obsolete FileMaker references while preserving backward compatibility. Updated financialRecords.js comments to clarify legacy field structure is for UI compatibility (not FileMaker). Removed unused import convertFileMakerToSupabase. Commented out financialSyncService exports from services/index.js with deprecation notice. Updated CLAUDE.md to remove financialSyncService reference from QuickBooks integration section. Build verified successful. Key decision: Kept fieldData wrapper and date conversion for backward compatibility with billableHoursService and existing UI components.",
+      "notes": "\u2705 COMPLETED: Removed obsolete FileMaker references while preserving backward compatibility. Updated financialRecords.js comments to clarify legacy field structure is for UI compatibility (not FileMaker). Removed unused import convertFileMakerToSupabase. Commented out financialSyncService exports from services/index.js with deprecation notice. Updated CLAUDE.md to remove financialSyncService reference from QuickBooks integration section. Build verified successful. Key decision: Kept fieldData wrapper and date conversion for backward compatibility with billableHoursService and existing UI components.",
       "executionPid": null,
       "sessionId": null,
       "completed_at": "2026-01-15T00:00:00.000Z",
       "executionError": null,
-      "implementation_notes": "Implemented TSK0015 cleanup to remove obsolete FileMaker code paths while preserving the legacy UI compatibility layer: updated 'src/api/financialRecords.js' to drop the unused 'convertFileMakerToSupabase' import and rewrite FileMaker-specific comments to describe the 'fieldData' wrapper and date formatting as legacy UI structure. Updated 'src/services/index.js' to stop exporting the deprecated 'financialSyncService' (left commented with a deprecation note referencing 'FINANCIAL_SYNC_SERVICE_DEPRECATION.md') and revised 'CLAUDE.md' to reflect direct Supabase RPC usage via 'src/api/financialRecords.js'. Key decision was to keep 'normalizeFinancialRecords()' and the legacy field naming/date conversion since 'billableHoursService.js' and several UI components still depend on that shape; build was verified and a completion doc was added at '.devflow/tasks/financial-records-backend-integration/TSK0015_COMPLETION_SUMMARY.md'."
+      "implementation_notes": "Implemented TSK0015 cleanup to remove obsolete FileMaker code paths while preserving the legacy UI compatibility layer: updated 'src/api/financialRecords.js' to drop the unused 'convertFileMakerToSupabase' import and rewrite FileMaker-specific comments to describe the 'fieldData' wrapper and date formatting as legacy UI structure. Updated 'src/services/index.js' to stop exporting the deprecated 'financialSyncService' (left commented with a deprecation note referencing 'FINANCIAL_SYNC_SERVICE_DEPRECATION.md') and revised 'CLAUDE.md' to reflect direct Supabase RPC usage via 'src/api/financialRecords.js'. Key decision was to keep 'normalizeFinancialRecords()' and the legacy field naming/date conversion since 'billableHoursService.js' and several UI components still depend on that shape; build was verified and a completion doc was added at '.devflow/tasks/financial-records-backend-integration/TSK0015_COMPLETION_SUMMARY.md'.",
+      "feature": "financial-records-backend-integration"
     }
   ]
 }

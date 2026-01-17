@@ -387,6 +387,57 @@ See appendix for complete bulk insert implementation.
 
 See appendix for complete validation scripts.
 
+## Security Considerations
+
+### Service Role Key Protection
+
+⚠️ **CRITICAL SECURITY WARNING**
+
+Migration scripts use `VITE_SUPABASE_SERVICE_ROLE_KEY` which bypasses ALL Row-Level Security (RLS) policies and grants UNRESTRICTED DATABASE ACCESS across all organizations.
+
+**Security Requirements:**
+
+1. **Environment Restrictions**
+   - ✅ ONLY run in secure backend environments (SSH, local dev, CI/CD)
+   - ❌ NEVER run in browser/frontend contexts
+   - ❌ NEVER deploy to publicly accessible environments
+   - ❌ NEVER commit scripts with hardcoded service role keys
+
+2. **Browser Detection Guards**
+   - All migration scripts MUST include `if (typeof window !== 'undefined')` checks
+   - Scripts will throw errors if executed in browser contexts
+   - Prevents accidental frontend deployment
+
+3. **Environment Variable Validation**
+   - Scripts MUST validate `SUPABASE_SERVICE_ROLE_KEY` exists before execution
+   - Keys MUST be stored in `.env` file (excluded from git)
+   - Scripts will exit with security error if key is missing
+
+4. **Migration Data Protection**
+   - Output files in `migration-data/` directory contain sensitive data
+   - Directory MUST be in `.gitignore` (excluded from version control)
+   - Delete output files after migration completes and validation passes
+   - Never share migration outputs containing production data
+
+5. **Post-Migration Key Rotation**
+   - Generate new service role key in Supabase dashboard after migration
+   - Update backend `.env` and restart services
+   - Invalidate old service role key
+   - Document rotation in security changelog
+
+**Security Incident Response:**
+
+If service role key is exposed:
+1. Rotate key immediately (Supabase Dashboard → Settings → API)
+2. Invalidate compromised key
+3. Update all environments (backend, local dev, CI/CD)
+4. Audit database access logs for unauthorized activity
+5. Notify security team and assess data exposure
+
+**For comprehensive security requirements, see:** `docs/MIGRATION_SCRIPTS_SECURITY.md`
+
+---
+
 ## Rollback Plan
 
 ### Pre-Rollback Snapshot
@@ -480,6 +531,7 @@ See appendix for complete rollback scripts.
 - [ ] RLS policies tested with multi-tenant data
 - [ ] Performance benchmarks meet targets
 - [ ] Rollback procedures documented and tested
+- [ ] **SECURITY:** Service role key rotation scheduled post-migration
 
 **1 Day Before:**
 - [ ] Production database backup completed
@@ -489,14 +541,19 @@ See appendix for complete rollback scripts.
 - [ ] Communication sent to users (maintenance window notice)
 - [ ] Monitoring dashboards configured
 - [ ] On-call schedule confirmed
+- [ ] **SECURITY:** Verified `.gitignore` includes `migration-data/` directory
+- [ ] **SECURITY:** Verified no service role keys in git history
+- [ ] **SECURITY:** Migration scripts include browser detection guards
 
 **Day Of (6:00 PM):**
 - [ ] All team members online and ready
 - [ ] Slack/Teams channel active for coordination
 - [ ] Database connections tested
 - [ ] FileMaker API accessible
-- [ ] Supabase service role key verified
+- [ ] Supabase service role key verified (in backend `.env` only)
 - [ ] Frontend build prepared and ready to deploy
+- [ ] **SECURITY:** Confirmed migration will run in secure backend environment
+- [ ] **SECURITY:** Confirmed migration data outputs will be deleted after validation
 
 ### Success Criteria
 
@@ -586,6 +643,26 @@ See "Data Export Process from FileMaker" section for complete export script.
 
 ```javascript
 // scripts/transform-notes.js
+/**
+ * ⚠️ SECURITY WARNING ⚠️
+ *
+ * This script uses SUPABASE_SERVICE_ROLE_KEY which bypasses ALL Row-Level
+ * Security (RLS) policies and grants UNRESTRICTED DATABASE ACCESS.
+ *
+ * CRITICAL: This script MUST ONLY run in secure backend environments.
+ * NEVER run in browser/frontend contexts or publicly accessible servers.
+ *
+ * For security requirements, see: docs/MIGRATION_SCRIPTS_SECURITY.md
+ */
+
+// SECURITY: Prevent execution in browser contexts
+if (typeof window !== 'undefined') {
+  throw new Error(
+    'SECURITY ERROR: Migration scripts cannot run in browser environments. ' +
+    'Service role key exposure would grant unrestricted database access.'
+  );
+}
+
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 
@@ -596,6 +673,7 @@ async function transformNotes() {
   const exportData = JSON.parse(fs.readFileSync('migration-data/notes-export.json'));
 
   // Initialize Supabase with service role key (bypasses RLS)
+  // SECURITY: This client has unrestricted access - use only in backend
   const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -726,12 +804,33 @@ transformNotes().catch(console.error);
 
 ```javascript
 // scripts/load-notes-to-supabase.js
+/**
+ * ⚠️ SECURITY WARNING ⚠️
+ *
+ * This script uses SUPABASE_SERVICE_ROLE_KEY which bypasses ALL Row-Level
+ * Security (RLS) policies and grants UNRESTRICTED DATABASE ACCESS.
+ *
+ * CRITICAL: This script MUST ONLY run in secure backend environments.
+ * NEVER run in browser/frontend contexts or publicly accessible servers.
+ *
+ * For security requirements, see: docs/MIGRATION_SCRIPTS_SECURITY.md
+ */
+
+// SECURITY: Prevent execution in browser contexts
+if (typeof window !== 'undefined') {
+  throw new Error(
+    'SECURITY ERROR: Migration scripts cannot run in browser environments. ' +
+    'Service role key exposure would grant unrestricted database access.'
+  );
+}
+
 async function loadNotesToSupabase() {
   console.log('Starting Supabase load...');
 
   const transformResult = JSON.parse(fs.readFileSync('migration-data/notes-transformed.json'));
   const notes = transformResult.notes;
 
+  // SECURITY: This client has unrestricted access - use only in backend
   const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY

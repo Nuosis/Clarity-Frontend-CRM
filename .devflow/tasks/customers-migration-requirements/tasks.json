@@ -38,7 +38,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Verified the existing requirements structure by reviewing 'CLAUDE.md' and inspecting 'requirements/customers' alongside other requirement folders to confirm the standard pattern. Confirmed no implementation changes were needed because 'requirements/customers/README.md' already existed and was comprehensive (245 lines), with supporting docs including 'acceptance-criteria.md', 'api-contracts.md', 'authorization.md', 'current-implementation.md', 'data-model-mapping.md', and 'migration-plan.md'. Key decision: mark the task complete with no file edits since the directory and overview documentation were already in place and aligned with the established template."
+      "implementation_notes": "Verified the existing requirements structure by reviewing 'CLAUDE.md' and inspecting 'requirements/customers' alongside other requirement folders to confirm the standard pattern. Confirmed no implementation changes were needed because 'requirements/customers/README.md' already existed and was comprehensive (245 lines), with supporting docs including 'acceptance-criteria.md', 'api-contracts.md', 'authorization.md', 'current-implementation.md', 'data-model-mapping.md', and 'migration-plan.md'. Key decision: mark the task complete with no file edits since the directory and overview documentation were already in place and aligned with the established template.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0002",
@@ -52,7 +53,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Enhanced the existing 'requirements/customers/current-implementation.md' by incorporating newly discovered dual-environment behavior where 'src/api/fileMaker.js' detects FileMaker WebViewer vs web app mode and routes calls either through the fm-gofer bridge or a backend API proxy via 'callBackendAPI()'. Added documentation for the backend FileMaker proxy '/filemaker/*' endpoints, updated data flow diagrams to show both execution paths, and expanded code references across 'src/api/customers.js', 'src/services/customerService.js', 'src/hooks/useCustomer.js', and 'src/hooks/useSupabaseCustomer.js'. Documented key security decisions and risks around the HMAC-SHA256 auth flow, including the issue of 'VITE_SECRET_KEY' exposure in client-side code, then verified the build succeeds with only pre-existing warnings and updated task status accordingly."
+      "implementation_notes": "Enhanced the existing 'requirements/customers/current-implementation.md' by incorporating newly discovered dual-environment behavior where 'src/api/fileMaker.js' detects FileMaker WebViewer vs web app mode and routes calls either through the fm-gofer bridge or a backend API proxy via 'callBackendAPI()'. Added documentation for the backend FileMaker proxy '/filemaker/*' endpoints, updated data flow diagrams to show both execution paths, and expanded code references across 'src/api/customers.js', 'src/services/customerService.js', 'src/hooks/useCustomer.js', and 'src/hooks/useSupabaseCustomer.js'. Documented key security decisions and risks around the HMAC-SHA256 auth flow, including the issue of 'VITE_SECRET_KEY' exposure in client-side code, then verified the build succeeds with only pre-existing warnings and updated task status accordingly.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0003",
@@ -66,7 +68,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented comprehensive Supabase schema documentation for customers and related tables, including foreign keys, constraints, indexes, enum usage, and data quality/multi-tenancy findings, based on direct SSH queries against the 'supabase-db' Postgres container. Added a 500+ line deliverable at '.devflow/tasks/customers-migration-requirements/supabase-schema.md' and updated '.devflow/tasks/customers-migration-requirements/tasks.json' to mark TSK0003 as done with summary notes. Key decisions highlighted include calling out missing indexes and RLS needs, identifying schema inconsistencies (enum case mismatch, 'customer_contacts.is_primary' varchar), and documenting implications of global uniqueness constraints on email/phone and nullable 'customers.organization_id'. Verified the build still succeeds after documentation changes."
+      "implementation_notes": "Implemented comprehensive Supabase schema documentation for customers and related tables, including foreign keys, constraints, indexes, enum usage, and data quality/multi-tenancy findings, based on direct SSH queries against the 'supabase-db' Postgres container. Added a 500+ line deliverable at '.devflow/tasks/customers-migration-requirements/supabase-schema.md' and updated '.devflow/tasks/customers-migration-requirements/tasks.json' to mark TSK0003 as done with summary notes. Key decisions highlighted include calling out missing indexes and RLS needs, identifying schema inconsistencies (enum case mismatch, 'customer_contacts.is_primary' varchar), and documenting implications of global uniqueness constraints on email/phone and nullable 'customers.organization_id'. Verified the build still succeeds after documentation changes.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0004",
@@ -81,7 +84,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a comprehensive FileMaker to Supabase field mapping spec by creating 'requirements/data-model-mapping.md', built from schema discovery via code inspection of 'src/components/customers/CustomerForm.jsx' and 'src/services/customerService.js' (with additional references in 'src/hooks/useSupabaseCustomer.js' and 'src/api/customers.js'). The mapping documents 21 FileMaker fields from the 'devCustomers' layout to Supabase tables, including transformation rules (boolean, timestamps, UUID preservation, normalization) and highlights key migration risks like duplicate unique constraints, required address fields, unmapped fields, and the '__ID' vs 'recordId' inconsistency. Important decisions were deferred but captured as change requests, notably how to set 'organization_id' and proposed backend schema additions such as 'customers.is_active', JSONB buckets for financial data and encrypted credentials, and a few missing columns and indexes. Verified the build still compiles (only pre-existing warnings) and updated 'tasks.json' to mark the work complete."
+      "implementation_notes": "Implemented a comprehensive FileMaker to Supabase field mapping spec by creating 'requirements/data-model-mapping.md', built from schema discovery via code inspection of 'src/components/customers/CustomerForm.jsx' and 'src/services/customerService.js' (with additional references in 'src/hooks/useSupabaseCustomer.js' and 'src/api/customers.js'). The mapping documents 21 FileMaker fields from the 'devCustomers' layout to Supabase tables, including transformation rules (boolean, timestamps, UUID preservation, normalization) and highlights key migration risks like duplicate unique constraints, required address fields, unmapped fields, and the '__ID' vs 'recordId' inconsistency. Important decisions were deferred but captured as change requests, notably how to set 'organization_id' and proposed backend schema additions such as 'customers.is_active', JSONB buckets for financial data and encrypted credentials, and a few missing columns and indexes. Verified the build still compiles (only pre-existing warnings) and updated 'tasks.json' to mark the work complete.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0005",
@@ -96,7 +100,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Created a comprehensive customers migration API contracts document in '.devflow/tasks/customers-migration-requirements/api-contracts.md', based on the existing reference at 'requirements/customers/api-contracts.md' but expanded for the devflow task deliverable. The new spec documents 11 endpoints (CRUD plus search, batch, stats, validate, and migration status) with request and response examples, validation and error codes, auth and RLS expectations, and key decisions like atomic multi-table transactions, default soft delete, organization scoping, optimistic locking, and idempotency keys. Updated '.devflow/tasks/customers-migration-requirements/tasks.json' to mark TSK0005 complete and verified the build still succeeds with only pre-existing warnings."
+      "implementation_notes": "Created a comprehensive customers migration API contracts document in '.devflow/tasks/customers-migration-requirements/api-contracts.md', based on the existing reference at 'requirements/customers/api-contracts.md' but expanded for the devflow task deliverable. The new spec documents 11 endpoints (CRUD plus search, batch, stats, validate, and migration status) with request and response examples, validation and error codes, auth and RLS expectations, and key decisions like atomic multi-table transactions, default soft delete, organization scoping, optimistic locking, and idempotency keys. Updated '.devflow/tasks/customers-migration-requirements/tasks.json' to mark TSK0005 complete and verified the build still succeeds with only pre-existing warnings.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0006",
@@ -110,12 +115,13 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented comprehensive authorization requirements documentation for the Customers migration by adding '.devflow/tasks/customers-migration-requirements/authorization.md' following the existing template in 'requirements/customers/authorization.md', including detailed org scoping, role definitions, RLS policy coverage, permission matrix, edge cases, testing guidance, and code references (notably 'src/services/dataService.js', 'src/services/supabaseService.js', 'src/context/AppStateContext.jsx', 'src/components/auth/SignIn.jsx'). Updated '.devflow/tasks.json' to mark 'TSK0006' complete and verified the build still succeeds with only pre-existing warnings. Key decisions documented include treating database RLS as the authoritative enforcement layer with backend validation and frontend UI permissions as additional defense-in-depth, and using JWT claims (organization_id and role) as the basis for tenant scoping and permissions."
+      "implementation_notes": "Implemented comprehensive authorization requirements documentation for the Customers migration by adding '.devflow/tasks/customers-migration-requirements/authorization.md' following the existing template in 'requirements/customers/authorization.md', including detailed org scoping, role definitions, RLS policy coverage, permission matrix, edge cases, testing guidance, and code references (notably 'src/services/dataService.js', 'src/services/supabaseService.js', 'src/context/AppStateContext.jsx', 'src/components/auth/SignIn.jsx'). Updated '.devflow/tasks.json' to mark 'TSK0006' complete and verified the build still succeeds with only pre-existing warnings. Key decisions documented include treating database RLS as the authoritative enforcement layer with backend validation and frontend UI permissions as additional defense-in-depth, and using JWT claims (organization_id and role) as the basis for tenant scoping and permissions.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0007",
       "title": "Analyze dual-write patterns",
-      "description": "Review dualWriteService.js and useSupabaseCustomer.js to understand current FileMaker→Supabase synchronization behavior",
+      "description": "Review dualWriteService.js and useSupabaseCustomer.js to understand current FileMaker\u2192Supabase synchronization behavior",
       "status": "done",
       "priority": "medium",
       "dependencies": [
@@ -124,7 +130,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a comprehensive dual-write pattern analysis and documented current FileMaker to Supabase synchronization behavior, including two identified patterns (manual customer sync in 'src/hooks/useCustomer.js' and service-based financial record sync in 'src/services/dualWriteService.js') and their failure modes, performance characteristics, and consistency gaps. Added the deliverable document at '.devflow/tasks/customers-migration-requirements/dual-write-analysis.md' with detailed flow breakdowns and recommendations, then updated '.devflow/tasks/customers-migration-requirements/tasks.json' to mark the work complete. Verified the project build still succeeds (only pre-existing warnings), confirming no functional regressions introduced by the documentation-only changes."
+      "implementation_notes": "Implemented a comprehensive dual-write pattern analysis and documented current FileMaker to Supabase synchronization behavior, including two identified patterns (manual customer sync in 'src/hooks/useCustomer.js' and service-based financial record sync in 'src/services/dualWriteService.js') and their failure modes, performance characteristics, and consistency gaps. Added the deliverable document at '.devflow/tasks/customers-migration-requirements/dual-write-analysis.md' with detailed flow breakdowns and recommendations, then updated '.devflow/tasks/customers-migration-requirements/tasks.json' to mark the work complete. Verified the project build still succeeds (only pre-existing warnings), confirming no functional regressions introduced by the documentation-only changes.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0008",
@@ -139,7 +146,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented the ID reconciliation strategy for the Customers migration by auditing existing dual-write and migration planning docs, checking for existing Supabase mapping tables, and deciding on direct 1:1 UUID preservation from FileMaker '__ID' to Supabase 'customers.id' with FileMaker 'recordId' discarded and no lookup table required. Added the primary deliverable in '.devflow/tasks/customers-migration-requirements/id-reconciliation-strategy.md' (including migration scenarios, foreign key order across related tables, validation and reconciliation queries, rollback and testing guidance, and noted refactor targets like 'src/api/customers.js', 'src/hooks/useCustomer.js', and 'src/services/customerService.js'). Verified the build succeeded with only pre-existing warnings and updated task status, plus created a short summary reference document for follow-up work."
+      "implementation_notes": "Implemented the ID reconciliation strategy for the Customers migration by auditing existing dual-write and migration planning docs, checking for existing Supabase mapping tables, and deciding on direct 1:1 UUID preservation from FileMaker '__ID' to Supabase 'customers.id' with FileMaker 'recordId' discarded and no lookup table required. Added the primary deliverable in '.devflow/tasks/customers-migration-requirements/id-reconciliation-strategy.md' (including migration scenarios, foreign key order across related tables, validation and reconciliation queries, rollback and testing guidance, and noted refactor targets like 'src/api/customers.js', 'src/hooks/useCustomer.js', and 'src/services/customerService.js'). Verified the build succeeded with only pre-existing warnings and updated task status, plus created a short summary reference document for follow-up work.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0009",
@@ -153,7 +161,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a comprehensive customers migration plan documenting the end-to-end approach for moving customers from FileMaker to Supabase, including phased execution, schema and RLS prerequisites, required API endpoints, data backfill and reconciliation steps, rollout and rollback procedures, and monitoring and success criteria. Added the plan at '.devflow/tasks/customers-migration-requirements/migration-plan.md' and updated '.devflow/tasks/tasks.json' to mark 'TSK0009' complete. Key decisions captured include direct UUID mapping from FileMaker '__ID' to Supabase 'customers.id', a feature-flagged gradual rollout using 'VITE_USE_SUPABASE_CUSTOMERS', and a backend-first architecture where all operations go through the API. Verified the build still succeeds with only pre-existing warnings."
+      "implementation_notes": "Implemented a comprehensive customers migration plan documenting the end-to-end approach for moving customers from FileMaker to Supabase, including phased execution, schema and RLS prerequisites, required API endpoints, data backfill and reconciliation steps, rollout and rollback procedures, and monitoring and success criteria. Added the plan at '.devflow/tasks/customers-migration-requirements/migration-plan.md' and updated '.devflow/tasks/tasks.json' to mark 'TSK0009' complete. Key decisions captured include direct UUID mapping from FileMaker '__ID' to Supabase 'customers.id', a feature-flagged gradual rollout using 'VITE_USE_SUPABASE_CUSTOMERS', and a backend-first architecture where all operations go through the API. Verified the build still succeeds with only pre-existing warnings.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0010",
@@ -168,7 +177,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented comprehensive edge case documentation for the customers migration by adding the new doc file 'edge-cases.md', detailing 17 critical scenarios with detection methods, impact analysis, recommended mitigations, and validation checklists. Updated 'tasks.json' to mark TSK0010 as complete. Verified the project build still succeeds, confirming only pre-existing warnings and no regressions introduced by the documentation changes."
+      "implementation_notes": "Implemented comprehensive edge case documentation for the customers migration by adding the new doc file 'edge-cases.md', detailing 17 critical scenarios with detection methods, impact analysis, recommended mitigations, and validation checklists. Updated 'tasks.json' to mark TSK0010 as complete. Verified the project build still succeeds, confirming only pre-existing warnings and no regressions introduced by the documentation changes.",
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0011",
@@ -184,7 +194,8 @@
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented comprehensive acceptance criteria for the customers migration project by creating '.devflow/tasks/customers-migration-requirements/acceptance-criteria.md', a 730+ line document covering 10 major sections and 50+ criteria with validation steps, pass fail thresholds, test procedures, failure actions, metrics, and sign off requirements. Updated '.devflow/tasks/tasks.json' to mark 'TSK0011' as DONE with detailed implementation notes. Verified the build still succeeds, noting only pre existing warnings and no new issues. Key decision was to make the criteria highly actionable by embedding concrete checks (SQL, scripts, and endpoint expectations) and measurable targets (latency, error rate, rollback time, and data integrity).",
-      "executionError": null
+      "executionError": null,
+      "feature": "customers-migration-requirements"
     },
     {
       "id": "TSK0012",
@@ -203,7 +214,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a comprehensive review and validation of the Customers Migration Requirements documentation, confirming completeness, cross-document consistency, code reference correctness, and backend protocol compliance, and verified the project build (no new errors, only pre-existing warnings). Updated '.devflow/tasks/tasks.json' to mark 'TSK0012' complete and created three deliverables for backend consumption: 'VALIDATION_REPORT.md' (document-by-document validation plus identified gaps), 'README.md' (quick-start overview), and 'TASK_COMPLETION_SUMMARY.md' (execution summary). Key decisions were to explicitly capture remaining technical gaps (e.g., missing 'customers.is_active', financial fields modeling, dual-write coverage, and retry queue needs) as documented follow-ups while still approving the package as backend-ready."
+      "implementation_notes": "Implemented a comprehensive review and validation of the Customers Migration Requirements documentation, confirming completeness, cross-document consistency, code reference correctness, and backend protocol compliance, and verified the project build (no new errors, only pre-existing warnings). Updated '.devflow/tasks/tasks.json' to mark 'TSK0012' complete and created three deliverables for backend consumption: 'VALIDATION_REPORT.md' (document-by-document validation plus identified gaps), 'README.md' (quick-start overview), and 'TASK_COMPLETION_SUMMARY.md' (execution summary). Key decisions were to explicitly capture remaining technical gaps (e.g., missing 'customers.is_active', financial fields modeling, dual-write coverage, and retry queue needs) as documented follow-ups while still approving the package as backend-ready.",
+      "feature": "customers-migration-requirements"
     }
   ]
 }

@@ -589,6 +589,23 @@ Required variables in `.env`:
 
 **NEVER modify environment files without explicit permission.**
 
+## Migration Script Security
+
+⚠️ **CRITICAL:** Migration scripts use `VITE_SUPABASE_SERVICE_ROLE_KEY` which bypasses ALL Row-Level Security (RLS) policies and grants unrestricted database access.
+
+**Security Requirements:**
+- ❌ NEVER run migration scripts in browser/frontend contexts
+- ❌ NEVER commit scripts with hardcoded service role keys
+- ✅ ONLY run in secure backend environments (SSH, local dev, CI/CD)
+- ✅ ALWAYS use environment variables for service role key
+- ✅ ROTATE service role key after major migrations complete
+
+**Affected Scripts:**
+- `scripts/migrate-teams-data.js` - Teams migration (has browser detection guards)
+- `requirements/notes/migration-plan.md` - Notes migration scripts (documented)
+
+**See comprehensive security guide:** `docs/MIGRATION_SCRIPTS_SECURITY.md`
+
 ## Common Pitfalls
 
 1. **SSH Access**: Never try local Docker commands - always SSH to remote server first
@@ -640,4 +657,5 @@ Required variables in `.env`:
 - `.roo/rules/rules_general.md`: General project rules and SSH patterns
 - `.roo/rules/SUPABASE_DATABASE_VERIFICATION.md`: Database access patterns
 - `requirements/teams/`: Teams migration requirements and specifications
+- **`docs/MIGRATION_SCRIPTS_SECURITY.md`**: Critical security requirements for migration scripts
 - `docs/`: Additional technical documentation

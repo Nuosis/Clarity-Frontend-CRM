@@ -36,11 +36,12 @@
       ],
       "dependencies": [],
       "completed_at": "2026-01-15T00:00:00.000Z",
-      "notes": "✅ Endpoints verified at /links (not /api/links). ✅ HMAC auth accepted. ⚠️ Backend POST returns 500 error - requires backend team investigation. GET requires JWT (HTTPBearer). Schema documented: uses 'link' field (not 'url'), no title/description fields. Frontend can proceed with implementation. See TSK0001-verification-results.md for details.",
+      "notes": "\u2705 Endpoints verified at /links (not /api/links). \u2705 HMAC auth accepted. \u26a0\ufe0f Backend POST returns 500 error - requires backend team investigation. GET requires JWT (HTTPBearer). Schema documented: uses 'link' field (not 'url'), no title/description fields. Frontend can proceed with implementation. See TSK0001-verification-results.md for details.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented verification of backend links API by creating and iterating on an ES module Node.js test script (file: 'test-links-endpoints.js') that exercises HMAC auth against the correct base path. Key decision was updating requests from '/api/links' to '/links' after checking the OpenAPI spec, and documenting that 'GET /links' requires JWT (HTTPBearer) while 'POST /links' accepts HMAC (SharedSecretBearer) but currently returns 500 even with valid payload schema (uses 'link' not 'url'). Captured findings and backend bug details in 'TSK0001-verification-results.md' and 'BACKEND_ISSUE_REPORT.md', and updated 'tasks.json' to mark TSK0001 complete; confirmed changes did not break the build."
+      "implementation_notes": "Implemented verification of backend links API by creating and iterating on an ES module Node.js test script (file: 'test-links-endpoints.js') that exercises HMAC auth against the correct base path. Key decision was updating requests from '/api/links' to '/links' after checking the OpenAPI spec, and documenting that 'GET /links' requires JWT (HTTPBearer) while 'POST /links' accepts HMAC (SharedSecretBearer) but currently returns 500 even with valid payload schema (uses 'link' not 'url'). Captured findings and backend bug details in 'TSK0001-verification-results.md' and 'BACKEND_ISSUE_REPORT.md', and updated 'tasks.json' to mark TSK0001 complete; confirmed changes did not break the build.",
+      "feature": "links-backend-integration"
     },
     {
       "id": "TSK0002",
@@ -63,11 +64,12 @@
         "TSK0001"
       ],
       "completed_at": "2026-01-15T00:00:00.000Z",
-      "notes": "✅ Refactored src/api/links.js to use backend API exclusively. Removed all FileMaker code paths. ✅ All CRUD operations implemented: createLink() (POST /links), fetchLinks() (GET /links), updateLink() (PATCH /links/{id}), deleteLink() (DELETE /links/{id}). ✅ Uses dataService methods which handle HMAC auth automatically. ✅ Organization scope checking added. ✅ Proper error handling with validation. ✅ Schema follows backend format (uses 'link' field not 'url', supports all parent FK fields). ✅ Build verified - project compiles successfully.",
+      "notes": "\u2705 Refactored src/api/links.js to use backend API exclusively. Removed all FileMaker code paths. \u2705 All CRUD operations implemented: createLink() (POST /links), fetchLinks() (GET /links), updateLink() (PATCH /links/{id}), deleteLink() (DELETE /links/{id}). \u2705 Uses dataService methods which handle HMAC auth automatically. \u2705 Organization scope checking added. \u2705 Proper error handling with validation. \u2705 Schema follows backend format (uses 'link' field not 'url', supports all parent FK fields). \u2705 Build verified - project compiles successfully.",
       "implementation_notes": "Refactored 'src/api/links.js' to remove all FileMaker paths and use backend REST endpoints under '/links' exclusively, implementing full CRUD via 'createLink' (POST), 'fetchLinks' (GET with query params), new 'updateLink' (PATCH), and 'deleteLink' (DELETE). Aligned the client with backend schema decisions by using 'link' (with backward-compatible 'url' alias), supporting FK fields like 'project_id', 'customer_id', 'task_id', and enforcing org scoping with 'env.authentication.user.supabaseOrgID', while routing all requests through 'dataService' for auth and consistent error handling. Updated 'tasks.json' to mark TSK0002 complete and added session artifacts 'TSK0002-implementation-summary.md', 'TSK0002-code-verification.js', and 'TSK0002-COMPLETION-REPORT.md', validating via a passing verification script and successful builds despite known backend issues (POST 500, GET requiring JWT).",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "links-backend-integration"
     },
     {
       "id": "TSK0003",
@@ -89,11 +91,12 @@
         "TSK0002"
       ],
       "completed_at": "2026-01-15T00:00:00.000Z",
-      "notes": "✅ Added transformBackendLink() function to map backend snake_case to frontend camelCase format (link→url, created_at→createdAt, etc.). ✅ Updated createNewLink() to support both legacy (fkId, link) and new (params object) signatures with parentType parameter for project/task/customer/org. ✅ URL validation maintained in both create and update operations. ✅ Added updateExistingLink() service function with URL validation. ✅ Added fetchLinksByEntity() for flexible multi-entity fetching. ✅ deleteLinkById() already existed and maintained. ✅ GitHub URL detection logic preserved (handled in useLink hook via parseGitHubUrl). ✅ All functions return frontend-formatted data via transformBackendLink(). ✅ Build verified - project compiles successfully with no errors.",
+      "notes": "\u2705 Added transformBackendLink() function to map backend snake_case to frontend camelCase format (link\u2192url, created_at\u2192createdAt, etc.). \u2705 Updated createNewLink() to support both legacy (fkId, link) and new (params object) signatures with parentType parameter for project/task/customer/org. \u2705 URL validation maintained in both create and update operations. \u2705 Added updateExistingLink() service function with URL validation. \u2705 Added fetchLinksByEntity() for flexible multi-entity fetching. \u2705 deleteLinkById() already existed and maintained. \u2705 GitHub URL detection logic preserved (handled in useLink hook via parseGitHubUrl). \u2705 All functions return frontend-formatted data via transformBackendLink(). \u2705 Build verified - project compiles successfully with no errors.",
       "implementation_notes": "Implemented backend LinkResponse support in 'src/services/linkService.js' by adding a 'transformBackendLink' mapper that converts snake_case fields (including 'link', 'created_at', and parent ids) into the frontend camelCase model, generates a hostname-based 'title', and handles invalid URLs safely. Enhanced link CRUD by updating 'createNewLink' to accept a new object signature with 'parentType' (while preserving the legacy signature), adding 'updateExistingLink' and a generic 'fetchLinksByEntity' with pagination, and updating 'fetchLinksByProject' to return transformed results while keeping 'processLinks' for FileMaker compatibility. Key decisions were to maintain backward compatibility, normalize 'url' and 'link' inputs for validation, and preserve existing GitHub URL parsing behavior outside the service layer; task status was marked complete in 'tasks.json' and supporting verification and completion docs were added ('TSK0003-transformation-demo.js', 'TSK0003-COMPLETION-REPORT.md', 'TSK0003-implementation-summary.md').",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "links-backend-integration"
     },
     {
       "id": "TSK0004",
@@ -117,11 +120,12 @@
         "TSK0003"
       ],
       "completed_at": "2026-01-15T00:00:00.000Z",
-      "notes": "✅ Updated processProjectLinks() to handle backend LinkResponse format with explicit project_id filtering, safe URL parsing, sorting, and complete field mapping. ✅ Updated processTaskLinks() to support both FileMaker and backend formats with task_id filtering, title generation, and sorting. ✅ Added source parameter ('filemaker'|'backend') to both functions. ✅ Updated loadTaskDetails() call site to pass taskId and source. ✅ All acceptance criteria met: proper filtering by parent entity, timestamp formatting (snake_case→camelCase), fallback titles with safe URL parsing. ✅ Build verified successfully. See TSK0004-implementation-summary.md for detailed changes.",
+      "notes": "\u2705 Updated processProjectLinks() to handle backend LinkResponse format with explicit project_id filtering, safe URL parsing, sorting, and complete field mapping. \u2705 Updated processTaskLinks() to support both FileMaker and backend formats with task_id filtering, title generation, and sorting. \u2705 Added source parameter ('filemaker'|'backend') to both functions. \u2705 Updated loadTaskDetails() call site to pass taskId and source. \u2705 All acceptance criteria met: proper filtering by parent entity, timestamp formatting (snake_case\u2192camelCase), fallback titles with safe URL parsing. \u2705 Build verified successfully. See TSK0004-implementation-summary.md for detailed changes.",
       "implementation_notes": "Implemented updates to link processing to support the new backend API schema while preserving FileMaker compatibility by enhancing 'processProjectLinks' in 'src/services/projectService.js' and extending 'processTaskLinks' in 'src/services/taskService.js' to accept a 'source' plus entity id filtering (added 'taskId' param and updated the 'loadTaskDetails' call site). Key decisions included reusing the shared backend transformation logic from 'src/services/linkService.js', adding explicit filtering by 'project_id' and 'task_id', safe URL parsing for title generation, and consistent newest-first sorting via timestamps with snake_case to camelCase mapping. Updated 'tasks.json' to mark TSK0004 complete and added session documentation in 'TSK0004-implementation-summary.md' and 'TSK0004-COMPLETION-REPORT.md', validating changes via successful 'npm run build'.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "links-backend-integration"
     },
     {
       "id": "TSK0005",
@@ -144,11 +148,12 @@
         "TSK0003"
       ],
       "completed_at": "2026-01-15T22:15:00.000Z",
-      "notes": "✅ Added handleLinkUpdate() method to useLink hook with full GitHub metadata re-augmentation support. ✅ handleLinkDelete() already existed and is working correctly. ✅ handleLinkCreate() maintained with GitHub URL detection and metadata augmentation. ✅ Imported updateExistingLink() from linkService. ✅ All operations include proper error handling with user-friendly messages via SnackBar. ✅ Loading states managed correctly for all operations. ✅ GitHub detection works for both create and update operations via parseGitHubUrl(). ✅ Build verified - project compiles successfully with no errors.",
+      "notes": "\u2705 Added handleLinkUpdate() method to useLink hook with full GitHub metadata re-augmentation support. \u2705 handleLinkDelete() already existed and is working correctly. \u2705 handleLinkCreate() maintained with GitHub URL detection and metadata augmentation. \u2705 Imported updateExistingLink() from linkService. \u2705 All operations include proper error handling with user-friendly messages via SnackBar. \u2705 Loading states managed correctly for all operations. \u2705 GitHub detection works for both create and update operations via parseGitHubUrl(). \u2705 Build verified - project compiles successfully with no errors.",
       "implementation_notes": "Implemented full CRUD support in the 'useLink' hook by adding a new 'handleLinkUpdate' callback that uses 'updateExistingLink' from 'src/services/linkService.js', mirrors existing validation and loading error patterns, and re-applies GitHub URL parsing and metadata augmentation before returning the updated link. Updated 'src/hooks/useLink.js' imports and exports to include the new update handler while preserving existing create, fetch, and delete behavior, and verified consumers like 'ProjectLinksTab' and 'TaskList' remain compatible. Marked 'TSK0005' complete in 'tasks.json' and added supporting artifacts including 'TSK0005-COMPLETION-REPORT.md', 'TSK0005-implementation-summary.md', and 'TSK0005-hook-verification.js', then confirmed a successful production build and passing verification script after fixing a script path issue. Key decision was to keep the update flow consistent with create by centralizing the update call in the service layer and ensuring the same GitHub integration and SnackBar-based error messaging in the hook.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "links-backend-integration"
     },
     {
       "id": "TSK0006",
@@ -176,11 +181,12 @@
         "TSK0005"
       ],
       "completed_at": "2026-01-15T23:00:00.000Z",
-      "notes": "✅ Added environment-agnostic project ID extraction (project.id || project.__ID). ✅ Updated all handleLinkCreate and loadProjectDetails calls to use projectId variable. ✅ Enhanced renderLink to support both url and link field names. ✅ Updated GitHub metadata fetching to handle both field formats. ✅ Maintains 100% backward compatibility with FileMaker format. ✅ All acceptance criteria met. ✅ Build verified successfully. ✅ 7/7 automated verification tests passed.",
+      "notes": "\u2705 Added environment-agnostic project ID extraction (project.id || project.__ID). \u2705 Updated all handleLinkCreate and loadProjectDetails calls to use projectId variable. \u2705 Enhanced renderLink to support both url and link field names. \u2705 Updated GitHub metadata fetching to handle both field formats. \u2705 Maintains 100% backward compatibility with FileMaker format. \u2705 All acceptance criteria met. \u2705 Build verified successfully. \u2705 7/7 automated verification tests passed.",
       "implementation_notes": "Implemented dual-environment support in 'src/components/projects/ProjectLinksTab.jsx' to work with both the new backend API and legacy FileMaker data by introducing a unified 'projectId' resolver ('project.id || project.__ID') and updating all CRUD calls to use it. Adjusted link handling to be schema-tolerant by rendering and parsing URLs from either 'url' or 'link', including GitHub URL extraction and metadata fetching, while keeping the existing optimistic-update UX intact. Added verification and documentation artifacts (including 'TSK0006-verification.js' and multiple TSK0006 summary reports) and marked TSK0006 as done in '.devflow/tasks/links-backend-integration/tasks.json' after confirming a successful build and passing tests.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "links-backend-integration"
     },
     {
       "id": "TSK0007",
@@ -205,11 +211,12 @@
         "TSK0005"
       ],
       "completed_at": "2026-01-15T00:00:00.000Z",
-      "notes": "✅ Enhanced useLink hook to accept parentType parameter (defaults to 'project' for backward compatibility). ✅ Updated TaskList to pass 'task' as parentType, ensuring links created with correct task_id FK. ✅ Enhanced link display to support both 'url' and 'link' field formats with title fallback. ✅ All acceptance criteria met: links render correctly, creation works with proper FK, refresh after creation, error handling in place. ✅ Build verified successfully. ✅ 6/6 automated verification checks passed.",
+      "notes": "\u2705 Enhanced useLink hook to accept parentType parameter (defaults to 'project' for backward compatibility). \u2705 Updated TaskList to pass 'task' as parentType, ensuring links created with correct task_id FK. \u2705 Enhanced link display to support both 'url' and 'link' field formats with title fallback. \u2705 All acceptance criteria met: links render correctly, creation works with proper FK, refresh after creation, error handling in place. \u2705 Build verified successfully. \u2705 6/6 automated verification checks passed.",
       "implementation_notes": "Implemented task link creation and display updates to support the new links API by fixing incorrect foreign key usage and adding defensive rendering. Updated 'src/hooks/useLink.js' to accept an optional 'parentType' parameter on 'handleLinkCreate' (defaulting to 'project' for backward compatibility) and to use transformed backend responses, then updated 'src/components/tasks/TaskList.jsx' to pass 'task' so links are created with 'task_id' instead of mistakenly defaulting to 'project_id', and to fall back between 'url' and 'link' fields (with title or URL fallback). Added verification and documentation artifacts including 'TSK0007-verification.js' and multiple TSK0007 summary reports, and marked TSK0007 complete in 'tasks.json', while noting the known backend POST '/links' 500 issue is external to these frontend changes.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "links-backend-integration"
     },
     {
       "id": "TSK0008",
@@ -233,11 +240,12 @@
         "TSK0007"
       ],
       "completed_at": "2026-01-15T23:30:00.000Z",
-      "notes": "✅ Added edit/delete UI controls to ProjectLinksTab with hover-revealed buttons, inline editing form, and confirmation dialog for delete. ✅ Added edit/delete UI controls to TaskList with same UX pattern for consistency. ✅ Both components now support handleLinkUpdate and handleLinkDelete from useLink hook. ✅ Edit mode shows inline input field with Save/Cancel buttons. ✅ Delete operation requires confirmation dialog. ✅ UI updates after successful operations by calling loadProjectDetails or onExpand. ✅ All acceptance criteria met. ✅ Build verified successfully with no compilation errors.",
+      "notes": "\u2705 Added edit/delete UI controls to ProjectLinksTab with hover-revealed buttons, inline editing form, and confirmation dialog for delete. \u2705 Added edit/delete UI controls to TaskList with same UX pattern for consistency. \u2705 Both components now support handleLinkUpdate and handleLinkDelete from useLink hook. \u2705 Edit mode shows inline input field with Save/Cancel buttons. \u2705 Delete operation requires confirmation dialog. \u2705 UI updates after successful operations by calling loadProjectDetails or onExpand. \u2705 All acceptance criteria met. \u2705 Build verified successfully with no compilation errors.",
       "implementation_notes": "Implemented edit and delete UI controls for links across both project and task views by enhancing 'src/components/projects/ProjectLinksTab.jsx' and 'src/components/tasks/TaskList.jsx', leveraging existing 'handleLinkUpdate' and 'handleLinkDelete' from 'useLink.js'. Added inline edit mode with Save Cancel, hover-revealed action buttons, and delete confirmation dialogs, plus loading and error handling with SnackBar and test IDs for automation. Updated TaskList plumbing by introducing wrapper handlers and passing new props through 'TaskSection' and 'TaskItem' with corresponding PropTypes changes, and ensured data refresh after operations via 'loadProjectDetails(projectId)' and 'onExpand(task.id)'. Marked the work complete in '.devflow/tasks/links-backend-integration/tasks.json' and recorded completion docs, with builds verified successful (existing proposalService warnings unchanged).",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "links-backend-integration"
     },
     {
       "id": "TSK0009",
@@ -263,11 +271,12 @@
         "TSK0005"
       ],
       "completed_at": "2026-01-15T22:30:00.000Z",
-      "notes": "✅ Created comprehensive test suite for links API integration (26 tests, 100% passing). ✅ Created linkService transformation tests (29 tests, 100% passing). ✅ Created useLink hook integration tests (20 tests, 100% passing). ✅ All tests use backend LinkResponse format with snake_case to camelCase transformations. ✅ Tests cover: CRUD operations, organization scoping, multi-entity support (project/task/customer), environment detection (FileMaker vs webapp), GitHub URL detection, error handling, data validation, URL format validation. ✅ Mock data uses correct backend schema (link field, foreign keys, timestamps). ✅ 75 total tests passing. ✅ Build verified successfully with no compilation errors.",
+      "notes": "\u2705 Created comprehensive test suite for links API integration (26 tests, 100% passing). \u2705 Created linkService transformation tests (29 tests, 100% passing). \u2705 Created useLink hook integration tests (20 tests, 100% passing). \u2705 All tests use backend LinkResponse format with snake_case to camelCase transformations. \u2705 Tests cover: CRUD operations, organization scoping, multi-entity support (project/task/customer), environment detection (FileMaker vs webapp), GitHub URL detection, error handling, data validation, URL format validation. \u2705 Mock data uses correct backend schema (link field, foreign keys, timestamps). \u2705 75 total tests passing. \u2705 Build verified successfully with no compilation errors.",
       "implementation_notes": "Implemented TSK0009 by adding and updating comprehensive link-related tests to match the new backend LinkResponse schema and mocks across API, service, and hook layers. Key files added/changed include 'src/api/__tests__/links.test.js', 'src/services/__tests__/linkService.test.js', and 'src/hooks/__tests__/useLink.test.js', plus documentation in 'TSK0009-COMPLETION-REPORT.md' and 'TSK0009-TEST-SUMMARY.md' and a status update in 'tasks.json'. Important decisions included correcting expectations where the API does not throw on empty update payloads, refactoring hook tests to avoid '@testing-library/react' (not installed), and fully mocking integration points to avoid Jest incompatibilities with 'import.meta'. All three suites now pass (75 tests total) and the build succeeds.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "links-backend-integration"
     },
     {
       "id": "TSK0010",
@@ -296,11 +305,12 @@
         "TSK0007"
       ],
       "completed_at": "2026-01-15T00:00:00.000Z",
-      "notes": "✅ All automated testing complete: 15/15 code verification checks passed, 75/75 unit/integration tests passed, production build verified, dev server running successfully. ✅ Zero FileMaker dependencies confirmed - complete migration to backend API verified. ✅ Comprehensive documentation created: test plan, automated results, manual testing guide, and completion report. ⚠️ Known issue: Backend POST /links returns 500 error (documented in BACKEND_ISSUE_REPORT.md) - frontend implementation is correct and ready, awaiting backend fix. ✅ Manual testing guide provided for user to verify UI interactions. Frontend is 100% production-ready pending backend fix and manual UI verification.",
+      "notes": "\u2705 All automated testing complete: 15/15 code verification checks passed, 75/75 unit/integration tests passed, production build verified, dev server running successfully. \u2705 Zero FileMaker dependencies confirmed - complete migration to backend API verified. \u2705 Comprehensive documentation created: test plan, automated results, manual testing guide, and completion report. \u26a0\ufe0f Known issue: Backend POST /links returns 500 error (documented in BACKEND_ISSUE_REPORT.md) - frontend implementation is correct and ready, awaiting backend fix. \u2705 Manual testing guide provided for user to verify UI interactions. Frontend is 100% production-ready pending backend fix and manual UI verification.",
       "implementation_notes": "Implemented and completed TSK0010 integration testing and verification for the Links Backend Integration, including starting the dev server, running the full test suite (75 passing), and confirming the production build succeeds with only pre-existing proposalService warnings. Added a code-level automated verification script and refined it to correctly detect environment-agnostic project id extraction in 'ProjectLinksTab' (accepting 'project?.id || project?.__ID'), then reran checks to green. Created the full testing/documentation set under '.devflow/tasks/links-backend-integration/' (test plan, automated checks, automated results, manual testing guide, completion report, quick summary) and updated 'tasks.json' and todos to mark TSK0010 complete. Documented the key blocking decision: frontend is production-ready but link creation remains blocked by a known backend 'POST /links' 500, tracked in 'BACKEND_ISSUE_REPORT.md'.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "links-backend-integration"
     }
   ]
 }

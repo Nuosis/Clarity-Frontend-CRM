@@ -159,6 +159,48 @@ VITE_FM_USER=your-fm-user
 VITE_FM_PASSWORD=your-fm-password
 ```
 
+## 🔒 Security Best Practices
+
+### Service Role Key Protection
+
+⚠️ **CRITICAL:** Migration scripts use `VITE_SUPABASE_SERVICE_ROLE_KEY` which grants unrestricted database access across all organizations and bypasses all Row-Level Security (RLS) policies.
+
+**Security Requirements:**
+
+1. **Never commit service role keys to git**
+   - ✅ Always use `.env` file (excluded from git)
+   - ❌ Never hardcode keys in scripts
+   - 🔍 Check git history if suspicious: `git log -p -S "SUPABASE_SERVICE_ROLE_KEY"`
+
+2. **Only run migrations in secure environments**
+   - ✅ Local development machines (secure workstations)
+   - ✅ Backend servers (SSH access only)
+   - ✅ CI/CD pipelines with secret management
+   - ❌ NEVER in browser or frontend contexts
+   - ❌ NEVER in publicly accessible environments
+
+3. **Rotate keys after major migrations**
+   - Generate new service role key in Supabase dashboard: Settings → API → Generate New Key
+   - Update backend `.env` and restart services
+   - Update local development `.env` files
+   - Invalidate old key in Supabase dashboard
+   - Document rotation in security changelog
+
+4. **Protect migration output files**
+   - Verify `migration-data/` is in `.gitignore`
+   - Delete output files after validation completes
+   - Do not share outputs containing production data
+   - Review files before committing any changes
+
+5. **Environment variable validation**
+   - Scripts will exit with error if `VITE_SUPABASE_SERVICE_ROLE_KEY` is missing
+   - Scripts include browser detection to prevent accidental frontend execution
+   - Always verify environment variables before running migrations
+
+**For comprehensive security requirements, see:** `docs/MIGRATION_SCRIPTS_SECURITY.md`
+
+---
+
 ## Best Practices
 
 1. **Always run dry-run first** before actual migrations
@@ -167,6 +209,7 @@ VITE_FM_PASSWORD=your-fm-password
 4. **Check exit codes** - 0 = success, 1 = failure
 5. **Review output carefully** for warnings and errors
 6. **Test in development** before running in production
+7. **Follow security best practices** (see above section)
 
 ## Troubleshooting
 

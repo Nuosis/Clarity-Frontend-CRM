@@ -34,7 +34,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented a full verification of backend integrations across prerequisite features by reviewing the OpenAPI spec, checking key API integration points for customers, projects, tasks, notes, links, financial records, QuickBooks, and teams, and confirming auth and endpoint availability. Added documentation outputs in 'BACKEND_INTEGRATION_VERIFICATION.md', '.devflow/tasks/filemaker-frontend-removal/TSK0001_COMPLETION_SUMMARY.md', and '.devflow/tasks/filemaker-frontend-removal/README.md', and updated '.devflow/tasks/filemaker-frontend-removal/tasks.json' to mark 'TSK0001' complete. Confirmed the project compiles cleanly via 'npm run build' and noted the key decision that several features are already backend-only while customers, projects, and tasks still retain FileMaker fallbacks for compatibility."
+      "implementation_notes": "Implemented a full verification of backend integrations across prerequisite features by reviewing the OpenAPI spec, checking key API integration points for customers, projects, tasks, notes, links, financial records, QuickBooks, and teams, and confirming auth and endpoint availability. Added documentation outputs in 'BACKEND_INTEGRATION_VERIFICATION.md', '.devflow/tasks/filemaker-frontend-removal/TSK0001_COMPLETION_SUMMARY.md', and '.devflow/tasks/filemaker-frontend-removal/README.md', and updated '.devflow/tasks/filemaker-frontend-removal/tasks.json' to mark 'TSK0001' complete. Confirmed the project compiles cleanly via 'npm run build' and noted the key decision that several features are already backend-only while customers, projects, and tasks still retain FileMaker fallbacks for compatibility.",
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0002",
@@ -50,7 +51,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented a comprehensive audit of all FileMaker references across the codebase and produced two new deliverables: 'FILEMAKER_AUDIT_REPORT.md' (inventory of 85 files, categorized into 6 reference types with per-file removal safety analysis, dependency graph, backend verification checklist, and a 6-phase removal plan) and 'AUDIT_SUMMARY.md' (executive stats, readiness assessment, risks, and next steps). Key decisions included categorizing references by integration pattern (API calls, environment detection, auth/config, utilities, UI, tests) and defining a phased deprecation approach that keeps core environment detection until the final phase while removing low-risk examples first. Verified report completeness and confirmed the build still succeeds after generating the documentation."
+      "implementation_notes": "Implemented a comprehensive audit of all FileMaker references across the codebase and produced two new deliverables: 'FILEMAKER_AUDIT_REPORT.md' (inventory of 85 files, categorized into 6 reference types with per-file removal safety analysis, dependency graph, backend verification checklist, and a 6-phase removal plan) and 'AUDIT_SUMMARY.md' (executive stats, readiness assessment, risks, and next steps). Key decisions included categorizing references by integration pattern (API calls, environment detection, auth/config, utilities, UI, tests) and defining a phased deprecation approach that keeps core environment detection until the final phase while removing low-risk examples first. Verified report completeness and confirmed the build still succeeds after generating the documentation.",
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0003",
@@ -70,7 +72,8 @@
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Feature flag system fully implemented with FeatureFlagContext, useFeatureFlag hook, environment-aware helpers, and declarative routing. Includes localStorage persistence, 15 default flags for all major features, and comprehensive documentation. Build verified successful.",
       "implementation_notes": "Implemented a feature flag system to support gradual rollout of backend API migrations, including a new FeatureFlagContext provider with localStorage persistence and CRUD operations plus hooks for basic access, environment-aware flag behavior, and declarative routing. Key files added or updated include 'src/context/FeatureFlagContext.jsx', 'src/hooks/useFeatureFlag.js', 'src/hooks/index.js', and integration of the FeatureFlagProvider into the app provider hierarchy in 'src/main.jsx' (placed after AppStateProvider). Added comprehensive documentation in 'docs/FEATURE_FLAGS.md' and 'docs/FEATURE_FLAG_MIGRATION_EXAMPLE.md', and updated 'CLAUDE.md' with usage patterns, available flags, and debugging notes; builds were run and confirmed successful to validate compilation.",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0004",
@@ -91,7 +94,8 @@
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Updated all customer API endpoints from /contacts_api to /api/customers. Updated dataService.js layout mapping. All endpoints now use correct backend API paths including /api/customers/search and /api/customers/{id}/status. Build verified successful.",
       "implementation_notes": "Implemented the switch from legacy '/contacts_api' routes to the real backend customer endpoints by updating 'src/api/customers.js' to call '/api/customers' for all CRUD operations (and aligning status toggling to use '/api/customers/{id}/status' with an 'is_active' boolean plus updating active-customer filtering to use 'active=true'), while confirming '/api/customers/search' was already correct. Updated 'src/services/dataService.js' to remap 'devCustomers' from 'contacts_api' to 'api/customers' so frontend requests resolve through the Vite '/api' proxy correctly. Kept the existing environment-aware routing to preserve FileMaker compatibility and noted the existing 'use_backend_customers' feature flag for future rollout rather than changing behavior now. Also recorded completion by updating 'tasks.json' and adding 'TSK0004_COMPLETION_SUMMARY.md'.",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0005",
@@ -110,7 +114,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented backend-ready projects API routing by updating the client in 'projects.js' to consistently use REST-style backend endpoints with the '/api' prefix (covering core project CRUD plus related objectives, steps, images, notes, status, and reorder operations) while retaining FileMaker fallback and existing org scoping and normalization. Fixed response handling in 'fetchProjectsForCustomers' to correctly unwrap array payloads when aggregating results across multiple customers. Deliberately kept feature flag logic out of the API layer after confirming hooks are not usable there, aligning with the established pattern in 'customers.js' where the 'use_backend_projects' rollout flag (default false) is enforced at the service or hook level. Added a completion note in '.devflow/tasks/projects-backend-integration/TSK0002_COMPLETION_SUMMARY.md' and verified changes via a successful build."
+      "implementation_notes": "Implemented backend-ready projects API routing by updating the client in 'projects.js' to consistently use REST-style backend endpoints with the '/api' prefix (covering core project CRUD plus related objectives, steps, images, notes, status, and reorder operations) while retaining FileMaker fallback and existing org scoping and normalization. Fixed response handling in 'fetchProjectsForCustomers' to correctly unwrap array payloads when aggregating results across multiple customers. Deliberately kept feature flag logic out of the API layer after confirming hooks are not usable there, aligning with the established pattern in 'customers.js' where the 'use_backend_projects' rollout flag (default false) is enforced at the service or hook level. Added a completion note in '.devflow/tasks/projects-backend-integration/TSK0002_COMPLETION_SUMMARY.md' and verified changes via a successful build.",
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0006",
@@ -132,7 +137,8 @@
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Updated all task and timer API endpoints to use environment-aware routing. Replaced hardcoded USE_BACKEND_API flag with getEnvironmentContext(). Task CRUD operations now use /api/tasks endpoints, timer operations use /time-entries endpoints. All functions maintain FileMaker fallback for backward compatibility. Build verified successful.",
       "implementation_notes": "Implemented TSK0006 by migrating the frontend tasks API to environment-aware backend endpoints using dataService instead of a hardcoded USE_BACKEND_API flag, while preserving the FileMaker fallback via getEnvironmentContext and ENVIRONMENT_TYPES. Updated src/api/tasks.js to route task CRUD through '/api/tasks' (including toggle-completion) and reworked timer operations to use the '/time-entries/*' pattern rather than '/tasks/{id}/timer/*', keeping data transformations and handleApiError consistency. Marked the work complete in '.devflow/tasks/filemaker-frontend-removal/tasks.json' and added documentation in '.devflow/tasks/filemaker-frontend-removal/TSK0006_COMPLETION_SUMMARY.md' and '.devflow/tasks/filemaker-frontend-removal/TSK0006_QUICK_REFERENCE.md', with builds verified via 'npm run build'.",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0007",
@@ -153,7 +159,8 @@
       "executionError": null,
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Notes API already fully migrated to backend endpoints. All functions use dataService with proper REST endpoints (/projects/{id}/notes, /tasks/{id}/notes, /customers/{id}/notes). No FileMaker-specific code found. Feature flags enabled (use_backend_project_notes, use_backend_task_notes). Build verified successful.",
-      "implementation_notes": "Verified that TSK0007 was already complete: the notes API in 'src/api/notes.js' uses backend endpoints via 'dataService.get post patch delete' for project, task, and customer notes, with org scoping and no FileMaker-specific logic in the notes layer (environment routing remains centralized in 'dataService'). Confirmed supporting layers in 'src/services/noteService.js' (snake_case to camelCase, 'note' to 'content', backward-compatible 'fieldData') and 'src/hooks/useNote.js' (CRUD and per-entity pagination) are backend-ready, and validated feature flags 'use_backend_project_notes' and 'use_backend_task_notes' are enabled. Marked TSK0007 done in 'tasks.json' and added verification and reference docs ('TSK0007_COMPLETION_SUMMARY.md', 'TSK0007_QUICK_REFERENCE.md', 'TSK0007_VERIFICATION_REPORT.md') after confirming the build passes."
+      "implementation_notes": "Verified that TSK0007 was already complete: the notes API in 'src/api/notes.js' uses backend endpoints via 'dataService.get post patch delete' for project, task, and customer notes, with org scoping and no FileMaker-specific logic in the notes layer (environment routing remains centralized in 'dataService'). Confirmed supporting layers in 'src/services/noteService.js' (snake_case to camelCase, 'note' to 'content', backward-compatible 'fieldData') and 'src/hooks/useNote.js' (CRUD and per-entity pagination) are backend-ready, and validated feature flags 'use_backend_project_notes' and 'use_backend_task_notes' are enabled. Marked TSK0007 done in 'tasks.json' and added verification and reference docs ('TSK0007_COMPLETION_SUMMARY.md', 'TSK0007_QUICK_REFERENCE.md', 'TSK0007_VERIFICATION_REPORT.md') after confirming the build passes.",
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0008",
@@ -174,7 +181,8 @@
       "executionError": null,
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Links API already fully migrated to backend endpoints. Removed all FileMaker-specific code from linkService.js (processLinks function, environment checks) and useLink.js (environment detection, conditional response handling). Enabled use_backend_links feature flag. Build verified successful.",
-      "implementation_notes": "Implemented full cleanup of remaining FileMaker legacy logic in the Links feature now that the API layer already targets backend '/links' endpoints. Updated 'src/services/linkService.js' to remove the FileMaker-only 'processLinks' formatter plus environment-context imports and conditional routing, and updated 'src/hooks/useLink.js' to drop environment checks and simplify create handling to backend responses only. Enabled the 'use_backend_links' flag by default in 'src/context/FeatureFlagContext.jsx', then verified the build, removed remaining FileMaker references, and added completion and verification docs while marking the task complete in 'tasks.json'."
+      "implementation_notes": "Implemented full cleanup of remaining FileMaker legacy logic in the Links feature now that the API layer already targets backend '/links' endpoints. Updated 'src/services/linkService.js' to remove the FileMaker-only 'processLinks' formatter plus environment-context imports and conditional routing, and updated 'src/hooks/useLink.js' to drop environment checks and simplify create handling to backend responses only. Enabled the 'use_backend_links' flag by default in 'src/context/FeatureFlagContext.jsx', then verified the build, removed remaining FileMaker references, and added completion and verification docs while marking the task complete in 'tasks.json'.",
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0009",
@@ -195,7 +203,8 @@
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Migrated all financial records operations from Supabase RPC to Backend API endpoints via dataService. Updated data transformations for backend schema (string to float parsing). Added project_id support. Deprecated get-by-ID functions. Feature flag already enabled (use_backend_financial_records: true). Build verified successful.",
       "implementation_notes": "Implemented TSK0009 by migrating the financial records client API from direct Supabase RPC usage to backend REST endpoints under '/api/financial-records/*', routing all operations through 'dataService' with HMAC-authenticated requests. The primary change was in 'src/api/financialRecords.js', updating all fetch, create, summary, and mark-billed flows to call endpoints like '/query', '/unpaid', '/summary/{monthly|quarterly|yearly}', '/create', and '/mark-billed', and revising 'normalizeFinancialRecords()' to match the backend schema (including parsing numeric strings and supporting fields like 'project_id', 'billing_status', 'time_entry_id', and 'configuration_data') while preserving the legacy 'fieldData' wrapper. Important decisions included keeping backward compatibility by deprecating get-by-ID helpers (no backend endpoint available) with console warnings and fallback full-table scans, and relying on the already-enabled feature flag 'use_backend_financial_records'. Added completion docs ('TSK0009_COMPLETION_SUMMARY.md', 'TSK0009_QUICK_REFERENCE.md') and marked the task complete in 'tasks.json', with builds verified successful.",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0010",
@@ -216,7 +225,8 @@
       "implementation_notes": "Implemented the QuickBooks migration by removing the unused FileMaker-based 'initializeQuickBooks' function from 'src/api/fileMaker.js' and dropping its export from 'src/api/index.js', replacing it with exports for the backend QuickBooks API (status, unbilled records, invoice creation, sync, config, and customer search). Added a new feature flag 'use_backend_quickbooks' (default true) in 'src/context/FeatureFlagContext.jsx' to control rollout, and documented it in 'docs/FEATURE_FLAGS.md'. Created a completion and migration guide in 'TSK0010_COMPLETION_SUMMARY.md' and marked the work complete in 'tasks.json', with a successful build confirming no breaking changes since the removed function had no callers.'",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0011",
@@ -237,7 +247,8 @@
       "sessionId": null,
       "completed_at": "2026-01-15T12:00:00.000Z",
       "verification_notes": "Service deprecated with comprehensive warnings. All exported functions tagged with @deprecated JSDoc and console.warn() calls. Documentation created in DUAL_WRITE_SERVICE_DEPRECATION.md. CLAUDE.md updated. Build verified successful. No production code uses this service (verified via grep).",
-      "implementation_notes": "Deprecated dualWriteService.js by adding comprehensive deprecation notices to the file header explaining the service is obsolete now that backend API handles all writes (TSK0004-TSK0006 complete). Added @deprecated JSDoc tags and console.warn() calls to all exported functions: withDualWrite(), stopTimerWithDualWrite(), dualWriteConfig methods, and isDualWriteEnabled(). Created DUAL_WRITE_SERVICE_DEPRECATION.md with full migration paths showing how to use backend API endpoints instead. Updated CLAUDE.md to mark dualWriteService as deprecated. Verified via grep that no production code imports or uses this service. Build passes with npm run build. Service remains in codebase as deprecated reference until TSK0025 final cleanup."
+      "implementation_notes": "Deprecated dualWriteService.js by adding comprehensive deprecation notices to the file header explaining the service is obsolete now that backend API handles all writes (TSK0004-TSK0006 complete). Added @deprecated JSDoc tags and console.warn() calls to all exported functions: withDualWrite(), stopTimerWithDualWrite(), dualWriteConfig methods, and isDualWriteEnabled(). Created DUAL_WRITE_SERVICE_DEPRECATION.md with full migration paths showing how to use backend API endpoints instead. Updated CLAUDE.md to mark dualWriteService as deprecated. Verified via grep that no production code imports or uses this service. Build passes with npm run build. Service remains in codebase as deprecated reference until TSK0025 final cleanup.",
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0012",
@@ -257,7 +268,8 @@
       "completed_at": "2026-01-16T00:00:00.000Z",
       "verification_notes": "Removed all FileMaker reconciliation logic from financialSyncService.js. Service now operates in validation-only mode. All FileMaker-specific functions removed (fetchDevRecordsForDateRange, compareRecords, identifyChanges, createCustomerSaleFromDevRecord, updateCustomerSaleFromDevRecord, convertToFileMakerDate, getOrCreateCustomerId, ensureCustomerOrganizationLink, formatProductName). Main functions deprecated with console warnings. Build verified successful.",
       "implementation_notes": "Implemented TSK0012 by removing FileMaker reconciliation from financialSyncService, deleting 9 FileMaker-specific helpers (about 298 LOC) and refactoring synchronizeFinancialRecords and getFinancialSyncStatus to run in validation-only, Supabase-only mode with deprecation warnings directing developers to the Backend API. Key code changes were focused in the financialSyncService module (imports cleaned to retain only the essential query path) and tasks.json was updated to mark TSK0012 complete. Created new documentation artifacts including TSK0012_COMPLETION_SUMMARY.md, TSK0012_QUICK_REFERENCE.md, and TSK0012_VERIFICATION_REPORT.md, and updated CLAUDE.md to reflect the migration guidance. Multiple npm run build checks confirmed no compilation errors and maintained backward compatibility while significantly reducing the service footprint (final file about 284 lines).",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0013",
@@ -282,7 +294,8 @@
       "executionError": null,
       "completed_at": "2026-01-16T00:00:00.000Z",
       "verification_notes": "Successfully removed all FileMaker initialization logic from initializationService.js and index.jsx. Removed waitForFileMaker(), loadUserContext(), and FileMaker bridge hook usage. Added FileMaker deprecation handler. Build verified successful (~102 LOC reduction).",
-      "implementation_notes": "Implemented TSK0013 by stripping all FileMaker-specific initialization logic and environment readiness handling, making initialization Supabase-only while keeping shared methods like 'fetchSupabaseUserId', 'preloadData', and 'loadProducts'. Key changes were in 'initializationService.js' (removed 'waitForFileMaker', 'loadUserContext', 'delay', retry constants, and FileMaker imports) and 'index.jsx' (removed 'useFileMakerBridge' usage, FileMaker init block, readiness UI, and related effect dependencies). Added a deliberate deprecation path that detects 'ENVIRONMENT_TYPES.FILEMAKER', logs a warning, sets a user-facing error, and aborts initialization. Updated 'tasks.json' to mark TSK0013 complete and added task docs ('TSK0013_COMPLETION_SUMMARY.md', 'TSK0013_QUICK_REFERENCE.md', 'TSK0013_VERIFICATION_REPORT.md') with successful build verification noted."
+      "implementation_notes": "Implemented TSK0013 by stripping all FileMaker-specific initialization logic and environment readiness handling, making initialization Supabase-only while keeping shared methods like 'fetchSupabaseUserId', 'preloadData', and 'loadProducts'. Key changes were in 'initializationService.js' (removed 'waitForFileMaker', 'loadUserContext', 'delay', retry constants, and FileMaker imports) and 'index.jsx' (removed 'useFileMakerBridge' usage, FileMaker init block, readiness UI, and related effect dependencies). Added a deliberate deprecation path that detects 'ENVIRONMENT_TYPES.FILEMAKER', logs a warning, sets a user-facing error, and aborts initialization. Updated 'tasks.json' to mark TSK0013 complete and added task docs ('TSK0013_COMPLETION_SUMMARY.md', 'TSK0013_QUICK_REFERENCE.md', 'TSK0013_VERIFICATION_REPORT.md') with successful build verification noted.",
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0014",
@@ -302,7 +315,8 @@
       "implementation_notes": "Implemented removal of FileMaker authentication and detection from the SignIn flow, leaving Supabase-only auth and aligning behavior with the feature flag context expectations. Updated 'src/components/SignIn.jsx' to drop detectFileMaker logic and related callback props, and updated 'src/index.jsx' to remove FileMaker handlers and simplify SignIn usage while ensuring Supabase auth sets the WEBAPP environment. Marked 'TSK0014' complete in 'tasks.json' and added supporting docs in 'TSK0014_COMPLETION_SUMMARY.md' and 'TSK0014_QUICK_REFERENCE.md', with the key decision to keep 'setEnvironmentDetectionComplete' in app state operations since it may be used elsewhere.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0015",
@@ -323,7 +337,8 @@
       "implementation_notes": "Implemented TSK0015 by refactoring the frontend to a single backend-only routing path using an authentication context pattern, removing FileMaker environment detection and related code paths. Key updates included changes to 'src/index.jsx', 'src/context/FeatureFlagContext.jsx', 'src/hooks/useProject.js', 'src/services/taskService.js', and cleanup in 'src/api/index.js' plus multiple API modules such as 'src/api/tasks.js', 'src/api/projects.js', and 'src/api/links.js' to resolve missing exports and replace 'fetchTaskLinks' with 'fetchLinks' using a task_id filter. Important decisions were to drop 'ENVIRONMENT_TYPES' usage, remove FileMaker-specific project data functions from the API surface, and keep the build green after fixing export mismatches, with completion documented in '.devflow/tasks/filemaker-frontend-removal/TSK0015_COMPLETION_SUMMARY.md' and the task marked complete in 'tasks.json'.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0016",
@@ -343,7 +358,8 @@
       "implementation_notes": "Removed the unused React hook 'useFileMakerBridge' from 'src/hooks/index.js', including its associated logic and an unused React import, after confirming there were no real imports or usages anywhere in 'src'. Verified the build still compiles successfully and that the only remaining 'useFileMakerBridge' string is a boolean flag variable in 'src/api/fileMaker.js' (not the hook). Updated 'tasks.json' to mark TSK0016 complete and added supporting docs in 'TSK0016_COMPLETION_SUMMARY.md' and 'TSK0016_QUICK_REFERENCE.md'.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0017",
@@ -365,7 +381,8 @@
       "implementation_notes": "Implemented removal of legacy FileMaker integration by deleting 'src/api/fileMaker.js' and 'src/api/fileMakerEdgeFunction.js', then updating the codebase to eliminate or stub all remaining imports and usage. Key changes included exporting 'generateBackendAuthHeader' from 'src/api/dataService.js' and switching 'src/api/mailjet.js' to use it, removing FileMaker exports from 'src/api/index.js', and commenting out FileMaker-dependent functionality in 'src/components/financial/QboTestPanel.jsx', 'src/api/prospects.js', 'src/services/recordQueueManager.js', and related example/test/context files (including 'src/context/ProjectContext.jsx'). FileMaker-specific modules still referenced by product flows (notably 'src/api/customerActivity.js' and the queue manager) were left in place but explicitly marked deprecated, and the build was re-run to confirm compilation succeeds before updating 'tasks.json' and documenting the work in 'TSK0017_COMPLETION_SUMMARY.md'.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0018",
@@ -385,7 +402,8 @@
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Successfully removed fm-gofer package from dependencies. Deprecated mailjetService.js with clear error messages for all FileMaker-dependent functions. Build passes without fm-gofer. Email sending functionality temporarily unavailable pending backend API migration.",
       "implementation_notes": "Implemented removal of the 'fm-gofer' dependency by deleting it from 'package.json' and updating 'package-lock.json', then verifying the app still builds cleanly. Updated 'src/services/mailjetService.js' to deprecate the FileMaker-proxy Mailjet integration: the 'fm-gofer' import was removed (left only as a commented reference) and FileMaker-dependent functions like 'sendEmailWithAttachment' and 'isMailjetConfigured' were stubbed to return clear unavailability errors while keeping non-FM helpers intact. Key decision: because email sending is still used in production and no backend email endpoint exists yet, the integration was intentionally disabled with explicit warnings and documentation rather than replaced, and a backend change request plus task completion and audit docs were added (including updates to 'tasks.json').",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0019",
@@ -405,7 +423,8 @@
       "implementation_notes": "Implemented removal of FileMaker environment variable documentation after confirming via repo-wide searches that no code referenced them. Updated '/CLAUDE.md' and '/README.md' to drop the FileMaker variable/config sections and add a migration note indicating legacy vars can be removed. Marked the corresponding task as done in '.devflow/tasks/filemaker-frontend-removal/tasks.json' (noting the task appeared as TSK0019 rather than TSK0016) and verified the changes by running 'npm run build' with only pre-existing warnings.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0020",
@@ -425,7 +444,8 @@
       "implementation_notes": "Implemented removal of legacy FileMaker deployment commands by deleting the 'upload', 'build:upload', and 'deploy-to-fm' scripts from 'package.json' while intentionally preserving 'scripts/upload.js' and 'widget.config.js' in the repo for historical reference. Updated docs to eliminate or replace FileMaker deployment guidance, with edits in 'CLAUDE.md', 'README.md', and 'AGENTS.md' to reflect a web-only deployment approach and include migration notes. Marked 'TSK0020' as done in 'tasks.json' with timestamp and verification notes, and added supporting artifacts 'TSK0020_COMPLETION_SUMMARY.md', 'TSK0020_QUICK_REFERENCE.md', and 'TSK0020_VERIFICATION_REPORT.md'. Verified the build still passes and confirmed the removed scripts no longer run or appear in the available script list.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0021",
@@ -444,7 +464,8 @@
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Successfully updated CLAUDE.md to remove FileMaker references while preserving migration history. Updated Project Overview, Architecture sections, Feature Flag system documentation, External Integrations, Customer/Notes architecture sections, and Common Pitfalls. Removed dual-environment patterns and FileMaker-specific guidance. Build verified successful.",
       "implementation_notes": "Implemented TSK0021 by comprehensively updating 'CLAUDE.md' to be Supabase-first, removing FileMaker-specific architecture, auth, API routing, integrations, env vars, and pitfall guidance while preserving migration context via a brief historical note and references to obsolete flags. Updated '.devflow/tasks/filemaker-frontend-removal/tasks.json' to mark the task complete and added three deliverables: '.devflow/tasks/filemaker-frontend-removal/TSK0021_COMPLETION_SUMMARY.md', 'TSK0021_QUICK_REFERENCE.md', and 'TSK0021_VERIFICATION_REPORT.md'. Verified the changes by running 'npm run build' successfully, noting that remaining proposal export warnings were pre-existing and unrelated.",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0022",
@@ -463,7 +484,8 @@
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Successfully updated README.md to remove all FileMaker references and add migration completed notice. Updated project description, features list, tech stack, prerequisites, architecture section, deployment section, documentation links, support section, migration status/history, and acknowledgments. All FileMaker setup instructions removed. Build verified successful.",
       "implementation_notes": "Implemented documentation updates to reflect a Supabase-only architecture by revising 'README.md' to remove outdated FileMaker references, adding a prominent migration-completed notice (Jan 2026), and rewriting the architecture and migration history sections to clearly describe Supabase, backend API usage, org scoping, and RLS. Verified the project still builds successfully after the doc changes. Updated task tracking by marking TSK0022 as done in '.devflow/tasks/filemaker-frontend-removal/tasks.json' with completion notes. Created supporting deliverables 'TSK0022_COMPLETION_SUMMARY.md', 'TSK0022_VERIFICATION_REPORT.md', and 'TSK0022_QUICK_REFERENCE.md' to capture outcomes and verification.",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0023",
@@ -487,7 +509,8 @@
       "implementation_notes": "Implemented TSK0023 by removing FileMaker-specific test fixtures and updating tests to rely on backend API mocks instead. Key changes included cleaning up fixture data in 'src/__fixtures__/tasks.js', 'src/__fixtures__/timers.js', and 'src/__fixtures__/financialRecords.js' (removing FileMaker-only mocks and fields), refactoring 'tasksApi.test.js' to replace 'fileMakerApi' usage with 'dataService' and dropping obsolete FileMaker fallback and 'validateParams' tests, and updating 'useLink.test.js' to remove FILEMAKER environment coverage. Kept 'customerTransformations.test.js' and 'dataMappers.test.js' intact for backward compatibility based on current usage and migration considerations, and documented completion by updating '.devflow/tasks/filemaker-frontend-removal/tasks.json' and adding 'TSK0023_COMPLETION_SUMMARY.md' plus 'TSK0023_QUICK_REFERENCE.md'.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0024",
@@ -507,7 +530,8 @@
       "implementation_notes": "Implemented a comprehensive post-migration regression testing workflow: verified production build, confirmed Supabase schema (85 tables) and executed integration tests, with teams tests passing 9 of 9 after fixing test setup. Key changes were made to the integration test scripts and config, including adding dotenv loading to the teams test, adding missing test IDs to '.env', fixing a task lifecycle test name collision (renamed conflicting 'generateReport'), and updating backend API request handling to include 'X-Organization-ID' and correct HMAC signing (message format and timestamp precision) to resolve 401 auth failures. Added/updated regression documentation artifacts ('REGRESSION_TEST_RESULTS.md', 'REGRESSION_TEST_SUMMARY.md', 'TSK0024_COMPLETION_SUMMARY.md', 'TSK0024_QUICK_REFERENCE.md') and marked the task as done, with the main decision to skip completing task lifecycle execution due to required test fixtures after auth moved from 401 to 400.",
       "executionPid": null,
       "sessionId": null,
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     },
     {
       "id": "TSK0025",
@@ -527,7 +551,8 @@
       "completed_at": "2026-01-16T12:00:00.000Z",
       "verification_notes": "Successfully removed feature flag system (3 files, ~543 LOC). Deleted FeatureFlagContext.jsx, useFeatureFlag.js, and documentation files. Removed FeatureFlagProvider from main.jsx. Updated CLAUDE.md to remove feature flag references. Build verified successful (2.60s, 2,115.57 kB bundle). Created comprehensive migration completion report documenting all 25 tasks, code changes, architecture improvements, and production readiness checklist.",
       "implementation_notes": "Implemented final migration cleanup by removing the entire feature flag system (deleted 'src/context/FeatureFlagContext.jsx', 'src/hooks/useFeatureFlag.js', and related docs) and updating app wiring to drop 'FeatureFlagProvider' from 'src/main.jsx' and remove exports from 'src/hooks/index.js'. Updated documentation by stripping feature flag references from 'CLAUDE.md' while intentionally keeping deprecated FileMaker services as warning-only documentation. Added migration deliverables ('FILEMAKER_MIGRATION_COMPLETION_REPORT.md', '.devflow/tasks/filemaker-frontend-removal/TSK0025_COMPLETION_SUMMARY.md', '.devflow/tasks/filemaker-frontend-removal/TSK0025_QUICK_REFERENCE.md') and marked TSK0025 complete in '.devflow/tasks/filemaker-frontend-removal/tasks.json' after a successful build verification.",
-      "executionError": null
+      "executionError": null,
+      "feature": "filemaker-frontend-removal"
     }
   ]
 }

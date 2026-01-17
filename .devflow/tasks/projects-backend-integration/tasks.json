@@ -13,7 +13,7 @@
     "Must maintain feature parity with existing FileMaker implementation",
     "No direct Supabase client calls - all operations through backend API",
     "Proper error handling and loading states for all operations",
-    "Update data transformations for FileMaker → Supabase schema mapping",
+    "Update data transformations for FileMaker \u2192 Supabase schema mapping",
     "Remove FileMaker dependencies completely (no recordId, no dual-write)",
     "Preserve business logic for fixed-price and subscription projects",
     "Maintain organization scoping for all operations"
@@ -30,7 +30,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented a new API layer for projects, objectives, images, and notes by replacing FileMaker Data API calls with backend REST endpoints, including project CRUD plus status updates, objective CRUD plus reorder and completion toggles, and project image and note CRUD. Key changes were made in 'src/api/projects.js' (rewritten to be environment-aware, use HMAC-SHA256 auth via 'dataService.generateBackendAuthHeader()', enforce org scoping from JWT claims, and normalize responses while preserving legacy FileMaker fallbacks like 'fetchProjectRelatedData()' and 'fetchAllProjectData()'). Updated 'tasks.json' to mark 'TSK0001', 'TSK0002', and 'TSK0003' complete and added a completion summary document, with the notable decision to keep links support on the legacy FileMaker path due to missing backend links endpoints. Verified the build compiles successfully, with unrelated proposal warnings only."
+      "implementation_notes": "Implemented a new API layer for projects, objectives, images, and notes by replacing FileMaker Data API calls with backend REST endpoints, including project CRUD plus status updates, objective CRUD plus reorder and completion toggles, and project image and note CRUD. Key changes were made in 'src/api/projects.js' (rewritten to be environment-aware, use HMAC-SHA256 auth via 'dataService.generateBackendAuthHeader()', enforce org scoping from JWT claims, and normalize responses while preserving legacy FileMaker fallbacks like 'fetchProjectRelatedData()' and 'fetchAllProjectData()'). Updated 'tasks.json' to mark 'TSK0001', 'TSK0002', and 'TSK0003' complete and added a completion summary document, with the notable decision to keep links support on the legacy FileMaker path due to missing backend links endpoints. Verified the build compiles successfully, with unrelated proposal warnings only.",
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0002",
@@ -39,7 +40,8 @@
       "status": "done",
       "priority": "high",
       "completed_at": "2026-01-15T00:00:00Z",
-      "notes": "Implemented all objective CRUD operations plus reordering and completion toggle. Step operations available via objectives endpoint (backend returns nested steps)."
+      "notes": "Implemented all objective CRUD operations plus reordering and completion toggle. Step operations available via objectives endpoint (backend returns nested steps).",
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0003",
@@ -48,12 +50,13 @@
       "status": "done",
       "priority": "medium",
       "completed_at": "2026-01-15T00:00:00Z",
-      "notes": "Implemented full CRUD for images and notes. Links endpoints not found in backend API - will use legacy FileMaker method or may need backend team to add links endpoints."
+      "notes": "Implemented full CRUD for images and notes. Links endpoints not found in backend API - will use legacy FileMaker method or may need backend team to add links endpoints.",
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0004",
       "title": "Update service layer data transformations",
-      "description": "Update src/services/projectService.js to transform data between frontend and backend schemas. Update processProjectData(), formatProjectForBackend() with field mappings: projectName→name, _custID→customer_id, value→budget, dateStart→start_date, dateEnd→target_end_date, f_fixedPrice→is_fixed_price, f_subscription→is_subscription. Map status values: Open→active, Closed→completed. Remove FileMaker-specific logic (recordId handling).",
+      "description": "Update src/services/projectService.js to transform data between frontend and backend schemas. Update processProjectData(), formatProjectForBackend() with field mappings: projectName\u2192name, _custID\u2192customer_id, value\u2192budget, dateStart\u2192start_date, dateEnd\u2192target_end_date, f_fixedPrice\u2192is_fixed_price, f_subscription\u2192is_subscription. Map status values: Open\u2192active, Closed\u2192completed. Remove FileMaker-specific logic (recordId handling).",
       "status": "done",
       "priority": "high",
       "completed_at": "2026-01-15T00:00:00Z",
@@ -61,20 +64,22 @@
       "implementation_notes": "Implemented dual-schema project transformations in src/services/projectService.js to support both legacy FileMaker and the new backend API by enhancing processProjectData with a source parameter, adding processBackendProject, and introducing formatProjectForBackend plus updated processProjectValue field normalization. Exported status conversion helpers mapBackendStatusToFrontend and mapFrontendStatusToBackend to keep status handling consistent across layers, while preserving backward compatibility (including __ID aliasing and existing FileMaker formatting). Updated .devflow/tasks/projects-backend-integration/tasks.json to mark TSK0004 complete and added .devflow/tasks/projects-backend-integration/TSK0004_COMPLETION_SUMMARY.md documenting the schema mappings and usage decisions, with builds verified to compile cleanly.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0005",
       "title": "Update service layer for objectives, steps, images, links",
-      "description": "Update transformation functions in src/services/projectService.js for related entities. Update processProjectObjectives(), processObjectiveSteps(), processProjectImages(), processProjectLinks() to handle new backend schema. Ensure proper nesting of objectives→steps. Remove _fkID polymorphic logic, use proper foreign keys.",
+      "description": "Update transformation functions in src/services/projectService.js for related entities. Update processProjectObjectives(), processObjectiveSteps(), processProjectImages(), processProjectLinks() to handle new backend schema. Ensure proper nesting of objectives\u2192steps. Remove _fkID polymorphic logic, use proper foreign keys.",
       "status": "done",
       "priority": "medium",
       "completed_at": "2026-01-15T01:00:00Z",
-      "notes": "Updated all four transformation functions to handle both FileMaker and backend API data formats. Added source parameter to processProjectImages(), processProjectLinks(), processProjectObjectives(), and processObjectiveSteps(). Backend schema correctly maps: _fkID→project_id for images/links, _projectID→project_id for objectives, _objectiveID→objective_id for steps. Fixed FileMaker bug (_projectID vs _fkID for images). Build verified successfully.",
+      "notes": "Updated all four transformation functions to handle both FileMaker and backend API data formats. Added source parameter to processProjectImages(), processProjectLinks(), processProjectObjectives(), and processObjectiveSteps(). Backend schema correctly maps: _fkID\u2192project_id for images/links, _projectID\u2192project_id for objectives, _objectiveID\u2192objective_id for steps. Fixed FileMaker bug (_projectID vs _fkID for images). Build verified successfully.",
       "implementation_notes": "Implemented backend-schema support in the project service layer by updating transformation functions for objectives, steps, images, and links, including correct field mappings, boolean conversions, and handling both nested and separate steps arrays. Key changes were made in 'src/services/projectService.js' across 'processProjectImages', 'processProjectLinks', 'processProjectObjectives', 'processObjectiveSteps', and 'processBackendProject' to pass 'source=backend' while keeping 'source=filemaker' as the default for backward compatibility, plus a FileMaker bug fix changing the image filter from '_projectID' to the correct polymorphic '_fkID'. Important decisions included deriving link titles from the URL hostname due to the backend lacking a 'title' column and noting backend constraints like required 'customer_id' and 'organization_id' and a 2048 URL length limit. Task tracking was updated by marking completion in '.devflow/tasks/projects-backend-integration/tasks.json' and adding ' .devflow/tasks/projects-backend-integration/TSK0005_COMPLETION_SUMMARY.md', and the build was verified to compile successfully with only unrelated warnings.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0006",
@@ -87,7 +92,8 @@
       "implementation_notes": "Implemented environment-aware updates to the useProject hook load operations so the webapp uses the new backend REST API while the legacy FileMaker path remains intact. Updated 'src/hooks/useProject.js' to route 'loadProjects()' and 'loadProjectDetails()' via 'getEnvironmentContext()', using 'fetchProjectWithDetails()' for a single 'GET /projects/{id}/detail' call in webapp and retaining parallel FileMaker layout calls; also simplified 'handleProjectSelect()' to rely on the updated detail loader and state. Added the missing export for 'fetchProjectWithDetails' in 'src/api/index.js', and updated task tracking in '.devflow/tasks/projects-backend-integration/tasks.json' plus documentation in '.devflow/tasks/projects-backend-integration/TSK0006_COMPLETION_SUMMARY.md' after confirming successful builds.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0007",
@@ -100,7 +106,8 @@
       "implementation_notes": "Implemented updates to 'src/hooks/useProject.js' to migrate all project CRUD handlers to the environment-aware backend API, removing the Supabase dual-write block, de-emphasizing 'recordId', and standardizing on 'project.id' with smart fallbacks for legacy FileMaker compatibility. Updated 'handleProjectCreate', 'handleProjectUpdate', 'handleProjectStatusChange', 'handleProjectDelete', and also aligned 'handleProjectTeamChange' to use environment-specific formatting and field names (eg 'team_id' vs '_teamID') while preserving fixed-price and subscription business logic. Marked TSK0007 complete in '.devflow/tasks/projects-backend-integration/tasks.json' and added documentation in '.devflow/tasks/projects-backend-integration/TSK0007_COMPLETION_SUMMARY.md' after confirming the build compiles cleanly aside from pre-existing warnings.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0008",
@@ -113,7 +120,8 @@
       "implementation_notes": "Implemented backend integration for objective and step management by updating the API exports in 'src/api/index.js' and refactoring 'src/hooks/useProject.js' to use new objective methods with environment-aware routing between backend and FileMaker. Replaced 'handleObjectiveCreate' (removing the prior 500ms FileMaker delay) and added new 'handleObjectiveUpdate' and 'handleObjectiveDelete' handlers with bidirectional field mapping and boolean conversion, plus immediate local state updates for UI responsiveness. Updated the hook return exports to include the new handlers, verified exports via grep, ran successful builds, marked TSK0008 complete in the task JSON, and documented the work in '.devflow/tasks/projects-backend-integration/TSK0008_COMPLETION_SUMMARY.md'.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0009",
@@ -126,7 +134,8 @@
       "implementation_notes": "Implemented a business logic review and hardening for fixed-price and subscription project flows by improving frontend sales generation handling and explicitly documenting gaps around billable status updates. Updated 'src/hooks/useProject.js' to add '[Business Logic]' logging plus stronger error handling and warnings in 'handleProjectCreate()' and 'handleProjectUpdate()' so sales entry failures do not crash project operations. Updated 'src/services/projectService.js' to add detailed documentation, logging, and error handling around the still-unimplemented 'updateProjectRecordsBillableStatus()', explicitly noting it requires a backend endpoint to function. Added documentation deliverables 'TSK0009_BUSINESS_LOGIC_REVIEW.md' and 'TSK0009_COMPLETION_SUMMARY.md', and marked TSK0009 complete after verifying the build succeeds, with the key decision to recommend migrating these rules to the backend for transaction safety, deduping, and server-side enforcement.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0010",
@@ -139,7 +148,8 @@
       "implementation_notes": "Implemented TSK0010 by updating 'ProjectDetails.jsx' to align with the new backend schema, replacing 'recordId' usage with 'project.id' for status toggling and other operations, and adjusting loading and error handling plus PropTypes (making 'recordId' optional for backward compatibility). Updated related tabs to use the new identifier, including 'ProjectTeamTab.jsx' (team assignment) and 'ProjectNotesTab.jsx' (note creation and details loading), ensuring all project detail tabs receive consistent data. Confirmed parent integration via 'MainContent' and the 'useProject' hook signature '(projectId, status)', and verified builds compile successfully after the changes. Added documentation in 'TSK0010_COMPLETION_SUMMARY.md' and 'TSK0010_CHANGES.md', and marked the task complete in 'tasks.json'.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0011",
@@ -152,7 +162,8 @@
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "implementation_notes": "Implemented updates to project list and creation components to support the new backend API schema while preserving FileMaker backward compatibility via dual field handling and status normalization. Key changes were made in 'src/components/projects/ProjectList.jsx' (customer/status field usage and simplified selection), 'src/components/customers/ProjectCreationForm.jsx' (submission payload now includes both backend and legacy field names), and 'src/components/customers/ProjectCard.jsx' (pricing/type/date rendering updated to read both schema variants and PropTypes expanded), while 'ProjectListing.jsx' required no changes. Marked TSK0011 complete in '.devflow/tasks/projects-backend-integration/tasks.json' and added documentation in '.devflow/tasks/projects-backend-integration/TSK0011_COMPLETION_SUMMARY.md'. Build was verified successfully after the updates."
+      "implementation_notes": "Implemented updates to project list and creation components to support the new backend API schema while preserving FileMaker backward compatibility via dual field handling and status normalization. Key changes were made in 'src/components/projects/ProjectList.jsx' (customer/status field usage and simplified selection), 'src/components/customers/ProjectCreationForm.jsx' (submission payload now includes both backend and legacy field names), and 'src/components/customers/ProjectCard.jsx' (pricing/type/date rendering updated to read both schema variants and PropTypes expanded), while 'ProjectListing.jsx' required no changes. Marked TSK0011 complete in '.devflow/tasks/projects-backend-integration/tasks.json' and added documentation in '.devflow/tasks/projects-backend-integration/TSK0011_COMPLETION_SUMMARY.md'. Build was verified successfully after the updates.",
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0012",
@@ -165,7 +176,8 @@
       "implementation_notes": "Implemented full objectives and steps CRUD in the objectives tab by adding step API utilities in 'src/api/projects.js' (create, update, delete, toggle completed, reorder) and exporting them via 'src/api/index.js'. Extended 'src/hooks/useProject.js' to include new step handlers with environment-aware routing and backend vs FileMaker field mapping, then rewired the prop chain through 'MainContent.jsx' and 'ProjectDetails.jsx' (including PropTypes) into 'ProjectObjectivesTab.jsx'. Reworked 'ProjectObjectivesTab.jsx' UI to support inline editing, step add edit toggle, delete confirmations, and completion tracking while preserving dark mode and keyboard shortcuts, and confirmed the build succeeds; task status and docs were updated in 'tasks.json' plus 'TSK0012_COMPLETION_SUMMARY.md' and 'TSK0012_CHANGES.md'.",
       "executionError": null,
       "executionPid": null,
-      "sessionId": null
+      "sessionId": null,
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0013",
@@ -176,7 +188,8 @@
       "executionPid": null,
       "sessionId": null,
       "executionError": null,
-      "implementation_notes": "Implemented backend-API support for project links, notes, and images while preserving FileMaker compatibility by adding environment-aware API clients in 'src/api/links.js', 'src/api/notes.js', and new 'src/api/images.js', plus updating exports in 'src/api/index.js' (and resolving a duplicate export by removing 'fetchProjectNotes' from the notes export since it already exists in projects). Updated services and hooks ('src/services/linkService.js', 'src/services/noteService.js', 'src/hooks/useLink.js', 'src/hooks/useNote.js') to add fetch and delete flows with response normalization for polymorphic links and notes and project-scoped images. Refreshed UI components under 'src/components/projects/' by enhancing 'ProjectNotesTab.jsx' and 'ProjectLinksTab.jsx' PropTypes and dual-format rendering, and adding a new 'ProjectImagesTab.jsx' with grid display and modal viewing; key decision was to normalize both backend and legacy data shapes (e.g., 'content' vs 'fieldData.note', 'url' vs 'link') for backward-compatible rendering."
+      "implementation_notes": "Implemented backend-API support for project links, notes, and images while preserving FileMaker compatibility by adding environment-aware API clients in 'src/api/links.js', 'src/api/notes.js', and new 'src/api/images.js', plus updating exports in 'src/api/index.js' (and resolving a duplicate export by removing 'fetchProjectNotes' from the notes export since it already exists in projects). Updated services and hooks ('src/services/linkService.js', 'src/services/noteService.js', 'src/hooks/useLink.js', 'src/hooks/useNote.js') to add fetch and delete flows with response normalization for polymorphic links and notes and project-scoped images. Refreshed UI components under 'src/components/projects/' by enhancing 'ProjectNotesTab.jsx' and 'ProjectLinksTab.jsx' PropTypes and dual-format rendering, and adding a new 'ProjectImagesTab.jsx' with grid display and modal viewing; key decision was to normalize both backend and legacy data shapes (e.g., 'content' vs 'fieldData.note', 'url' vs 'link') for backward-compatible rendering.",
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0014",
@@ -189,7 +202,8 @@
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented backend-compatible project display handling across financial and proposals features while preserving FileMaker backward compatibility by normalizing field access for both schemas. Updated 'src/components/financial/ProjectList.jsx' to add a 'normalizeProject()' helper for id and name resolution in the aggregated financial-by-project view, clarified 'src/components/financial/ProjectReportButton.jsx' expectations via documentation, and expanded 'src/components/proposals/ProjectProposalsTab.jsx' PropTypes and comments to accept both id and customer field variants. Marked TSK0014 complete by updating '.devflow/tasks/projects-backend-integration/tasks.json' and adding the writeup in '.devflow/tasks/projects-backend-integration/TSK0014_COMPLETION_SUMMARY.md', with the key decision to rely on upstream 'projectService' normalization and only harden component-level compatibility where needed.",
-      "executionError": null
+      "executionError": null,
+      "feature": "projects-backend-integration"
     },
     {
       "id": "TSK0015",
@@ -202,7 +216,8 @@
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented a comprehensive projects test and fixture update for Supabase backend integration, adding API coverage for environment-aware routing, org scoping, full CRUD for projects and related entities, reorder and toggle behaviors, and robust error handling. Key files added or updated were 'src/api/__tests__/projects.test.js' (42 tests), 'src/services/__tests__/projectService.test.js' (23 tests), and 'src/__tests__/fixtures/projectFixtures.js' (Supabase and FileMaker mock data plus helpers). Tests were aligned to actual implementation details, including using PATCH (not PUT) for updates, sending reorder arrays directly, omitting bodies for toggle endpoints, matching service return shapes, and using correct field names like 'isFixedPrice' and 'isSubscription'. Final result was 65 passing tests with a successful build, and 'tasks.json' was updated to mark 'TSK0015' complete.",
-      "executionError": null
+      "executionError": null,
+      "feature": "projects-backend-integration"
     }
   ]
 }

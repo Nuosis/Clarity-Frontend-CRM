@@ -25,7 +25,8 @@
       "files": [
         "requirements/links/current-implementation.md"
       ],
-      "dependencies": []
+      "dependencies": [],
+      "feature": "links-migration-requirements"
     },
     {
       "id": "TSK0002",
@@ -36,7 +37,10 @@
       "files": [
         "requirements/links/data-model-mapping.md"
       ],
-      "dependencies": ["TSK0001"]
+      "dependencies": [
+        "TSK0001"
+      ],
+      "feature": "links-migration-requirements"
     },
     {
       "id": "TSK0003",
@@ -47,7 +51,10 @@
       "files": [
         "requirements/links/api-contracts.md"
       ],
-      "dependencies": ["TSK0002"]
+      "dependencies": [
+        "TSK0002"
+      ],
+      "feature": "links-migration-requirements"
     },
     {
       "id": "TSK0004",
@@ -58,7 +65,10 @@
       "files": [
         "requirements/links/authorization.md"
       ],
-      "dependencies": ["TSK0002"]
+      "dependencies": [
+        "TSK0002"
+      ],
+      "feature": "links-migration-requirements"
     },
     {
       "id": "TSK0005",
@@ -69,7 +79,11 @@
       "files": [
         "requirements/links/migration-plan.md"
       ],
-      "dependencies": ["TSK0002", "TSK0003"]
+      "dependencies": [
+        "TSK0002",
+        "TSK0003"
+      ],
+      "feature": "links-migration-requirements"
     },
     {
       "id": "TSK0006",
@@ -80,7 +94,11 @@
       "files": [
         "requirements/links/acceptance-criteria.md"
       ],
-      "dependencies": ["TSK0001", "TSK0003"]
+      "dependencies": [
+        "TSK0001",
+        "TSK0003"
+      ],
+      "feature": "links-migration-requirements"
     },
     {
       "id": "TSK0007",
@@ -91,7 +109,10 @@
       "files": [
         "BACKEND_CHANGE_REQUEST_LINKS.md"
       ],
-      "dependencies": ["TSK0002"]
+      "dependencies": [
+        "TSK0002"
+      ],
+      "feature": "links-migration-requirements"
     },
     {
       "id": "TSK0008",
@@ -102,7 +123,15 @@
       "files": [
         "requirements/links/README.md"
       ],
-      "dependencies": ["TSK0001", "TSK0002", "TSK0003", "TSK0004", "TSK0005", "TSK0006"]
+      "dependencies": [
+        "TSK0001",
+        "TSK0002",
+        "TSK0003",
+        "TSK0004",
+        "TSK0005",
+        "TSK0006"
+      ],
+      "feature": "links-migration-requirements"
     }
   ]
 }
