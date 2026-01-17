@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-17T19:43:42.597Z",
+  "updated_at": "2026-01-17T20:09:32.006Z",
   "feature": {
     "name": "Projects Backend Integration",
     "slug": "projects-backend-integration",
@@ -494,10 +494,12 @@
       "context": {
         "role_in_system": "Remediate review finding COD-001 from iteration 2"
       },
-      "status": "in_progress",
+      "status": "done",
+      "completedAt": "2026-01-17T19:45:48.287Z",
       "executionError": null,
-      "executionPid": 1768679022584,
-      "sessionId": null,
+      "executionPid": null,
+      "sessionId": "019bcd7c-2074-7fb2-b78c-480224d72f23",
+      "implementation_notes": "Task execution completed. Check logs for details.\n\nFinal output:\nFixed the project selection race by gating updates to the latest request and merging fetched detail data instead of re-reading stale state in `src/hooks/useProject.js`.\n\n**Findings**\n- High: stale closure in `src/hooks/useProject.js` caused `handleProjectSelect` to read outdated `projects` after `loadProjectDetails`, so selection could end up missing details or wrong; now uses request-id gating and merges returned details directly.\n- Medium: earlier selection calls could finish later and flip `loading`/`error` for a newer selection; now state updates are guarded to the latest request.\n\n**Tests**\n- `npm run build` (passes; existing warnings: `createProposalDeliverables`/`createProposalConcepts` not exported in `src/services/proposalService.js`).\n\nIf you want, I can also add a focused test around rapid project selection to lock this behavior down.",
       "depends_on": []
     },
     {
@@ -515,9 +517,9 @@
       "context": {
         "role_in_system": "Remediate review finding COD-002 from iteration 2"
       },
-      "status": "pending",
+      "status": "in_progress",
       "executionError": null,
-      "executionPid": null,
+      "executionPid": 1768680432967,
       "sessionId": null,
       "depends_on": []
     },

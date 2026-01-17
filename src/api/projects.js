@@ -78,9 +78,36 @@ export async function fetchProjectsForCustomers(customerIds) {
     checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomers');
 
     // Fetch projects for each customer and combine results
-    const projectLists = await Promise.all(
-        customerIds.map(id => dataService.get(`/api/projects/customer/${id}`))
+    const projectResults = await Promise.allSettled(
+        customerIds.map(async (id) => {
+            try {
+                return await dataService.get(`/api/projects/customer/${id}`);
+            } catch (error) {
+                const contextError = new Error(`Failed to fetch projects for customer ${id}: ${error.message}`);
+                contextError.customerId = id;
+                contextError.cause = error;
+                throw contextError;
+            }
+        })
     );
+
+    const failures = projectResults.filter(result => result.status === 'rejected');
+    if (failures.length) {
+        const failedIds = failures
+            .map(failure => failure.reason?.customerId)
+            .filter(Boolean);
+        console.error('[Projects] Failed to fetch projects for customers:', failures.map(failure => failure.reason));
+        const message = failedIds.length
+            ? `Failed to fetch projects for customers: ${failedIds.join(', ')}`
+            : 'Failed to fetch projects for one or more customers.';
+        const error = new Error(message);
+        error.failures = failures.map(failure => failure.reason);
+        throw error;
+    }
+
+    const projectLists = projectResults
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value);
     const allProjects = projectLists.flatMap(response => response.data || response);
     return normalizeProjectData(allProjects);
 }
