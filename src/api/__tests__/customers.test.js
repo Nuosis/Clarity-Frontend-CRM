@@ -1128,6 +1128,25 @@ describe('Customer API Integration Tests', () => {
                 __ID: 'legacy-id'
             });
         });
+
+        it('should preserve legacy __ID when id is also present', async () => {
+            const mockCustomer = {
+                id: 'backend-id',
+                __ID: 'legacy-id',
+                business_name: 'Test Customer'
+            };
+
+            dataService.dataService.get.mockResolvedValue({
+                data: mockCustomer
+            });
+
+            const result = await customersApi.fetchCustomerById('backend-id');
+
+            expect(result).toMatchObject({
+                id: 'backend-id',
+                __ID: 'legacy-id'
+            });
+        });
     });
 
     describe('Parameter Validation', () => {

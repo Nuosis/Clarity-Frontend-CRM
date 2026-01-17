@@ -34,7 +34,8 @@ const SignIn = ({ onSupabaseAuth }) => {
       onSupabaseAuth({
         isAuthenticated: true,
         method: 'supabase',
-        user: result.data.user
+        user: result.data.user,
+        accessToken: result.data.session?.access_token || null
       });
     } catch (err) {
       console.error('[SignIn] Supabase authentication error:', err);

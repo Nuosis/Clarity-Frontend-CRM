@@ -6,59 +6,7 @@
 
 import axios from 'axios';
 import { backendConfig } from '../config';
-
-// ============================================================================
-// HMAC AUTHENTICATION
-// ============================================================================
-
-/**
- * Generate HMAC-SHA256 authentication header for backend API
- * @param {string} payload - Request payload
- * @returns {Promise<string>} Authorization header
- */
-async function generateAuthHeader(payload = '') {
-  const secretKey = import.meta.env.VITE_SECRET_KEY;
-
-  if (!secretKey) {
-    console.warn('[ProposalExtended] SECRET_KEY not available. Using development mode.');
-    const timestamp = Math.floor(Date.now() / 1000);
-    return `Bearer dev-token.${timestamp}`;
-  }
-
-  if (typeof crypto === 'undefined' || !crypto.subtle) {
-    console.warn('[ProposalExtended] Web Crypto API not available. Using fallback auth.');
-    const timestamp = Math.floor(Date.now() / 1000);
-    return `Bearer fallback-token.${timestamp}`;
-  }
-
-  const timestamp = Math.floor(Date.now() / 1000);
-  const message = `${timestamp}.${payload}`;
-
-  try {
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(secretKey);
-    const messageData = encoder.encode(message);
-
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-
-    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-    const signatureHex = Array.from(new Uint8Array(signature))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    return `Bearer ${signatureHex}.${timestamp}`;
-  } catch (error) {
-    console.warn('[ProposalExtended] Crypto operation failed, using fallback:', error);
-    const timestamp = Math.floor(Date.now() / 1000);
-    return `Bearer fallback-token.${timestamp}`;
-  }
-}
+import { generateBackendAuthHeader } from '../services/dataService';
 
 /**
  * Make authenticated API request to backend
@@ -80,9 +28,9 @@ async function apiRequest(method, path, data = null) {
     if (data) {
       config.data = data;
       const payload = JSON.stringify(data);
-      config.headers.Authorization = await generateAuthHeader(payload);
+      config.headers.Authorization = await generateBackendAuthHeader(payload);
     } else {
-      config.headers.Authorization = await generateAuthHeader();
+      config.headers.Authorization = await generateBackendAuthHeader();
     }
 
     console.log('[ProposalExtended] Making API request:', method, path, 'data:', data);

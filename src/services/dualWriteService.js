@@ -49,8 +49,8 @@ import { createSaleFromFinancialRecord } from './salesService';
  * Configuration for dual-write operations
  */
 const DUAL_WRITE_CONFIG = {
-  // Enable/disable dual writes globally
-  enabled: true,
+  // Enable/disable dual writes globally (disabled by default; no transactional guarantees)
+  enabled: false,
   // Retry configuration for failed Supabase writes
   maxRetries: 3,
   retryDelay: 1000, // 1 second
@@ -67,6 +67,7 @@ const DUAL_WRITE_CONFIG = {
  * @param {string} options.operationType - Type of operation ('timer_stop', 'record_create', 'record_update')
  * @param {string} options.organizationId - Organization ID for Supabase
  * @param {Object} options.recordData - Record data for Supabase operation
+ * @param {boolean} options.allowUnsafeDualWrite - Must be true to permit dual-write execution
  * @returns {Promise<Object>} - Result of the FileMaker operation with dual-write status
  */
 export async function withDualWrite(fileMakerOperation, options = {}) {
@@ -75,10 +76,14 @@ export async function withDualWrite(fileMakerOperation, options = {}) {
     operationType,
     organizationId,
     recordData,
-    enableRollback = false
+    enableRollback = false,
+    allowUnsafeDualWrite = false
   } = options;
 
-  if (!DUAL_WRITE_CONFIG.enabled) {
+  if (!DUAL_WRITE_CONFIG.enabled || !allowUnsafeDualWrite) {
+    if (DUAL_WRITE_CONFIG.enabled && !allowUnsafeDualWrite) {
+      console.warn('[DualWrite] Dual-write blocked: no transaction guarantees. Set allowUnsafeDualWrite to override.');
+    }
     console.log('[DualWrite] Dual-write disabled, executing FileMaker operation only');
     return await fileMakerOperation();
   }

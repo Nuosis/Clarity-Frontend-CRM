@@ -1,15 +1,61 @@
 import { dataService, getAuthenticationContext } from '../services/dataService';
+import {
+    withNoteErrorHandling,
+    checkNoteOrganizationScope,
+    NoteError,
+    NoteErrorCodes
+} from '../errors';
 
 /**
- * Check organization scope
- * @param {Object} auth - Authentication context
- * @param {string} operation - Operation name for error messages
- * @throws {Error} If organization ID is missing
+ * Normalize note data from backend API
+ * @param {Object|Array} data - Raw note data from backend
+ * @returns {Object|Array} Normalized note data
  */
-function checkOrganizationScope({ authentication: auth }, operation) {
-    if (!auth?.user?.supabaseOrgID) {
-        throw new Error(`Organization context required for ${operation}. Please authenticate.`);
+function normalizeNoteData(data) {
+    if (!data) {
+        return data;
     }
+
+    if (Array.isArray(data)) {
+        return data.map(note => ({
+            id: note.id || note.__ID,
+            __ID: note.id || note.__ID,
+            ...note
+        }));
+    }
+
+    return {
+        id: data.id || data.__ID,
+        __ID: data.id || data.__ID,
+        ...data
+    };
+}
+
+/**
+ * Normalize list response for notes (data + pagination).
+ * Handles backend responses with { data: [], pagination: {} } and legacy arrays.
+ * @param {Object|Array} response - Raw API response
+ * @returns {Object} { notes, pagination }
+ */
+function normalizeNoteListResponse(response) {
+    if (!response) {
+        return { notes: [], pagination: null };
+    }
+
+    const rawNotes = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.data?.notes)
+            ? response.data.notes
+            : Array.isArray(response?.notes)
+                ? response.notes
+                : Array.isArray(response)
+                    ? response
+                    : [];
+
+    const pagination = response?.pagination || response?.data?.pagination || null;
+    const normalizedNotes = normalizeNoteData(rawNotes) || [];
+
+    return { notes: normalizedNotes, pagination };
 }
 
 /**
@@ -29,56 +75,66 @@ function checkOrganizationScope({ authentication: auth }, operation) {
  * @note 'created_by' is set automatically by backend from JWT, not from request payload
  */
 export async function createNote(data) {
-    if (!data) {
-        throw new Error('Data is required');
-    }
+    return withNoteErrorHandling(async () => {
+        if (!data) {
+            throw new NoteError('Data is required', NoteErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    // Backend API: POST /projects/{parent_id}/notes
-    // Database schema uses explicit FKs: project_id, customer_id, task_id
-    // Exactly ONE must be provided (enforced by check constraint)
+        // Backend API: POST /projects/{parent_id}/notes
+        // Database schema uses explicit FKs: project_id, customer_id, task_id
+        // Exactly ONE must be provided (enforced by check constraint)
 
-    const projectId = data.project_id;
-    const customerId = data.customer_id;
-    const taskId = data.task_id;
+        const projectId = data.project_id;
+        const customerId = data.customer_id;
+        const taskId = data.task_id;
 
-    // Determine parent entity
-    if (!projectId && !customerId && !taskId) {
-        throw new Error('One of project_id, customer_id, or task_id is required for creating notes');
-    }
+        // Determine parent entity
+        if (!projectId && !customerId && !taskId) {
+            throw new NoteError(
+                'One of project_id, customer_id, or task_id is required for creating notes',
+                NoteErrorCodes.REQUIRED_FIELD_MISSING,
+                { field: 'parent_id' }
+            );
+        }
 
-    // Ensure exactly one parent is provided
-    const parentCount = [projectId, customerId, taskId].filter(Boolean).length;
-    if (parentCount > 1) {
-        throw new Error('Only one of project_id, customer_id, or task_id should be provided');
-    }
+        // Ensure exactly one parent is provided
+        const parentCount = [projectId, customerId, taskId].filter(Boolean).length;
+        if (parentCount > 1) {
+            throw new NoteError(
+                'Only one of project_id, customer_id, or task_id should be provided',
+                NoteErrorCodes.INVALID_NOTE_DATA,
+                { field: 'parent_id' }
+            );
+        }
 
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'createNote');
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkNoteOrganizationScope({ authentication: auth }, 'createNote');
 
-    // Build payload matching database schema
-    const payload = {
-        note: data.content || data.note,
-        type: data.type || 'general',
-        project_id: projectId || null,
-        customer_id: customerId || null,
-        task_id: taskId || null
-        // organization_id added by backend from X-Organization-ID header
-        // created_by set by backend from JWT token
-    };
+        // Build payload matching database schema
+        const payload = {
+            note: data.content || data.note,
+            type: data.type || 'general',
+            project_id: projectId || null,
+            customer_id: customerId || null,
+            task_id: taskId || null
+            // organization_id added by backend from X-Organization-ID header
+            // created_by set by backend from JWT token
+        };
 
-    // Use appropriate endpoint based on parent entity
-    let endpoint;
-    if (projectId) {
-        endpoint = `/projects/${projectId}/notes`;
-    } else if (taskId) {
-        endpoint = `/tasks/${taskId}/notes`;
-    } else if (customerId) {
-        endpoint = `/customers/${customerId}/notes`;
-    }
+        // Use appropriate endpoint based on parent entity
+        let endpoint;
+        if (projectId) {
+            endpoint = `/projects/${projectId}/notes`;
+        } else if (taskId) {
+            endpoint = `/tasks/${taskId}/notes`;
+        } else if (customerId) {
+            endpoint = `/customers/${customerId}/notes`;
+        }
 
-    const response = await dataService.post(endpoint, payload);
-    return response.data || response;
+        const response = await dataService.post(endpoint, payload);
+        return normalizeNoteData(response.data || response);
+    }, 'createNote', { data });
 }
 
 /**
@@ -88,24 +144,28 @@ export async function createNote(data) {
  * @param {Object} options - Query options
  * @param {number} options.limit - Max records to return (default: backend default)
  * @param {number} options.offset - Pagination offset (default: 0)
- * @returns {Promise<Array>} Array of note objects
+ * @returns {Promise<Object>} Note list with pagination
  */
 export async function fetchNotesByProject(projectId, options = {}) {
-    if (!projectId) {
-        throw new Error('Project ID is required');
-    }
+    return withNoteErrorHandling(async () => {
+        if (!projectId) {
+            throw new NoteError('Project ID is required', NoteErrorCodes.REQUIRED_FIELD_MISSING, {
+                field: 'projectId'
+            });
+        }
 
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchNotesByProject');
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkNoteOrganizationScope({ authentication: auth }, 'fetchNotesByProject');
 
-    // Backend API: GET /projects/{project_id}/notes
-    const queryParams = {};
-    if (options.limit) queryParams.limit = options.limit;
-    if (options.offset) queryParams.offset = options.offset;
+        // Backend API: GET /projects/{project_id}/notes
+        const queryParams = {};
+        if (options.limit) queryParams.limit = options.limit;
+        if (options.offset) queryParams.offset = options.offset;
 
-    const response = await dataService.get(`/projects/${projectId}/notes`, { params: queryParams });
-    return response.data || response;
+        const response = await dataService.get(`/projects/${projectId}/notes`, { params: queryParams });
+        return normalizeNoteListResponse(response);
+    }, 'fetchNotesByProject', { projectId, options });
 }
 
 /**
@@ -115,24 +175,28 @@ export async function fetchNotesByProject(projectId, options = {}) {
  * @param {Object} options - Query options
  * @param {number} options.limit - Max records to return
  * @param {number} options.offset - Pagination offset
- * @returns {Promise<Array>} Array of note objects
+ * @returns {Promise<Object>} Note list with pagination
  */
 export async function fetchNotesByTask(taskId, options = {}) {
-    if (!taskId) {
-        throw new Error('Task ID is required');
-    }
+    return withNoteErrorHandling(async () => {
+        if (!taskId) {
+            throw new NoteError('Task ID is required', NoteErrorCodes.REQUIRED_FIELD_MISSING, {
+                field: 'taskId'
+            });
+        }
 
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchNotesByTask');
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkNoteOrganizationScope({ authentication: auth }, 'fetchNotesByTask');
 
-    // Backend API: GET /tasks/{task_id}/notes
-    const queryParams = {};
-    if (options.limit) queryParams.limit = options.limit;
-    if (options.offset) queryParams.offset = options.offset;
+        // Backend API: GET /tasks/{task_id}/notes
+        const queryParams = {};
+        if (options.limit) queryParams.limit = options.limit;
+        if (options.offset) queryParams.offset = options.offset;
 
-    const response = await dataService.get(`/tasks/${taskId}/notes`, { params: queryParams });
-    return response.data || response;
+        const response = await dataService.get(`/tasks/${taskId}/notes`, { params: queryParams });
+        return normalizeNoteListResponse(response);
+    }, 'fetchNotesByTask', { taskId, options });
 }
 
 /**
@@ -142,24 +206,28 @@ export async function fetchNotesByTask(taskId, options = {}) {
  * @param {Object} options - Query options
  * @param {number} options.limit - Max records to return
  * @param {number} options.offset - Pagination offset
- * @returns {Promise<Array>} Array of note objects
+ * @returns {Promise<Object>} Note list with pagination
  */
 export async function fetchNotesByCustomer(customerId, options = {}) {
-    if (!customerId) {
-        throw new Error('Customer ID is required');
-    }
+    return withNoteErrorHandling(async () => {
+        if (!customerId) {
+            throw new NoteError('Customer ID is required', NoteErrorCodes.REQUIRED_FIELD_MISSING, {
+                field: 'customerId'
+            });
+        }
 
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchNotesByCustomer');
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkNoteOrganizationScope({ authentication: auth }, 'fetchNotesByCustomer');
 
-    // Backend API: GET /customers/{customer_id}/notes
-    const queryParams = {};
-    if (options.limit) queryParams.limit = options.limit;
-    if (options.offset) queryParams.offset = options.offset;
+        // Backend API: GET /customers/{customer_id}/notes
+        const queryParams = {};
+        if (options.limit) queryParams.limit = options.limit;
+        if (options.offset) queryParams.offset = options.offset;
 
-    const response = await dataService.get(`/customers/${customerId}/notes`, { params: queryParams });
-    return response.data || response;
+        const response = await dataService.get(`/customers/${customerId}/notes`, { params: queryParams });
+        return normalizeNoteListResponse(response);
+    }, 'fetchNotesByCustomer', { customerId, options });
 }
 
 /**
@@ -167,7 +235,9 @@ export async function fetchNotesByCustomer(customerId, options = {}) {
  * @deprecated Use fetchNotesByProject instead
  */
 export async function fetchProjectNotes(projectId, options = {}) {
-    return fetchNotesByProject(projectId, options);
+    return withNoteErrorHandling(async () => {
+        return fetchNotesByProject(projectId, options);
+    }, 'fetchProjectNotes', { projectId, options });
 }
 
 /**
@@ -183,28 +253,34 @@ export async function fetchProjectNotes(projectId, options = {}) {
  * @note Backend sets 'updated_by' automatically from JWT token
  */
 export async function updateNote(noteId, data) {
-    if (!noteId) {
-        throw new Error('Note ID is required');
-    }
-    if (!data) {
-        throw new Error('Update data is required');
-    }
+    return withNoteErrorHandling(async () => {
+        if (!noteId) {
+            throw new NoteError('Note ID is required', NoteErrorCodes.REQUIRED_FIELD_MISSING, {
+                field: 'noteId'
+            });
+        }
+        if (!data) {
+            throw new NoteError('Update data is required', NoteErrorCodes.REQUIRED_FIELD_MISSING, {
+                field: 'data'
+            });
+        }
 
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'updateNote');
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkNoteOrganizationScope({ authentication: auth }, 'updateNote');
 
-    // Backend API: PATCH /projects/notes/{note_id}
-    const payload = {};
-    if (data.note || data.content) {
-        payload.note = data.content || data.note;
-    }
-    if (data.type) {
-        payload.type = data.type;
-    }
+        // Backend API: PATCH /projects/notes/{note_id}
+        const payload = {};
+        if (data.note || data.content) {
+            payload.note = data.content || data.note;
+        }
+        if (data.type) {
+            payload.type = data.type;
+        }
 
-    const response = await dataService.patch(`/projects/notes/${noteId}`, payload);
-    return response.data || response;
+        const response = await dataService.patch(`/projects/notes/${noteId}`, payload);
+        return normalizeNoteData(response.data || response);
+    }, 'updateNote', { noteId, data });
 }
 
 /**
@@ -214,15 +290,19 @@ export async function updateNote(noteId, data) {
  * @returns {Promise<Object>} Deletion result
  */
 export async function deleteNote(noteId) {
-    if (!noteId) {
-        throw new Error('Note ID is required');
-    }
+    return withNoteErrorHandling(async () => {
+        if (!noteId) {
+            throw new NoteError('Note ID is required', NoteErrorCodes.REQUIRED_FIELD_MISSING, {
+                field: 'noteId'
+            });
+        }
 
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'deleteNote');
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkNoteOrganizationScope({ authentication: auth }, 'deleteNote');
 
-    // Backend API: DELETE /projects/notes/{note_id}
-    const response = await dataService.delete(`/projects/notes/${noteId}`);
-    return response.data || response;
+        // Backend API: DELETE /projects/notes/{note_id}
+        const response = await dataService.delete(`/projects/notes/${noteId}`);
+        return response.data || response;
+    }, 'deleteNote', { noteId });
 }

@@ -67,7 +67,7 @@ function getAuthToken(req) {
 The HMAC validation logic remains unchanged:
 - Token format: `{signature}.{timestamp}`
 - Message: `{timestamp}.{payload}` (where payload is empty string for GET requests)
-- Secret: `QArxVv0J1xggzd8Ai_Sk7TfFzllOflBJjVxA4kazpDo`
+- Secret: `REDACTED`
 - Algorithm: HMAC-SHA256
 
 ## Frontend Implementation Ready

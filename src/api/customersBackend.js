@@ -25,7 +25,13 @@
  * - Proper error handling and validation
  */
 
-import { dataService } from '../services/dataService.js';
+import { dataService, getAuthenticationContext } from '../services/dataService.js';
+import {
+  checkOrganizationScope,
+  CustomerError,
+  CustomerErrorCodes,
+  withErrorHandling
+} from '../errors/customerErrors.js';
 
 const BASE_PATH = '/api/customers';
 
@@ -45,33 +51,38 @@ const BASE_PATH = '/api/customers';
  * const searchResults = await listCustomers({ search: 'John', include_related: true });
  */
 export async function listCustomers(options = {}) {
-  const {
-    limit = 50,
-    offset = 0,
-    active,
-    search,
-    include_related = false
-  } = options;
+  return withErrorHandling(async () => {
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'listCustomers');
 
-  const params = {
-    limit: Math.min(Math.max(limit, 1), 200),
-    offset: Math.max(offset, 0)
-  };
+    const {
+      limit = 50,
+      offset = 0,
+      active,
+      search,
+      include_related = false
+    } = options;
 
-  if (active !== undefined) {
-    params.active = active;
-  }
+    const params = {
+      limit: Math.min(Math.max(limit, 1), 200),
+      offset: Math.max(offset, 0)
+    };
 
-  if (search) {
-    params.search = search;
-  }
+    if (active !== undefined) {
+      params.active = active;
+    }
 
-  if (include_related) {
-    params.include_related = include_related;
-  }
+    if (search) {
+      params.search = search;
+    }
 
-  const response = await dataService.get(BASE_PATH, params);
-  return response;
+    if (include_related) {
+      params.include_related = include_related;
+    }
+
+    const response = await dataService.get(BASE_PATH, params);
+    return response;
+  }, 'listCustomers', { options });
 }
 
 /**
@@ -88,19 +99,28 @@ export async function listCustomers(options = {}) {
  * const customerBasic = await getCustomerById(id, { include_related: false });
  */
 export async function getCustomerById(customerId, options = {}) {
-  if (!customerId) {
-    throw new Error('Customer ID is required');
-  }
+  return withErrorHandling(async () => {
+    if (!customerId) {
+      throw new CustomerError(
+        'Customer ID is required',
+        CustomerErrorCodes.REQUIRED_FIELD_MISSING,
+        { field: 'customerId' }
+      );
+    }
 
-  const { include_related = true } = options;
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'getCustomerById');
 
-  const params = {};
-  if (include_related !== undefined) {
-    params.include_related = include_related;
-  }
+    const { include_related = true } = options;
 
-  const response = await dataService.get(`${BASE_PATH}/${customerId}`, params);
-  return response;
+    const params = {};
+    if (include_related !== undefined) {
+      params.include_related = include_related;
+    }
+
+    const response = await dataService.get(`${BASE_PATH}/${customerId}`, params);
+    return response;
+  }, 'getCustomerById', { customerId, options });
 }
 
 /**
@@ -136,17 +156,26 @@ export async function getCustomerById(customerId, options = {}) {
  * });
  */
 export async function createCustomer(customerData, options = {}) {
-  if (!customerData || !customerData.name) {
-    throw new Error('Customer name is required');
-  }
+  return withErrorHandling(async () => {
+    if (!customerData || !customerData.name) {
+      throw new CustomerError(
+        'Customer name is required',
+        CustomerErrorCodes.REQUIRED_FIELD_MISSING,
+        { field: 'name' }
+      );
+    }
 
-  const headers = {};
-  if (options.idempotencyKey) {
-    headers['Idempotency-Key'] = options.idempotencyKey;
-  }
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'createCustomer');
 
-  const response = await dataService.post(BASE_PATH, customerData);
-  return response;
+    const headers = {};
+    if (options.idempotencyKey) {
+      headers['Idempotency-Key'] = options.idempotencyKey;
+    }
+
+    const response = await dataService.post(BASE_PATH, customerData, { headers });
+    return response;
+  }, 'createCustomer', { customerData, options });
 }
 
 /**
@@ -179,16 +208,29 @@ export async function createCustomer(customerData, options = {}) {
  * });
  */
 export async function updateCustomer(customerId, customerData) {
-  if (!customerId) {
-    throw new Error('Customer ID is required');
-  }
+  return withErrorHandling(async () => {
+    if (!customerId) {
+      throw new CustomerError(
+        'Customer ID is required',
+        CustomerErrorCodes.REQUIRED_FIELD_MISSING,
+        { field: 'customerId' }
+      );
+    }
 
-  if (!customerData || Object.keys(customerData).length === 0) {
-    throw new Error('Customer data is required');
-  }
+    if (!customerData || Object.keys(customerData).length === 0) {
+      throw new CustomerError(
+        'Customer data is required',
+        CustomerErrorCodes.REQUIRED_FIELD_MISSING,
+        { field: 'customerData' }
+      );
+    }
 
-  const response = await dataService.patch(`${BASE_PATH}/${customerId}`, customerData);
-  return response;
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'updateCustomer');
+
+    const response = await dataService.patch(`${BASE_PATH}/${customerId}`, customerData);
+    return response;
+  }, 'updateCustomer', { customerId, customerData });
 }
 
 /**
@@ -202,12 +244,21 @@ export async function updateCustomer(customerId, customerData) {
  * await deleteCustomer('123e4567-e89b-12d3-a456-426614174000');
  */
 export async function deleteCustomer(customerId) {
-  if (!customerId) {
-    throw new Error('Customer ID is required');
-  }
+  return withErrorHandling(async () => {
+    if (!customerId) {
+      throw new CustomerError(
+        'Customer ID is required',
+        CustomerErrorCodes.REQUIRED_FIELD_MISSING,
+        { field: 'customerId' }
+      );
+    }
 
-  const response = await dataService.delete(`${BASE_PATH}/${customerId}`);
-  return response;
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'deleteCustomer');
+
+    const response = await dataService.delete(`${BASE_PATH}/${customerId}`);
+    return response;
+  }, 'deleteCustomer', { customerId });
 }
 
 /**
@@ -222,11 +273,17 @@ export async function deleteCustomer(customerId) {
  * await updateCustomerStatus(id, true);  // Activate
  */
 export async function updateCustomerStatus(customerId, isActive) {
-  if (!customerId) {
-    throw new Error('Customer ID is required');
-  }
+  return withErrorHandling(async () => {
+    if (!customerId) {
+      throw new CustomerError(
+        'Customer ID is required',
+        CustomerErrorCodes.REQUIRED_FIELD_MISSING,
+        { field: 'customerId' }
+      );
+    }
 
-  return await updateCustomer(customerId, { is_active: isActive });
+    return await updateCustomer(customerId, { is_active: isActive });
+  }, 'updateCustomerStatus', { customerId, isActive });
 }
 
 /**
@@ -242,12 +299,21 @@ export async function updateCustomerStatus(customerId, isActive) {
  * ]);
  */
 export async function batchCreateCustomers(customers) {
-  if (!Array.isArray(customers) || customers.length === 0) {
-    throw new Error('Customers array is required and must not be empty');
-  }
+  return withErrorHandling(async () => {
+    if (!Array.isArray(customers) || customers.length === 0) {
+      throw new CustomerError(
+        'Customers array is required and must not be empty',
+        CustomerErrorCodes.REQUIRED_FIELD_MISSING,
+        { field: 'customers' }
+      );
+    }
 
-  const response = await dataService.post(`${BASE_PATH}/batch`, { customers });
-  return response;
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'batchCreateCustomers');
+
+    const response = await dataService.post(`${BASE_PATH}/batch`, { customers });
+    return response;
+  }, 'batchCreateCustomers', { customers });
 }
 
 /**
@@ -267,29 +333,34 @@ export async function batchCreateCustomers(customers) {
  * const emailResults = await searchCustomers({ email: 'john@example.com' });
  */
 export async function searchCustomers(searchParams = {}) {
-  const params = {
-    limit: searchParams.limit || 50,
-    offset: searchParams.offset || 0
-  };
+  return withErrorHandling(async () => {
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'searchCustomers');
 
-  if (searchParams.query) {
-    params.q = searchParams.query;
-  }
+    const params = {
+      limit: searchParams.limit || 50,
+      offset: searchParams.offset || 0
+    };
 
-  if (searchParams.email) {
-    params.email = searchParams.email;
-  }
+    if (searchParams.query) {
+      params.q = searchParams.query;
+    }
 
-  if (searchParams.phone) {
-    params.phone = searchParams.phone;
-  }
+    if (searchParams.email) {
+      params.email = searchParams.email;
+    }
 
-  if (searchParams.active !== undefined) {
-    params.active = searchParams.active;
-  }
+    if (searchParams.phone) {
+      params.phone = searchParams.phone;
+    }
 
-  const response = await dataService.get(`${BASE_PATH}/search`, params);
-  return response;
+    if (searchParams.active !== undefined) {
+      params.active = searchParams.active;
+    }
+
+    const response = await dataService.get(`${BASE_PATH}/search`, params);
+    return response;
+  }, 'searchCustomers', { searchParams });
 }
 
 /**
@@ -305,10 +376,12 @@ export async function searchCustomers(searchParams = {}) {
  * const activeCustomers = await fetchActiveCustomers({ limit: 100 });
  */
 export async function fetchActiveCustomers(options = {}) {
-  return await listCustomers({
-    ...options,
-    active: true
-  });
+  return withErrorHandling(async () => {
+    return await listCustomers({
+      ...options,
+      active: true
+    });
+  }, 'fetchActiveCustomers', { options });
 }
 
 /**
@@ -321,7 +394,9 @@ export async function fetchActiveCustomers(options = {}) {
  * const allCustomers = await fetchCustomers({ limit: 200 });
  */
 export async function fetchCustomers(options = {}) {
-  return await listCustomers(options);
+  return withErrorHandling(async () => {
+    return await listCustomers(options);
+  }, 'fetchCustomers', { options });
 }
 
 /**
@@ -335,5 +410,7 @@ export async function fetchCustomers(options = {}) {
  * await toggleCustomerStatus(id, false); // Deactivate
  */
 export async function toggleCustomerStatus(customerId, active) {
-  return await updateCustomerStatus(customerId, active);
+  return withErrorHandling(async () => {
+    return await updateCustomerStatus(customerId, active);
+  }, 'toggleCustomerStatus', { customerId, active });
 }

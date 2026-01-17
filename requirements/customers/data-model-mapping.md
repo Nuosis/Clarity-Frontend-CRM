@@ -191,7 +191,7 @@ CREATE TABLE customer_contacts (
 
 **Data Transformations**:
 ```javascript
-// Current mapping (src/hooks/useSupabaseCustomer.js:49-53)
+// Legacy mapping (removed hook; see docs/CUSTOMER_API_INTEGRATION.md)
 {
   id: customer.fileMakerUUID || uuidv4(),    // Use FM __ID if provided
   business_name: customer.Name,               // Map Name to business_name
@@ -212,7 +212,7 @@ CREATE TABLE customer_contacts (
 
 **Data Transformations**:
 ```javascript
-// Current mapping (src/hooks/useSupabaseCustomer.js:100-109)
+// Legacy mapping (removed hook; see docs/CUSTOMER_API_INTEGRATION.md)
 {
   customer_id: supabaseCustomerId,   // FK to customers.id
   email: customer.Email,              // Direct mapping
@@ -234,7 +234,7 @@ CREATE TABLE customer_contacts (
 
 **Data Transformations**:
 ```javascript
-// Current mapping (src/hooks/useSupabaseCustomer.js:112-122)
+// Legacy mapping (removed hook; see docs/CUSTOMER_API_INTEGRATION.md)
 {
   customer_id: supabaseCustomerId,   // FK to customers.id
   phone: customer.Phone,              // Direct mapping (no formatting)
@@ -260,7 +260,7 @@ CREATE TABLE customer_contacts (
 
 **Data Transformations**:
 ```javascript
-// Current mapping (src/hooks/useSupabaseCustomer.js:126-138)
+// Legacy mapping (removed hook; see docs/CUSTOMER_API_INTEGRATION.md)
 {
   customer_id: supabaseCustomerId,      // FK to customers.id
   address_line1: customer.Address || '', // Direct mapping, default to empty
@@ -271,7 +271,7 @@ CREATE TABLE customer_contacts (
 }
 ```
 
-**Conditional Logic**: Address is only created if `City` AND `State` are both present (src/hooks/useSupabaseCustomer.js:126).
+**Conditional Logic**: Address was only created if `City` AND `State` were both present in the legacy hook.
 
 ### customer_contacts Table Mapping (Not Implemented)
 
@@ -295,7 +295,7 @@ CREATE TABLE customer_contacts (
 
 **Data Transformations**:
 ```javascript
-// Current mapping (src/hooks/useSupabaseCustomer.js:162-165)
+// Legacy mapping (removed hook; backend now handles organization linking)
 {
   customer_id: customerId,             // FK to customers.id (FM __ID)
   organization_id: organizationId      // From user.supabaseOrgID

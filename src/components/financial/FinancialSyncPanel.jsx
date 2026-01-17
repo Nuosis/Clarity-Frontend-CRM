@@ -42,29 +42,6 @@ function FinancialSyncPanel({ darkMode = false, onSyncComplete }) {
     clearLastSyncResult
   } = useFinancialSync();
 
-  // Debug logging for user information
-  useEffect(() => {
-    console.log('[FinancialSyncPanel] Debug - App State:', {
-      user: appState.user,
-      authentication: appState.authentication,
-      environment: appState.environment
-    });
-    
-    if (appState.user) {
-      console.log('[FinancialSyncPanel] Debug - User properties:', {
-        userEmail: appState.user.userEmail,
-        userName: appState.user.userName,
-        userID: appState.user.userID,
-        supabaseUserID: appState.user.supabaseUserID,
-        supabaseOrgID: appState.user.supabaseOrgID,
-        supabaseOrgId: appState.user.supabaseOrgId,
-        allUserKeys: Object.keys(appState.user)
-      });
-    } else {
-      console.log('[FinancialSyncPanel] Debug - No user found in app state');
-    }
-  }, [appState.user, appState.authentication, appState.environment]);
-
   const [dateRange, setDateRange] = useState({
     startDate: '',
     endDate: ''

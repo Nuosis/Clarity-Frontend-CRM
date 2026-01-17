@@ -92,9 +92,15 @@ function QuickBooksConfigPanel({ darkMode = false }) {
       const savedConfig = localStorage.getItem(storageKey);
 
       if (savedConfig) {
-        const parsedConfig = JSON.parse(savedConfig);
-        setConfig(parsedConfig);
-        setInitialConfig(parsedConfig);
+        try {
+          const parsedConfig = JSON.parse(savedConfig);
+          setConfig(parsedConfig);
+          setInitialConfig(parsedConfig);
+        } catch (parseError) {
+          console.warn('Invalid QuickBooks config in localStorage, resetting to defaults.', parseError);
+          localStorage.removeItem(storageKey);
+          setInitialConfig(config);
+        }
       } else {
         // Use default config
         setInitialConfig(config);

@@ -159,23 +159,41 @@ export function useNote() {
 
             // Fetch notes based on entity type
             let notes = [];
+            let pagination = null;
             if (entityType === 'project') {
-                notes = await fetchNotesByProject(entityId, { limit, offset });
+                const result = await fetchNotesByProject(entityId, { limit, offset });
+                notes = result?.notes || [];
+                pagination = result?.pagination || null;
             } else if (entityType === 'task') {
-                notes = await fetchNotesByTask(entityId, { limit, offset });
+                const result = await fetchNotesByTask(entityId, { limit, offset });
+                notes = result?.notes || [];
+                pagination = result?.pagination || null;
             } else if (entityType === 'customer') {
-                notes = await fetchNotesByCustomer(entityId, { limit, offset });
+                const result = await fetchNotesByCustomer(entityId, { limit, offset });
+                notes = result?.notes || [];
+                pagination = result?.pagination || null;
             }
 
             // Update pagination state
+            const resolvedLimit = pagination?.limit ?? limit;
+            const resolvedOffset = pagination?.offset ?? offset;
+            const resolvedTotal = pagination?.total ?? (append ? currentPagination.total + notes.length : notes.length);
+            const resolvedHasMore = pagination?.has_more ?? pagination?.hasMore ?? (notes.length >= resolvedLimit);
+
             updatePagination(entityType, entityId, {
-                offset,
-                limit,
-                hasMore: notes.length >= limit,
-                total: append ? currentPagination.total + notes.length : notes.length
+                offset: resolvedOffset,
+                limit: resolvedLimit,
+                hasMore: resolvedHasMore,
+                total: resolvedTotal
             });
 
-            console.log(`[useNote] Notes fetched successfully:`, { entityType, entityId, count: notes.length, offset, limit });
+            console.log(`[useNote] Notes fetched successfully:`, {
+                entityType,
+                entityId,
+                count: notes.length,
+                offset: resolvedOffset,
+                limit: resolvedLimit
+            });
             return notes;
         } catch (err) {
             const errorMessage = err.response?.data?.message || err.message || 'Error fetching notes';

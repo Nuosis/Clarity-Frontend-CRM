@@ -1,12 +1,13 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-17T00:37:14.051Z",
+  "updated_at": "2026-01-17T18:26:23.911Z",
   "feature": {
     "name": "Tasks Backend Integration",
     "slug": "tasks-backend-integration",
     "description": "Integrate tasks and timer features with new Supabase-backed backend APIs, replacing FileMaker implementation",
     "review_status": "blocked",
     "review_iteration": 2,
+    "updatedAt": "2026-01-17T00:37:14.053Z",
     "last_review": {
       "feature_slug": "tasks-backend-integration",
       "reviewed_at": "2026-01-17T00:36:12.662Z",
@@ -51,8 +52,7 @@
         "TASK018"
       ],
       "summary": "Found 3 issue(s) requiring remediation - created 3 task(s)"
-    },
-    "updatedAt": "2026-01-17T00:37:14.053Z"
+    }
   },
   "standing_constraints": [
     "Do NOT modify backend infrastructure or database schema",
@@ -397,12 +397,12 @@
         "dependencies": [],
         "role_in_system": "Remediate review finding COD-001 from iteration 1"
       },
-      "status": "pending",
+      "status": "blocked",
       "description": "",
       "verification": {},
-      "executionError": null,
+      "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
-      "sessionId": null,
+      "sessionId": "019bcd28-62c1-7760-81fb-17b9eba57ced",
       "depends_on": []
     },
     {
@@ -424,9 +424,9 @@
       "status": "pending",
       "description": "",
       "verification": {},
-      "executionError": null,
+      "executionError": "Task execution failed: Timed out after 600000ms",
       "executionPid": null,
-      "sessionId": null,
+      "sessionId": "019bcd2b-7439-7022-8fca-3889fd5c340c",
       "depends_on": []
     },
     {
@@ -445,12 +445,12 @@
         "dependencies": [],
         "role_in_system": "Remediate review finding ARC-001 from iteration 1"
       },
-      "status": "pending",
+      "status": "blocked",
       "description": "",
       "verification": {},
-      "executionError": null,
+      "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
-      "sessionId": null,
+      "sessionId": "019bcd2e-2db6-7e63-8d1c-b4e688ee40f5",
       "depends_on": []
     }
   ]

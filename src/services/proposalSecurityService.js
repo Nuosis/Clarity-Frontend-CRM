@@ -199,7 +199,16 @@ export class ProposalSecurityService {
     
     // Get stored access data from sessionStorage (client-side rate limiting)
     const storedData = sessionStorage.getItem(rateLimitKey)
-    let accessData = storedData ? JSON.parse(storedData) : { count: 0, windowStart: now }
+    let accessData = { count: 0, windowStart: now }
+
+    if (storedData) {
+      try {
+        accessData = JSON.parse(storedData)
+      } catch (error) {
+        console.warn('[ProposalSecurityService] Invalid rate limit data, resetting.', error)
+        sessionStorage.removeItem(rateLimitKey)
+      }
+    }
     
     // Reset window if expired
     if (now - accessData.windowStart > windowMs) {

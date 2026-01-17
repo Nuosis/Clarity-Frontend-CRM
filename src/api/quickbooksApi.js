@@ -4,8 +4,7 @@
  * This module provides a comprehensive client for interacting with the QuickBooks Online API
  * through the Clarity Business Solutions backend API.
  * 
- * Follows the FRONTEND_AUTHENTICATION_COMPREHENSIVE_GUIDE.md for M2M authentication
- * using HMAC-SHA256 signature-based authentication.
+ * Uses Supabase JWT authentication for backend requests.
  * 
  * See /docs/reference/QUICKBOOKS_ENDPOINTS_REFERENCE.md for examples of working
  * endpoint calls
@@ -13,6 +12,8 @@
  * @author Clarity Business Solutions
  * @version 2.0.0
  */
+
+import { generateBackendAuthHeader, getAuthenticationContext } from '../services/dataService';
 
 // Base URL for the Clarity backend API
 // const BACKEND_API_URL = 'https://api.claritybusinesssolutions.ca';
@@ -24,43 +25,6 @@ const BACKEND_API_URL = (typeof import.meta !== 'undefined' && import.meta.env?.
 const isDev =
   (typeof import.meta !== 'undefined' && import.meta.env?.MODE && import.meta.env.MODE !== 'production') ||
   (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production')
-
-/**
- * Generate HMAC-SHA256 authentication header for Clarity backend
- * @param {string} payload - The request payload (JSON string or empty string)
- * @returns {Promise<string>} - The authorization header value
- */
-const generateAuthHeader = async (payload = '') => {
-  const secretKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SECRET_KEY) ||
-                    (typeof process !== 'undefined' && process.env?.VITE_SECRET_KEY);
-
-  if (!secretKey) {
-    throw new Error('VITE_SECRET_KEY not available. Check environment variables.');
-  }
-  
-  const timestamp = Math.floor(Date.now() / 1000);
-  const message = `${timestamp}.${payload}`;
-  
-  // Use Web Crypto API for HMAC-SHA256
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secretKey);
-  const messageData = encoder.encode(message);
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-  const signatureHex = Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-  
-  return `Bearer ${signatureHex}.${timestamp}`;
-};
 
 /**
  * Make a request to the QuickBooks API backend
@@ -83,18 +47,19 @@ const makeRequest = async (endpoint, method = 'GET', data = null, options = {}) 
     throw new Error(msg);
   }
 
-  // Determine payload based on request type and data
-  const payload = (method !== 'GET' && data) ? JSON.stringify(data) : '';
-  
-  // Generate authentication header with exact payload
-  const authHeader = await generateAuthHeader(payload);
+  const payload = method !== 'GET' && data ? JSON.stringify(data) : '';
 
-  // Get organization ID from environment
-  const orgId = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLARITY_INTEGRATION_ORG_ID) ||
-                (typeof process !== 'undefined' && process.env?.VITE_CLARITY_INTEGRATION_ORG_ID);
+  // Generate authentication header
+  const authHeader = await generateBackendAuthHeader(payload);
+  if (!authHeader) {
+    throw new Error('Authentication token not available. Please sign in again.');
+  }
+
+  const authContext = getAuthenticationContext();
+  const orgId = authContext?.user?.supabaseOrgID;
 
   if (!orgId) {
-    throw new Error('VITE_CLARITY_INTEGRATION_ORG_ID not available. Check environment variables.');
+    throw new Error('Organization ID not available. Ensure user organization context is loaded.');
   }
   
   const headers = {

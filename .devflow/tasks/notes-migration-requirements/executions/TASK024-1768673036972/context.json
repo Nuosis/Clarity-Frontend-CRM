@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T18:03:56.973Z",
+    "featureSlug": "notes-migration-requirements",
+    "taskId": "TASK024",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] Inconsistent error handling approach violates hook architecture pattern",
+    "sessionId": "019bcd20-cac0-7ab3-876e-2a86090dc4f8",
+    "processId": 1768673036972,
+    "lastUpdated": "2026-01-17T18:09:22.723Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T18:03:56.974Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-17T18:09:22.615Z",
+    "output": {
+      "success": true,
+      "sessionId": "019bcd20-cac0-7ab3-876e-2a86090dc4f8",
+      "processId": 89715,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\n**Findings**\n- Low: `npm run build` reports missing exports (`createProposalDeliverables`, `createProposalConcepts`) imported in `src/services/proposalService.js` but not exported by `src/api/proposals.js`. This existed before the change and still appears.\n\nAligned project creation error handling with the rest of the project hook by rethrowing failures and catching them at the UI entry points, so errors no longer get swallowed and promise rejections are handled. Updated `src/hooks/useProject.js` to throw on create errors, and updated `src/components/customers/CustomerDetails.jsx` plus `src/components/customers/ProspectDetails.jsx` to await project creation and surface errors via the snackbar when it fails.\n\n**Tests**\n- `npm run build` (warnings about missing exports noted above)\n\nNext steps (optional)\n1) Investigate whether `src/api/proposals.js` should export the missing proposal helpers or `src/services/proposalService.js` should stop importing them."
+    }
+  },
+  "ValidateNode": {
+    "timestamp": "2026-01-17T18:09:22.721Z",
+    "output": {
+      "passed": false,
+      "buildPassed": false,
+      "buildErrors": "Build failed with exit code 1:\nnpm error Missing script: \"typecheck\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /Users/marcusswift/.npm/_logs/2026-01-17T18_09_22_692Z-debug-0.log\n",
+      "error": "Build verification failed"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T18:09:22.723Z",
+    "output": {
+      "taskStatus": "blocked",
+      "summary": "Task validation failed: Build verification failed",
+      "nextTaskTriggered": true
+    }
+  }
+}

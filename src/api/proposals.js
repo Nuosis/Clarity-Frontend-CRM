@@ -6,56 +6,7 @@
 
 import axios from 'axios'
 import { backendConfig } from '../config'
-
-/**
- * Generate HMAC-SHA256 authentication header for backend API
- * @param {string} payload - Request payload
- * @returns {Promise<string>} Authorization header
- */
-async function generateBackendAuthHeader(payload = '') {
-  const secretKey = import.meta.env.VITE_SECRET_KEY
-  
-  if (!secretKey) {
-    console.warn('[Proposals] SECRET_KEY not available. Using development mode.')
-    const timestamp = Math.floor(Date.now() / 1000)
-    return `Bearer dev-token.${timestamp}`
-  }
-  
-  // Check if Web Crypto API is available
-  if (typeof crypto === 'undefined' || !crypto.subtle) {
-    console.warn('[Proposals] Web Crypto API not available. Using fallback auth.')
-    const timestamp = Math.floor(Date.now() / 1000)
-    return `Bearer fallback-token.${timestamp}`
-  }
-  
-  const timestamp = Math.floor(Date.now() / 1000)
-  const message = `${timestamp}.${payload}`
-  
-  try {
-    const encoder = new TextEncoder()
-    const keyData = encoder.encode(secretKey)
-    const messageData = encoder.encode(message)
-    
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    )
-    
-    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData)
-    const signatureHex = Array.from(new Uint8Array(signature))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
-    
-    return `Bearer ${signatureHex}.${timestamp}`
-  } catch (error) {
-    console.warn('[Proposals] Crypto operation failed, using fallback:', error)
-    const timestamp = Math.floor(Date.now() / 1000)
-    return `Bearer fallback-token.${timestamp}`
-  }
-}
+import { generateBackendAuthHeader } from '../services/dataService'
 
 /**
  * Generate secure access token for proposals
@@ -103,7 +54,8 @@ export async function createProposal(proposalData) {
       }
     })
 
-    console.log(`[Proposals] ${isUpdate ? 'Updating' : 'Creating'} proposal:`, backendProposalData)
+    const { access_token: _accessToken, ...safeProposalData } = backendProposalData
+    console.log(`[Proposals] ${isUpdate ? 'Updating' : 'Creating'} proposal:`, safeProposalData)
 
     const payload = JSON.stringify(backendProposalData)
     const authHeader = await generateBackendAuthHeader(payload)
@@ -220,7 +172,7 @@ export async function fetchProposalByToken(token) {
       }
     })
 
-    console.log('[Proposals] Fetched proposal by token:', token)
+    console.log('[Proposals] Fetched proposal by token')
     return {
       success: true,
       data: response.data

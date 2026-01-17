@@ -2,16 +2,22 @@
  * QuickBooks API Client Integration Tests
  *
  * Tests for the QuickBooks API client functions
- * Tests HMAC authentication, endpoint construction, and error handling
+ * Tests authentication, endpoint construction, and error handling
  */
 
 // Mock import.meta before importing the module
 const mockEnv = {
-  VITE_SECRET_KEY: 'test-secret-key-for-hmac-authentication',
-  VITE_CLARITY_INTEGRATION_ORG_ID: '9816c057-b5d3-43a2-848f-99365ee6255e',
   VITE_API_URL: 'https://api.claritybusinesssolutions.ca',
   MODE: 'test'
 };
+
+jest.mock('../../services/dataService', () => ({
+  generateBackendAuthHeader: jest.fn().mockResolvedValue('Bearer test-jwt-token'),
+  getAuthenticationContext: jest.fn().mockReturnValue({
+    isAuthenticated: true,
+    user: { supabaseOrgID: '9816c057-b5d3-43a2-848f-99365ee6255e' }
+  })
+}));
 
 jest.mock('../../api/quickbooksApi', () => {
   // Mock import.meta.env
@@ -52,18 +58,11 @@ import {
   getQuickBooksConfig,
   updateQuickBooksConfig
 } from '../quickbooksApi';
+import { generateBackendAuthHeader, getAuthenticationContext } from '../../services/dataService';
 
 beforeEach(() => {
   // Mock fetch
   global.fetch = jest.fn();
-
-  // Mock Web Crypto API
-  global.crypto = {
-    subtle: {
-      importKey: jest.fn().mockResolvedValue('mock-crypto-key'),
-      sign: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]))
-    }
-  };
 });
 
 afterEach(() => {
@@ -711,8 +710,8 @@ describe('QuickBooks API Client - Error Handling', () => {
   });
 });
 
-describe('QuickBooks API Client - HMAC Authentication', () => {
-  test('should generate HMAC signature for requests', async () => {
+describe('QuickBooks API Client - Authentication', () => {
+  test('should include backend auth header for requests', async () => {
     const mockResponse = { success: true };
 
     global.fetch.mockResolvedValueOnce({
@@ -726,14 +725,14 @@ describe('QuickBooks API Client - HMAC Authentication', () => {
     const fetchCall = global.fetch.mock.calls[0];
     const headers = fetchCall[1].headers;
 
-    // Verify Authorization header exists and has Bearer token format
-    expect(headers.Authorization).toMatch(/^Bearer [a-f0-9]+\.\d+$/);
+    expect(generateBackendAuthHeader).toHaveBeenCalled();
+    expect(headers.Authorization).toBe('Bearer test-jwt-token');
 
     // Verify Organization header exists
     expect(headers['X-Organization-ID']).toBe('9816c057-b5d3-43a2-848f-99365ee6255e');
   });
 
-  test('should include payload in HMAC signature for POST requests', async () => {
+  test('should include body for POST requests', async () => {
     const customerData = { DisplayName: 'Test Customer' };
     const mockResponse = { success: true };
 
@@ -748,22 +747,19 @@ describe('QuickBooks API Client - HMAC Authentication', () => {
     const fetchCall = global.fetch.mock.calls[0];
     const headers = fetchCall[1].headers;
 
-    // Verify Authorization header exists
-    expect(headers.Authorization).toMatch(/^Bearer [a-f0-9]+\.\d+$/);
+    expect(generateBackendAuthHeader).toHaveBeenCalled();
+    expect(headers.Authorization).toBe('Bearer test-jwt-token');
 
     // Verify body was sent
     expect(fetchCall[1].body).toBe(JSON.stringify(customerData));
   });
 
-  test('should throw error if VITE_SECRET_KEY is missing', async () => {
-    delete process.env.VITE_SECRET_KEY;
+  test('should throw error if organization context is missing', async () => {
+    getAuthenticationContext.mockReturnValueOnce({
+      isAuthenticated: true,
+      user: {}
+    });
 
-    await expect(getQBOCompanyInfo()).rejects.toThrow('VITE_SECRET_KEY not available');
-  });
-
-  test('should throw error if VITE_CLARITY_INTEGRATION_ORG_ID is missing', async () => {
-    delete process.env.VITE_CLARITY_INTEGRATION_ORG_ID;
-
-    await expect(getQBOCompanyInfo()).rejects.toThrow('VITE_CLARITY_INTEGRATION_ORG_ID not available');
+    await expect(getQBOCompanyInfo()).rejects.toThrow('Organization ID not available');
   });
 });

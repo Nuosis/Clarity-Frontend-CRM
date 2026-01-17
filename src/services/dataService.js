@@ -7,6 +7,7 @@
 
 import axios from 'axios';
 import { backendConfig } from '../config';
+import { getSession } from './supabaseService';
 
 /**
  * Global authentication state
@@ -25,7 +26,11 @@ let currentAuthentication = {
  */
 export const setAuthenticationContext = (authState) => {
   currentAuthentication = { ...authState };
-  console.log('[DataService] Authentication context set:', currentAuthentication);
+  console.log('[DataService] Authentication context set:', {
+    isAuthenticated: currentAuthentication.isAuthenticated,
+    hasUser: !!currentAuthentication.user,
+    hasOrganizationId: !!currentAuthentication.user?.supabaseOrgID
+  });
 };
 
 /**
@@ -52,55 +57,82 @@ export const hasOrganizationContext = () => {
   return Boolean(currentAuthentication?.user?.supabaseOrgID);
 };
 
+const emptyPayloadTokenCache = { token: null, expiresAt: 0 };
+
+const parseBackendAuthError = async (response) => {
+  try {
+    const errorText = await response.text();
+    if (!errorText) return `HTTP ${response.status}: ${response.statusText}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      return errorJson.detail || errorJson.message || errorText;
+    } catch {
+      return errorText;
+    }
+  } catch {
+    return `HTTP ${response.status}: ${response.statusText}`;
+  }
+};
+
+const getSupabaseAccessToken = async () => {
+  const sessionResult = await getSession();
+  if (!sessionResult?.success) {
+    throw new Error(sessionResult?.error || 'Supabase session unavailable.');
+  }
+  const accessToken = sessionResult?.data?.session?.access_token;
+  if (!accessToken) {
+    throw new Error('Supabase access token unavailable.');
+  }
+  return accessToken;
+};
+
+const requestBackendAuthToken = async (payload, organizationId) => {
+  const accessToken = await getSupabaseAccessToken();
+  const response = await fetch(`${backendConfig.baseUrl}/auth/generate-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({
+      payload,
+      organization_id: organizationId || null
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseBackendAuthError(response));
+  }
+
+  const data = await response.json();
+  if (!data?.token) {
+    throw new Error('Backend token missing in response.');
+  }
+
+  return data;
+};
+
 /**
- * Generate HMAC-SHA256 authentication header for backend API
+ * Generate authentication header for backend API
+ * Uses the backend token endpoint to avoid client-side HMAC secrets.
  * @param {string} payload - Request payload
  * @returns {Promise<string>} Authorization header
  */
 export const generateBackendAuthHeader = async (payload = '') => {
-  const secretKey = import.meta.env.VITE_SECRET_KEY;
-  
-  if (!secretKey) {
-    console.warn('[DataService] SECRET_KEY not available. Using development mode.');
-    // In development, return a simple auth header
-    const timestamp = Math.floor(Date.now() / 1000);
-    return `Bearer dev-token.${timestamp}`;
+  if (!payload && emptyPayloadTokenCache.token && Date.now() < emptyPayloadTokenCache.expiresAt) {
+    return emptyPayloadTokenCache.token;
   }
-  
-  // Check if Web Crypto API is available
-  if (typeof crypto === 'undefined' || !crypto.subtle) {
-    console.warn('[DataService] Web Crypto API not available. Using fallback auth.');
-    const timestamp = Math.floor(Date.now() / 1000);
-    return `Bearer fallback-token.${timestamp}`;
+
+  const tokenResponse = await requestBackendAuthToken(payload, getOrganizationId());
+  const token = tokenResponse.token;
+
+  if (!payload) {
+    const ttlMs = Math.max(0, (tokenResponse.expires_in || 300) - 30) * 1000;
+    emptyPayloadTokenCache.token = token;
+    emptyPayloadTokenCache.expiresAt = Date.now() + ttlMs;
   }
-  
-  const timestamp = Math.floor(Date.now() / 1000);
-  const message = `${timestamp}.${payload}`;
-  
-  try {
-    // Use Web Crypto API for HMAC-SHA256
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(secretKey);
-    const messageData = encoder.encode(message);
-    
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    
-    const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-    const signatureHex = Array.from(new Uint8Array(signature))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-    
-    return `Bearer ${signatureHex}.${timestamp}`;
-  } catch (error) {
-    console.warn('[DataService] Crypto operation failed, using fallback:', error);
-    return `Bearer fallback-token.${timestamp}`;
-  }
+
+  return token;
 };
 
 /**
@@ -129,12 +161,14 @@ const createDataServiceClient = () => {
       // Add backend authentication
       const payload = config.data ? JSON.stringify(config.data) : '';
       const authHeader = await generateBackendAuthHeader(payload);
-      config.headers.Authorization = authHeader;
+      if (authHeader) {
+        config.headers.Authorization = authHeader;
+      }
 
       // Add organization_id to headers for backend API calls
       if (auth.user && auth.user.supabaseOrgID) {
         config.headers['X-Organization-ID'] = auth.user.supabaseOrgID;
-        console.log('[DataService] Added organization context:', auth.user.supabaseOrgID);
+        console.log('[DataService] Added organization context');
       } else {
         console.warn('[DataService] Organization ID not found in user context. This may cause authorization errors.', {
           url: config.url,

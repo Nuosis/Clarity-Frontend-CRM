@@ -15,16 +15,16 @@ function normalizeCustomerData(data) {
     // Backend API data - normalize to expected format
     if (Array.isArray(data)) {
         return data.map(customer => ({
+            ...customer,
             id: customer.id || customer.__ID,
-            __ID: customer.id || customer.__ID,
-            ...customer
+            __ID: customer.__ID || customer.id
         }));
     }
 
     return {
+        ...data,
         id: data.id || data.__ID,
-        __ID: data.id || data.__ID,
-        ...data
+        __ID: data.__ID || data.id
     };
 }
 
@@ -71,6 +71,26 @@ export async function fetchCustomers(options = {}) {
         const response = await dataService.get('/api/customers', { params: queryParams });
         return normalizeCustomerData(response.data || response);
     }, 'fetchCustomers', { options });
+}
+
+/**
+ * Fetches only active customers
+ * @param {Object} options - Fetch options
+ * @param {number} options.limit - Number of records per page (default: 50, max: 200)
+ * @param {number} options.offset - Pagination offset (default: 0)
+ * @param {string} options.search - Search by business name (optional)
+ * @param {string} options.sort - Sort field (default: 'business_name')
+ * @param {string} options.order - Sort order ('asc' or 'desc')
+ * @param {boolean} options.include_related - Include nested emails/phones/addresses
+ * @returns {Promise<Object>} Customer list with pagination
+ */
+export async function fetchActiveCustomers(options = {}) {
+    return withErrorHandling(async () => {
+        return fetchCustomers({
+            ...options,
+            active: true
+        });
+    }, 'fetchActiveCustomers', { options });
 }
 
 /**

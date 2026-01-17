@@ -3,8 +3,7 @@ import PropTypes from 'prop-types';
 import { v4 as uuidv4 } from 'uuid';
 import { createCustomer, updateCustomer } from '../../api/customers';
 import { useSnackBar } from '../../context/SnackBarContext';
-import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
-import { useSupabaseCustomer } from '../../hooks/useSupabaseCustomer';
+import { useAppStateOperations } from '../../context/AppStateContext';
 import { useCustomer } from '../../hooks/useCustomer';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../../services/dataService';
 
@@ -20,8 +19,6 @@ import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../../services/dataSer
 function CustomerForm({ customer = null, onClose, darkMode = false }) {
   const { showError } = useSnackBar();
   const { setLoading } = useAppStateOperations();
-  const { user } = useAppState();
-  const { createCustomerInSupabase } = useSupabaseCustomer();
   const { loadCustomers, handleCustomerSelect } = useCustomer();
 
   const isEditMode = Boolean(customer);
@@ -413,27 +410,6 @@ function CustomerForm({ customer = null, onClose, darkMode = false }) {
           fileMakerData.__ID = uuidv4();
           const fileMakerResult = await createCustomer(fileMakerData);
           console.log('FileMaker customer created:', fileMakerResult);
-
-          // Dual-write to Supabase if user is authenticated
-          if (user && user.supabaseOrgID) {
-            try {
-              const supabaseCustomerData = {
-                Name: fileMakerData.Name,
-                Email: fileMakerData.Email || null,
-                Phone: fileMakerData.phone || null,
-                fileMakerUUID: fileMakerData.__ID
-              };
-
-              const supabaseResult = await createCustomerInSupabase(supabaseCustomerData, user);
-              if (supabaseResult && supabaseResult.success) {
-                console.log('Supabase customer created:', supabaseResult.data);
-              } else {
-                console.warn('Failed to create customer in Supabase:', supabaseResult?.error);
-              }
-            } catch (supabaseError) {
-              console.error('Error creating customer in Supabase:', supabaseError);
-            }
-          }
 
           // Auto-select newly created customer
           if (fileMakerResult && fileMakerResult.response && fileMakerResult.response.data) {

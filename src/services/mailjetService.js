@@ -78,12 +78,6 @@ export async function sendEmailWithAttachment(options) {
       throw new Error('Mailjet API credentials are not configured');
     }
     
-    // Prepare the request to Mailjet API using fetch
-    console.log("[DEBUG] Preparing direct API call to Mailjet with keys:", {
-      apiKeyPrefix: apiKey ? apiKey.substring(0, 5) + '...' : 'missing',
-      secretKeyPrefix: secretKey ? secretKey.substring(0, 5) + '...' : 'missing'
-    });
-    
     // Create the email payload
     const payload = {
       Messages: [

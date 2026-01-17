@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { useSales } from '../../hooks/useSales';
-import { useAppState } from '../../context/AppStateContext';
 import { parseDate, formatDate, formatYearMonth, formatMonthYear } from '../../utils/dateUtils';
 import SalesModal from './SalesModal';
 import CustomerSettings from './CustomerSettings';
@@ -11,23 +10,22 @@ function CustomerTabs({ customer }) {
   const { darkMode } = useTheme();
   const [activeTab, setActiveTab] = useState('sales');
   const { sales, formatSale } = useSales();
-  const { customerDetails } = useAppState();
   const [customerSales, setCustomerSales] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
 
-  // Use customerDetails from AppState if available, otherwise fallback to customer prop
-  const currentCustomer = customerDetails || customer;
+  const currentCustomer = customer;
+  const currentCustomerId = currentCustomer?.id || currentCustomer?.__ID;
 
   // Filter sales for the current customer
   useEffect(() => {
-    if (sales && sales.length > 0 && customerDetails && customerDetails.id) {
-      const filteredSales = sales.filter(sale => sale.customer_id === customerDetails.id);
+    if (sales && sales.length > 0 && currentCustomerId) {
+      const filteredSales = sales.filter(sale => sale.customer_id === currentCustomerId);
       setCustomerSales(filteredSales);
     } else {
       setCustomerSales([]);
     }
-  }, [sales, customerDetails?.id]);
+  }, [sales, currentCustomerId]);
 
   // Group sales by Product/Service and Month (YYYY-MM)
   const groupedSales = useMemo(() => {
@@ -276,21 +274,21 @@ function CustomerTabs({ customer }) {
                   <tr>
                     <td className="px-6 py-4 whitespace-nowrap">04/25/2025</td>
                     <td className="px-6 py-4 whitespace-nowrap">Email</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{customerDetails?.Email || 'john@example.com'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{currentCustomer?.Email || 'john@example.com'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">Project Update</td>
                     <td className="px-6 py-4">Sent weekly progress report on website development</td>
                   </tr>
                   <tr>
                     <td className="px-6 py-4 whitespace-nowrap">04/23/2025</td>
                     <td className="px-6 py-4 whitespace-nowrap">Phone</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{customerDetails?.Phone || '555-123-4567'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{currentCustomer?.Phone || '555-123-4567'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">Requirements Clarification</td>
                     <td className="px-6 py-4">Discussed additional requirements for the contact form</td>
                   </tr>
                   <tr>
                     <td className="px-6 py-4 whitespace-nowrap">04/20/2025</td>
                     <td className="px-6 py-4 whitespace-nowrap">Email</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{customerDetails?.Email || 'john@example.com'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{currentCustomer?.Email || 'john@example.com'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">Invoice #1234</td>
                     <td className="px-6 py-4">Sent invoice for initial payment</td>
                   </tr>

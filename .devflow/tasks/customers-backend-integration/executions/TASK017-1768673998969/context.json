@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T18:19:58.969Z",
+    "featureSlug": "customers-backend-integration",
+    "taskId": "TASK017",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] useSupabaseCustomer.js File Not Removed (AC7 Violation)",
+    "sessionId": "019bcd32-aa52-77a2-9855-cb7789958f6a",
+    "processId": 1768673998969,
+    "lastUpdated": "2026-01-17T18:31:57.995Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T18:19:58.971Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-17T18:31:57.882Z",
+    "output": {
+      "success": true,
+      "sessionId": "019bcd32-aa52-77a2-9855-cb7789958f6a",
+      "processId": 23172,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\n**Findings**\n- Low: `npm run build` reports missing exports used by proposal creation calls in `src/services/proposalService.js:103` and `src/services/proposalService.js:107`.\n\n**Assumptions**\n- Assumed it is acceptable to refresh requirements docs without changing the acceptance criteria wording (AC7 still explicitly calls out the removed hook).\n\n**Change Summary**\n- Cleaned requirements docs to remove the outdated Supabase hook/dual-write descriptions and point to backend-only flow in `requirements/customers/README.md`, `requirements/customers/current-implementation.md`, and `requirements/customers/data-model-mapping.md`.\n- Verified the hook file is already deleted in this worktree and no `src/` code references remain for `useSupabaseCustomer`.\n\n**Tests**\n- `npm run build` (succeeded; warnings noted above).\n\n**Next Steps**\n1) If you want, I can resolve the proposal export warnings by aligning `src/api/proposals.js` with the usage in `src/services/proposalService.js`."
+    }
+  },
+  "ValidateNode": {
+    "timestamp": "2026-01-17T18:31:57.991Z",
+    "output": {
+      "passed": false,
+      "buildPassed": false,
+      "buildErrors": "Build failed with exit code 1:\nnpm error Missing script: \"typecheck\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /Users/marcusswift/.npm/_logs/2026-01-17T18_31_57_961Z-debug-0.log\n",
+      "error": "Build verification failed"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T18:31:57.995Z",
+    "output": {
+      "taskStatus": "blocked",
+      "summary": "Task validation failed: Build verification failed",
+      "nextTaskTriggered": true
+    }
+  }
+}

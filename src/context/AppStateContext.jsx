@@ -48,7 +48,7 @@ const initialState = {
     selectedTeam: null,
     selectedProduct: null,
     selectedSale: null,
-    customerDetails: null, // Will store Supabase customer details
+    customerDetails: null, // Stores detailed customer data when available
     showFinancialActivity: false,
     showFileMakerExample: false,
     showSupabaseExample: false,

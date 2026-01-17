@@ -1,0 +1,486 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T01:11:06.421Z",
+    "featureSlug": "projects-backend-integration",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 2,
+    "featureName": "Projects Backend Integration",
+    "mode": "autonomous",
+    "sessionId": "41b9e038-4178-4334-9e33-abc5901fc028",
+    "processId": 1768612266420,
+    "lastUpdated": "2026-01-17T01:20:59.114Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-17T01:11:06.716Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Update API layer for core project operations (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a new API layer for projects, objectives, images, and notes by replacing FileMaker Data API calls with backend REST endpoints, including project CRUD plus status updates, objective CRUD plus reorder and completion toggles, and project image and note CRUD. Key changes were made in 'src/api/projects.js' (rewritten to be environment-aware, use HMAC-SHA256 auth via 'dataService.generateBackendAuthHeader()', enforce org scoping from JWT claims, and normalize responses while preserving legacy FileMaker fallbacks like 'fetchProjectRelatedData()' and 'fetchAllProjectData()'). Updated 'tasks.json' to mark 'TSK0001', 'TSK0002', and 'TSK0003' complete and added a completion summary document, with the notable decision to keep links support on the legacy FileMaker path due to missing backend links endpoints. Verified the build compiles successfully, with unrelated proposal warnings only.\n\n---\n\n### Update API layer for objectives and steps (TSK0002)\n**Status:** done\n\n---\n\n### Update API layer for images, links, and notes (TSK0003)\n**Status:** done\n\n---\n\n### Update service layer data transformations (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented dual-schema project transformations in src/services/projectService.js to support both legacy FileMaker and the new backend API by enhancing processProjectData with a source parameter, adding processBackendProject, and introducing formatProjectForBackend plus updated processProjectValue field normalization. Exported status conversion helpers mapBackendStatusToFrontend and mapFrontendStatusToBackend to keep status handling consistent across layers, while preserving backward compatibility (including __ID aliasing and existing FileMaker formatting). Updated .devflow/tasks/projects-backend-integration/tasks.json to mark TSK0004 complete and added .devflow/tasks/projects-backend-integration/TSK0004_COMPLETION_SUMMARY.md documenting the schema mappings and usage decisions, with builds verified to compile cleanly.\n\n---\n\n### Update service layer for objectives, steps, images, links (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented backend-schema support in the project service layer by updating transformation functions for objectives, steps, images, and links, including correct field mappings, boolean conversions, and handling both nested and separate steps arrays. Key changes were made in 'src/services/projectService.js' across 'processProjectImages', 'processProjectLinks', 'processProjectObjectives', 'processObjectiveSteps', and 'processBackendProject' to pass 'source=backend' while keeping 'source=filemaker' as the default for backward compatibility, plus a FileMaker bug fix changing the image filter from '_projectID' to the correct polymorphic '_fkID'. Important decisions included deriving link titles from the URL hostname due to the backend lacking a 'title' column and noting backend constraints like required 'customer_id' and 'organization_id' and a 2048 URL length limit. Task tracking was updated by marking completion in '.devflow/tasks/projects-backend-integration/tasks.json' and adding ' .devflow/tasks/projects-backend-integration/TSK0005_COMPLETION_SUMMARY.md', and the build was verified to compile successfully with only unrelated warnings.\n\n---\n\n### Update useProject hook - load operations (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented environment-aware updates to the useProject hook load operations so the webapp uses the new backend REST API while the legacy FileMaker path remains intact. Updated 'src/hooks/useProject.js' to route 'loadProjects()' and 'loadProjectDetails()' via 'getEnvironmentContext()', using 'fetchProjectWithDetails()' for a single 'GET /projects/{id}/detail' call in webapp and retaining parallel FileMaker layout calls; also simplified 'handleProjectSelect()' to rely on the updated detail loader and state. Added the missing export for 'fetchProjectWithDetails' in 'src/api/index.js', and updated task tracking in '.devflow/tasks/projects-backend-integration/tasks.json' plus documentation in '.devflow/tasks/projects-backend-integration/TSK0006_COMPLETION_SUMMARY.md' after confirming successful builds.\n\n---\n\n### Update useProject hook - CRUD operations (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented updates to 'src/hooks/useProject.js' to migrate all project CRUD handlers to the environment-aware backend API, removing the Supabase dual-write block, de-emphasizing 'recordId', and standardizing on 'project.id' with smart fallbacks for legacy FileMaker compatibility. Updated 'handleProjectCreate', 'handleProjectUpdate', 'handleProjectStatusChange', 'handleProjectDelete', and also aligned 'handleProjectTeamChange' to use environment-specific formatting and field names (eg 'team_id' vs '_teamID') while preserving fixed-price and subscription business logic. Marked TSK0007 complete in '.devflow/tasks/projects-backend-integration/tasks.json' and added documentation in '.devflow/tasks/projects-backend-integration/TSK0007_COMPLETION_SUMMARY.md' after confirming the build compiles cleanly aside from pre-existing warnings.\n\n---\n\n### Update useProject hook - objectives and steps (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented backend integration for objective and step management by updating the API exports in 'src/api/index.js' and refactoring 'src/hooks/useProject.js' to use new objective methods with environment-aware routing between backend and FileMaker. Replaced 'handleObjectiveCreate' (removing the prior 500ms FileMaker delay) and added new 'handleObjectiveUpdate' and 'handleObjectiveDelete' handlers with bidirectional field mapping and boolean conversion, plus immediate local state updates for UI responsiveness. Updated the hook return exports to include the new handlers, verified exports via grep, ran successful builds, marked TSK0008 complete in the task JSON, and documented the work in '.devflow/tasks/projects-backend-integration/TSK0008_COMPLETION_SUMMARY.md'.\n\n---\n\n### Update useProject hook - business logic (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a business logic review and hardening for fixed-price and subscription project flows by improving frontend sales generation handling and explicitly documenting gaps around billable status updates. Updated 'src/hooks/useProject.js' to add '[Business Logic]' logging plus stronger error handling and warnings in 'handleProjectCreate()' and 'handleProjectUpdate()' so sales entry failures do not crash project operations. Updated 'src/services/projectService.js' to add detailed documentation, logging, and error handling around the still-unimplemented 'updateProjectRecordsBillableStatus()', explicitly noting it requires a backend endpoint to function. Added documentation deliverables 'TSK0009_BUSINESS_LOGIC_REVIEW.md' and 'TSK0009_COMPLETION_SUMMARY.md', and marked TSK0009 complete after verifying the build succeeds, with the key decision to recommend migrating these rules to the backend for transaction safety, deduping, and server-side enforcement.\n\n---\n\n### Update ProjectDetails component (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nImplemented TSK0010 by updating 'ProjectDetails.jsx' to align with the new backend schema, replacing 'recordId' usage with 'project.id' for status toggling and other operations, and adjusting loading and error handling plus PropTypes (making 'recordId' optional for backward compatibility). Updated related tabs to use the new identifier, including 'ProjectTeamTab.jsx' (team assignment) and 'ProjectNotesTab.jsx' (note creation and details loading), ensuring all project detail tabs receive consistent data. Confirmed parent integration via 'MainContent' and the 'useProject' hook signature '(projectId, status)', and verified builds compile successfully after the changes. Added documentation in 'TSK0010_COMPLETION_SUMMARY.md' and 'TSK0010_CHANGES.md', and marked the task complete in 'tasks.json'.\n\n---\n\n### Update project list and creation components (TSK0011)\n**Status:** done\n\n**Implementation Notes:**\nImplemented updates to project list and creation components to support the new backend API schema while preserving FileMaker backward compatibility via dual field handling and status normalization. Key changes were made in 'src/components/projects/ProjectList.jsx' (customer/status field usage and simplified selection), 'src/components/customers/ProjectCreationForm.jsx' (submission payload now includes both backend and legacy field names), and 'src/components/customers/ProjectCard.jsx' (pricing/type/date rendering updated to read both schema variants and PropTypes expanded), while 'ProjectListing.jsx' required no changes. Marked TSK0011 complete in '.devflow/tasks/projects-backend-integration/tasks.json' and added documentation in '.devflow/tasks/projects-backend-integration/TSK0011_COMPLETION_SUMMARY.md'. Build was verified successfully after the updates.\n\n---\n\n### Update objectives tab component (TSK0012)\n**Status:** done\n\n**Implementation Notes:**\nImplemented full objectives and steps CRUD in the objectives tab by adding step API utilities in 'src/api/projects.js' (create, update, delete, toggle completed, reorder) and exporting them via 'src/api/index.js'. Extended 'src/hooks/useProject.js' to include new step handlers with environment-aware routing and backend vs FileMaker field mapping, then rewired the prop chain through 'MainContent.jsx' and 'ProjectDetails.jsx' (including PropTypes) into 'ProjectObjectivesTab.jsx'. Reworked 'ProjectObjectivesTab.jsx' UI to support inline editing, step add edit toggle, delete confirmations, and completion tracking while preserving dark mode and keyboard shortcuts, and confirmed the build succeeds; task status and docs were updated in 'tasks.json' plus 'TSK0012_COMPLETION_SUMMARY.md' and 'TSK0012_CHANGES.md'.\n\n---\n\n### Update images, links, notes tab components (TSK0013)\n**Status:** done\n\n**Implementation Notes:**\nImplemented backend-API support for project links, notes, and images while preserving FileMaker compatibility by adding environment-aware API clients in 'src/api/links.js', 'src/api/notes.js', and new 'src/api/images.js', plus updating exports in 'src/api/index.js' (and resolving a duplicate export by removing 'fetchProjectNotes' from the notes export since it already exists in projects). Updated services and hooks ('src/services/linkService.js', 'src/services/noteService.js', 'src/hooks/useLink.js', 'src/hooks/useNote.js') to add fetch and delete flows with response normalization for polymorphic links and notes and project-scoped images. Refreshed UI components under 'src/components/projects/' by enhancing 'ProjectNotesTab.jsx' and 'ProjectLinksTab.jsx' PropTypes and dual-format rendering, and adding a new 'ProjectImagesTab.jsx' with grid display and modal viewing; key decision was to normalize both backend and legacy data shapes (e.g., 'content' vs 'fieldData.note', 'url' vs 'link') for backward-compatible rendering.\n\n---\n\n### Update related project displays in other features (TSK0014)\n**Status:** done\n\n**Implementation Notes:**\nImplemented backend-compatible project display handling across financial and proposals features while preserving FileMaker backward compatibility by normalizing field access for both schemas. Updated 'src/components/financial/ProjectList.jsx' to add a 'normalizeProject()' helper for id and name resolution in the aggregated financial-by-project view, clarified 'src/components/financial/ProjectReportButton.jsx' expectations via documentation, and expanded 'src/components/proposals/ProjectProposalsTab.jsx' PropTypes and comments to accept both id and customer field variants. Marked TSK0014 complete by updating '.devflow/tasks/projects-backend-integration/tasks.json' and adding the writeup in '.devflow/tasks/projects-backend-integration/TSK0014_COMPLETION_SUMMARY.md', with the key decision to rely on upstream 'projectService' normalization and only harden component-level compatibility where needed.\n\n---\n\n### Update tests and fixtures (TSK0015)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive projects test and fixture update for Supabase backend integration, adding API coverage for environment-aware routing, org scoping, full CRUD for projects and related entities, reorder and toggle behaviors, and robust error handling. Key files added or updated were 'src/api/__tests__/projects.test.js' (42 tests), 'src/services/__tests__/projectService.test.js' (23 tests), and 'src/__tests__/fixtures/projectFixtures.js' (Supabase and FileMaker mock data plus helpers). Tests were aligned to actual implementation details, including using PATCH (not PUT) for updates, sending reorder arrays directly, omitting bodies for toggle endpoints, matching service return shapes, and using correct field names like 'isFixedPrice' and 'isSubscription'. Final result was 65 passing tests with a successful build, and 'tasks.json' was updated to mark 'TSK0015' complete.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 15,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 291
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-17T01:12:51.946Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Direct Supabase client calls violate standing constraint",
+          "description": "The implementation violates the standing constraint 'No direct Supabase client calls - all operations through backend API'. The business logic for fixed-price and subscription projects in src/hooks/useProject.js calls createSalesFromProjectValue() from src/services/salesService.js, which ultimately uses direct Supabase client calls via the insert() function from supabaseService.js. The supabaseService.js wraps direct Supabase client operations and routes them through a backend proxy (callBackendSupabaseAPI), but this still constitutes direct database operations rather than using dedicated backend REST API endpoints. According to TSK0009 documentation, sales generation logic should be migrated to the backend for transaction safety, data consistency, and security - but this migration was not completed. The current implementation writes directly to the customer_sales table via Supabase calls during project creation (lines 242-257 in useProject.js) and updates (lines 337-351).",
+          "file_paths": [
+            "src/hooks/useProject.js",
+            "src/services/salesService.js",
+            "src/services/supabaseService.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Create a backend API endpoint for sales generation (POST /api/projects/{id}/generate-sales or similar) and migrate the business logic from createSalesFromProjectValue() to the backend. Update useProject.js to call this new endpoint instead of directly manipulating the customer_sales table. This will ensure all project operations go through the backend API as required by the standing constraints and will provide better transaction safety, duplicate prevention, and server-side validation as documented in TSK0009_BUSINESS_LOGIC_REVIEW.md."
+        }
+      ],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-17T01:14:31.393Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Stale closure bug in handleProjectSelect causes race condition",
+          "description": "The handleProjectSelect function at line 140-171 has a stale closure issue. After calling loadProjectDetails(projectId) which updates state via setProjects, the function immediately reads from the stale 'projects' closure variable (line 160: projects.find(p => p.id === projectId)). Since setState is asynchronous, this will return the OLD project state, not the updated one with the newly loaded details. This creates a race condition where selectedProject may be set to a version without the loaded details.",
+          "file_paths": [
+            "src/hooks/useProject.js"
+          ],
+          "code_snippet": "const handleProjectSelect = useCallback(async (projectOrId) => {\n  // ...\n  if (!project.images || !project.links || !project.objectives) {\n    await loadProjectDetails(projectId);\n    // BUG: 'projects' is stale here - doesn't include the update from loadProjectDetails\n    const updatedProject = projects.find(p => p.id === projectId);\n    setSelectedProject(updatedProject || project);\n  }\n}, [projects, loadProjectDetails]);",
+          "recommendation": "Modify loadProjectDetails to return the updated project data, or use a functional setState update. Better approach: const updatedDetails = await loadProjectDetails(projectId); setSelectedProject(prev => ({ ...project, ...updatedDetails }));"
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing error handling in Promise.all for fetchProjectsForCustomers",
+          "description": "In src/api/projects.js at line 81-83, Promise.all is used to fetch projects for multiple customers. If any single customer request fails, Promise.all will reject immediately and all other successful requests are lost. This creates a poor user experience where one failing customer ID causes the entire batch to fail, even if other customers have valid data.",
+          "file_paths": [
+            "src/api/projects.js"
+          ],
+          "code_snippet": "const projectLists = await Promise.all(\n  customerIds.map(id => dataService.get(`/api/projects/customer/${id}`))\n);\nconst allProjects = projectLists.flatMap(response => response.data || response);",
+          "recommendation": "Use Promise.allSettled instead to handle partial failures gracefully: const results = await Promise.allSettled(customerIds.map(...)); const allProjects = results.filter(r => r.status === 'fulfilled').flatMap(r => r.value.data || r.value); if (results.some(r => r.status === 'rejected')) { console.warn('Some customer projects failed to load', results.filter(r => r.status === 'rejected')); }"
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Dependency array missing in useProject callbacks causes stale closures",
+          "description": "Multiple useCallback hooks in useProject.js include 'projects' in their dependency arrays (lines 171, 378, 423, 431, 469, 517). This causes the callbacks to be recreated every time the projects array changes, which happens frequently. This can lead to performance issues and potential stale closure bugs when callbacks capture intermediate states. Notably, handleProjectUpdate at line 280 depends on [projects, selectedProject, user], meaning it will recreate on every project list change.",
+          "file_paths": [
+            "src/hooks/useProject.js"
+          ],
+          "code_snippet": "const handleProjectUpdate = useCallback(async (projectId, projectData) => {\n  // ... uses projects.find()\n}, [projects, selectedProject, user]);\n\nconst handleProjectDelete = useCallback(async (projectId) => {\n  // ... uses projects.find()\n}, [projects, selectedProject]);",
+          "recommendation": "Use functional setState updates to avoid depending on 'projects' in the dependency array. Instead of reading from 'projects', use setProjects(prev => prev.map(...)) and setSelectedProject(prev => ...). This eliminates the need for 'projects' in dependencies and prevents unnecessary callback recreation."
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "URL parsing in processProjectLinks lacks error handling for malformed URLs",
+          "description": "In src/services/projectService.js at lines 235-240, URL parsing uses try/catch but only catches exceptions during title generation from hostname. However, if link.link is null/undefined, it will still attempt to access it before the try block. Additionally, the catch block falls back to the potentially malformed link value, which could propagate bad data.",
+          "file_paths": [
+            "src/services/projectService.js"
+          ],
+          "code_snippet": "let title = link.title;\nif (!title && link.link) {\n  try {\n    title = new URL(link.link).hostname;\n  } catch {\n    title = link.link;\n  }\n}",
+          "recommendation": "Add explicit null checks and provide a safer fallback: if (!title) { if (link.link) { try { title = new URL(link.link).hostname; } catch (e) { console.warn('Invalid URL format:', link.link); title = 'Invalid URL'; } } else { title = 'Untitled Link'; } }"
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Missing null checks in date transformations",
+          "description": "In src/services/projectService.js at lines 506-507 and 515-516, new Date() is called on createdAt/modifiedAt/dateStart/dateEnd without null checks. If these fields are null/undefined (which is valid according to the backend schema), toLocaleDateString() will be called on an Invalid Date object, resulting in 'Invalid Date' strings in the UI rather than 'Not set' or similar user-friendly messages.",
+          "file_paths": [
+            "src/services/projectService.js"
+          ],
+          "code_snippet": "created: new Date(project.createdAt).toLocaleDateString(),\nmodified: new Date(project.modifiedAt).toLocaleDateString(),\n// ...\ndateStart: project.dateStart ? new Date(project.dateStart).toLocaleDateString() : 'Not set',\ndateEnd: project.dateEnd ? new Date(project.dateEnd).toLocaleDateString() : 'Not set'",
+          "recommendation": "Add consistent null checks for all date fields: created: project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'Not available', modified: project.modifiedAt ? new Date(project.modifiedAt).toLocaleDateString() : 'Not available'"
+        }
+      ],
+      "files_reviewed": 0,
+      "issues_found": 5
+    }
+  },
+  "SecurityCheckNode": {
+    "timestamp": "2026-01-17T01:16:50.048Z",
+    "output": {
+      "findings": [
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "major",
+          "title": "Missing input validation for UUID format allows injection of arbitrary IDs",
+          "description": "The API layer in src/api/projects.js performs null checks on IDs (projectId, objectiveId, stepId, etc.) but does not validate that they are properly formatted UUIDs. IDs are passed directly into URL paths without type or format validation. While the backend should enforce authorization, the frontend should validate UUID format to prevent injection of malformed data. An attacker could potentially pass path traversal sequences (e.g., '../admin/projects'), SQL injection attempts if backend is vulnerable, or cause backend errors with malformed UUIDs. Attack vector: User could manipulate client-side code or intercept API calls to inject malicious ID values like '../../sensitive-data' or '<script>alert(1)</script>' into URL paths.",
+          "file_paths": [
+            "src/api/projects.js"
+          ],
+          "code_snippet": "export async function fetchProjectById(projectId) {\n  if (!projectId) {\n    throw new Error('Project ID is required');\n  }\n  // No UUID format validation\n  const response = await dataService.get(`/api/projects/${projectId}`);\n  return normalizeProjectData(response.data || response);\n}",
+          "recommendation": "Add UUID format validation before making API calls. Install a UUID validation library or use a regex: const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i; function validateUUID(id, name) { if (!UUID_REGEX.test(id)) { throw new Error(`Invalid ${name} format`); } } Then call validateUUID(projectId, 'project ID') in each function before API calls."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "major",
+          "title": "No input sanitization or length limits on user-generated text content",
+          "description": "User-generated text content (project names, objective text, step text, note content) has no sanitization or maximum length enforcement in src/services/projectService.js and src/hooks/useProject.js. While React automatically escapes JSX expressions preventing XSS, there's no protection against: (1) Extremely long strings causing DoS, (2) Special characters causing backend parsing issues, (3) Unicode control characters or right-to-left override attacks affecting UI display. The validateProjectData function only checks if projectName is truthy and trimmed, but doesn't validate length or content. Attack vector: Malicious user could create projects/objectives with multi-megabyte names, causing performance issues, or use Unicode exploits to manipulate text direction and confuse users.",
+          "file_paths": [
+            "src/services/projectService.js",
+            "src/hooks/useProject.js",
+            "src/components/customers/ProjectCreationForm.jsx"
+          ],
+          "code_snippet": "export function validateProjectData(data) {\n  const errors = [];\n  if (!data.projectName?.trim()) {\n    errors.push('Project name is required');\n  }\n  // No length validation, no character sanitization\n  if (!data._custID) {\n    errors.push('Customer ID is required');\n  }\n  return { isValid: errors.length === 0, errors };\n}",
+          "recommendation": "Add input validation with reasonable length limits: (1) Project names: max 255 characters, (2) Objective text: max 500 characters, (3) Step text: max 500 characters, (4) Note content: max 10000 characters, (5) Description: max 2000 characters. Add validation in validateProjectData: if (data.projectName.length > 255) { errors.push('Project name must be 255 characters or less'); }. Consider sanitizing special characters if needed for your use case."
+        },
+        {
+          "id": "SEC-003",
+          "category": "security",
+          "severity": "minor",
+          "title": "Numeric input parsing without bounds checking",
+          "description": "In src/services/projectService.js, parseFloat is used on user-provided budget/value fields (lines 49, 94, 552) without bounds checking for reasonable values. While validation checks for positive numbers in fixed-price/subscription projects, there's no upper bound. An attacker could input extremely large numbers (e.g., Number.MAX_SAFE_INTEGER or scientific notation like 1e308) causing: (1) Integer overflow issues in backend calculations, (2) Display rendering problems, (3) Database storage issues, (4) Financial calculation errors. Attack vector: User creates project with value='9999999999999999999999' or '1e308', potentially causing backend crashes or incorrect financial calculations.",
+          "file_paths": [
+            "src/services/projectService.js",
+            "src/components/customers/ProjectCreationForm.jsx"
+          ],
+          "code_snippet": "if (data.f_fixedPrice === '1' || data.f_fixedPrice === 1) {\n  if (!data.value || isNaN(parseFloat(data.value)) || parseFloat(data.value) <= 0) {\n    errors.push('Value is required for fixed price projects and must be a positive number');\n  }\n  // No maximum value check\n}",
+          "recommendation": "Add maximum value validation. For financial amounts, set reasonable upper bounds: const MAX_PROJECT_VALUE = 10000000; // $10M or appropriate for your business. In validateProjectData, add: const numValue = parseFloat(data.value); if (numValue > MAX_PROJECT_VALUE) { errors.push(`Value must be less than ${MAX_PROJECT_VALUE}`); }. Also validate against Number.MAX_SAFE_INTEGER to prevent precision loss."
+        },
+        {
+          "id": "SEC-004",
+          "category": "security",
+          "severity": "minor",
+          "title": "Open redirect vulnerability in external link handling",
+          "description": "In src/components/projects/ProjectLinksTab.jsx at line 183, user-provided URLs are rendered directly in href attributes without validation: <a href={linkUrl} target=\"_blank\" rel=\"noopener noreferrer\">. While 'noopener noreferrer' prevents some attacks, there's no validation that the URL scheme is safe. Malicious users could add links with javascript: or data: schemes, potentially executing code in user context. Attack vector: User creates project link with URL 'javascript:alert(document.cookie)' or 'data:text/html,<script>alert(1)</script>', which executes when another user clicks the link.",
+          "file_paths": [
+            "src/components/projects/ProjectLinksTab.jsx"
+          ],
+          "code_snippet": "<a\n  href={linkUrl}\n  target=\"_blank\"\n  rel=\"noopener noreferrer\"\n  className={`flex-1 truncate ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}\n>\n  {linkTitle}\n</a>",
+          "recommendation": "Add URL scheme validation before rendering links. Create a validation function: function isSafeURL(url) { try { const parsed = new URL(url); return ['http:', 'https:'].includes(parsed.protocol); } catch { return false; } }. In ProjectLinksTab, validate before rendering: {isSafeURL(linkUrl) ? (<a href={linkUrl} ...>) : (<span className=\"text-red-500\">Invalid URL scheme</span>)}. Also validate on the backend when creating/updating links."
+        },
+        {
+          "id": "SEC-005",
+          "category": "security",
+          "severity": "minor",
+          "title": "No rate limiting or duplicate request prevention in API layer",
+          "description": "The API functions in src/api/projects.js have no client-side rate limiting, request deduplication, or debouncing. An attacker could rapidly call create/update/delete operations, potentially: (1) Creating thousands of projects/objectives/steps causing DoS, (2) Overwhelming the backend with requests, (3) Bypassing backend rate limits through distributed attacks. While backend should implement rate limiting, the frontend lacks any protective measures. Attack vector: Malicious script calls createProject() in a loop 10000 times, overwhelming both frontend and backend.",
+          "file_paths": [
+            "src/api/projects.js",
+            "src/hooks/useProject.js"
+          ],
+          "code_snippet": "export async function createProject(data) {\n  if (!data) {\n    throw new Error('Project data is required');\n  }\n  // No rate limiting or duplicate request detection\n  const auth = getAuthenticationContext();\n  checkOrganizationScope({ authentication: auth }, 'createProject');\n  const response = await dataService.post('/api/projects', data);\n  return normalizeProjectData(response.data || response);\n}",
+          "recommendation": "Implement client-side protections: (1) Add request deduplication using a Set of in-flight request IDs, (2) Disable submit buttons while requests are pending (already partially done), (3) Implement debouncing for rapid repeated actions, (4) Add a simple rate limit check: const REQUEST_WINDOW = 60000; const MAX_REQUESTS = 100; Track request counts per operation type and reject if exceeded. (5) Most importantly, ensure backend has proper rate limiting per user/organization."
+        }
+      ],
+      "files_reviewed": 0,
+      "vulnerabilities_found": 5
+    }
+  },
+  "ArchitectureCheckNode": {
+    "timestamp": "2026-01-17T01:18:59.485Z",
+    "output": {
+      "findings": [
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing structured error handling wrapper - inconsistent with Customer API pattern",
+          "description": "The projects API layer (src/api/projects.js) does not use the withErrorHandling wrapper pattern that is established in src/api/customers.js. The Customer API wraps all operations with withErrorHandling() for comprehensive error parsing, logging, and transformation into domain-specific errors (CustomerError with error codes). The Projects API uses raw try-catch in the consuming hook layer instead. This creates inconsistent error handling across features - Customer operations return structured errors with codes (CUSTOMER_NOT_FOUND, CUSTOMER_AUTH_FAILED, etc.) while Project operations return generic Error objects. This makes error handling unpredictable for consumers and prevents proper error recovery strategies.",
+          "file_paths": [
+            "src/api/projects.js",
+            "src/api/customers.js"
+          ],
+          "code_snippet": "// customers.js - CORRECT PATTERN\nexport async function fetchCustomerById(customerId) {\n  return withErrorHandling(async () => {\n    if (!customerId) {\n      throw new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);\n    }\n    const auth = getAuthenticationContext();\n    checkOrganizationScope({ authentication: auth }, 'fetchCustomerById');\n    const response = await dataService.get(`/api/customers/${customerId}`);\n    return normalizeCustomerData(response.data || response);\n  }, 'fetchCustomerById', { customerId });\n}\n\n// projects.js - MISSING PATTERN\nexport async function fetchProjectById(projectId) {\n  if (!projectId) {\n    throw new Error('Project ID is required');\n  }\n  const auth = getAuthenticationContext();\n  checkOrganizationScope({ authentication: auth }, 'fetchProjectById');\n  const response = await dataService.get(`/api/projects/${projectId}`);\n  return normalizeProjectData(response.data || response);\n}",
+          "recommendation": "Create src/errors/projectErrors.js similar to customerErrors.js with ProjectError class, ProjectErrorCodes enum, withErrorHandling wrapper, and checkOrganizationScope function. Wrap all API functions in projects.js with withErrorHandling(). Update useProject.js to handle ProjectError types instead of generic errors. This provides consistent error handling across the application and enables proper error recovery, user messaging, and debugging."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing environment-aware routing in hook layer - violates established pattern",
+          "description": "The useProject hook (src/hooks/useProject.js) does not implement environment-aware routing like useCustomer does. The Customer hook uses getEnvironmentContext() and ENVIRONMENT_TYPES to route between FileMaker and webapp environments at the hook level, calling different processing functions based on env.type. The Project hook hardcodes 'backend' as the source parameter in processProjectData() calls (lines 73, 81, 103) and comments claim environment detection but never actually check the environment. According to TSK0006 notes, the implementation claims to be 'environment-aware' but the code shows no environment detection. This breaks the architectural pattern where hooks are responsible for environment routing, not the API layer.",
+          "file_paths": [
+            "src/hooks/useProject.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// useCustomer.js - CORRECT PATTERN\nconst loadCustomers = useCallback(async (options = {}) => {\n  try {\n    setLoading(true);\n    setError(null);\n    const env = getEnvironmentContext();\n    const result = await fetchCustomers(options);\n    let processedCustomers;\n    let paginationInfo;\n    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {\n      processedCustomers = processCustomerData(result);\n      paginationInfo = { total: processedCustomers.length, ... };\n    } else {\n      const processed = processBackendCustomerList(result);\n      processedCustomers = processed.customers;\n      paginationInfo = processed.pagination;\n    }\n    setCustomers(processedCustomers);\n    setPagination(paginationInfo);\n  } catch (err) { ... }\n}, []);\n\n// useProject.js - MISSING PATTERN\nconst loadProjects = useCallback(async (custId) => {\n  try {\n    // No environment detection!\n    if (custId) {\n      const projectResult = await fetchProjectsForCustomer(custId);\n      const processedProjects = processProjectData(projectResult, {}, 'backend');\n      setProjects(processedProjects);\n    }\n  } catch (err) { ... }\n}, []);",
+          "recommendation": "Import getEnvironmentContext and ENVIRONMENT_TYPES in useProject.js. Add environment detection at the start of loadProjects(), loadProjectDetails(), and all CRUD operations. Check env.type and route to appropriate processing: if (env.type === ENVIRONMENT_TYPES.FILEMAKER) use 'filemaker' source, else use 'backend'. This aligns with the established Customer pattern and enables true dual-environment support as documented."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing pagination state management - inconsistent with Customer hook pattern",
+          "description": "The useProject hook does not implement pagination state management, while useCustomer establishes a clear pattern with pagination state (total, limit, offset, has_more) and setPagination(). Projects are loaded without pagination controls, potentially causing performance issues when customers have hundreds of projects. The Customer hook returns pagination info to components and manages offset/limit state. The Project hook has no pagination.total, no 'load more' capability, and no offset tracking. This is architecturally inconsistent and creates a poor UX for users with many projects.",
+          "file_paths": [
+            "src/hooks/useProject.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// useCustomer.js - CORRECT PATTERN\nconst [pagination, setPagination] = useState({\n  total: 0,\n  limit: 50,\n  offset: 0,\n  has_more: false\n});\n\nconst loadCustomers = useCallback(async (options = {}) => {\n  // ... fetch with pagination params\n  setPagination(paginationInfo);\n}, []);\n\nreturn {\n  customers,\n  pagination,\n  loadCustomers,\n  // ...\n};\n\n// useProject.js - MISSING PATTERN\nconst [projects, setProjects] = useState([]);\n// No pagination state at all\nconst loadProjects = useCallback(async (custId) => {\n  const processedProjects = processProjectData(projectResult, {}, 'backend');\n  setProjects(processedProjects); // Replaces all, no append\n}, []);",
+          "recommendation": "Add pagination state to useProject hook following the Customer pattern. Include total, limit, offset, has_more fields. Update loadProjects to accept pagination options and return pagination info. Add backend API support for limit/offset query params in fetchProjectsForCustomer(). Export pagination state from hook. Update ProjectList component to show pagination controls and handle 'load more' functionality."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Inconsistent checkOrganizationScope implementation across API files",
+          "description": "The projects.js API has its own checkOrganizationScope function (lines 42-46) that duplicates logic from customerErrors.js (line 346-356). The Customer API imports checkOrganizationScope from customerErrors.js as a shared utility, but Projects API re-implements it inline. This violates DRY principle and creates inconsistent behavior - Customer's version is more sophisticated (checks env.type === 'webapp', has better error codes), while Project's version is simpler. If organization scope logic needs to change, it must be updated in multiple places.",
+          "file_paths": [
+            "src/api/projects.js",
+            "src/errors/customerErrors.js",
+            "src/api/notes.js"
+          ],
+          "code_snippet": "// projects.js - LOCAL IMPLEMENTATION\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n  if (!auth?.user?.supabaseOrgID) {\n    throw new Error(`Organization context required for ${operation}. Please authenticate.`);\n  }\n}\n\n// notes.js - DUPLICATE IMPLEMENTATION\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n  if (!auth?.user?.supabaseOrgID) {\n    throw new Error(`Organization context required for ${operation}. Please authenticate.`);\n  }\n}\n\n// customerErrors.js - CANONICAL IMPLEMENTATION\nexport function checkOrganizationScope(env, operation = 'unknown') {\n  if (env.type === 'webapp') {\n    if (!env.authentication?.user?.supabaseOrgID) {\n      throw new CustomerError(\n        'Organization context is required but not found',\n        CustomerErrorCodes.ORG_SCOPE_MISSING,\n        { operation, environment: env.type }\n      );\n    }\n  }\n}",
+          "recommendation": "Create a shared errors/commonErrors.js or utils/apiUtils.js file with a canonical checkOrganizationScope implementation. Import and use this shared function in all API files (projects.js, notes.js, links.js, images.js, customers.js). Remove duplicate implementations. The shared version should check environment type and throw appropriate domain errors or a generic ApiError class that all feature-specific errors extend from."
+        },
+        {
+          "id": "ARC-005",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Missing service layer exports from index.js - breaks encapsulation",
+          "description": "The useProject hook directly imports transformation functions from '../services/projectService' (line 23-34) instead of importing from '../services' index. The Customer feature properly exports all service functions through src/services/index.js and hooks import from '../services'. This breaks encapsulation - the services/index.js should be the public API boundary for the services layer. Direct imports create tight coupling and make it harder to refactor the services layer structure.",
+          "file_paths": [
+            "src/hooks/useProject.js",
+            "src/services/index.js"
+          ],
+          "code_snippet": "// useProject.js - DIRECT IMPORT (ANTI-PATTERN)\nimport {\n  processProjectData,\n  validateProjectData,\n  formatProjectForFileMaker,\n  formatProjectForBackend,\n  calculateProjectCompletion,\n  processProjectImages,\n  processProjectLinks,\n  processProjectObjectives,\n  processProjectValue,\n  updateProjectRecordsBillableStatus\n} from '../services/projectService';\n\n// useCustomer.js - CORRECT PATTERN\nimport {\n  processCustomerData,\n  processBackendCustomerList,\n  processBackendCustomerDetail,\n  sortCustomers,\n  validateCustomerData,\n  formatCustomerForFileMaker,\n  calculateCustomerStats,\n  transformFileMakerToBackend,\n  transformBackendToFileMaker\n} from '../services';",
+          "recommendation": "Add all project service exports to src/services/index.js: export { processProjectData, validateProjectData, formatProjectForFileMaker, formatProjectForBackend, calculateProjectCompletion, processProjectImages, processProjectLinks, processProjectObjectives, processProjectValue, updateProjectRecordsBillableStatus } from './projectService'; Update useProject.js to import from '../services' instead of '../services/projectService'. This maintains proper layer boundaries and follows the established pattern."
+        }
+      ],
+      "patterns_reviewed": 0,
+      "violations_found": 5
+    }
+  },
+  "JudgeNode": {
+    "timestamp": "2026-01-17T01:18:59.486Z",
+    "output": {
+      "total_findings": 16,
+      "kept_findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Direct Supabase client calls violate standing constraint",
+          "description": "The implementation violates the standing constraint 'No direct Supabase client calls - all operations through backend API'. The business logic for fixed-price and subscription projects in src/hooks/useProject.js calls createSalesFromProjectValue() from src/services/salesService.js, which ultimately uses direct Supabase client calls via the insert() function from supabaseService.js. The supabaseService.js wraps direct Supabase client operations and routes them through a backend proxy (callBackendSupabaseAPI), but this still constitutes direct database operations rather than using dedicated backend REST API endpoints. According to TSK0009 documentation, sales generation logic should be migrated to the backend for transaction safety, data consistency, and security - but this migration was not completed. The current implementation writes directly to the customer_sales table via Supabase calls during project creation (lines 242-257 in useProject.js) and updates (lines 337-351).",
+          "file_paths": [
+            "src/hooks/useProject.js",
+            "src/services/salesService.js",
+            "src/services/supabaseService.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Create a backend API endpoint for sales generation (POST /api/projects/{id}/generate-sales or similar) and migrate the business logic from createSalesFromProjectValue() to the backend. Update useProject.js to call this new endpoint instead of directly manipulating the customer_sales table. This will ensure all project operations go through the backend API as required by the standing constraints and will provide better transaction safety, duplicate prevention, and server-side validation as documented in TSK0009_BUSINESS_LOGIC_REVIEW.md."
+        },
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Stale closure bug in handleProjectSelect causes race condition",
+          "description": "The handleProjectSelect function at line 140-171 has a stale closure issue. After calling loadProjectDetails(projectId) which updates state via setProjects, the function immediately reads from the stale 'projects' closure variable (line 160: projects.find(p => p.id === projectId)). Since setState is asynchronous, this will return the OLD project state, not the updated one with the newly loaded details. This creates a race condition where selectedProject may be set to a version without the loaded details.",
+          "file_paths": [
+            "src/hooks/useProject.js"
+          ],
+          "code_snippet": "const handleProjectSelect = useCallback(async (projectOrId) => {\n  // ...\n  if (!project.images || !project.links || !project.objectives) {\n    await loadProjectDetails(projectId);\n    // BUG: 'projects' is stale here - doesn't include the update from loadProjectDetails\n    const updatedProject = projects.find(p => p.id === projectId);\n    setSelectedProject(updatedProject || project);\n  }\n}, [projects, loadProjectDetails]);",
+          "recommendation": "Modify loadProjectDetails to return the updated project data, or use a functional setState update. Better approach: const updatedDetails = await loadProjectDetails(projectId); setSelectedProject(prev => ({ ...project, ...updatedDetails }));"
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing error handling in Promise.all for fetchProjectsForCustomers",
+          "description": "In src/api/projects.js at line 81-83, Promise.all is used to fetch projects for multiple customers. If any single customer request fails, Promise.all will reject immediately and all other successful requests are lost. This creates a poor user experience where one failing customer ID causes the entire batch to fail, even if other customers have valid data.",
+          "file_paths": [
+            "src/api/projects.js"
+          ],
+          "code_snippet": "const projectLists = await Promise.all(\n  customerIds.map(id => dataService.get(`/api/projects/customer/${id}`))\n);\nconst allProjects = projectLists.flatMap(response => response.data || response);",
+          "recommendation": "Use Promise.allSettled instead to handle partial failures gracefully: const results = await Promise.allSettled(customerIds.map(...)); const allProjects = results.filter(r => r.status === 'fulfilled').flatMap(r => r.value.data || r.value); if (results.some(r => r.status === 'rejected')) { console.warn('Some customer projects failed to load', results.filter(r => r.status === 'rejected')); }"
+        },
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "major",
+          "title": "Missing input validation for UUID format allows injection of arbitrary IDs",
+          "description": "The API layer in src/api/projects.js performs null checks on IDs (projectId, objectiveId, stepId, etc.) but does not validate that they are properly formatted UUIDs. IDs are passed directly into URL paths without type or format validation. While the backend should enforce authorization, the frontend should validate UUID format to prevent injection of malformed data. An attacker could potentially pass path traversal sequences (e.g., '../admin/projects'), SQL injection attempts if backend is vulnerable, or cause backend errors with malformed UUIDs. Attack vector: User could manipulate client-side code or intercept API calls to inject malicious ID values like '../../sensitive-data' or '<script>alert(1)</script>' into URL paths.",
+          "file_paths": [
+            "src/api/projects.js"
+          ],
+          "code_snippet": "export async function fetchProjectById(projectId) {\n  if (!projectId) {\n    throw new Error('Project ID is required');\n  }\n  // No UUID format validation\n  const response = await dataService.get(`/api/projects/${projectId}`);\n  return normalizeProjectData(response.data || response);\n}",
+          "recommendation": "Add UUID format validation before making API calls. Install a UUID validation library or use a regex: const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i; function validateUUID(id, name) { if (!UUID_REGEX.test(id)) { throw new Error(`Invalid ${name} format`); } } Then call validateUUID(projectId, 'project ID') in each function before API calls."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "major",
+          "title": "No input sanitization or length limits on user-generated text content",
+          "description": "User-generated text content (project names, objective text, step text, note content) has no sanitization or maximum length enforcement in src/services/projectService.js and src/hooks/useProject.js. While React automatically escapes JSX expressions preventing XSS, there's no protection against: (1) Extremely long strings causing DoS, (2) Special characters causing backend parsing issues, (3) Unicode control characters or right-to-left override attacks affecting UI display. The validateProjectData function only checks if projectName is truthy and trimmed, but doesn't validate length or content. Attack vector: Malicious user could create projects/objectives with multi-megabyte names, causing performance issues, or use Unicode exploits to manipulate text direction and confuse users.",
+          "file_paths": [
+            "src/services/projectService.js",
+            "src/hooks/useProject.js",
+            "src/components/customers/ProjectCreationForm.jsx"
+          ],
+          "code_snippet": "export function validateProjectData(data) {\n  const errors = [];\n  if (!data.projectName?.trim()) {\n    errors.push('Project name is required');\n  }\n  // No length validation, no character sanitization\n  if (!data._custID) {\n    errors.push('Customer ID is required');\n  }\n  return { isValid: errors.length === 0, errors };\n}",
+          "recommendation": "Add input validation with reasonable length limits: (1) Project names: max 255 characters, (2) Objective text: max 500 characters, (3) Step text: max 500 characters, (4) Note content: max 10000 characters, (5) Description: max 2000 characters. Add validation in validateProjectData: if (data.projectName.length > 255) { errors.push('Project name must be 255 characters or less'); }. Consider sanitizing special characters if needed for your use case."
+        },
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing structured error handling wrapper - inconsistent with Customer API pattern",
+          "description": "The projects API layer (src/api/projects.js) does not use the withErrorHandling wrapper pattern that is established in src/api/customers.js. The Customer API wraps all operations with withErrorHandling() for comprehensive error parsing, logging, and transformation into domain-specific errors (CustomerError with error codes). The Projects API uses raw try-catch in the consuming hook layer instead. This creates inconsistent error handling across features - Customer operations return structured errors with codes (CUSTOMER_NOT_FOUND, CUSTOMER_AUTH_FAILED, etc.) while Project operations return generic Error objects. This makes error handling unpredictable for consumers and prevents proper error recovery strategies.",
+          "file_paths": [
+            "src/api/projects.js",
+            "src/api/customers.js"
+          ],
+          "code_snippet": "// customers.js - CORRECT PATTERN\nexport async function fetchCustomerById(customerId) {\n  return withErrorHandling(async () => {\n    if (!customerId) {\n      throw new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);\n    }\n    const auth = getAuthenticationContext();\n    checkOrganizationScope({ authentication: auth }, 'fetchCustomerById');\n    const response = await dataService.get(`/api/customers/${customerId}`);\n    return normalizeCustomerData(response.data || response);\n  }, 'fetchCustomerById', { customerId });\n}\n\n// projects.js - MISSING PATTERN\nexport async function fetchProjectById(projectId) {\n  if (!projectId) {\n    throw new Error('Project ID is required');\n  }\n  const auth = getAuthenticationContext();\n  checkOrganizationScope({ authentication: auth }, 'fetchProjectById');\n  const response = await dataService.get(`/api/projects/${projectId}`);\n  return normalizeProjectData(response.data || response);\n}",
+          "recommendation": "Create src/errors/projectErrors.js similar to customerErrors.js with ProjectError class, ProjectErrorCodes enum, withErrorHandling wrapper, and checkOrganizationScope function. Wrap all API functions in projects.js with withErrorHandling(). Update useProject.js to handle ProjectError types instead of generic errors. This provides consistent error handling across the application and enables proper error recovery, user messaging, and debugging."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing environment-aware routing in hook layer - violates established pattern",
+          "description": "The useProject hook (src/hooks/useProject.js) does not implement environment-aware routing like useCustomer does. The Customer hook uses getEnvironmentContext() and ENVIRONMENT_TYPES to route between FileMaker and webapp environments at the hook level, calling different processing functions based on env.type. The Project hook hardcodes 'backend' as the source parameter in processProjectData() calls (lines 73, 81, 103) and comments claim environment detection but never actually check the environment. According to TSK0006 notes, the implementation claims to be 'environment-aware' but the code shows no environment detection. This breaks the architectural pattern where hooks are responsible for environment routing, not the API layer.",
+          "file_paths": [
+            "src/hooks/useProject.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// useCustomer.js - CORRECT PATTERN\nconst loadCustomers = useCallback(async (options = {}) => {\n  try {\n    setLoading(true);\n    setError(null);\n    const env = getEnvironmentContext();\n    const result = await fetchCustomers(options);\n    let processedCustomers;\n    let paginationInfo;\n    if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {\n      processedCustomers = processCustomerData(result);\n      paginationInfo = { total: processedCustomers.length, ... };\n    } else {\n      const processed = processBackendCustomerList(result);\n      processedCustomers = processed.customers;\n      paginationInfo = processed.pagination;\n    }\n    setCustomers(processedCustomers);\n    setPagination(paginationInfo);\n  } catch (err) { ... }\n}, []);\n\n// useProject.js - MISSING PATTERN\nconst loadProjects = useCallback(async (custId) => {\n  try {\n    // No environment detection!\n    if (custId) {\n      const projectResult = await fetchProjectsForCustomer(custId);\n      const processedProjects = processProjectData(projectResult, {}, 'backend');\n      setProjects(processedProjects);\n    }\n  } catch (err) { ... }\n}, []);",
+          "recommendation": "Import getEnvironmentContext and ENVIRONMENT_TYPES in useProject.js. Add environment detection at the start of loadProjects(), loadProjectDetails(), and all CRUD operations. Check env.type and route to appropriate processing: if (env.type === ENVIRONMENT_TYPES.FILEMAKER) use 'filemaker' source, else use 'backend'. This aligns with the established Customer pattern and enables true dual-environment support as documented."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing pagination state management - inconsistent with Customer hook pattern",
+          "description": "The useProject hook does not implement pagination state management, while useCustomer establishes a clear pattern with pagination state (total, limit, offset, has_more) and setPagination(). Projects are loaded without pagination controls, potentially causing performance issues when customers have hundreds of projects. The Customer hook returns pagination info to components and manages offset/limit state. The Project hook has no pagination.total, no 'load more' capability, and no offset tracking. This is architecturally inconsistent and creates a poor UX for users with many projects.",
+          "file_paths": [
+            "src/hooks/useProject.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// useCustomer.js - CORRECT PATTERN\nconst [pagination, setPagination] = useState({\n  total: 0,\n  limit: 50,\n  offset: 0,\n  has_more: false\n});\n\nconst loadCustomers = useCallback(async (options = {}) => {\n  // ... fetch with pagination params\n  setPagination(paginationInfo);\n}, []);\n\nreturn {\n  customers,\n  pagination,\n  loadCustomers,\n  // ...\n};\n\n// useProject.js - MISSING PATTERN\nconst [projects, setProjects] = useState([]);\n// No pagination state at all\nconst loadProjects = useCallback(async (custId) => {\n  const processedProjects = processProjectData(projectResult, {}, 'backend');\n  setProjects(processedProjects); // Replaces all, no append\n}, []);",
+          "recommendation": "Add pagination state to useProject hook following the Customer pattern. Include total, limit, offset, has_more fields. Update loadProjects to accept pagination options and return pagination info. Add backend API support for limit/offset query params in fetchProjectsForCustomer(). Export pagination state from hook. Update ProjectList component to show pagination controls and handle 'load more' functionality."
+        }
+      ],
+      "dropped_findings": [
+        "COD-003",
+        "COD-004",
+        "COD-005",
+        "SEC-003",
+        "SEC-004",
+        "SEC-005",
+        "ARC-004",
+        "ARC-005"
+      ],
+      "merged_findings": [],
+      "decisions": [
+        {
+          "finding_id": "COM-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-003",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "SEC-003",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "SEC-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "SEC-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        }
+      ],
+      "summary": "Judge phase complete: 16 findings reviewed, 8 kept (critical/major), 8 dropped (minor/suggestion), 0 merged (duplicates)"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T01:20:59.114Z",
+    "output": {
+      "review_status": "blocked",
+      "tasks_created": [
+        "TASK016",
+        "TASK017",
+        "TASK018",
+        "TASK019",
+        "TASK020",
+        "TASK021",
+        "TASK022",
+        "TASK023"
+      ],
+      "summary": "Found 8 issue(s) requiring remediation - created 8 task(s)",
+      "findings_count": 8
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T06:03:12.125Z",
+    "featureSlug": "notes-migration-requirements",
+    "taskId": "TASK019",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] Missing error handling wrapper (withErrorHandling) in API layer",
+    "sessionId": "019bca8c-ed8f-7880-a41c-2fa5680492b2",
+    "processId": 1768629792124,
+    "lastUpdated": "2026-01-17T06:05:43.713Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T06:03:12.127Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-17T06:05:43.596Z",
+    "output": {
+      "success": true,
+      "sessionId": "019bca8c-ed8f-7880-a41c-2fa5680492b2",
+      "processId": 47722,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\nAdded note-level error handling in the API layer by wrapping all note API calls with `withNoteErrorHandling`, switching org-scope checks to the shared note helper, and emitting `NoteError` codes for missing input so errors are classified consistently in `src/api/notes.js`.\n\nDetails and context:\n- `src/api/notes.js` now mirrors the customer API pattern: each public function is wrapped and passes operation context for logging/classification, and missing required inputs surface as `NoteErrorCodes.REQUIRED_FIELD_MISSING` instead of generic errors.\n\nTests:\n- `npm test -- src/errors/__tests__/noteErrors.test.js` (passes; this suite intentionally logs a `console.error` from `withErrorHandling`)\n\nNext steps (optional):\n1. Run the full Jest suite with `npm test`.\n2. Exercise a note flow in the UI to confirm the formatted error display paths."
+    }
+  },
+  "ValidateNode": {
+    "timestamp": "2026-01-17T06:05:43.711Z",
+    "output": {
+      "passed": false,
+      "buildPassed": false,
+      "buildErrors": "Build failed with exit code 1:\nnpm error Missing script: \"typecheck\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /Users/marcusswift/.npm/_logs/2026-01-17T06_05_43_683Z-debug-0.log\n",
+      "error": "Build verification failed"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T06:05:43.713Z",
+    "output": {
+      "taskStatus": "blocked",
+      "summary": "Task validation failed: Build verification failed",
+      "nextTaskTriggered": true
+    }
+  }
+}

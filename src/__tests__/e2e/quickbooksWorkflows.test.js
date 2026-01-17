@@ -5,31 +5,27 @@
  * Tests OAuth flow, invoice creation, customer sync, and error recovery
  */
 
+jest.mock('../../services/dataService', () => ({
+  generateBackendAuthHeader: jest.fn().mockResolvedValue('Bearer test-jwt-token'),
+  getAuthenticationContext: jest.fn().mockReturnValue({
+    isAuthenticated: true,
+    user: { supabaseOrgID: '9816c057-b5d3-43a2-848f-99365ee6255e' }
+  })
+}));
+
 import * as quickbooksApi from '../../api/quickbooksApi';
 
 // Mock fetch for all tests
 global.fetch = jest.fn();
 
-// Mock Web Crypto API
-global.crypto = {
-  subtle: {
-    importKey: jest.fn().mockResolvedValue('mock-crypto-key'),
-    sign: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]))
-  }
-};
-
 beforeEach(() => {
   // Mock environment variables
-  process.env.VITE_SECRET_KEY = 'test-secret-key';
-  process.env.VITE_CLARITY_INTEGRATION_ORG_ID = '9816c057-b5d3-43a2-848f-99365ee6255e';
   process.env.VITE_API_URL = 'https://api.claritybusinesssolutions.ca';
 
   jest.clearAllMocks();
 });
 
 afterEach(() => {
-  delete process.env.VITE_SECRET_KEY;
-  delete process.env.VITE_CLARITY_INTEGRATION_ORG_ID;
   delete process.env.VITE_API_URL;
 });
 

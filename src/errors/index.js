@@ -13,3 +13,11 @@ export {
     withErrorHandling,
     formatErrorForUI
 } from './customerErrors';
+
+export {
+    NoteError,
+    NoteErrorCodes,
+    parseHttpError as parseNoteHttpError,
+    checkOrganizationScope as checkNoteOrganizationScope,
+    withErrorHandling as withNoteErrorHandling
+} from './noteErrors';

@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T18:18:46.204Z",
+    "featureSlug": "customers-backend-integration",
+    "taskId": "TASK016",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] FileMaker Dual-Write Logic Not Removed (AC7 Violation)",
+    "sessionId": "019bcd2e-5c4f-7181-b553-4261e2eff4e4",
+    "processId": 1768673926204,
+    "lastUpdated": "2026-01-17T18:19:58.965Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T18:18:46.206Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-17T18:19:58.834Z",
+    "output": {
+      "success": true,
+      "sessionId": "019bcd2e-5c4f-7181-b553-4261e2eff4e4",
+      "processId": 10880,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\n**Findings**\n- High: Dual-write logic is still active in `src/hooks/useCustomer.js:246-275`, where a FileMaker update is followed by `updateCustomerInSupabase()`. This directly violates AC7 “dual-write removal” and risks divergence when the Supabase update fails after FileMaker succeeds.\n- High: `src/hooks/useSupabaseCustomer.js:1-240` still performs direct Supabase mutations for customers (insert/update/link email/phone/address), which AC7 explicitly forbids (“no direct Supabase client calls from frontend for customers”) and says this hook should be removed or repurposed.\n- Medium: FileMaker-specific customer formatting is still used in the primary customer hook (`src/hooks/useCustomer.js:12-18` and `src/hooks/useCustomer.js:202-249`), conflicting with AC7’s requirement to remove FileMaker-specific customer code (e.g., `formatCustomerForFileMaker`).\n- Medium: UI text and flow still assume dual-write (“Update customer in both FileMaker and Supabase”) in `src/components/customers/CustomerSettings.jsx:194-195`, which misrepresents the intended backend-only routing and implies the old behavior persists.\n\n**Open Questions / Assumptions**\n- Assumption: Per `CLAUDE.md`, FileMaker integration was removed as of Jan 2026, so customer flows should be backend-only; please confirm if any legacy FileMaker environment still needs to be supported.\n- I did not run tests or a build for this review-only pass.\n\nIf you want, I can implement AC7 removal by deleting the dual-write path, removing or repurposing `useSupabaseCustomer`, and updating the UI copy to backend-only semantics."
+    }
+  },
+  "ValidateNode": {
+    "timestamp": "2026-01-17T18:19:58.961Z",
+    "output": {
+      "passed": false,
+      "buildPassed": false,
+      "buildErrors": "Build failed with exit code 1:\nnpm error Missing script: \"typecheck\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /Users/marcusswift/.npm/_logs/2026-01-17T18_19_58_929Z-debug-0.log\n",
+      "error": "Build verification failed"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T18:19:58.965Z",
+    "output": {
+      "taskStatus": "blocked",
+      "summary": "Task validation failed: Build verification failed",
+      "nextTaskTriggered": true
+    }
+  }
+}

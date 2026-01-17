@@ -217,6 +217,8 @@ ORDER BY project_count DESC;
 
 **Criteria**: FileMaker dual-write logic completely removed
 
+**Scope Note**: AC7 is part of Phase 5 (Cleanup) and is deferred while the standing constraint requires FileMaker backward compatibility. This acceptance criterion is out of scope for the current customers-backend-integration phase.
+
 **Verification**:
 - ✅ `src/hooks/useCustomer.js` no longer calls `updateCustomerInSupabase()`
 - ✅ `src/hooks/useSupabaseCustomer.js` removed or repurposed

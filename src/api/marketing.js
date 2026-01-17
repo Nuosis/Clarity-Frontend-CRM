@@ -3,50 +3,14 @@
  * Integrates with the backend bulk email endpoint
  */
 
-/**
- * Create HMAC signature for authentication
- * @param {string} secret - The secret key
- * @param {string} payload - The request payload
- * @returns {Object} - Object containing signature and timestamp
- */
-function createSignature(secret, payload) {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const message = `${timestamp}.${payload}`;
-    
-    // Use Web Crypto API for HMAC-SHA256
-    return crypto.subtle.importKey(
-        'raw',
-        new TextEncoder().encode(secret),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-    ).then(key => {
-        return crypto.subtle.sign(
-            'HMAC',
-            key,
-            new TextEncoder().encode(message)
-        );
-    }).then(signature => {
-        const hexSignature = Array.from(new Uint8Array(signature))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('');
-        return { signature: hexSignature, timestamp };
-    });
-}
+import { generateBackendAuthHeader } from '../services/dataService';
 
 /**
  * Get authentication header
- * @param {string} payload - The request payload
  * @returns {Promise<string>} - The authorization header value
  */
-async function getAuthHeader(payload) {
-    const secret = import.meta.env.VITE_SECRET_KEY;
-    if (!secret) {
-        throw new Error('VITE_SECRET_KEY environment variable not set');
-    }
-    
-    const { signature, timestamp } = await createSignature(secret, payload);
-    return `Bearer ${signature}.${timestamp}`;
+async function getAuthHeader() {
+    return generateBackendAuthHeader();
 }
 
 /**
@@ -160,7 +124,7 @@ export async function sendInformationSessionEmails(customers, options = {}) {
         const requestBody = JSON.stringify(requestPayload);
         
         // Get authentication header
-        const authHeader = await getAuthHeader(requestBody);
+        const authHeader = await getAuthHeader();
         
         // Make the API call with authentication
         const response = await fetch(apiUrl, {
@@ -248,7 +212,7 @@ export async function sendCustomListInformationSessionEmails(csvFile, options = 
         const requestBody = JSON.stringify(requestPayload);
         
         // Get authentication header
-        const authHeader = await getAuthHeader(requestBody);
+        const authHeader = await getAuthHeader();
         
         // Make the API call
         const response = await fetch(apiUrl, {
@@ -313,7 +277,7 @@ export async function sendTestInformationSessionEmail(options = {}) {
         const requestBody = JSON.stringify(requestPayload);
         
         // Get authentication header
-        const authHeader = await getAuthHeader(requestBody);
+        const authHeader = await getAuthHeader();
         
         // Make the API call
         const response = await fetch(apiUrl, {
@@ -364,7 +328,7 @@ export async function validateEmailTemplate(templatePath, sampleVariables = {}) 
         });
         
         // Get authentication header
-        const authHeader = await getAuthHeader(requestBody);
+        const authHeader = await getAuthHeader();
         
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -413,7 +377,7 @@ export async function sendCustomBulkEmail(recipients, emailConfig) {
         const requestBody = JSON.stringify(requestPayload);
         
         // Get authentication header
-        const authHeader = await getAuthHeader(requestBody);
+        const authHeader = await getAuthHeader();
         
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -449,7 +413,7 @@ export async function getCampaignStatus(campaignId) {
         const apiUrl = `https://devhook.claritybusinesssolutions.app/mailjet/campaign-status/${campaignId}`;
         
         // For GET requests, use empty payload
-        const authHeader = await getAuthHeader('');
+        const authHeader = await getAuthHeader();
         
         const response = await fetch(apiUrl, {
             method: 'GET',

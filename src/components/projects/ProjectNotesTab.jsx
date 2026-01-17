@@ -15,6 +15,7 @@ function ProjectNotesTab({ project, darkMode }) {
     handleNoteDelete,
     handleFetchNotes,
     getPagination,
+    updatePagination,
     loading: noteLoading
   } = useNote();
   const { loadProjectDetails } = useProject();
@@ -26,8 +27,15 @@ function ProjectNotesTab({ project, darkMode }) {
   React.useEffect(() => {
     if (project.notes) {
       setAllNotes(project.notes);
+      const currentPagination = getPagination('project', project.id);
+      updatePagination('project', project.id, {
+        offset: 0,
+        limit: currentPagination.limit,
+        hasMore: project.notes.length >= currentPagination.limit,
+        total: project.notes.length
+      });
     }
-  }, [project.notes]);
+  }, [project.id, project.notes, getPagination, updatePagination]);
 
   // Load more notes handler
   const handleLoadMore = async () => {

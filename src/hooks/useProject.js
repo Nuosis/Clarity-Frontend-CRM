@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
     fetchProjectsForCustomer,
@@ -42,6 +42,7 @@ export function useProject(customerId = null) {
     const [error, setError] = useState(null);
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
+    const projectSelectionRequestId = useRef(0);
     const projectRecords = useProjectRecords();
     const { showError } = useSnackBar();
     const { user } = useAppState();
@@ -138,6 +139,7 @@ export function useProject(customerId = null) {
      * Selects a project and loads all its data
      */
     const handleProjectSelect = useCallback(async (projectOrId) => {
+        const requestId = ++projectSelectionRequestId.current;
         try {
             setLoading(true);
             setError(null);
@@ -154,19 +156,26 @@ export function useProject(customerId = null) {
 
             // Load details if not already loaded
             if (!project.images || !project.links || !project.objectives) {
-                await loadProjectDetails(projectId);
+                const projectDetails = await loadProjectDetails(projectId);
+                if (projectSelectionRequestId.current !== requestId) {
+                    return;
+                }
 
-                // Get the updated project from state (loadProjectDetails updates it)
-                const updatedProject = projects.find(p => p.id === projectId);
-                setSelectedProject(updatedProject || project);
+                setSelectedProject({ ...project, ...projectDetails });
             } else {
-                setSelectedProject(project);
+                if (projectSelectionRequestId.current === requestId) {
+                    setSelectedProject(project);
+                }
             }
         } catch (err) {
-            setError(err.message);
-            console.error('Error selecting project:', err);
+            if (projectSelectionRequestId.current === requestId) {
+                setError(err.message);
+                console.error('Error selecting project:', err);
+            }
         } finally {
-            setLoading(false);
+            if (projectSelectionRequestId.current === requestId) {
+                setLoading(false);
+            }
         }
     }, [projects, loadProjectDetails]);
 
@@ -266,8 +275,7 @@ export function useProject(customerId = null) {
             console.error('Error creating project:', err);
             showError(err.message);
             console.log('Error displayed in snackbar:', err.message);
-            // Don't throw the error, handle it here
-            return { error: err.message };
+            throw err;
         } finally {
             setLoading(false);
         }

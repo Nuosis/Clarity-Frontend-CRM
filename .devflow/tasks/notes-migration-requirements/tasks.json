@@ -1,114 +1,152 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-17T01:20:00.000Z",
+  "updated_at": "2026-01-17T18:15:35.695Z",
   "feature": {
     "name": "Notes Migration Requirements",
     "slug": "notes-migration-requirements",
     "description": "Create comprehensive requirements documentation for migrating Notes feature from FileMaker to Supabase, including data model design, API contracts, and migration planning",
-    "review_status": "pending",
-    "review_iteration": 7,
+    "review_status": "blocked",
+    "review_iteration": 9,
+    "updatedAt": "2026-01-17T00:52:38.467Z",
     "last_review": {
       "feature_slug": "notes-migration-requirements",
-      "reviewed_at": "2026-01-17T00:28:45.516Z",
+      "reviewed_at": "2026-01-17T00:52:38.465Z",
       "status": "blocked",
-      "iteration": 7,
+      "iteration": 9,
       "mode": "autonomous",
       "findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Missing Error Handling Module (noteErrors.js) Required by Documentation",
+          "description": "The api-contracts.md documentation (lines 651-658, 692-699) explicitly requires importing error handling functions from '../errors/noteErrors.js' including withErrorHandling, checkOrganizationScope, NoteErrorCodes, and NoteError. However, this module does not exist in the codebase. The directory /Users/marcusswift/javascript/clarityCrmFrontend/src/errors/ exists with customerErrors.js and index.js, but noteErrors.js is missing. The current implementation in src/api/notes.js (lines 9-13) includes a local checkOrganizationScope function instead of importing from the documented error module. This creates a discrepancy between the requirements documentation and the actual implementation pattern established by the customer API.",
+          "file_paths": [
+            "requirements/notes/api-contracts.md",
+            "src/api/notes.js",
+            "src/errors/"
+          ],
+          "code_snippet": null,
+          "recommendation": "Create src/errors/noteErrors.js following the pattern documented in api-contracts.md and matching the established pattern from src/errors/customerErrors.js. The module should export: NoteErrorCodes (enumeration of error codes), NoteError (custom error class), withErrorHandling (wrapper function for API calls), checkOrganizationScope (organization validation function), and parseHttpError (error normalization function). Then update src/api/notes.js to import and use these functions instead of the local checkOrganizationScope implementation. This ensures consistency with the documented pattern and matches the established error handling architecture used by the customer API (referenced in api-contracts.md lines 640-800 as the implementation pattern to follow)."
+        },
         {
           "id": "COD-001",
           "category": "code_soundness",
           "severity": "major",
-          "title": "Missing retry logic despite documented requirement",
-          "description": "The bulk insert implementation in load-notes-to-supabase.js does not include the retry logic with exponential backoff that is explicitly documented in the requirements (section 'Bulk Insert Approach' states '3 retry attempts per failed batch' and 'Exponential backoff: 2^attempt seconds'). The current implementation logs failures but continues processing without retrying failed batches.",
+          "title": "Missing error handling wrapper (withErrorHandling) in API layer",
+          "description": "The src/api/notes.js file does not use the withErrorHandling wrapper pattern that is standard across the codebase. All API functions (createNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, updateNote, deleteNote) directly call dataService methods without wrapping them in withErrorHandling(). This is inconsistent with the established pattern in src/api/customers.js where ALL API calls are wrapped with withErrorHandling() for centralized error handling, logging, and error code normalization. The documentation (requirements/notes/api-contracts.md) explicitly requires this pattern but the implementation does not follow it.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/api/notes.js"
           ],
-          "code_snippet": "// Current implementation (lines 758-776)\ntry {\n  const { data, error } = await supabase\n    .from('notes')\n    .insert(batch);\n\n  if (error) {\n    console.error(`Batch ${i + 1} failed:`, error);\n    failedBatches.push({ batchIndex: i, batch, error: error.message });\n    failureCount += batch.length;\n  } else {\n    successCount += batch.length;\n    console.log(`  ✅ Batch ${i + 1} completed`);\n  }\n} catch (error) {\n  console.error(`Batch ${i + 1} exception:`, error);\n  failedBatches.push({ batchIndex: i, batch, error: error.message });\n  failureCount += batch.length;\n}",
-          "recommendation": "Implement retry logic with exponential backoff as documented. Wrap the batch insert in a retry function that attempts up to 3 times with delays of 2, 4, and 8 seconds between attempts."
+          "code_snippet": "export async function createNote(data) {\n  // ... validation ...\n  const response = await dataService.post(endpoint, payload);\n  return response.data || response;\n}\n\n// Should be:\nexport const createNote = withErrorHandling(\n  async (data) => {\n    // ... validation ...\n    const response = await dataService.post(endpoint, payload);\n    return response.data || response;\n  },\n  'createNote',\n  { data }\n);",
+          "recommendation": "Wrap all API functions in src/api/notes.js with withErrorHandling() following the pattern from src/api/customers.js. Import withErrorHandling from the error handling module (once noteErrors.js is created as identified in the compliance review). This ensures consistent error handling, logging, and error code normalization across all API operations."
         },
         {
           "id": "COD-002",
           "category": "code_soundness",
           "severity": "major",
-          "title": "Potential null pointer in buildUserMapping",
-          "description": "The buildUserMapping function (lines 248-262) assumes that supabase.auth.admin.listUsers() returns a 'users' property containing a 'users' array (accessed as users.users). If the API returns null or the structure is different, this will cause a runtime error when calling forEach on undefined.",
+          "title": "Missing data normalization function in API layer",
+          "description": "The src/api/notes.js file does not include a normalizeNoteData() function to handle backend response normalization (e.g., mapping __ID to id fields). The customer API (src/api/customers.js) includes normalizeCustomerData() for this purpose. The documentation in requirements/notes/api-contracts.md explicitly requires this normalization pattern. Without it, inconsistencies may occur if the backend returns data with different field naming conventions.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/api/notes.js"
           ],
-          "code_snippet": "async function buildUserMapping(supabase) {\n  const { data: users, error } = await supabase.auth.admin.listUsers();\n\n  if (error) {\n    throw new Error(`Failed to fetch users: ${error.message}`);\n  }\n\n  const emailToUUID = new Map();\n  users.users.forEach(user => {  // Risk: users could be null\n    emailToUUID.set(user.email.toLowerCase(), user.id);\n  });\n\n  console.log(`Built user mapping for ${emailToUUID.size} users`);\n  return emailToUUID;\n}",
-          "recommendation": "Add null check: if (!users || !users.users) { throw new Error('Failed to retrieve user list'); } before accessing users.users"
-        },
-        {
-          "id": "COD-003",
-          "category": "code_soundness",
-          "severity": "major",
-          "title": "Missing error handling in detectParentEntity",
-          "description": "The detectParentEntity function (lines 176-237) does not handle Supabase query errors. If any of the three database queries fail, the error is silently ignored and the function continues, potentially treating database errors as 'entity not found' scenarios.",
-          "file_paths": [
-            "requirements/notes/migration-plan.md"
-          ],
-          "code_snippet": "async function detectParentEntity(fkId, supabase) {\n  // Strategy 1: Check projects first (most common)\n  const { data: project } = await supabase\n    .from('projects')\n    .select('id, organization_id')\n    .eq('id', fkId)\n    .maybeSingle();\n  // No error handling - continues if query fails",
-          "recommendation": "Destructure the error from each query and check it: const { data: project, error: projectError } = await supabase... if (projectError) { throw new Error(`Failed to query projects: ${projectError.message}`); }"
+          "code_snippet": "// Missing normalization function:\nfunction normalizeNoteData(note) {\n  if (!note) return null;\n  return {\n    ...note,\n    id: note.id || note.__ID,\n    // other normalizations\n  };\n}",
+          "recommendation": "Add a normalizeNoteData() function to src/api/notes.js following the pattern from normalizeCustomerData() in src/api/customers.js. Apply this normalization to all API responses before returning them to ensure consistent data shape across the application."
         },
         {
           "id": "SEC-001",
           "category": "security",
           "severity": "critical",
-          "title": "Service role key exposure risk in migration scripts",
-          "description": "The migration scripts (transform-notes.js and load-notes-to-supabase.js) use process.env.SUPABASE_SERVICE_ROLE_KEY which bypasses ALL Row-Level Security policies. If these scripts are accidentally deployed to a frontend environment or committed with hardcoded values, attackers could gain unrestricted database access across all organizations. The documentation doesn't warn about the critical security implications or provide safeguards against accidental exposure.",
+          "title": "Missing input sanitization for note content allows potential XSS attacks",
+          "description": "In src/api/notes.js (lines 60-61) and src/services/noteService.js (lines 38-39), note content is accepted directly from user input and passed to the backend without any sanitization or validation beyond trim(). The note content is stored in the database and later rendered in the UI (src/components/projects/ProjectNotesTab.jsx line 182). While React provides default XSS protection through JSX, if the note content is ever rendered using dangerouslySetInnerHTML or innerHTML in the future, or if it's included in email templates or PDFs without proper escaping, it could enable stored XSS attacks. Attack vector: User creates note with content like '<script>alert(document.cookie)</script>' or '<img src=x onerror=alert(1)>' which gets stored in the database. If rendering method changes or content is used in email/PDF generation, the script executes.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/api/notes.js",
+            "src/services/noteService.js",
+            "src/components/projects/ProjectNotesTab.jsx"
           ],
-          "code_snippet": "// lines 598-602\nconst supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY  // BYPASSES ALL RLS!\n);\n\n// lines 735-738\nconst supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY\n);",
-          "recommendation": "Add explicit security warnings in the migration documentation: 1) These scripts MUST ONLY run in secure backend environments, NEVER in frontend/browser contexts. 2) Add environment validation: if (typeof window !== 'undefined') { throw new Error('Migration scripts cannot run in browser'); } 3) Document that service role key should be rotated after migration. 4) Add .gitignore verification for migration-data/ directory containing sensitive outputs. 5) Consider using Supabase database webhooks or backend API to perform migration instead of client-side scripts."
+          "code_snippet": "// src/api/notes.js:60-61\nconst payload = {\n    note: data.content || data.note,  // No sanitization\n    type: data.type || 'general',\n    // ...\n};\n\n// src/components/projects/ProjectNotesTab.jsx:182\n<p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{noteContent}</p>",
+          "recommendation": "Implement server-side input sanitization: 1) Add a sanitization function that removes or escapes HTML tags and JavaScript from note content before sending to backend. 2) Consider using DOMPurify library for robust HTML sanitization if rich text is needed, or strip all HTML if plain text only. 3) Add backend validation that rejects notes containing script tags or suspicious patterns. 4) Document in requirements that notes are plain text only and HTML rendering is not supported. 5) Add Content Security Policy headers to prevent inline script execution as defense-in-depth."
         },
         {
           "id": "ARC-001",
           "category": "architectural_fit",
-          "severity": "major",
-          "title": "Missing error handling wrapper pattern",
-          "description": "The proposed API layer in api-contracts.md (lines 608-651) uses raw dataService.request() calls without the withErrorHandling wrapper that is standard across the codebase. The existing customer API implementation (src/api/customers.js) consistently wraps all API calls with withErrorHandling() for centralized error handling, logging, and error code normalization. The notes documentation proposes a simpler pattern without this wrapper.",
+          "severity": "critical",
+          "title": "Missing withErrorHandling wrapper violates established API layer pattern",
+          "description": "The src/api/notes.js implementation does not use the withErrorHandling() wrapper pattern that is mandatory across the entire codebase. All API functions in src/api/customers.js (lines 42-149) wrap every function with withErrorHandling() for centralized error handling, logging, and error code normalization. The notes API layer directly returns raw async functions without this wrapper. This architectural inconsistency means notes operations lack: 1) Centralized error logging with context, 2) Automatic error code normalization, 3) User-friendly error message generation, 4) Consistent error structure across the application. The documentation (requirements/notes/api-contracts.md lines 640-800) explicitly requires this pattern but the implementation violates it.",
           "file_paths": [
-            "requirements/notes/api-contracts.md"
+            "src/api/notes.js",
+            "src/api/customers.js"
           ],
-          "code_snippet": "// Proposed (lines 610-618)\nexport const fetchProjectNotes = async (projectId, options = {}) => {\n  const params = new URLSearchParams({\n    project_id: projectId,\n    sort_order: 'desc',\n    limit: options.limit || 50,\n    ...options\n  });\n  return dataService.request(`/api/notes?${params}`, { method: 'GET' });\n};\n\n// Expected pattern from src/api/customers.js:42-73\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        const auth = getAuthenticationContext();\n        checkOrganizationScope({ authentication: auth }, 'fetchCustomers');\n        \n        const queryParams = { /* ... */ };\n        const response = await dataService.get('/api/customers', { params: queryParams });\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomers', { options });\n}",
-          "recommendation": "Update api-contracts.md to follow the established error handling pattern: 1) Import withErrorHandling, checkOrganizationScope, and getAuthenticationContext from the appropriate modules. 2) Wrap all API functions with withErrorHandling(). 3) Add organization scope checks with checkOrganizationScope(). 4) Include function name and parameters in error context. 5) Add data normalization function similar to normalizeCustomerData(). Example should match the pattern in src/api/customers.js lines 42-73, 81-93, 101-113."
+          "code_snippet": "// WRONG - src/api/notes.js:31-82\nexport async function createNote(data) {\n    // validation...\n    const response = await dataService.post(endpoint, payload);\n    return response.data || response;\n}\n\n// CORRECT - src/api/customers.js:119-131\nexport async function createCustomer(data) {\n    return withErrorHandling(async () => {\n        // validation...\n        const response = await dataService.post('/api/customers', data);\n        return normalizeCustomerData(response.data || response);\n    }, 'createCustomer', { data });\n}",
+          "recommendation": "Refactor all API functions in src/api/notes.js to follow the established pattern: 1) Create src/errors/noteErrors.js with NoteErrorCodes, NoteError class, and withErrorHandling wrapper (following src/errors/customerErrors.js pattern). 2) Wrap ALL API functions (createNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, updateNote, deleteNote) with withErrorHandling(async () => { ... }, 'functionName', context). 3) Use NoteError for all thrown errors with appropriate error codes. This ensures architectural consistency and provides the same error handling quality as other features."
         },
         {
           "id": "ARC-002",
           "category": "architectural_fit",
-          "severity": "major",
-          "title": "Inconsistent HTTP method pattern with dataService",
-          "description": "The proposed API uses dataService.request() with explicit method parameter (lines 617, 633, 641, 649) instead of the semantic dataService.get(), dataService.post(), dataService.put(), dataService.patch(), dataService.delete() methods that are standard across the codebase. The customer API (src/api/customers.js:71, 90, 110, 129, 148, 167) consistently uses semantic methods. Using .request() is more verbose and doesn't follow the established pattern.",
+          "severity": "critical",
+          "title": "Missing data normalization layer violates service architecture pattern",
+          "description": "The src/api/notes.js lacks a normalizeNoteData() function at the API layer, violating the established architecture. Every API module in the codebase implements normalization: src/api/customers.js has normalizeCustomerData() (lines 13-28), and the customer service layer has transformBackendToFileMaker() (customerService.js lines 99+). The notes implementation partially compensates with transformBackendNote() in the service layer (noteService.js lines 154-178), but this violates separation of concerns - the API layer should normalize backend responses to a consistent shape, and the service layer should transform to domain models. This architectural inconsistency creates confusion about where data transformation belongs and makes the code harder to maintain.",
           "file_paths": [
-            "requirements/notes/api-contracts.md"
+            "src/api/notes.js",
+            "src/services/noteService.js",
+            "src/api/customers.js"
           ],
-          "code_snippet": "// Proposed (non-standard)\nreturn dataService.request('/api/notes', {\n  method: 'POST',\n  body: JSON.stringify(noteData)\n});\n\n// Expected pattern from src/api/customers.js\nconst response = await dataService.get('/api/customers', { params: queryParams });\nconst response = await dataService.post('/api/customers', data);\nconst response = await dataService.put(`/api/customers/${customerId}`, data);\nconst response = await dataService.patch(`/api/customers/${customerId}/toggle-status`);\nconst response = await dataService.delete(`/api/customers/${customerId}`);",
-          "recommendation": "Update all API examples in api-contracts.md (lines 608-651) to use semantic dataService methods: dataService.get() for fetches, dataService.post() for creates, dataService.patch() for updates, dataService.delete() for deletes. This improves code readability and consistency with existing patterns. The dataService methods handle JSON stringification and content-type headers automatically, so body: JSON.stringify() can be removed."
+          "code_snippet": "// MISSING in src/api/notes.js:\nfunction normalizeNoteData(note) {\n    if (!note) return null;\n    return {\n        ...note,\n        id: note.id || note.__ID,\n        __ID: note.id || note.__ID\n    };\n}\n\n// EXISTING pattern in src/api/customers.js:13-28\nfunction normalizeCustomerData(data) {\n    if (Array.isArray(data)) {\n        return data.map(customer => ({\n            id: customer.id || customer.__ID,\n            __ID: customer.id || customer.__ID,\n            ...customer\n        }));\n    }\n    return { id: data.id || data.__ID, __ID: data.id || data.__ID, ...data };\n}",
+          "recommendation": "Add normalizeNoteData() function to src/api/notes.js following the established pattern: 1) Place function at top of file (lines 15-30), 2) Handle both single objects and arrays, 3) Normalize id/__ID fields for consistency, 4) Apply normalization to ALL API function return values before returning, 5) Keep transformBackendNote() in service layer for domain-specific transformations (snake_case to camelCase, fieldData wrapper). This maintains proper separation: API layer normalizes structure, service layer transforms to domain model."
         },
         {
           "id": "ARC-003",
           "category": "architectural_fit",
           "severity": "major",
-          "title": "Missing organization scope validation",
-          "description": "The proposed API layer does not include organization scope validation via checkOrganizationScope() before making backend requests. Every customer API function (src/api/customers.js:47, 88, 108, 127, 146, 165) validates that the user has organization context before proceeding. This is a critical security check that ensures users cannot make requests without proper organization assignment. The notes documentation omits this pattern entirely.",
+          "title": "Inconsistent error handling approach violates hook architecture pattern",
+          "description": "The src/hooks/useNote.js implements basic try-catch error handling with console.error (lines 99-106) instead of following the established pattern in src/hooks/useCustomer.js which uses setErrorWithFormatting() helper (lines 60-69), formatErrorForUI() transformation, and CustomerError type checking. The customer hook maintains both raw error state and formatted error state for UI display. The notes hook lacks: 1) Formatted error state for user-friendly messages, 2) Error formatting helper function, 3) NoteError-specific error handling, 4) Structured error logging with context. This architectural inconsistency means notes errors provide worse UX than customer errors.",
           "file_paths": [
-            "requirements/notes/api-contracts.md"
+            "src/hooks/useNote.js",
+            "src/hooks/useCustomer.js"
           ],
-          "code_snippet": "// Proposed (missing organization check)\nexport const fetchProjectNotes = async (projectId, options = {}) => {\n  const params = new URLSearchParams({ /* ... */ });\n  return dataService.request(`/api/notes?${params}`, { method: 'GET' });\n};\n\n// Expected pattern from src/api/customers.js:42-73\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        const auth = getAuthenticationContext();\n        checkOrganizationScope({ authentication: auth }, 'fetchCustomers'); // REQUIRED\n        \n        const queryParams = { /* ... */ };\n        const response = await dataService.get('/api/customers', { params: queryParams });\n        return normalizeCustomerData(response.data || response);\n    }, 'fetchCustomers', { options });\n}",
-          "recommendation": "Add organization scope validation to all API functions in the documentation: 1) Import getAuthenticationContext and checkOrganizationScope. 2) Call const auth = getAuthenticationContext() at the start of each function. 3) Call checkOrganizationScope({ authentication: auth }, 'functionName') before any API request. 4) Document this pattern in api-contracts.md as a mandatory security requirement. 5) Reference the customer implementation as the pattern to follow."
+          "code_snippet": "// WRONG - src/hooks/useNote.js:99-106\ncatch (err) {\n    setError(err);\n    console.error('[useNote] Error creating note:', err);\n    showError(err.message || 'Failed to create note');\n    return null;\n}\n\n// CORRECT - src/hooks/useCustomer.js:60-69\nconst setErrorWithFormatting = useCallback((err) => {\n    const formatted = formatErrorForUI(err);\n    setError(err);\n    setFormattedError(formatted);\n    console.error('[useCustomer] Error:', {\n        raw: err,\n        formatted,\n        stack: err.stack\n    });\n}, []);",
+          "recommendation": "Refactor src/hooks/useNote.js to match the established error handling pattern: 1) Add formattedError state alongside error state, 2) Create setErrorWithFormatting() helper that calls formatErrorForUI() from src/errors/noteErrors.js, 3) Replace all setError() calls with setErrorWithFormatting(), 4) Enhance console.error to log structured data (raw error, formatted, stack), 5) Use formattedError.message for showError() calls. Import formatErrorForUI and parseValidationError from noteErrors module once created."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Service layer bypasses API layer with dynamic imports violating architecture",
+          "description": "In src/services/noteService.js lines 86 and 104, fetchNotesByTask() and fetchNotesByCustomer() use dynamic imports to lazy-load API functions. This violates the established architecture where service functions import API functions statically at the top of the file (see src/services/customerService.js uses static imports, src/hooks/useCustomer.js lines 1-9 shows proper static imports). Dynamic imports should only be used for code-splitting large modules, not for simple API function imports. This pattern adds unnecessary complexity, makes dependencies unclear, and can cause performance issues by loading modules multiple times.",
+          "file_paths": [
+            "src/services/noteService.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// WRONG - src/services/noteService.js:86, 104\nexport async function fetchNotesByTask(taskId, options = {}) {\n    const { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');\n    const result = await fetchTaskNotesAPI(taskId, options);\n}\n\n// CORRECT - src/hooks/useCustomer.js:1-9\nimport {\n    fetchCustomers,\n    fetchCustomerById,\n    updateCustomer,\n    createCustomer,\n    toggleCustomerStatus,\n    deleteCustomer,\n    searchCustomers,\n} from '../api';",
+          "recommendation": "Replace dynamic imports with static imports at top of src/services/noteService.js: 1) Add to line 1: import { createNote, fetchProjectNotes, fetchNotesByTask as fetchTaskNotesAPI, fetchNotesByCustomer as fetchCustomerNotesAPI, deleteNote, updateNote } from '../api/notes'; 2) Remove await import() statements from lines 86 and 104, 3) Use the imported functions directly. This aligns with established architecture, improves performance, and makes dependencies explicit."
+        },
+        {
+          "id": "ARC-005",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing pagination state management pattern in hook architecture",
+          "description": "The src/hooks/useNote.js implements custom per-entity pagination state (lines 12, 22-47) using a paginationByEntity object, diverging from the established pattern in src/hooks/useCustomer.js which uses a simple pagination state object (lines 42-47). While the notes approach is more sophisticated (supporting multiple entities), it violates the architectural principle of consistency. The customer hook demonstrates the standard pattern: single pagination object, setPagination for updates, simple structure. The notes pagination also lacks the stats calculation pattern seen in useCustomer (lines 72-76) and useTeam (lines 40-45).",
+          "file_paths": [
+            "src/hooks/useNote.js",
+            "src/hooks/useCustomer.js",
+            "src/hooks/useTeam.js"
+          ],
+          "code_snippet": "// COMPLEX - src/hooks/useNote.js:12, 22-47\nconst [paginationByEntity, setPaginationByEntity] = useState({});\n\nconst getPagination = useCallback((entityType, entityId) => {\n    const key = `${entityType}-${entityId}`;\n    return paginationByEntity[key] || { limit: 50, offset: 0, hasMore: false, total: 0 };\n}, [paginationByEntity]);\n\n// STANDARD - src/hooks/useCustomer.js:42-47\nconst [pagination, setPagination] = useState({\n    total: 0,\n    limit: 50,\n    offset: 0,\n    has_more: false\n});",
+          "recommendation": "While the per-entity pagination is a valid architectural decision for notes (which can belong to multiple parent entities), document this deviation clearly: 1) Add JSDoc comment explaining why notes require per-entity pagination vs. single pagination state, 2) Consider extracting pagination logic to a reusable usePagination() custom hook if this pattern is needed elsewhere, 3) Standardize field naming (hasMore vs has_more) to match customer pattern, 4) Add stats calculation like other hooks if notes have aggregate statistics worth tracking."
         }
       ],
       "tasks_created": [
-        "TASK011",
-        "TASK012",
-        "TASK013",
-        "TASK014",
-        "TASK015",
-        "TASK016",
-        "TASK017"
+        "TASK018",
+        "TASK019",
+        "TASK020",
+        "TASK021",
+        "TASK022",
+        "TASK023",
+        "TASK024",
+        "TASK025",
+        "TASK026"
       ],
-      "summary": "Found 7 issue(s) requiring remediation - created 7 task(s)"
+      "summary": "Found 9 issue(s) requiring remediation - created 9 task(s)"
     }
   },
   "standing_constraints": [
@@ -428,7 +466,196 @@
       "executionError": null,
       "executionPid": 57020,
       "sessionId": "f7849fc9-7ba3-4874-87b4-0f241c22479d",
-      "implementation_notes": "Implemented organization scope validation across all notes API functions (createNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, updateNote, deleteNote) by adding checkOrganizationScope() calls in src/api/notes.js following the established pattern from src/api/customers.js. Enhanced requirements/notes/api-contracts.md with a new 'Organization Scope Validation' section documenting the mandatory security pattern, including code examples, implementation steps, and rationale (lines 11-44), plus added a security requirement note in the Frontend Integration section. Verified the build compiles successfully with no new errors.",
+      "implementation_notes": "Implemented mandatory organization scope validation across the notes API by adding checkOrganizationScope() to the missing fetch, update, and delete methods in 'src/api/notes.js', bringing all six exported functions in line with the established customer API security pattern. Updated 'requirements/notes/api-contracts.md' to add a dedicated 'Organization Scope Validation' section and reinforced the requirement in the Frontend Integration guidance with consistent examples. Verified the build succeeded, confirmed there were no notes tests to adjust, and updated task tracking in 'tasks.json' including the task timestamp.",
+      "depends_on": []
+    },
+    {
+      "id": "TASK018",
+      "feature": "notes-migration-requirements",
+      "name": "[REVIEW] Missing Error Handling Module (noteErrors.js) Required by Documentation",
+      "title": "[REVIEW] Missing Error Handling Module (noteErrors.js) Required by Documentation",
+      "priority": "high",
+      "requirements": [
+        "The api-contracts.md documentation (lines 651-658, 692-699) explicitly requires importing error handling functions from '../errors/noteErrors.js' including withErrorHandling, checkOrganizationScope, NoteErrorCodes, and NoteError. However, this module does not exist in the codebase. The directory /Users/marcusswift/javascript/clarityCrmFrontend/src/errors/ exists with customerErrors.js and index.js, but noteErrors.js is missing. The current implementation in src/api/notes.js (lines 9-13) includes a local checkOrganizationScope function instead of importing from the documented error module. This creates a discrepancy between the requirements documentation and the actual implementation pattern established by the customer API.",
+        "",
+        "**Recommendation:** Create src/errors/noteErrors.js following the pattern documented in api-contracts.md and matching the established pattern from src/errors/customerErrors.js. The module should export: NoteErrorCodes (enumeration of error codes), NoteError (custom error class), withErrorHandling (wrapper function for API calls), checkOrganizationScope (organization validation function), and parseHttpError (error normalization function). Then update src/api/notes.js to import and use these functions instead of the local checkOrganizationScope implementation. This ensures consistency with the documented pattern and matches the established error handling architecture used by the customer API (referenced in api-contracts.md lines 640-800 as the implementation pattern to follow)."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COM-001 from iteration 8"
+      },
+      "status": "blocked",
+      "executionError": "Task validation failed: Build verification failed",
+      "executionPid": null,
+      "sessionId": "019bca8a-debd-72a1-ab25-3c3d3e216f0c",
+      "depends_on": []
+    },
+    {
+      "id": "TASK019",
+      "feature": "notes-migration-requirements",
+      "name": "[REVIEW] Missing error handling wrapper (withErrorHandling) in API layer",
+      "title": "[REVIEW] Missing error handling wrapper (withErrorHandling) in API layer",
+      "priority": "high",
+      "requirements": [
+        "The src/api/notes.js file does not use the withErrorHandling wrapper pattern that is standard across the codebase. All API functions (createNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, updateNote, deleteNote) directly call dataService methods without wrapping them in withErrorHandling(). This is inconsistent with the established pattern in src/api/customers.js where ALL API calls are wrapped with withErrorHandling() for centralized error handling, logging, and error code normalization. The documentation (requirements/notes/api-contracts.md) explicitly requires this pattern but the implementation does not follow it.",
+        "",
+        "**Recommendation:** Wrap all API functions in src/api/notes.js with withErrorHandling() following the pattern from src/api/customers.js. Import withErrorHandling from the error handling module (once noteErrors.js is created as identified in the compliance review). This ensures consistent error handling, logging, and error code normalization across all API operations."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-001 from iteration 8"
+      },
+      "status": "blocked",
+      "executionError": "Task validation failed: Build verification failed",
+      "executionPid": null,
+      "sessionId": "019bca8c-ed8f-7880-a41c-2fa5680492b2",
+      "depends_on": []
+    },
+    {
+      "id": "TASK020",
+      "feature": "notes-migration-requirements",
+      "name": "[REVIEW] Missing data normalization function in API layer",
+      "title": "[REVIEW] Missing data normalization function in API layer",
+      "priority": "high",
+      "requirements": [
+        "The src/api/notes.js file does not include a normalizeNoteData() function to handle backend response normalization (e.g., mapping __ID to id fields). The customer API (src/api/customers.js) includes normalizeCustomerData() for this purpose. The documentation in requirements/notes/api-contracts.md explicitly requires this normalization pattern. Without it, inconsistencies may occur if the backend returns data with different field naming conventions.",
+        "",
+        "**Recommendation:** Add a normalizeNoteData() function to src/api/notes.js following the pattern from normalizeCustomerData() in src/api/customers.js. Apply this normalization to all API responses before returning them to ensure consistent data shape across the application."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-002 from iteration 8"
+      },
+      "status": "blocked",
+      "executionError": "Task validation failed: Build verification failed",
+      "executionPid": null,
+      "sessionId": "019bca8e-1fe5-7ce1-841e-b3a11f6d812e",
+      "depends_on": []
+    },
+    {
+      "id": "TASK021",
+      "feature": "notes-migration-requirements",
+      "name": "[REVIEW] Missing input sanitization for note content allows potential XSS attacks",
+      "title": "[REVIEW] Missing input sanitization for note content allows potential XSS attacks",
+      "priority": "critical",
+      "requirements": [
+        "In src/api/notes.js (lines 60-61) and src/services/noteService.js (lines 38-39), note content is accepted directly from user input and passed to the backend without any sanitization or validation beyond trim(). The note content is stored in the database and later rendered in the UI (src/components/projects/ProjectNotesTab.jsx line 182). While React provides default XSS protection through JSX, if the note content is ever rendered using dangerouslySetInnerHTML or innerHTML in the future, or if it's included in email templates or PDFs without proper escaping, it could enable stored XSS attacks. Attack vector: User creates note with content like '<script>alert(document.cookie)</script>' or '<img src=x onerror=alert(1)>' which gets stored in the database. If rendering method changes or content is used in email/PDF generation, the script executes.",
+        "",
+        "**Recommendation:** Implement server-side input sanitization: 1) Add a sanitization function that removes or escapes HTML tags and JavaScript from note content before sending to backend. 2) Consider using DOMPurify library for robust HTML sanitization if rich text is needed, or strip all HTML if plain text only. 3) Add backend validation that rejects notes containing script tags or suspicious patterns. 4) Document in requirements that notes are plain text only and HTML rendering is not supported. 5) Add Content Security Policy headers to prevent inline script execution as defense-in-depth."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding SEC-001 from iteration 8"
+      },
+      "status": "blocked",
+      "executionError": "Task validation failed: Build verification failed",
+      "executionPid": null,
+      "sessionId": "019bca91-6678-75a2-9074-ac1d7a7fc0c4",
+      "depends_on": []
+    },
+    {
+      "id": "TASK022",
+      "feature": "notes-migration-requirements",
+      "name": "[REVIEW] Missing withErrorHandling wrapper violates established API layer pattern",
+      "title": "[REVIEW] Missing withErrorHandling wrapper violates established API layer pattern",
+      "priority": "critical",
+      "requirements": [
+        "The src/api/notes.js implementation does not use the withErrorHandling() wrapper pattern that is mandatory across the entire codebase. All API functions in src/api/customers.js (lines 42-149) wrap every function with withErrorHandling() for centralized error handling, logging, and error code normalization. The notes API layer directly returns raw async functions without this wrapper. This architectural inconsistency means notes operations lack: 1) Centralized error logging with context, 2) Automatic error code normalization, 3) User-friendly error message generation, 4) Consistent error structure across the application. The documentation (requirements/notes/api-contracts.md lines 640-800) explicitly requires this pattern but the implementation violates it.",
+        "",
+        "**Recommendation:** Refactor all API functions in src/api/notes.js to follow the established pattern: 1) Create src/errors/noteErrors.js with NoteErrorCodes, NoteError class, and withErrorHandling wrapper (following src/errors/customerErrors.js pattern). 2) Wrap ALL API functions (createNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, updateNote, deleteNote) with withErrorHandling(async () => { ... }, 'functionName', context). 3) Use NoteError for all thrown errors with appropriate error codes. This ensures architectural consistency and provides the same error handling quality as other features."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-001 from iteration 8"
+      },
+      "status": "blocked",
+      "executionError": "Task validation failed: Build verification failed",
+      "executionPid": null,
+      "sessionId": "019bcd18-fa17-7bb1-aa49-95f7e8d02efe",
+      "depends_on": []
+    },
+    {
+      "id": "TASK023",
+      "feature": "notes-migration-requirements",
+      "name": "[REVIEW] Missing data normalization layer violates service architecture pattern",
+      "title": "[REVIEW] Missing data normalization layer violates service architecture pattern",
+      "priority": "critical",
+      "requirements": [
+        "The src/api/notes.js lacks a normalizeNoteData() function at the API layer, violating the established architecture. Every API module in the codebase implements normalization: src/api/customers.js has normalizeCustomerData() (lines 13-28), and the customer service layer has transformBackendToFileMaker() (customerService.js lines 99+). The notes implementation partially compensates with transformBackendNote() in the service layer (noteService.js lines 154-178), but this violates separation of concerns - the API layer should normalize backend responses to a consistent shape, and the service layer should transform to domain models. This architectural inconsistency creates confusion about where data transformation belongs and makes the code harder to maintain.",
+        "",
+        "**Recommendation:** Add normalizeNoteData() function to src/api/notes.js following the established pattern: 1) Place function at top of file (lines 15-30), 2) Handle both single objects and arrays, 3) Normalize id/__ID fields for consistency, 4) Apply normalization to ALL API function return values before returning, 5) Keep transformBackendNote() in service layer for domain-specific transformations (snake_case to camelCase, fieldData wrapper). This maintains proper separation: API layer normalizes structure, service layer transforms to domain model."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-002 from iteration 8"
+      },
+      "status": "blocked",
+      "executionError": "Task validation failed: Build verification failed",
+      "executionPid": null,
+      "sessionId": "019bcd1c-8506-7232-a69d-934b68363832",
+      "depends_on": []
+    },
+    {
+      "id": "TASK024",
+      "feature": "notes-migration-requirements",
+      "name": "[REVIEW] Inconsistent error handling approach violates hook architecture pattern",
+      "title": "[REVIEW] Inconsistent error handling approach violates hook architecture pattern",
+      "priority": "high",
+      "requirements": [
+        "The src/hooks/useNote.js implements basic try-catch error handling with console.error (lines 99-106) instead of following the established pattern in src/hooks/useCustomer.js which uses setErrorWithFormatting() helper (lines 60-69), formatErrorForUI() transformation, and CustomerError type checking. The customer hook maintains both raw error state and formatted error state for UI display. The notes hook lacks: 1) Formatted error state for user-friendly messages, 2) Error formatting helper function, 3) NoteError-specific error handling, 4) Structured error logging with context. This architectural inconsistency means notes errors provide worse UX than customer errors.",
+        "",
+        "**Recommendation:** Refactor src/hooks/useNote.js to match the established error handling pattern: 1) Add formattedError state alongside error state, 2) Create setErrorWithFormatting() helper that calls formatErrorForUI() from src/errors/noteErrors.js, 3) Replace all setError() calls with setErrorWithFormatting(), 4) Enhance console.error to log structured data (raw error, formatted, stack), 5) Use formattedError.message for showError() calls. Import formatErrorForUI and parseValidationError from noteErrors module once created."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-003 from iteration 8"
+      },
+      "status": "blocked",
+      "executionError": "Task validation failed: Build verification failed",
+      "executionPid": null,
+      "sessionId": "019bcd20-cac0-7ab3-876e-2a86090dc4f8",
+      "depends_on": []
+    },
+    {
+      "id": "TASK025",
+      "feature": "notes-migration-requirements",
+      "name": "[REVIEW] Service layer bypasses API layer with dynamic imports violating architecture",
+      "title": "[REVIEW] Service layer bypasses API layer with dynamic imports violating architecture",
+      "priority": "high",
+      "requirements": [
+        "In src/services/noteService.js lines 86 and 104, fetchNotesByTask() and fetchNotesByCustomer() use dynamic imports to lazy-load API functions. This violates the established architecture where service functions import API functions statically at the top of the file (see src/services/customerService.js uses static imports, src/hooks/useCustomer.js lines 1-9 shows proper static imports). Dynamic imports should only be used for code-splitting large modules, not for simple API function imports. This pattern adds unnecessary complexity, makes dependencies unclear, and can cause performance issues by loading modules multiple times.",
+        "",
+        "**Recommendation:** Replace dynamic imports with static imports at top of src/services/noteService.js: 1) Add to line 1: import { createNote, fetchProjectNotes, fetchNotesByTask as fetchTaskNotesAPI, fetchNotesByCustomer as fetchCustomerNotesAPI, deleteNote, updateNote } from '../api/notes'; 2) Remove await import() statements from lines 86 and 104, 3) Use the imported functions directly. This aligns with established architecture, improves performance, and makes dependencies explicit."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-004 from iteration 8"
+      },
+      "status": "blocked",
+      "executionError": "Task validation failed: Build verification failed",
+      "executionPid": null,
+      "sessionId": "019bcd22-f5ed-76d2-9f9e-1f00014ae999",
+      "depends_on": []
+    },
+    {
+      "id": "TASK026",
+      "feature": "notes-migration-requirements",
+      "name": "[REVIEW] Missing pagination state management pattern in hook architecture",
+      "title": "[REVIEW] Missing pagination state management pattern in hook architecture",
+      "priority": "high",
+      "requirements": [
+        "The src/hooks/useNote.js implements custom per-entity pagination state (lines 12, 22-47) using a paginationByEntity object, diverging from the established pattern in src/hooks/useCustomer.js which uses a simple pagination state object (lines 42-47). While the notes approach is more sophisticated (supporting multiple entities), it violates the architectural principle of consistency. The customer hook demonstrates the standard pattern: single pagination object, setPagination for updates, simple structure. The notes pagination also lacks the stats calculation pattern seen in useCustomer (lines 72-76) and useTeam (lines 40-45).",
+        "",
+        "**Recommendation:** While the per-entity pagination is a valid architectural decision for notes (which can belong to multiple parent entities), document this deviation clearly: 1) Add JSDoc comment explaining why notes require per-entity pagination vs. single pagination state, 2) Consider extracting pagination logic to a reusable usePagination() custom hook if this pattern is needed elsewhere, 3) Standardize field naming (hasMore vs has_more) to match customer pattern, 4) Add stats calculation like other hooks if notes have aggregate statistics worth tracking."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-005 from iteration 8"
+      },
+      "status": "blocked",
+      "executionError": "Task validation failed: Build verification failed",
+      "executionPid": null,
+      "sessionId": "019bcd25-c415-7f32-9f98-98406d2dfb06",
       "depends_on": []
     }
   ]

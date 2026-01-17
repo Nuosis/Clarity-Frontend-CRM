@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T17:55:24.703Z",
+    "featureSlug": "notes-migration-requirements",
+    "taskId": "TASK022",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] Missing withErrorHandling wrapper violates established API layer pattern",
+    "sessionId": "019bcd18-fa17-7bb1-aa49-95f7e8d02efe",
+    "processId": 1768672524702,
+    "lastUpdated": "2026-01-17T18:04:43.815Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T17:55:24.710Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-17T18:04:43.693Z",
+    "output": {
+      "success": true,
+      "sessionId": "019bcd18-fa17-7bb1-aa49-95f7e8d02efe",
+      "processId": 83559,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\nAdded `fetchActiveCustomers` to align the customer API exports with the established `withErrorHandling` pattern, delegating to `fetchCustomers` with the `active: true` flag for consistent error handling in `src/api/customers.js`.\n\nTests: `npm test -- src/api/__tests__/customers.test.js` failed because the test mocks `../fileMaker`, which no longer exists (`Cannot find module '../fileMaker'`).\n\nNext steps:\n1) Update/remove the FileMaker mock in `src/api/__tests__/customers.test.js` to match the current API layer.\n2) Re-run the customer API test after the mock update."
+    }
+  },
+  "ValidateNode": {
+    "timestamp": "2026-01-17T18:04:43.813Z",
+    "output": {
+      "passed": false,
+      "buildPassed": false,
+      "buildErrors": "Build failed with exit code 1:\nnpm error Missing script: \"typecheck\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /Users/marcusswift/.npm/_logs/2026-01-17T18_04_43_781Z-debug-0.log\n",
+      "error": "Build verification failed"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T18:04:43.815Z",
+    "output": {
+      "taskStatus": "blocked",
+      "summary": "Task validation failed: Build verification failed",
+      "nextTaskTriggered": true
+    }
+  }
+}

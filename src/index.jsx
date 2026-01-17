@@ -13,7 +13,7 @@ import { loadingStateManager, useGlobalLoadingState } from './services/loadingSt
 import { AppStateProvider, useAppState, useAppStateOperations } from './context/AppStateContext';
 import { ProjectProvider } from './context/ProjectContext';
 import { calculateProjectDetailStats } from './services/projectService';
-import { setAuthenticationContext } from './services/dataService';
+import { getAuthenticationContext, setAuthenticationContext } from './services/dataService';
 
 // Memoized sidebar for performance
 const MemoizedSidebar = React.memo(Sidebar);
@@ -109,7 +109,11 @@ function AppContent() {
 
     // Authentication handler - Supabase only
     const handleSupabaseAuth = useCallback((authState) => {
-        console.log('[App] Supabase authentication successful', authState);
+        console.log('[App] Supabase authentication successful', {
+            isAuthenticated: authState?.isAuthenticated,
+            method: authState?.method,
+            hasUser: !!authState?.user
+        });
 
         // Set authentication context in dataService
         setAuthenticationContext(authState);
@@ -161,11 +165,13 @@ function AppContent() {
                                 supabaseOrgID: supabaseIds.supabaseOrgId
                             };
 
+                            const existingAuth = getAuthenticationContext();
                             setAuthenticationContext({
                                 isAuthenticated: true,
-                                user: updatedUser
+                                user: updatedUser,
+                                accessToken: existingAuth?.accessToken || appState.authentication?.accessToken || null
                             });
-                            console.log('[App] Authentication context updated with organization ID:', supabaseIds.supabaseOrgId);
+                            console.log('[App] Authentication context updated with organization ID');
                         }
 
                         // Load products (single-tenancy)

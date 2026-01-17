@@ -1,11 +1,10 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
-import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
+import { useAppStateOperations } from '../../context/AppStateContext';
 import { useProject } from '../../hooks/useProject';
 import { calculateRecordsUnbilledHours } from '../../services/projectService';
 import { useSnackBar } from '../../context/SnackBarContext';
-import { useSupabaseCustomer } from '../../hooks/useSupabaseCustomer';
 import { useSales } from '../../hooks/useSales';
 
 // Import our new components
@@ -23,26 +22,16 @@ function CustomerDetails({
   isProspect = false
 }) {
   const { darkMode } = useTheme();
-  const { setLoading, setCustomerDetails } = useAppStateOperations();
+  const { setLoading } = useAppStateOperations();
   const { projectRecords } = useProject();
   const { showError } = useSnackBar();
-  const { user, customerDetails } = useAppState();
-  const { fetchOrCreateCustomerInSupabase } = useSupabaseCustomer();
-  const { sales, loadSalesForCustomer, loadUnbilledSalesForCustomer } = useSales();
+  const { sales, loadUnbilledSalesForCustomer } = useSales();
   
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
   const [showActivityReport, setShowActivityReport] = useState(false);
   const [showProspectForm, setShowProspectForm] = useState(false);
   const [groupingError, setGroupingError] = useState(null);
   const [activeProspectTab, setActiveProspectTab] = useState('touch-history');
-
-  // Function to load all sales for this customer
-  const loadAllSalesForThisCustomer = useCallback(() => {
-    const customerId = customerDetails?.id || customer?.id;
-    if (customerId) {
-      loadSalesForCustomer(customerId);
-    }
-  }, [customerDetails?.id, customer?.id, loadSalesForCustomer]);
 
   // Calculate stats for display
   const stats = useMemo(() => {
@@ -52,11 +41,10 @@ function CustomerDetails({
     
     // Calculate total sales for this customer
     let totalSales = 0;
-    const customerId = customer?.id;
-    const customerSPId = customerDetails?.id ;
+    const customerId = customer?.id || customer?.__ID;
     
-    if (sales && sales.length > 0 && customerSPId ) {
-      const customerSales = sales.filter(sale => sale.customer_id === customerSPId );
+    if (sales && sales.length > 0 && customerId) {
+      const customerSales = sales.filter(sale => sale.customer_id === customerId);
       console.log('Customer Sales:', customerSales);
       totalSales = customerSales.reduce((sum, sale) => {
         const amount = typeof sale.total_price === 'number' ? sale.total_price : parseFloat(sale.total_price || 0);
@@ -69,7 +57,7 @@ function CustomerDetails({
       unbilledHours: calculateRecordsUnbilledHours(projectRecords, true, customerId),
       totalSales: totalSales
     };
-  }, [projects, projectRecords, customerDetails?.id, customer?.id, sales]);
+  }, [projects, projectRecords, customer?.id, customer?.__ID, sales]);
 
   // Memoized project grouping with error handling
   const { activeProjects, closedProjects } = useMemo(() => {
@@ -105,41 +93,23 @@ function CustomerDetails({
   }, []);
   
   // Handle project form submission
-  const handleProjectFormSubmit = useCallback((projectData) => {
-    onProjectCreate(projectData);
-    setShowNewProjectInput(false);
-  }, [onProjectCreate]);
-
-  // Memoize the fetch function to prevent infinite loops
-  const handleFetchCustomerDetails = useCallback(async () => {
-    if (customer && customer.Name && user && user.supabaseOrgID) {
-      // Only fetch if we don't already have customer details for this customer
-      if (!customerDetails || customerDetails.business_name !== customer.Name) {
-        try {
-          const customerData = await fetchOrCreateCustomerInSupabase(customer, user);
-          if (customerData) {
-            setCustomerDetails(customerData);
-          }
-        } catch (error) {
-          console.error("[ERROR] Failed to fetch/create customer details in Supabase:", error);
-          showError(`Error with customer details in Supabase: ${error.message}`);
-        }
-      }
+  const handleProjectFormSubmit = useCallback(async (projectData) => {
+    try {
+      await onProjectCreate(projectData);
+      setShowNewProjectInput(false);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      showError(error.message || 'Failed to create project');
     }
-  }, [customer, user, customerDetails, fetchOrCreateCustomerInSupabase, setCustomerDetails, showError]);
+  }, [onProjectCreate, showError]);
 
-  // Fetch or create customer details in Supabase when component mounts
-  useEffect(() => {
-    handleFetchCustomerDetails();
-  }, [handleFetchCustomerDetails]);
-  
   // Load sales data for this customer when customerDetails changes
   useEffect(() => {
-    const customerId = customerDetails?.id || customer?.id;
+    const customerId = customer?.id || customer?.__ID;
     if (customerId) {
       loadUnbilledSalesForCustomer(customerId);
     }
-  }, [customerDetails?.id, customer?.id, loadUnbilledSalesForCustomer]);
+  }, [customer?.id, customer?.__ID, loadUnbilledSalesForCustomer]);
 
   return (
     <div className="space-y-6 h-[calc(100vh-8rem)] overflow-y-auto pr-2">

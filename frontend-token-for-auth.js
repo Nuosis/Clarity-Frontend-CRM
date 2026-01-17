@@ -4,7 +4,10 @@ import crypto from 'crypto';
 
 // Generate HMAC authentication like the frontend does
 function generateBackendAuthHeader(payload = '') {
-  const secretKey = 'QArxVv0J1xggzd8Ai_Sk7TfFzllOflBJjVxA4kazpDo';
+  const secretKey = process.env.VITE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error('Missing VITE_SECRET_KEY. Provide it via environment variables.');
+  }
   const timestamp = Math.floor(Date.now() / 1000);
   const message = `${timestamp}.${payload}`;
   

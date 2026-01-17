@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T19:43:42.586Z",
+    "featureSlug": "projects-backend-integration",
+    "taskId": "TASK017",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] Stale closure bug in handleProjectSelect causes race condition",
+    "sessionId": "019bcd7c-2074-7fb2-b78c-480224d72f23",
+    "processId": 1768679022584,
+    "lastUpdated": "2026-01-17T19:45:28.870Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T19:43:42.599Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-17T19:45:28.870Z",
+    "output": {
+      "success": true,
+      "sessionId": "019bcd7c-2074-7fb2-b78c-480224d72f23",
+      "processId": 16007,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\nFixed the project selection race by gating updates to the latest request and merging fetched detail data instead of re-reading stale state in `src/hooks/useProject.js`.\n\n**Findings**\n- High: stale closure in `src/hooks/useProject.js` caused `handleProjectSelect` to read outdated `projects` after `loadProjectDetails`, so selection could end up missing details or wrong; now uses request-id gating and merges returned details directly.\n- Medium: earlier selection calls could finish later and flip `loading`/`error` for a newer selection; now state updates are guarded to the latest request.\n\n**Tests**\n- `npm run build` (passes; existing warnings: `createProposalDeliverables`/`createProposalConcepts` not exported in `src/services/proposalService.js`).\n\nIf you want, I can also add a focused test around rapid project selection to lock this behavior down."
+    }
+  }
+}

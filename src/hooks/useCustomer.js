@@ -15,18 +15,12 @@ import {
     sortCustomers,
     validateCustomerData,
     formatCustomerForFileMaker,
-    calculateCustomerStats,
-    transformFileMakerToBackend,
-    transformBackendToFileMaker
+    calculateCustomerStats
 } from '../services';
-import { useSupabaseCustomer } from './useSupabaseCustomer';
-import { useAppState } from '../context/AppStateContext';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 import {
     formatErrorForUI,
-    parseValidationError,
-    CustomerError,
-    CustomerErrorCodes
+    parseValidationError
 } from '../errors/customerErrors';
 
 /**
@@ -50,9 +44,18 @@ export function useCustomer() {
     const [isSearching, setIsSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const { updateCustomerInSupabase } = useSupabaseCustomer();
-    const { user } = useAppState();
     const searchTimeoutRef = useRef(null);
+    const searchRequestIdRef = useRef(0);
+    const isMountedRef = useRef(true);
+    const paginationRef = useRef(pagination);
+
+    const clearSearchTimeout = useCallback(() => {
+        clearSearchTimeout();
+    }, []);
+
+    useEffect(() => {
+        paginationRef.current = pagination;
+    }, [pagination]);
 
     /**
      * Helper function to set error state with formatting
@@ -60,13 +63,18 @@ export function useCustomer() {
      */
     const setErrorWithFormatting = useCallback((err) => {
         const formatted = formatErrorForUI(err);
-        setError(err);
+        setError(formatted.message);
         setFormattedError(formatted);
         console.error('[useCustomer] Error:', {
             raw: err,
             formatted,
-            stack: err.stack
+            stack: err?.stack
         });
+    }, []);
+
+    const clearErrorState = useCallback(() => {
+        setError(null);
+        setFormattedError(null);
     }, []);
 
     // Update stats when customers change
@@ -88,10 +96,16 @@ export function useCustomer() {
     const loadCustomers = useCallback(async (options = {}) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const env = getEnvironmentContext();
-            const result = await fetchCustomers(options);
+            const currentPagination = paginationRef.current;
+            const effectiveOptions = {
+                limit: currentPagination.limit,
+                offset: currentPagination.offset,
+                ...options
+            };
+            const result = await fetchCustomers(effectiveOptions);
 
             let processedCustomers;
             let paginationInfo;
@@ -114,8 +128,8 @@ export function useCustomer() {
 
             // Apply client-side sorting if needed
             const sortedCustomers = sortCustomers(processedCustomers, {
-                field: options.sort || 'name',
-                order: options.order || 'asc'
+                field: effectiveOptions.sort || 'name',
+                order: effectiveOptions.order || 'asc'
             });
 
             setCustomers(sortedCustomers);
@@ -125,7 +139,7 @@ export function useCustomer() {
         } finally {
             setLoading(false);
         }
-    }, [setErrorWithFormatting]);
+    }, [clearErrorState, setErrorWithFormatting]);
 
     /**
      * Selects a customer by ID and loads full details
@@ -137,7 +151,7 @@ export function useCustomer() {
     const handleCustomerSelect = useCallback(async (customerId, options = {}) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const env = getEnvironmentContext();
             const result = await fetchCustomerById(customerId);
@@ -159,7 +173,7 @@ export function useCustomer() {
         } finally {
             setLoading(false);
         }
-    }, [setErrorWithFormatting]);
+    }, [clearErrorState, setErrorWithFormatting]);
 
     /**
      * Creates a new customer
@@ -169,7 +183,7 @@ export function useCustomer() {
     const handleCustomerCreate = useCallback(async (customerData) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const env = getEnvironmentContext();
 
@@ -203,7 +217,7 @@ export function useCustomer() {
         } finally {
             setLoading(false);
         }
-    }, [loadCustomers, setErrorWithFormatting]);
+    }, [clearErrorState, loadCustomers, setErrorWithFormatting]);
 
     /**
      * Updates an existing customer
@@ -214,7 +228,7 @@ export function useCustomer() {
     const handleCustomerUpdate = useCallback(async (customerId, customerData) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const env = getEnvironmentContext();
 
@@ -232,50 +246,33 @@ export function useCustomer() {
                 const formattedData = formatCustomerForFileMaker(customerData);
                 result = await updateCustomer(customerId, formattedData);
                 console.log('[useCustomer] FileMaker customer updated:', result);
-
-                // Update customer in Supabase after successful FileMaker update (dual-write)
-                if (user && user.supabaseOrgID) {
-                    try {
-                        const supabaseCustomerData = {
-                            Name: customerData.name || customerData.Name,
-                            Email: customerData.email || customerData.Email,
-                            Phone: customerData.phone || customerData.Phone,
-                            Address: customerData.Address,
-                            City: customerData.City,
-                            State: customerData.State,
-                            PostalCode: customerData.PostalCode,
-                            Country: customerData.Country
-                        };
-
-                        const supabaseResult = await updateCustomerInSupabase(customerId, supabaseCustomerData, user);
-                        if (supabaseResult && supabaseResult.success) {
-                            console.log('[useCustomer] Supabase customer updated:', supabaseResult.message);
-                        } else {
-                            console.warn('[useCustomer] Failed to update customer in Supabase:', supabaseResult?.error);
-                        }
-                    } catch (supabaseError) {
-                        console.error('[useCustomer] Error updating customer in Supabase:', supabaseError);
-                    }
-                }
             } else {
                 // Web app environment - send backend format directly
                 result = await updateCustomer(customerId, customerData);
                 console.log('[useCustomer] Backend customer updated:', result);
             }
 
+            const updatedCustomerData = (result && (result.id || result.__ID)) ? result : customerData;
+
             // Update local state
             setCustomers(prevCustomers =>
                 prevCustomers.map(customer =>
                     customer.id === customerId || customer.__ID === customerId
-                        ? { ...customer, ...customerData }
+                        ? { ...customer, ...updatedCustomerData }
                         : customer
                 )
             );
 
-            // Update selected customer if it's the one being updated
-            if (selectedCustomer?.id === customerId || selectedCustomer?.__ID === customerId) {
-                setSelectedCustomer(prev => ({ ...prev, ...customerData }));
-            }
+            // Update selected customer if it's the one being updated (avoid stale closure)
+            setSelectedCustomer(prev => {
+                if (!prev) {
+                    return prev;
+                }
+                if (prev.id !== customerId && prev.__ID !== customerId && prev.recordId !== customerId) {
+                    return prev;
+                }
+                return { ...prev, ...updatedCustomerData };
+            });
 
             return result;
         } catch (err) {
@@ -284,7 +281,7 @@ export function useCustomer() {
         } finally {
             setLoading(false);
         }
-    }, [selectedCustomer, user, updateCustomerInSupabase, setErrorWithFormatting]);
+    }, [clearErrorState, setErrorWithFormatting]);
 
     /**
      * Toggles customer active status
@@ -295,7 +292,7 @@ export function useCustomer() {
     const handleCustomerStatusToggle = useCallback(async (customerId, active) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             console.log(`[useCustomer] Toggling customer status: ${customerId}, active: ${active}`);
             const result = await toggleCustomerStatus(customerId, active);
@@ -328,7 +325,7 @@ export function useCustomer() {
         } finally {
             setLoading(false);
         }
-    }, [selectedCustomer, setErrorWithFormatting]);
+    }, [clearErrorState, selectedCustomer, setErrorWithFormatting]);
 
     /**
      * Deletes a customer
@@ -340,7 +337,7 @@ export function useCustomer() {
     const handleCustomerDelete = useCallback(async (customerId, options = {}) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             console.log(`[useCustomer] Deleting customer: ${customerId}`);
             const result = await deleteCustomer(customerId);
@@ -368,7 +365,7 @@ export function useCustomer() {
         } finally {
             setLoading(false);
         }
-    }, [selectedCustomer, setErrorWithFormatting]);
+    }, [clearErrorState, selectedCustomer, setErrorWithFormatting]);
 
     /**
      * Searches customers by query string with debouncing
@@ -381,10 +378,12 @@ export function useCustomer() {
     const handleCustomerSearch = useCallback((query, options = {}) => {
         const { limit = 20, debounceMs = 300 } = options;
 
+        // Invalidate any in-flight search
+        searchRequestIdRef.current += 1;
+        const requestId = searchRequestIdRef.current;
+
         // Clear existing timeout
-        if (searchTimeoutRef.current) {
-            clearTimeout(searchTimeoutRef.current);
-        }
+        clearSearchTimeout();
 
         // Update search query state immediately for UI feedback
         setSearchQuery(query);
@@ -405,10 +404,10 @@ export function useCustomer() {
 
         // Set searching state
         setIsSearching(true);
-        setError(null);
+        clearErrorState();
 
         // Debounce the actual search
-        searchTimeoutRef.current = setTimeout(async () => {
+        const timeoutId = setTimeout(async () => {
             try {
                 console.log(`[useCustomer] Searching customers: "${query}"`);
                 const result = await searchCustomers(query, { limit });
@@ -425,37 +424,50 @@ export function useCustomer() {
                     processedResults = processed.customers;
                 }
 
+                if (!isMountedRef.current || requestId !== searchRequestIdRef.current) {
+                    return;
+                }
+
                 console.log(`[useCustomer] Search returned ${processedResults.length} results`);
                 setSearchResults(processedResults);
             } catch (err) {
+                if (!isMountedRef.current || requestId !== searchRequestIdRef.current) {
+                    return;
+                }
                 setErrorWithFormatting(err);
                 setSearchResults([]);
             } finally {
+                if (searchTimeoutRef.current === timeoutId) {
+                    searchTimeoutRef.current = null;
+                }
+                if (!isMountedRef.current || requestId !== searchRequestIdRef.current) {
+                    return;
+                }
                 setIsSearching(false);
             }
         }, debounceMs);
-    }, [setErrorWithFormatting]);
+        searchTimeoutRef.current = timeoutId;
+    }, [clearErrorState, clearSearchTimeout, setErrorWithFormatting]);
 
     /**
      * Clears search results and query
      */
     const clearSearch = useCallback(() => {
-        if (searchTimeoutRef.current) {
-            clearTimeout(searchTimeoutRef.current);
-        }
+        searchRequestIdRef.current += 1;
+        clearSearchTimeout();
         setSearchQuery('');
         setSearchResults([]);
         setIsSearching(false);
-    }, []);
+    }, [clearSearchTimeout]);
 
     // Cleanup timeout on unmount
     useEffect(() => {
         return () => {
-            if (searchTimeoutRef.current) {
-                clearTimeout(searchTimeoutRef.current);
-            }
+            isMountedRef.current = false;
+            searchRequestIdRef.current += 1;
+            clearSearchTimeout();
         };
-    }, []);
+    }, [clearSearchTimeout]);
 
     return {
         // State
@@ -486,10 +498,7 @@ export function useCustomer() {
         clearSearch,
 
         // Utility functions
-        clearError: () => {
-            setError(null);
-            setFormattedError(null);
-        },
+        clearError: clearErrorState,
         clearSelectedCustomer: () => setSelectedCustomer(null),
         setPagination
     };

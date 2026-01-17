@@ -343,8 +343,6 @@ const [errors, setErrors] = useState({});
 
 ```javascript
 const { setLoading } = useAppStateOperations();
-const { user } = useAppState();
-const { createCustomerInSupabase } = useSupabaseCustomer();
 const { loadCustomers, handleCustomerSelect } = useCustomer();
 ```
 
@@ -381,8 +379,7 @@ Desktop: Two columns
 import { v4 as uuidv4 } from 'uuid';                           // UUID generation
 import { createCustomer, updateCustomer } from '../../api/customers';
 import { useSnackBar } from '../../context/SnackBarContext';
-import { useAppState, useAppStateOperations } from '../../context/AppStateContext';
-import { useSupabaseCustomer } from '../../hooks/useSupabaseCustomer';
+import { useAppStateOperations } from '../../context/AppStateContext';
 import { useCustomer } from '../../hooks/useCustomer';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../../services/dataService';
 ```

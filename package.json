@@ -13,6 +13,7 @@
     "docs:bundle": "node ./scripts/generate-docs-bundle.js",
     "docs": "node ./scripts/generate-docs.js",
     "test": "jest",
+    "typecheck": "echo \"No typecheck configured\"",
     "deploy:edge-function": "node ./scripts/deploy-edge-function.js",
     "test:edge-function": "node ./scripts/test-edge-function.js",
     "test:supabase": "node ./scripts/test-supabase-service.js",

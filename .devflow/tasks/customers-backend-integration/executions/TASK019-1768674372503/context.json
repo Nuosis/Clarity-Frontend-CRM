@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T18:26:12.503Z",
+    "featureSlug": "customers-backend-integration",
+    "taskId": "TASK019",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] Unsafe Dual-Write Without Transaction Guarantees",
+    "sessionId": "019bcd36-295c-7d51-bf3f-7f3e7a1dc2e5",
+    "processId": 1768674372502,
+    "lastUpdated": "2026-01-17T18:28:37.366Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T18:26:12.504Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-17T18:28:37.251Z",
+    "output": {
+      "success": true,
+      "sessionId": "019bcd36-295c-7d51-bf3f-7f3e7a1dc2e5",
+      "processId": 31223,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\nBlocked unsafe dual-writes by default and made any dual-write execution require an explicit `allowUnsafeDualWrite` opt-in so we don’t perform non-transactional dual writes unintentionally. This keeps legacy FileMaker calls functional while preventing accidental Supabase writes without guarantees. Changes are in `src/services/dualWriteService.js`.\n\nBuild check: `npm run build` (succeeds). Warnings:\n- `src/services/proposalService.js` imports `createProposalDeliverables` and `createProposalConcepts` not exported by `src/api/proposals.js`.\n\nIf you want, I can:\n1) remove or fix those proposal API imports to clear the build warnings\n2) add a small test or lint check that flags accidental dual-write enablement"
+    }
+  },
+  "ValidateNode": {
+    "timestamp": "2026-01-17T18:28:37.363Z",
+    "output": {
+      "passed": false,
+      "buildPassed": false,
+      "buildErrors": "Build failed with exit code 1:\nnpm error Missing script: \"typecheck\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /Users/marcusswift/.npm/_logs/2026-01-17T18_28_37_329Z-debug-0.log\n",
+      "error": "Build verification failed"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T18:28:37.366Z",
+    "output": {
+      "taskStatus": "blocked",
+      "summary": "Task validation failed: Build verification failed",
+      "nextTaskTriggered": true
+    }
+  }
+}

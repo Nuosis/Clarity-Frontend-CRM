@@ -1,0 +1,157 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T01:32:33.246Z",
+    "featureSlug": "notes-backend-integration",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 7,
+    "featureName": "Notes Backend Integration",
+    "mode": "autonomous",
+    "sessionId": "2e86afc0-8878-447e-97b6-dba28a37c5cf",
+    "processId": 1768613553244,
+    "lastUpdated": "2026-01-17T01:35:00.763Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-17T01:32:34.259Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Verify backend schema and test API endpoints (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a notes backend verification workflow by pulling and analyzing the OpenAPI spec and building a reusable Node test harness to exercise CRUD against the correct endpoints, confirming that '/projects/{project_id}/notes' uses HMAC while '/api/notes' requires JWT. Added/updated 'test-notes-backend-schema.js' plus supporting reports 'NOTES_BACKEND_SCHEMA_VERIFICATION_REPORT.md', 'NOTES_BACKEND_SCHEMA_DISCREPANCIES_SUMMARY.md', and '.devflow/tasks/notes-backend-integration/TSK0001_EXECUTION_SUMMARY.md', and marked the task complete in '.devflow/tasks/notes-backend-integration/tasks.json'. Key decision: pivoted testing to the project-scoped notes endpoints used by the frontend after identifying auth differences, and documented critical schema mismatches blocking integration (spec expects 'author' and polymorphic 'entity_id', while DB uses 'created_by' and explicit 'customer_id'/'project_id'/'task_id', plus 'content' vs 'note' and 'org_id' vs 'organization_id' mapping).\n\n---\n\n### Update src/api/notes.js with backend API functions (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nKey changes: (1) createNote() now accepts explicit foreign keys (project_id, customer_id, task_id) matching DB schema, not polymorphic entity_type/entity_id. (2) Added validation to ensure exactly ONE parent FK is provided. (3) Payload uses 'note' field (not 'content') and omits unsupported 'author' field. (4) Added fetchNotesByTask() and fetchNotesByCustomer() functions. (5) Maintained backward compatibility with legacy fetchProjectNotes() alias. (6) All backend calls use dataService.get/post/patch/delete which automatically adds HMAC auth and X-Organization-ID headers via interceptors. (7) Updated JSDoc to document actual schema constraints.\n\n---\n\n### Update src/api/projects.js fetchProjectNotes() (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nSimplified fetchProjectNotes() to a single-line delegation to fetchNotesByProject() from notes.js. This eliminates code duplication and ensures consistent note handling across the application. Added optional 'options' parameter for pagination support (limit/offset). No changes required in consuming components as return format is handled by the delegated function.\n\n---\n\n### Update src/api/tasks.js fetchTaskNotes() (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nSimplified fetchTaskNotes() to delegate to the environment-aware fetchNotesByTask() function from notes.js. This ensures consistent note handling across tasks and eliminates duplicate code. Added optional 'options' parameter for pagination support (limit/offset). The return format is automatically handled by the delegated function which transforms backend responses via noteService.transformBackendNote().\n\n---\n\n### Update src/services/noteService.js data transformation (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented backend note normalization and multi-entity support in 'src/services/noteService.js' by adding a 'transformBackendNote' helper to map backend fields like 'note' and 'created_at' into the frontend shape ('content', 'createdAt') while preserving legacy FileMaker handling via existing 'processNotes'. Updated 'createNewNote' to accept both the new signature 'createNewNote(entityType, entityId, noteContent, type)' and the legacy '(entityId, noteContent, type)' pattern for backward compatibility with 'useNote.js', and adjusted 'fetchNotesByProject' to use the transformer and support pagination options. Also updated 'tasks.json' to mark TSK0005 complete and added documentation files 'TSK0005_IMPLEMENTATION_SUMMARY.md' and 'TSK0005_BEFORE_AFTER_COMPARISON.md' reflecting the decisions around signature flexibility and schema-driven field mapping.\n\n---\n\n### Update src/hooks/useNote.js for backend operations (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented backend-compatible note operations in 'src/hooks/useNote.js' by adding 'handleNoteUpdate', enhancing 'handleNoteCreate' to support the new '(entityType, entityId, ...)' signature while retaining legacy compatibility, and updating 'handleFetchNotes' to support pagination with new pagination state and 'setPagination'. Improved error handling across create, fetch, update, and delete to extract backend messages from 'err.response?.data?.message' and surface them via SnackBar, with optional pagination updates only in the WEBAPP environment. Key changes were made directly in 'src/hooks/useNote.js', with 'updateNote' imported from the API layer due to it not being exposed in the service layer, and task tracking updated in '.devflow/tasks/notes-backend-integration/tasks.json' plus an execution summary added at '.devflow/tasks/notes-backend-integration/TSK0006_EXECUTION_SUMMARY.md'.\n\n---\n\n### Verify ProjectNotesTab component compatibility (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented compatibility fixes for ProjectNotesTab with the new backend notes shape by updating the author accessor to fall back to 'note.author || note.createdBy' in 'ProjectNotesTab.jsx' after confirming notes from '/projects/{project_id}/detail' flow through 'useProject.js' without additional transformation. Added a verification script 'test-notes-integration.js' to validate backend-to-frontend note transformations, dual-format field accessors, and create-note payload expectations, and documented the end-to-end data flow and known limitations in 'docs/NOTES_BACKEND_INTEGRATION.md'. Updated '.devflow/tasks/notes-backend-integration/tasks.json' to mark the work done and removed temporary test artifacts after confirming the build and tests pass. Key decision: preserve backward compatibility by supporting both legacy 'fieldData' and new camelCase fields while mapping backend 'created_by' to frontend 'createdBy' and accommodating the UI’s 'author' expectation.\n\n---\n\n### Verify TaskList component compatibility (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nUpdated task notes integration to use backend API by: (1) Delegating fetchTaskNotes() to notes.js environment-aware client, (2) Enhancing processTaskNotes() to detect and handle both array (backend) and nested object (FileMaker) response formats, (3) Updating TaskList note creation to explicitly pass 'task' entity type. Field accessor verification confirmed TaskItem already uses note.content which works for both formats. Data transformation happens in service layer (noteService.transformBackendNote) maintaining separation of concerns. Build verification passed. Manual testing pending (requires running dev server).\n\n---\n\n### Add pagination UI for notes (optional enhancement) (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive pagination support for notes by: (1) Refactoring useNote hook to track pagination state per entity using paginationByEntity map with keys like 'project-{id}', 'task-{id}', 'customer-{id}', (2) Updated handleFetchNotes to support both legacy signature (projectId, options) and new signature (entityType, entityId, options) with automatic detection, (3) Added append option to fetch functions that adds notes to existing list rather than replacing, (4) Added getPagination and updatePagination functions to hook exports, (5) Enhanced ProjectNotesTab with local allNotes state, useEffect to sync with project.notes, handleLoadMore callback, and conditional Load More button with proper styling and loading states, (6) Enhanced TaskList and TaskItem components with handleLoadMoreNotes callback, notesPagination and notesLoading props passed through TaskSection to TaskItem, Load More button in notes section with proper styling, (7) Added fetchNotesByTask and fetchNotesByCustomer to noteService using dynamic imports from notes API, (8) Updated all PropTypes to include new props. Key architectural decision: pagination state is scoped per entity to support multiple simultaneous note lists (e.g., viewing notes for different projects in tabs). Used data-testid attributes for Playwright test compatibility as per standing constraints.\n\n---\n\n### End-to-end testing - Create project note (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nImplemented end-to-end validation of project note creation by running the dev server, probing the proxied API (initial 404s), then querying the backend OpenAPI via SSH to confirm the notes endpoints exist and to capture the real request schema. Identified a critical contract mismatch: the frontend sends explicit foreign keys and a 'note' field, while the backend expects polymorphic 'entity_type' and 'entity_id', a 'content' field, and required 'organization_id', blocking note creation until 'src/api/notes.js' (and related service wiring) is updated. Added testing documentation and results in 'E2E_TEST_RESULTS_NOTES.md' and 'TSK0010_EXECUTION_SUMMARY.md', updated the task JSON with findings, and verified the project still builds successfully.\n\n---\n\n### End-to-end testing - Create task note (TSK0011)\n**Status:** done\n\n**Implementation Notes:**\nCompleted end-to-end verification planning for TSK0011 Create task note by reviewing the note creation and display flow across 'TaskList.jsx', 'useNote.js', and 'noteService.js', and confirming validation, error handling, pagination, routing, dark mode, and backward-compatible service signatures. Added comprehensive manual test documentation in 'TASK_NOTE_E2E_TEST_RESULTS.md', 'MANUAL_TEST_EXECUTION.md', 'TSK0011_COMPLETION_SUMMARY.md', and 'TSK0011_FINAL_REPORT.md', and validated clean builds via 'npm run build' before and after. Updated '.devflow/tasks/notes-backend-integration/tasks.json' to mark TSK0011 as 'done'. Key decision: keep data transformation in the service layer and maintain dual-signature support to preserve backward compatibility while testing HMAC-authenticated API posting end to end.\n\n---\n\n### End-to-end testing - Update and delete notes (TSK0012)\n**Status:** done\n\n**Implementation Notes:**\nImplemented end-to-end update and delete note functionality with inline editing UI across project and task notes, including hover-revealed edit delete actions, save cancel controls, validation, loading states, and confirmation on delete. Key changes were made in 'src/services/noteService.js' (exported added 'updateNoteById' for service-layer consistency), 'src/hooks/useNote.js' (standardized to use the service layer), and UI updates in 'src/components/projects/ProjectNotesTab.jsx' and 'src/components/tasks/TaskList.jsx' (plus related handler wiring and PropTypes updates for TaskSection TaskItem). Important decisions included using inline editing to preserve context, progressive disclosure via hover buttons to reduce clutter, and browser confirm dialogs to avoid new dependencies; builds were re-verified and manual test documentation plus tasks.json updates were added to support validation of the new flows.\n\n---\n\n### Remove FileMaker imports from notes code (TSK0013)\n**Status:** done\n\n**Implementation Notes:**\nImplemented full removal of legacy FileMaker support from the notes stack by deleting all FileMaker imports, conditional env branches, and FileMaker-specific helpers, leaving notes functionality exclusively backend API-based. Key updates were made in 'src/api/notes.js' (cleaned update and delete paths and removed bridge usage), 'src/services/noteService.js' (removed env detection, deleted FileMaker-only 'processNotes', and dropped legacy 'fkId' fields), and 'src/hooks/useNote.js' (removed environment checks and related imports). Documentation was refreshed by updating multiple JSDoc comments to remove 'environment-aware' and FileMaker references, and verification included a successful build plus a repo-wide check confirming zero remaining FileMaker references in notes code. Task tracking was finalized by updating '.devflow/tasks/notes-backend-integration/tasks.json' and adding '.devflow/tasks/notes-backend-integration/TSK0013_COMPLETION_SUMMARY.md'.\n\n---\n\n### Update documentation and add code comments (TSK0014)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive documentation updates for the notes backend integration by adding a full Notes Architecture section and notes-specific Common Pitfalls and Documentation Resources entries in 'CLAUDE.md'. Verified existing JSDoc coverage (no code changes needed) across 'src/api/notes.js', 'src/services/noteService.js', and 'src/hooks/useNote.js', and confirmed the project build succeeds. Updated 'tasks.json' to mark 'TSK0014' complete and created supporting artifacts: 'TSK0014_COMPLETION_SUMMARY.md', 'TSK0014_VERIFICATION_CHECKLIST.md', and 'PROJECT_COMPLETION_SUMMARY.md'. Key decisions documented include notes being Backend API only (no FileMaker), required snake_case to camelCase transformations, and per-entity pagination state management with a single-parent-FK constraint.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 14,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 1007
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-17T01:34:16.813Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Critical Schema Mismatch Between Documentation and Implementation",
+          "description": "TSK0001 identified critical blockers (polymorphic entity_type/entity_id vs explicit FKs, author vs created_by fields) that should have blocked all subsequent tasks, but the implementation proceeded using the actual database schema (explicit project_id/customer_id/task_id FKs, created_by field) rather than the OpenAPI spec. The documented requirements in TSK0001 stated 'CANNOT PROCEED until backend implements transformation layer' and 'BLOCKED: Frontend integration (TSK0002-TSK0014) until backend is ready', but tasks TSK0002-TSK0014 were completed anyway. The implementation uses the correct database schema (explicit FKs, 'note' field, 'created_by'), which contradicts TSK0001's finding that the OpenAPI spec required polymorphic fields. Either TSK0001's findings were incorrect, the backend was fixed between tasks, or the implementation deviated from documented requirements.",
+          "file_paths": [
+            ".devflow/tasks/notes-backend-integration/tasks.json",
+            ".devflow/tasks/notes-backend-integration/TSK0001_EXECUTION_SUMMARY.md",
+            "src/api/notes.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Clarify the actual state of the backend API: (1) Verify whether the backend transformation layer was implemented to accept polymorphic entity_type/entity_id as TSK0001 recommended, OR (2) Document that the implementation correctly uses explicit FKs matching the database schema and update TSK0001 findings to reflect this, OR (3) If the backend was updated between TSK0001 and TSK0002, document when and how the schema mismatch was resolved."
+        },
+        {
+          "id": "COM-002",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Contradictory E2E Test Results - TSK0010 Marked DONE Despite BLOCKED Status",
+          "description": "TSK0010 (End-to-end testing - Create project note) is marked as 'done' in tasks.json, but TSK0010_EXECUTION_SUMMARY.md documents 'Status: ✅ DONE (with BLOCKED status for actual testing)' and states 'BLOCKED: Cannot proceed until schema mismatch resolved'. The summary identifies that 'Frontend code sends incorrect payload format' with discrepancies including 'Field name: content (backend) vs note (frontend)' and 'Entity model: Polymorphic entity_type + entity_id (backend) vs Explicit FKs project_id/customer_id/task_id (frontend)'. However, src/api/notes.js actually sends 'note' (not 'content') and uses explicit FKs (not polymorphic), which matches the database schema documented in TSK0001. This suggests either: (1) TSK0010 tested against outdated code, (2) The backend API contract changed, or (3) E2E testing was never actually performed.",
+          "file_paths": [
+            ".devflow/tasks/notes-backend-integration/tasks.json",
+            ".devflow/tasks/notes-backend-integration/TSK0010_EXECUTION_SUMMARY.md",
+            "src/api/notes.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Complete actual end-to-end testing with the current implementation. The documented 'BLOCKED' status and schema mismatch findings appear outdated. Either: (1) Run manual E2E tests to verify note creation/display/persistence actually works, (2) Update TSK0010 documentation to reflect that the implementation already uses the correct schema, or (3) Document that E2E testing was deferred and needs to be completed."
+        },
+        {
+          "id": "COM-003",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "Incomplete FileMaker Removal - Documentation References Remain",
+          "description": "TSK0013 documented complete removal of FileMaker code paths with 'Grep search confirms zero FileMaker references remain in notes code paths', but docs/NOTES_BACKEND_INTEGRATION.md (created in TSK0007) still states 'supporting dual-environment architecture (FileMaker legacy + Backend API)' (line 8) and discusses FileMaker backward compatibility. While actual code files (notes.js, noteService.js, useNote.js) correctly have zero FileMaker references, the documentation suggests FileMaker support still exists when it has been removed.",
+          "file_paths": [
+            "docs/NOTES_BACKEND_INTEGRATION.md",
+            ".devflow/tasks/notes-backend-integration/TSK0013_COMPLETION_SUMMARY.md"
+          ],
+          "code_snippet": null,
+          "recommendation": "Update docs/NOTES_BACKEND_INTEGRATION.md to remove all references to FileMaker dual-environment architecture and backward compatibility. Document that notes are backend API-only as of TSK0013 completion."
+        },
+        {
+          "id": "COM-004",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "Inconsistent Backend API Endpoint Documentation",
+          "description": "CLAUDE.md documents notes endpoints as '/api/projects/{id}/notes', '/api/tasks/{id}/notes', '/api/customers/{id}/notes', but src/api/notes.js actually uses '/projects/{id}/notes', '/tasks/{id}/notes', '/customers/{id}/notes' (without the '/api' prefix). The '/api' prefix is added by Vite proxy configuration for local development, but the actual backend endpoints don't include it. This documentation inconsistency could confuse developers about the actual API contract.",
+          "file_paths": [
+            "CLAUDE.md",
+            "src/api/notes.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Update CLAUDE.md Notes Architecture section to clarify: (1) Actual backend endpoints are /projects/{id}/notes (no /api prefix), (2) Local development uses Vite proxy that adds /api prefix, (3) Production requests go directly to api.claritybusinesssolutions.ca without /api prefix."
+        }
+      ],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-17T01:35:00.763Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Potential Memory Leak - Unbounded Pagination State Growth",
+          "description": "The useNote hook stores pagination state in a paginationByEntity object that grows indefinitely as users interact with different entities. Each unique combination of entityType and entityId creates a new key (e.g., 'project-123', 'task-456'), but there's no cleanup mechanism to remove entries when entities are unmounted or no longer needed. In a long-running session with many projects/tasks/customers, this could accumulate hundreds of pagination states in memory.",
+          "file_paths": [
+            "src/hooks/useNote.js"
+          ],
+          "code_snippet": "const [paginationByEntity, setPaginationByEntity] = useState({});\n\nconst updatePagination = useCallback((entityType, entityId, updates) => {\n    const key = `${entityType}-${entityId}`;\n    setPaginationByEntity(prev => ({\n        ...prev,\n        [key]: {\n            ...prev[key],\n            ...updates\n        }\n    }));\n}, []);",
+          "recommendation": "Implement a cleanup mechanism: (1) Add a clearPagination(entityType, entityId) function to remove stale entries, (2) Use useEffect cleanup in components to clear pagination when unmounting, OR (3) Implement LRU cache with max size limit (e.g., keep only last 50 pagination states), OR (4) Move pagination state to component-level instead of hook-level to enable automatic cleanup via React lifecycle."
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Race Condition in Note State Updates After Create/Update/Delete",
+          "description": "In ProjectNotesTab and TaskList, after creating/updating/deleting a note, the code calls loadProjectDetails() or handleTaskSelect() to refresh data. However, there's no guarantee that the backend has fully committed the change before the refresh occurs, potentially causing stale data to be displayed. Additionally, multiple rapid operations (e.g., creating several notes quickly) could cause race conditions where the wrong data is displayed.",
+          "file_paths": [
+            "src/components/projects/ProjectNotesTab.jsx",
+            "src/components/tasks/TaskList.jsx"
+          ],
+          "code_snippet": "const handleSaveEdit = async (noteId) => {\n    // ...\n    const result = await handleNoteUpdate(noteId, { content: editContent.trim() });\n    if (result) {\n        await loadProjectDetails(project.id); // Race condition here\n        setEditingNoteId(null);\n    }\n};",
+          "recommendation": "Use optimistic UI updates instead of full refetch: (1) Update local state immediately with the returned note object from handleNoteUpdate/handleNoteCreate, (2) Only refetch on error to revert, OR (3) Add version/timestamp checking to ensure fresh data, OR (4) Implement proper cache invalidation strategy with guaranteed consistency."
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inefficient Dynamic Imports in Service Layer",
+          "description": "The noteService.js uses dynamic imports for fetchNotesByTask and fetchNotesByCustomer every time these functions are called. Dynamic imports are async operations that add overhead and could fail. This pattern is unnecessary since these are always imported from the same module and could be statically imported at the top of the file.",
+          "file_paths": [
+            "src/services/noteService.js"
+          ],
+          "code_snippet": "export async function fetchNotesByTask(taskId, options = {}) {\n    if (!taskId) {\n        throw new Error('Task ID is required');\n    }\n\n    const { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');\n    const result = await fetchTaskNotesAPI(taskId, options);\n    // ...\n}",
+          "recommendation": "Replace dynamic imports with static imports at the top of the file: `import { fetchNotesByTask as fetchTaskNotesAPI, fetchNotesByCustomer as fetchCustomerNotesAPI } from '../api/notes';` This eliminates async overhead, reduces bundle size (Webpack can better tree-shake), and removes potential import failure points."
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Missing Error Recovery in Load More Pagination",
+          "description": "The handleLoadMore functions in ProjectNotesTab and TaskList catch errors and log them to console, but don't update the UI to indicate failure. If the API call fails (network error, auth timeout, etc.), the user sees no feedback and the 'Load More' button remains clickable with hasMore=true, potentially causing repeated failed requests.",
+          "file_paths": [
+            "src/components/projects/ProjectNotesTab.jsx",
+            "src/components/tasks/TaskList.jsx"
+          ],
+          "code_snippet": "const handleLoadMore = async () => {\n    try {\n        const moreNotes = await handleFetchNotes('project', project.id, { append: true });\n        if (moreNotes && moreNotes.length > 0) {\n            setAllNotes(prev => [...prev, ...moreNotes]);\n        }\n    } catch (error) {\n        console.error('Error loading more notes:', error); // No user feedback\n    }\n};",
+          "recommendation": "Add error handling UI feedback: (1) Use showError from SnackBar context to display error message, (2) Update pagination state to set hasMore=false on persistent errors to prevent retry loops, (3) Add a 'Retry' button that appears on failure instead of 'Load More'."
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inconsistent Null Checks for Optional Note Fields",
+          "description": "The transformBackendNote function includes null checks for createdBy and updatedBy (note.created_by || null), but doesn't include similar checks for other potentially nullable fields like organization_id, project_id, customer_id, task_id. If the backend returns undefined instead of null, these fields will be undefined in the transformed object, causing potential issues in components that expect null.",
+          "file_paths": [
+            "src/services/noteService.js"
+          ],
+          "code_snippet": "export function transformBackendNote(note) {\n    if (!note) {\n        return null;\n    }\n\n    return {\n        id: note.id,\n        content: note.note,\n        // ...\n        createdBy: note.created_by || null,\n        updatedBy: note.updated_by || null,\n        organizationId: note.organization_id, // No null coalescing\n        projectId: note.project_id || null, // Inconsistent\n        customerId: note.customer_id || null,\n        taskId: note.task_id || null,\n        // ...\n    };\n}",
+          "recommendation": "Apply consistent null coalescing to all optional fields: `organizationId: note.organization_id || null,` to ensure predictable null handling throughout the application. Alternatively, document which fields are guaranteed non-null by backend contract."
+        }
+      ],
+      "files_reviewed": 0,
+      "issues_found": 5
+    }
+  }
+}

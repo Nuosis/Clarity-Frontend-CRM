@@ -20,7 +20,7 @@ import ProjectCreationForm from './ProjectCreationForm';
  */
 function ProspectDetails({ prospect, projects = [], onProjectSelect, onProjectCreate }) {
   const { darkMode } = useTheme();
-  const { showSuccess } = useSnackBar();
+  const { showSuccess, showError } = useSnackBar();
   const [showProspectForm, setShowProspectForm] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
@@ -63,11 +63,16 @@ function ProspectDetails({ prospect, projects = [], onProjectSelect, onProjectCr
   }, []);
 
   const handleProjectFormSubmit = useCallback(async (projectData) => {
-    if (onProjectCreate) {
-      await onProjectCreate(projectData);
+    try {
+      if (onProjectCreate) {
+        await onProjectCreate(projectData);
+      }
+      setShowNewProjectInput(false);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      showError(error.message || 'Failed to create project');
     }
-    setShowNewProjectInput(false);
-  }, [onProjectCreate]);
+  }, [onProjectCreate, showError]);
 
   const handleProjectSelection = useCallback((project) => {
     if (onProjectSelect) {

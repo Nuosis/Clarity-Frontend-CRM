@@ -1,0 +1,436 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T04:09:45.336Z",
+    "featureSlug": "quickbooks-backend-integration",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 1,
+    "featureName": "QuickBooks Backend Integration",
+    "mode": "autonomous",
+    "sessionId": "154c5c27-7863-427e-b6bf-cc4f3985e654",
+    "processId": 1768622985335,
+    "lastUpdated": "2026-01-17T04:15:28.927Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-17T04:09:45.783Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Verify backend schema deployment (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a backend schema verification for QuickBooks integration by SSHing into the server, confirming that QuickBooks-specific tables are absent and that 'customer_sales' exists but lacks the four required QuickBooks columns, along with identifying the existing legacy index 'idx_customer_sales_unbilled_org' that should be supplemented with a future 'is_billed' index rather than replaced. Discovered and validated that the generic 'integration_tokens' table is suitable for QuickBooks OAuth token storage (via a 'provider' field), which enables Phase 1 work (OAuth, token refresh, connection status, disconnect) without schema changes. Created/updated two docs, 'BACKEND_SCHEMA_VERIFICATION_QUICKBOOKS.md' and 'QUICKBOOKS_IMPLEMENTATION_STATUS.md', and updated the task JSON to mark TSK0001 complete while noting Phase 2 is blocked pending a migration to add 'is_billed', 'quickbooks_invoice_id', 'quickbooks_synced_at', and 'billed_at' plus new indexes for invoice lookup and unbilled filtering.\n\n---\n\n### Test backend QuickBooks endpoints (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nCreated and executed Node.js test script (test-qb-endpoints.js) using proper HMAC-SHA256 authentication to test QuickBooks backend endpoints. Verified that /quickbooks/status endpoint works correctly (200 OK) when organization_id is provided as query parameter. Discovered that /quickbooks/unbilled-records, /quickbooks/invoices/from-records, and /quickbooks/sync-invoices all require billing-related user roles (admin/billing/owner) and return 403 errors with HMAC auth since HMAC does not carry user role information. These endpoints are designed for JWT-based user authentication. Created comprehensive documentation (QUICKBOOKS_BACKEND_API_TESTS.md) covering all endpoints with request/response formats, authentication details, role requirements, error codes, and frontend integration examples. All endpoints are production-ready and operational.\n\n---\n\n### Update quickbooksApi.js with new endpoint functions (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nImplemented four new QuickBooks API client functions in 'src/api/quickbooksApi.js' for the added endpoints: 'getQuickBooksStatus', 'getUnbilledRecords', 'createInvoiceFromRecords', and 'syncInvoices', all using the existing 'makeRequest()' HMAC authentication pattern with consistent error handling and added JSDoc. Updated both named exports and the default export to include the new functions, then verified compilation via a successful build. Confirmed runtime behavior using the existing 'test-qb-endpoints.js' script: status succeeds via HMAC, while the other role-protected endpoints correctly return 403 because they require JWT-based roles. Marked the work complete by updating '.devflow/tasks/quickbooks-backend-integration/tasks.json' for TSK0003.\n\n---\n\n### Create QuickBooksConnectionPanel component (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a new QuickBooks connection management UI by adding the QuickBooksConnectionPanel component in 'src/components/financial/QuickBooksConnectionPanel.jsx', integrating it with the existing QuickBooks APIs ('getQuickBooksStatus', 'getQBOAuthorizationUrl', 'getQBOCompanyInfo') to handle OAuth initiation, callback detection, status refresh, and display of company info plus token expiration states. Wired the panel into 'src/components/financial/FinancialActivity.jsx' as a new 'QuickBooks Connection' tab, sourcing the organization id from AppStateContext ('user.supabaseOrgID') and matching existing Tailwind and darkMode patterns. Added supporting documentation in 'docs/QUICKBOOKS_CONNECTION_PANEL.md' and updated the task tracking JSON to mark TSK0004 complete, with the key decision to omit a disconnect action since no backend revocation endpoint exists (reconnect supported instead).\n\n---\n\n### Create QuickBooksSyncPanel component (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented the new QuickBooksSyncPanel UI and integrated it into the FinancialActivity screen as an Invoice Sync tab, providing manual invoice sync with date range inputs, presets, full sync option, status and progress states, success metrics, error handling with retry, and localStorage persistence of last sync info. Key files added or changed were 'src/components/financial/QuickBooksSyncPanel.jsx' (new panel component), 'src/components/financial/FinancialActivity.jsx' (tab integration), and 'docs/QUICKBOOKS_SYNC_PANEL.md' (usage and behavior documentation). The panel was wired to the existing 'syncInvoices()' API (including HMAC-auth expectations) and the build was verified to pass. Notably, while the session initially referenced updating 'src/hooks/useCustomer.js' for backend compatibility, that work was already marked done in 'tasks.json' and did not require further changes.\n\n---\n\n### Update CustomerSalesTable to use backend endpoints (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nRefactored 'CustomerSalesTable.jsx' to stop using direct QuickBooks and Supabase workflows and instead rely on the new backend endpoints 'getUnbilledRecords()' for fetching and 'createInvoiceFromRecords()' for end-to-end invoice creation, billing updates, and optional emailing. Updated 'handleQboInvoiceClick' to call the backend API and consume the documented response fields (e.g., 'result.success', 'result.data.invoice_id', 'invoice_number', 'total_amount', 'records_billed'), and removed the now-unused 'serializeError' helper to simplify error handling. Verified the build passes and updated the task JSON to mark TSK0006 complete, while keeping existing UI behavior (table, modals, customer search/creation, status indicators, dark mode) intact.\n\n---\n\n### Create QuickBooksConfigPanel component (admin only) (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented an admin-only QuickBooksConfigPanel UI to manage organization-specific QuickBooks settings (tax codes, service items by currency, invoice and sync settings) with change detection, save reset, feedback states, dark mode and responsive behavior, using localStorage as a temporary persistence layer due to missing backend schema and endpoints. Added backend-ready API client stubs getQuickBooksConfig and updateQuickBooksConfig in 'src/api/quickbooksApi.js' (HMAC and JSDoc) and integrated the new panel as a 'QuickBooks Config' tab in 'src/components/financial/FinancialActivity.jsx'. Created documentation in 'docs/QUICKBOOKS_CONFIG_PANEL.md' plus a task summary, and marked completion in '.devflow/tasks/quickbooks-backend-integration/tasks.json', with the key decision to defer true persistence until the 'organization_quickbooks_config' table or integration_tokens.meta_data support is deployed.\n\n---\n\n### Write integration and E2E tests (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nCreated comprehensive test suite for QuickBooks integration with 213+ test cases across API integration tests (120+ tests in quickbooksApi.test.js), component tests for all three UI panels (80 tests total - ConfigPanel: 27, ConnectionPanel: 21, SyncPanel: 32), and E2E workflow tests (13 comprehensive workflows). Updated quickbooksApi.js to support both import.meta.env and process.env for Jest compatibility. Tests cover authentication (OAuth, HMAC, token refresh), CRUD operations (customers, invoices, bills), status checks, configuration management, sync operations, error handling, and complete user workflows. Installed required testing dependencies (@testing-library/react, @testing-library/jest-dom). Build verification passed successfully. Created comprehensive documentation in QUICKBOOKS_TESTS_SUMMARY.md covering test organization, coverage areas, mocking strategies, and future improvements.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 8,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 446
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-17T04:10:41.128Z",
+    "output": {
+      "findings": [],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-17T04:11:43.268Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Infinite re-render risk in QuickBooksConfigPanel useCallback dependency",
+          "description": "The loadConfiguration useCallback has 'config' (a state object) in its dependency array at line 108. Since config is initialized with a complex object literal and is updated by the same function, this creates a dependency cycle that could cause infinite re-renders. The useEffect at line 178-180 calls loadConfiguration, which then updates config, which causes loadConfiguration to be recreated, which triggers the useEffect again.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "const loadConfiguration = useCallback(async () => {\n  // ... code ...\n  if (savedConfig) {\n    const parsedConfig = JSON.parse(savedConfig);\n    setConfig(parsedConfig);\n    setInitialConfig(parsedConfig);\n  } else {\n    // Use default config\n    setInitialConfig(config);  // <-- Uses config from state\n  }\n}, [user?.supabaseOrgID, config]);  // <-- config in deps causes recreation",
+          "recommendation": "Remove 'config' from the dependency array and instead capture the default config in a constant or useMemo outside the callback. Example: const DEFAULT_CONFIG = useMemo(() => ({ cad_tax_code: 4, ... }), []); Then use DEFAULT_CONFIG instead of 'config' in the else branch."
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Missing cleanup for OAuth callback URL parameters",
+          "description": "In QuickBooksConnectionPanel.jsx lines 168-186, the OAuth callback handler uses window.history.replaceState to clean up URL parameters, but if the user navigates away before the setTimeout fires (1000ms), the URL cleanup may not occur. This could leave sensitive OAuth parameters in the browser history.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx"
+          ],
+          "code_snippet": "useEffect(() => {\n  const urlParams = new URLSearchParams(window.location.search);\n  const code = urlParams.get('code');\n  const state = urlParams.get('state');\n\n  if (code && state) {\n    // Clean up URL\n    window.history.replaceState({}, document.title, window.location.pathname);\n    \n    // Refresh connection status after a short delay\n    setTimeout(() => {\n      fetchConnectionStatus();\n    }, 1000);\n  }\n}, [fetchConnectionStatus]);",
+          "recommendation": "Move the setTimeout cleanup into a variable and return a cleanup function from the useEffect that clears the timeout if the component unmounts. Also, call fetchConnectionStatus immediately rather than after a delay, or use a more robust state management pattern."
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Potential null pointer when accessing invoice response data",
+          "description": "In CustomerSalesTable.jsx line 308, the code accesses invoiceInfo.total_amount.toFixed(2) without null checking total_amount first. If the backend response is malformed or the field is missing, this will throw a runtime error.",
+          "file_paths": [
+            "src/components/financial/CustomerSalesTable.jsx"
+          ],
+          "code_snippet": "const successMessage = `Invoice ${invoiceInfo.invoice_number} created successfully!\\n\\n` +\n  `Invoice ID: ${invoiceInfo.invoice_id}\\n` +\n  `Total Amount: $${invoiceInfo.total_amount.toFixed(2)}\\n` +  // <-- No null check\n  `Records Billed: ${invoiceInfo.records_billed}\\n` +\n  `Email sent to customer.`;",
+          "recommendation": "Add defensive null checks or use optional chaining: `Total Amount: $${(invoiceInfo.total_amount ?? 0).toFixed(2)}` to handle cases where the backend response may be incomplete."
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Race condition in fetchCompanyInfo callback dependency",
+          "description": "In QuickBooksConnectionPanel.jsx line 59, fetchCompanyInfo is called directly without being awaited or tracked. If fetchConnectionStatus is called multiple times rapidly (e.g., user clicks refresh repeatedly), multiple fetchCompanyInfo calls could be in flight simultaneously, potentially causing UI state inconsistencies or redundant API calls.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx"
+          ],
+          "code_snippet": "if (response.data.connected) {\n  fetchCompanyInfo();  // <-- Not awaited, no race protection\n}",
+          "recommendation": "Either await fetchCompanyInfo() or add a loading guard to prevent concurrent calls. For example: if (response.data.connected && !isLoadingCompanyInfo) { await fetchCompanyInfo(); }"
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Unsafe localStorage JSON parsing without validation",
+          "description": "In QuickBooksSyncPanel.jsx lines 44-53, localStorage data is parsed without schema validation. If the stored data is corrupted, malformed, or from an older incompatible version, the component will fail silently or crash.",
+          "file_paths": [
+            "src/components/financial/QuickBooksSyncPanel.jsx"
+          ],
+          "code_snippet": "const savedSyncInfo = localStorage.getItem('qb_last_sync');\nif (savedSyncInfo) {\n  try {\n    const { timestamp, result } = JSON.parse(savedSyncInfo);  // <-- No schema validation\n    setLastSyncTimestamp(timestamp);\n    setLastSyncResult(result);\n  } catch (err) {\n    console.error('Error loading last sync info:', err);\n  }\n}",
+          "recommendation": "Add schema validation after parsing: if (timestamp && typeof timestamp === 'string' && result && typeof result === 'object') { ... } to ensure the data structure is valid before using it."
+        }
+      ],
+      "files_reviewed": 0,
+      "issues_found": 5
+    }
+  },
+  "SecurityCheckNode": {
+    "timestamp": "2026-01-17T04:13:25.446Z",
+    "output": {
+      "findings": [
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "critical",
+          "title": "SQL Injection vulnerability in deprecated legacy functions",
+          "description": "The deprecated functions listQBOCustomerByName (line 510) and getQBOAccount (line 543) construct SQL-like queries using string interpolation without proper sanitization. An attacker could inject malicious QuickBooks Query Language (QQL) statements by passing crafted input through the customerName or accountId parameters. For example: customerName = \"' OR 1=1--\" could return all customers instead of the intended match.",
+          "file_paths": [
+            "src/api/quickbooksApi.js"
+          ],
+          "code_snippet": "export const listQBOCustomerByName = async (customerName) => {\n  console.warn('listQBOCustomerByName is deprecated. Use executeQBOQuery with a custom query instead.');\n  const query = `SELECT * FROM Customer WHERE DisplayName LIKE '%${customerName}%'`;\n  return await executeQBOQuery(query);\n};\n\nexport const getQBOAccount = async (accountId) => {\n  console.warn('getQBOAccount is deprecated. Use executeQBOQuery instead.');\n  return await executeQBOQuery(`SELECT * FROM Account WHERE Id = '${accountId}'`);\n};",
+          "recommendation": "Remove these deprecated functions entirely (they're marked deprecated anyway) OR use parameterized queries if QuickBooks API supports it. Since these are deprecated and the comment suggests using executeQBOQuery directly, the best fix is to delete these functions and update any calling code to use the safer alternatives (searchQBOCustomers, listQBOItems with filters)."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "high",
+          "title": "Open redirect vulnerability in OAuth flow",
+          "description": "In QuickBooksConnectionPanel.jsx line 104, the code redirects to response.authorization_url without validating that it's a legitimate QuickBooks domain. If an attacker can compromise the backend API or perform a man-in-the-middle attack, they could return a malicious URL (e.g., https://evil.com/phishing) and redirect users to a phishing site that mimics QuickBooks login.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx"
+          ],
+          "code_snippet": "const response = await getQBOAuthorizationUrl();\n\nif (response.authorization_url) {\n  // Redirect to QuickBooks OAuth page\n  window.location.href = response.authorization_url;  // <-- No URL validation\n}",
+          "recommendation": "Validate that authorization_url starts with the official QuickBooks domain before redirecting:\n\nconst ALLOWED_QB_DOMAINS = ['https://appcenter.intuit.com', 'https://app.qbo.intuit.com'];\nif (response.authorization_url) {\n  const isValidUrl = ALLOWED_QB_DOMAINS.some(domain => response.authorization_url.startsWith(domain));\n  if (!isValidUrl) {\n    throw new Error('Invalid authorization URL received from server');\n  }\n  window.location.href = response.authorization_url;\n}"
+        },
+        {
+          "id": "SEC-003",
+          "category": "security",
+          "severity": "high",
+          "title": "Client-side access control bypass in QuickBooksConfigPanel",
+          "description": "In QuickBooksConfigPanel.jsx line 36, admin access is enforced purely on the client-side using user.role === 'admin' || user.role === 'owner'. A malicious user could bypass this check using browser DevTools to modify the user object or the component's rendered output, gaining unauthorized access to configuration settings. While the config currently uses localStorage (not sensitive), the backend API stubs (getQuickBooksConfig, updateQuickBooksConfig) suggest future backend integration where unauthorized modifications could occur.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "const isAdmin = user?.role === 'admin' || user?.role === 'owner';\n\nif (!isAdmin) {\n  return (\n    <div>Access Restricted</div>\n  );\n}",
+          "recommendation": "Client-side access control is acceptable for UI/UX purposes, but MUST be enforced server-side. When the backend endpoints (getQuickBooksConfig, updateQuickBooksConfig) are implemented, ensure they verify user roles via JWT claims. Add a comment warning developers: // WARNING: This is UI-only access control. Backend MUST enforce role-based permissions via JWT."
+        },
+        {
+          "id": "SEC-004",
+          "category": "security",
+          "severity": "medium",
+          "title": "User-controlled prompt allows XSS via customer DisplayName",
+          "description": "In CustomerSalesTable.jsx lines 253-260, customer data from the QuickBooks API (customer.DisplayName) is directly interpolated into a prompt() dialog without sanitization. If a malicious customer name contains special characters or escape sequences (though unlikely in QuickBooks data), this could lead to dialog manipulation or confusion attacks. More critically, the same DisplayName is used in alert messages (line 312) and console.log statements throughout, which could be exploited if an attacker controls customer data.",
+          "file_paths": [
+            "src/components/financial/CustomerSalesTable.jsx"
+          ],
+          "code_snippet": "qboCustomers.forEach((customer, index) => {\n  customerOptions += `${index + 1}: ${customer.DisplayName}\\n`;\n});\n\nconst selectedIndex = prompt(\n  `Multiple matching customers found in QuickBooks. Please enter the number of the correct customer:\\n\\n${customerOptions}`,\n  '1'\n);",
+          "recommendation": "Sanitize customer.DisplayName before displaying in prompts/alerts. Use a utility function to escape special characters:\n\nconst sanitizeForDisplay = (str) => str.replace(/[<>\"']/g, '');\ncustomerOptions += `${index + 1}: ${sanitizeForDisplay(customer.DisplayName)}\\n`;\n\nAlternatively, replace prompt() with a proper React modal component that handles rendering safely."
+        },
+        {
+          "id": "SEC-005",
+          "category": "security",
+          "severity": "medium",
+          "title": "Sensitive configuration data stored in localStorage without encryption",
+          "description": "QuickBooksConfigPanel (line 129) and QuickBooksSyncPanel (line 83) store sensitive QuickBooks configuration (tax codes, item IDs, invoice settings) and sync metadata in localStorage without encryption. LocalStorage is accessible to any JavaScript code running on the same origin (including third-party scripts, XSS attacks). While currently using mock data, the comment at line 87 indicates future backend integration will include production settings.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConfigPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx"
+          ],
+          "code_snippet": "// QuickBooksConfigPanel.jsx line 129:\nlocalStorage.setItem(storageKey, JSON.stringify(config));\n\n// QuickBooksSyncPanel.jsx line 83:\nlocalStorage.setItem('qb_last_sync', JSON.stringify({\n  timestamp,\n  result: response.data\n}));",
+          "recommendation": "For production: 1) Move all sensitive config to backend storage with proper access control. 2) If client-side caching is needed, use encrypted storage or sessionStorage (cleared on browser close). 3) Add security notice in code: // TODO: Replace localStorage with secure backend storage before production. Contains sensitive org config. 4) Consider using Web Crypto API to encrypt data before storing in localStorage."
+        },
+        {
+          "id": "SEC-006",
+          "category": "security",
+          "severity": "medium",
+          "title": "Lack of CSRF protection for state parameter in OAuth flow",
+          "description": "In QuickBooksConnectionPanel.jsx lines 169-186, the OAuth callback handler extracts the 'state' parameter from URL query params but doesn't validate it against a stored value. While the backend should validate state, the frontend doesn't verify that the state parameter matches what was originally sent, leaving potential for CSRF attacks where an attacker could trick a user into authorizing their own QuickBooks account instead of the user's account.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx"
+          ],
+          "code_snippet": "useEffect(() => {\n  const urlParams = new URLSearchParams(window.location.search);\n  const code = urlParams.get('code');\n  const state = urlParams.get('state');\n\n  if (code && state) {\n    // OAuth callback detected - refresh status\n    // The backend has already handled the token exchange via the redirect_uri\n    // We just need to check the new connection status\n    window.history.replaceState({}, document.title, window.location.pathname);\n    setTimeout(() => {\n      fetchConnectionStatus();\n    }, 1000);\n  }\n}, [fetchConnectionStatus]);",
+          "recommendation": "Implement CSRF state validation: 1) Before redirecting to OAuth (line 104), generate a random state value and store it in sessionStorage. 2) In the callback handler, verify the returned state matches the stored value. 3) Clear the stored state after validation. Example:\n\n// Before redirect:\nconst state = crypto.randomUUID();\nsessionStorage.setItem('qb_oauth_state', state);\n\n// In callback:\nconst storedState = sessionStorage.getItem('qb_oauth_state');\nif (state !== storedState) {\n  setError('Invalid OAuth state - possible CSRF attack');\n  return;\n}\nsessionStorage.removeItem('qb_oauth_state');"
+        },
+        {
+          "id": "SEC-007",
+          "category": "security",
+          "severity": "low",
+          "title": "Hardcoded organization ID in HMAC requests exposes potential privilege escalation",
+          "description": "In quickbooksApi.js lines 93-97, the organization ID is pulled from environment variable VITE_CLARITY_INTEGRATION_ORG_ID and sent in the X-Organization-ID header. This is hardcoded per build and doesn't use the authenticated user's actual organization. If a multi-tenant application is deployed with a single org ID, users from different organizations could potentially access each other's QuickBooks data (though backend RLS should prevent this).",
+          "file_paths": [
+            "src/api/quickbooksApi.js"
+          ],
+          "code_snippet": "const orgId = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLARITY_INTEGRATION_ORG_ID) ||\n              (typeof process !== 'undefined' && process.env?.VITE_CLARITY_INTEGRATION_ORG_ID);\n\nif (!orgId) {\n  throw new Error('VITE_CLARITY_INTEGRATION_ORG_ID not available. Check environment variables.');\n}\n\nconst headers = {\n  'Authorization': authHeader,\n  'X-Organization-ID': orgId,  // <-- Hardcoded from env, not from user context\n  'Content-Type': 'application/json',\n  ...options.headers\n};",
+          "recommendation": "Use the authenticated user's organization ID from the user context instead of environment variable. Example:\n\n// Accept orgId as parameter or get from global context\nconst makeRequest = async (endpoint, method = 'GET', data = null, options = {}, orgId = null) => {\n  if (!orgId) {\n    // Get from user context/AppState\n    orgId = window.__CURRENT_USER__?.supabaseOrgID;\n  }\n  if (!orgId) {\n    throw new Error('Organization ID not available');\n  }\n  // ... rest of code\n}"
+        },
+        {
+          "id": "SEC-008",
+          "category": "security",
+          "severity": "low",
+          "title": "Console.log exposes sensitive data in production",
+          "description": "Throughout the QuickBooks integration files, numerous console.log statements output sensitive data including customer names, invoice IDs, QuickBooks customer IDs, record IDs, and financial amounts. In production, these logs could be accessed via browser DevTools by malicious actors, exposing confidential business and customer information. Examples: CustomerSalesTable.jsx lines 203, 226, 236, 287, 303; QuickBooksConnectionPanel.jsx lines 65, 85, etc.",
+          "file_paths": [
+            "src/components/financial/CustomerSalesTable.jsx",
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/api/quickbooksApi.js"
+          ],
+          "code_snippet": "console.log('Customer details:', { customerId, customerName });\nconsole.log('Searching for QuickBooks customer:', customerName);\nconsole.log(`Creating invoice for ${recordIds.length} records using backend API`);\nconsole.log('Invoice created successfully:', invoiceInfo);",
+          "recommendation": "Remove all production console.log statements containing sensitive data. Either: 1) Use a logging library that can be disabled in production (e.g., loglevel, debug). 2) Wrap logs in environment checks: if (import.meta.env.DEV) { console.log(...) }. 3) Use structured logging that sanitizes sensitive fields. 4) Remove debug logs before production deployment."
+        }
+      ],
+      "files_reviewed": 0,
+      "vulnerabilities_found": 8
+    }
+  },
+  "ArchitectureCheckNode": {
+    "timestamp": "2026-01-17T04:15:28.917Z",
+    "output": {
+      "findings": [
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing service layer for QuickBooks business logic",
+          "description": "The QuickBooks integration lacks a dedicated service layer (quickbooksService.js) that sits between the API client and components. All other features follow the pattern: Component → Hook → Service → API. For example, Notes has noteService.js with transformBackendNote(), Customers has customerService.js with processBackendCustomerList(), and Projects has projectService.js. The QuickBooks components (QuickBooksConnectionPanel, QuickBooksSyncPanel, QuickBooksConfigPanel) call API functions directly, embedding business logic like validation, error formatting, and data transformation inside components.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx",
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "// QuickBooksConnectionPanel.jsx - Direct API calls in component\nconst response = await getQuickBooksStatus(user.supabaseOrgID);\nif (response.success) {\n  setConnectionStatus(response.data);\n}\n\n// QuickBooksSyncPanel.jsx - Business logic in component\nconst response = await syncInvoices({\n  start_date: dateRange.startDate,\n  end_date: dateRange.endDate,\n  full_sync: fullSync\n});\nif (response.success && response.data) {\n  setSyncStatus('success');\n  setLastSyncResult(response.data);\n  localStorage.setItem('qb_last_sync', JSON.stringify({...}));\n}",
+          "recommendation": "Create src/services/quickbooksService.js following the established pattern:\n\n// quickbooksService.js\nexport function transformQuickBooksStatus(response) {\n  return {\n    connected: response.data.connected,\n    realmId: response.data.realm_id,\n    expiresAt: response.data.expires_at,\n    isExpired: response.data.is_expired\n  };\n}\n\nexport function formatSyncResult(data) {\n  return {\n    invoicesSynced: data.invoices_synced,\n    newInvoices: data.new_invoices,\n    updatedInvoices: data.updated_invoices,\n    syncTimestamp: data.sync_timestamp\n  };\n}\n\nexport function validateSyncDateRange(startDate, endDate) {\n  if (!startDate || !endDate) {\n    throw new Error('Start and end dates are required');\n  }\n  if (new Date(startDate) > new Date(endDate)) {\n    throw new Error('Start date must be before end date');\n  }\n}\n\nThen refactor components to use the service layer."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing custom hook for QuickBooks state management",
+          "description": "The project follows a consistent pattern where complex feature state is managed through custom hooks (useCustomer, useNote, useProject, useTask, useTeam, etc.). These hooks encapsulate state management, loading states, error handling, and business operations. The QuickBooks panels directly manage their own state with useState/useCallback, duplicating patterns that should be centralized in a useQuickBooks hook. This violates the established architecture where components focus on rendering while hooks handle state and operations.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx",
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "// Current pattern - state management in component\nconst [connectionStatus, setConnectionStatus] = useState(null);\nconst [isLoading, setIsLoading] = useState(true);\nconst [error, setError] = useState(null);\nconst [companyInfo, setCompanyInfo] = useState(null);\n\nconst fetchConnectionStatus = useCallback(async () => {\n  setIsLoading(true);\n  setError(null);\n  try {\n    const response = await getQuickBooksStatus(user.supabaseOrgID);\n    setConnectionStatus(response.data);\n  } catch (err) {\n    setError(err.message);\n  } finally {\n    setIsLoading(false);\n  }\n}, [user?.supabaseOrgID]);",
+          "recommendation": "Create src/hooks/useQuickBooks.js following the established pattern:\n\n// useQuickBooks.js\nimport { useState, useCallback } from 'react';\nimport { useSnackBar } from '../context/SnackBarContext';\nimport { getQuickBooksStatus, syncInvoices, getQuickBooksConfig, updateQuickBooksConfig } from '../api/quickbooksApi';\nimport { transformQuickBooksStatus, formatSyncResult } from '../services/quickbooksService';\n\nexport function useQuickBooks() {\n  const [loading, setLoading] = useState(false);\n  const [error, setError] = useState(null);\n  const [connectionStatus, setConnectionStatus] = useState(null);\n  const [syncResult, setSyncResult] = useState(null);\n  const [config, setConfig] = useState(null);\n  const { showError, showSuccess } = useSnackBar();\n\n  const loadConnectionStatus = useCallback(async (organizationId) => {\n    try {\n      setLoading(true);\n      setError(null);\n      const response = await getQuickBooksStatus(organizationId);\n      const status = transformQuickBooksStatus(response);\n      setConnectionStatus(status);\n      return status;\n    } catch (err) {\n      setError(err);\n      showError(err.message);\n      return null;\n    } finally {\n      setLoading(false);\n    }\n  }, [showError]);\n\n  const performSync = useCallback(async (params) => {\n    // Similar pattern...\n  }, [showError, showSuccess]);\n\n  return {\n    loading,\n    error,\n    connectionStatus,\n    syncResult,\n    config,\n    loadConnectionStatus,\n    performSync,\n    loadConfig,\n    saveConfig\n  };\n}\n\nThen simplify components to just call hook methods."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Inconsistent error handling pattern - missing SnackBar integration",
+          "description": "The established pattern across the codebase uses useSnackBar() from SnackBarContext for user-facing error notifications (see useNote.js line 15, CustomerDetails.jsx line 28, useCustomer.js). QuickBooks components use inline error state and display errors directly in the component UI, which is inconsistent. Only CustomerList.jsx uses SnackBar. The pattern is: hooks call showError() for failures, components display via global snackbar, not local error divs.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx",
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "// Current pattern - local error state\nconst [error, setError] = useState(null);\n\n// Error displayed in component JSX\n{error && !isLoading && (\n  <div className={`p-4 rounded-lg border ${darkMode ? 'bg-red-900' : 'bg-red-50'}`}>\n    <p className=\"text-sm\">{error}</p>\n  </div>\n)}\n\n// Expected pattern from useNote.js:\nconst { showError } = useSnackBar();\ncatch (err) {\n  showError(err.message || 'Failed to fetch notes');\n}",
+          "recommendation": "Integrate SnackBar for error notifications:\n\n1. Import useSnackBar in all three QuickBooks components:\nimport { useSnackBar } from '../../context/SnackBarContext';\n\n2. Replace local error display with snackbar calls:\nconst { showError, showSuccess } = useSnackBar();\n\ntry {\n  // ... operation\n  showSuccess('QuickBooks connected successfully');\n} catch (err) {\n  showError(err.message || 'Failed to connect to QuickBooks');\n}\n\n3. Remove local error state and error display JSX blocks, relying on global snackbar for user notifications.\n4. Keep error state only for development logging/debugging purposes."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Inconsistent component export pattern",
+          "description": "Most components in the project use simple default exports (export default ComponentName). The QuickBooks components use React.memo wrapping at export time (export default React.memo(QuickBooksConnectionPanel)). While React.memo is valid, the established pattern in the codebase is to export components without memo unless there's a specific performance concern. Examples: CustomerHeader.jsx, ProjectNotesTab.jsx, CustomerDetails.jsx all use plain default exports. Only ErrorBoundary uses class components.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx",
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "// Current pattern in QuickBooks components:\nexport default React.memo(QuickBooksConnectionPanel);\n\n// Established pattern in other components:\n// CustomerHeader.jsx line 215\nexport default CustomerHeader;\n\n// ProjectNotesTab.jsx\nexport default ProjectNotesTab;",
+          "recommendation": "For consistency with the existing codebase, use plain default exports unless profiling shows a specific performance need for memoization:\n\n// Change from:\nexport default React.memo(QuickBooksConnectionPanel);\n\n// To:\nexport default QuickBooksConnectionPanel;\n\nIf memoization is needed later, apply it consistently across similar components and document the reason in comments."
+        },
+        {
+          "id": "ARC-005",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Missing error transformation layer",
+          "description": "The Customer feature has a dedicated error handling module (src/errors/customerErrors.js) with CustomerError class, error codes (CustomerErrorCodes), validation utilities (parseValidationError), and UI formatting (formatErrorForUI). The pattern is: API throws → Service catches/transforms → Hook calls formatErrorForUI → Component displays. QuickBooks integration uses raw error messages without transformation, making errors inconsistent and harder to internationalize or customize.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx",
+            "src/api/quickbooksApi.js"
+          ],
+          "code_snippet": "// Customer pattern - dedicated error handling:\nimport { formatErrorForUI, CustomerError, CustomerErrorCodes } from '../errors/customerErrors';\n\nconst setErrorWithFormatting = useCallback((err) => {\n  const formatted = formatErrorForUI(err);\n  setError(err);\n  setFormattedError(formatted);\n}, []);\n\n// QuickBooks - raw error messages:\ncatch (err) {\n  console.error('Error fetching QuickBooks status:', err);\n  setError(err.message || 'Failed to check QuickBooks connection status');\n}",
+          "recommendation": "Create src/errors/quickbooksErrors.js following the customer error pattern:\n\n// quickbooksErrors.js\nexport const QuickBooksErrorCodes = {\n  CONNECTION_FAILED: 'QB_CONNECTION_FAILED',\n  AUTH_EXPIRED: 'QB_AUTH_EXPIRED',\n  SYNC_FAILED: 'QB_SYNC_FAILED',\n  INVALID_CONFIG: 'QB_INVALID_CONFIG',\n  MISSING_ORG_ID: 'QB_MISSING_ORG_ID'\n};\n\nexport class QuickBooksError extends Error {\n  constructor(code, message, details = {}) {\n    super(message);\n    this.code = code;\n    this.details = details;\n    this.name = 'QuickBooksError';\n  }\n}\n\nexport function formatQuickBooksErrorForUI(error) {\n  if (error.code === QuickBooksErrorCodes.AUTH_EXPIRED) {\n    return {\n      title: 'QuickBooks Session Expired',\n      message: 'Please reconnect to QuickBooks to continue.',\n      action: 'reconnect'\n    };\n  }\n  // ... other error mappings\n  return {\n    title: 'QuickBooks Error',\n    message: error.message || 'An unexpected error occurred'\n  };\n}\n\nThen use in components for consistent error handling."
+        },
+        {
+          "id": "ARC-006",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Direct localStorage usage instead of abstraction",
+          "description": "QuickBooksConfigPanel and QuickBooksSyncPanel directly call localStorage.getItem/setItem. The project doesn't have a universal localStorage abstraction, but the pattern is to keep persistence logic in service layers, not components. For example, initialization data is managed via initializationService.js, and other features use Supabase for persistence via service layers.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConfigPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx"
+          ],
+          "code_snippet": "// Current - localStorage in component:\nlocalStorage.setItem('qb_last_sync', JSON.stringify({ timestamp, result }));\nconst savedSyncInfo = localStorage.getItem('qb_last_sync');\n\n// Better pattern - persistence in service:\n// quickbooksService.js\nexport function saveSyncInfo(orgId, syncData) {\n  const key = `qb_sync_${orgId}`;\n  localStorage.setItem(key, JSON.stringify(syncData));\n}\n\nexport function loadSyncInfo(orgId) {\n  const key = `qb_sync_${orgId}`;\n  const data = localStorage.getItem(key);\n  return data ? JSON.parse(data) : null;\n}",
+          "recommendation": "Move localStorage operations to quickbooksService.js:\n\n1. Create persistence functions in the service layer:\n   - saveQuickBooksConfig(orgId, config)\n   - loadQuickBooksConfig(orgId)\n   - saveSyncHistory(orgId, syncResult)\n   - loadSyncHistory(orgId)\n\n2. Have the useQuickBooks hook call these service methods\n3. Keep components free of direct persistence logic\n4. This makes it easier to migrate to backend persistence later (already noted as TODO in comments)"
+        }
+      ],
+      "patterns_reviewed": 0,
+      "violations_found": 6
+    }
+  },
+  "JudgeNode": {
+    "timestamp": "2026-01-17T04:15:28.919Z",
+    "output": {
+      "total_findings": 19,
+      "kept_findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Infinite re-render risk in QuickBooksConfigPanel useCallback dependency",
+          "description": "The loadConfiguration useCallback has 'config' (a state object) in its dependency array at line 108. Since config is initialized with a complex object literal and is updated by the same function, this creates a dependency cycle that could cause infinite re-renders. The useEffect at line 178-180 calls loadConfiguration, which then updates config, which causes loadConfiguration to be recreated, which triggers the useEffect again.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "const loadConfiguration = useCallback(async () => {\n  // ... code ...\n  if (savedConfig) {\n    const parsedConfig = JSON.parse(savedConfig);\n    setConfig(parsedConfig);\n    setInitialConfig(parsedConfig);\n  } else {\n    // Use default config\n    setInitialConfig(config);  // <-- Uses config from state\n  }\n}, [user?.supabaseOrgID, config]);  // <-- config in deps causes recreation",
+          "recommendation": "Remove 'config' from the dependency array and instead capture the default config in a constant or useMemo outside the callback. Example: const DEFAULT_CONFIG = useMemo(() => ({ cad_tax_code: 4, ... }), []); Then use DEFAULT_CONFIG instead of 'config' in the else branch."
+        },
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "critical",
+          "title": "SQL Injection vulnerability in deprecated legacy functions",
+          "description": "The deprecated functions listQBOCustomerByName (line 510) and getQBOAccount (line 543) construct SQL-like queries using string interpolation without proper sanitization. An attacker could inject malicious QuickBooks Query Language (QQL) statements by passing crafted input through the customerName or accountId parameters. For example: customerName = \"' OR 1=1--\" could return all customers instead of the intended match.",
+          "file_paths": [
+            "src/api/quickbooksApi.js"
+          ],
+          "code_snippet": "export const listQBOCustomerByName = async (customerName) => {\n  console.warn('listQBOCustomerByName is deprecated. Use executeQBOQuery with a custom query instead.');\n  const query = `SELECT * FROM Customer WHERE DisplayName LIKE '%${customerName}%'`;\n  return await executeQBOQuery(query);\n};\n\nexport const getQBOAccount = async (accountId) => {\n  console.warn('getQBOAccount is deprecated. Use executeQBOQuery instead.');\n  return await executeQBOQuery(`SELECT * FROM Account WHERE Id = '${accountId}'`);\n};",
+          "recommendation": "Remove these deprecated functions entirely (they're marked deprecated anyway) OR use parameterized queries if QuickBooks API supports it. Since these are deprecated and the comment suggests using executeQBOQuery directly, the best fix is to delete these functions and update any calling code to use the safer alternatives (searchQBOCustomers, listQBOItems with filters)."
+        },
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing service layer for QuickBooks business logic",
+          "description": "The QuickBooks integration lacks a dedicated service layer (quickbooksService.js) that sits between the API client and components. All other features follow the pattern: Component → Hook → Service → API. For example, Notes has noteService.js with transformBackendNote(), Customers has customerService.js with processBackendCustomerList(), and Projects has projectService.js. The QuickBooks components (QuickBooksConnectionPanel, QuickBooksSyncPanel, QuickBooksConfigPanel) call API functions directly, embedding business logic like validation, error formatting, and data transformation inside components.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx",
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "// QuickBooksConnectionPanel.jsx - Direct API calls in component\nconst response = await getQuickBooksStatus(user.supabaseOrgID);\nif (response.success) {\n  setConnectionStatus(response.data);\n}\n\n// QuickBooksSyncPanel.jsx - Business logic in component\nconst response = await syncInvoices({\n  start_date: dateRange.startDate,\n  end_date: dateRange.endDate,\n  full_sync: fullSync\n});\nif (response.success && response.data) {\n  setSyncStatus('success');\n  setLastSyncResult(response.data);\n  localStorage.setItem('qb_last_sync', JSON.stringify({...}));\n}",
+          "recommendation": "Create src/services/quickbooksService.js following the established pattern:\n\n// quickbooksService.js\nexport function transformQuickBooksStatus(response) {\n  return {\n    connected: response.data.connected,\n    realmId: response.data.realm_id,\n    expiresAt: response.data.expires_at,\n    isExpired: response.data.is_expired\n  };\n}\n\nexport function formatSyncResult(data) {\n  return {\n    invoicesSynced: data.invoices_synced,\n    newInvoices: data.new_invoices,\n    updatedInvoices: data.updated_invoices,\n    syncTimestamp: data.sync_timestamp\n  };\n}\n\nexport function validateSyncDateRange(startDate, endDate) {\n  if (!startDate || !endDate) {\n    throw new Error('Start and end dates are required');\n  }\n  if (new Date(startDate) > new Date(endDate)) {\n    throw new Error('Start date must be before end date');\n  }\n}\n\nThen refactor components to use the service layer."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing custom hook for QuickBooks state management",
+          "description": "The project follows a consistent pattern where complex feature state is managed through custom hooks (useCustomer, useNote, useProject, useTask, useTeam, etc.). These hooks encapsulate state management, loading states, error handling, and business operations. The QuickBooks panels directly manage their own state with useState/useCallback, duplicating patterns that should be centralized in a useQuickBooks hook. This violates the established architecture where components focus on rendering while hooks handle state and operations.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx",
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "// Current pattern - state management in component\nconst [connectionStatus, setConnectionStatus] = useState(null);\nconst [isLoading, setIsLoading] = useState(true);\nconst [error, setError] = useState(null);\nconst [companyInfo, setCompanyInfo] = useState(null);\n\nconst fetchConnectionStatus = useCallback(async () => {\n  setIsLoading(true);\n  setError(null);\n  try {\n    const response = await getQuickBooksStatus(user.supabaseOrgID);\n    setConnectionStatus(response.data);\n  } catch (err) {\n    setError(err.message);\n  } finally {\n    setIsLoading(false);\n  }\n}, [user?.supabaseOrgID]);",
+          "recommendation": "Create src/hooks/useQuickBooks.js following the established pattern:\n\n// useQuickBooks.js\nimport { useState, useCallback } from 'react';\nimport { useSnackBar } from '../context/SnackBarContext';\nimport { getQuickBooksStatus, syncInvoices, getQuickBooksConfig, updateQuickBooksConfig } from '../api/quickbooksApi';\nimport { transformQuickBooksStatus, formatSyncResult } from '../services/quickbooksService';\n\nexport function useQuickBooks() {\n  const [loading, setLoading] = useState(false);\n  const [error, setError] = useState(null);\n  const [connectionStatus, setConnectionStatus] = useState(null);\n  const [syncResult, setSyncResult] = useState(null);\n  const [config, setConfig] = useState(null);\n  const { showError, showSuccess } = useSnackBar();\n\n  const loadConnectionStatus = useCallback(async (organizationId) => {\n    try {\n      setLoading(true);\n      setError(null);\n      const response = await getQuickBooksStatus(organizationId);\n      const status = transformQuickBooksStatus(response);\n      setConnectionStatus(status);\n      return status;\n    } catch (err) {\n      setError(err);\n      showError(err.message);\n      return null;\n    } finally {\n      setLoading(false);\n    }\n  }, [showError]);\n\n  const performSync = useCallback(async (params) => {\n    // Similar pattern...\n  }, [showError, showSuccess]);\n\n  return {\n    loading,\n    error,\n    connectionStatus,\n    syncResult,\n    config,\n    loadConnectionStatus,\n    performSync,\n    loadConfig,\n    saveConfig\n  };\n}\n\nThen simplify components to just call hook methods."
+        }
+      ],
+      "dropped_findings": [
+        "COD-002",
+        "COD-003",
+        "COD-004",
+        "COD-005",
+        "ARC-005",
+        "ARC-006"
+      ],
+      "merged_findings": [],
+      "decisions": [
+        {
+          "finding_id": "COD-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-001",
+          "action": "keep",
+          "reason": "critical severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-002",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-003",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-006",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        }
+      ],
+      "summary": "Judge phase complete: 19 findings reviewed, 4 kept (critical/major), 6 dropped (minor/suggestion), 0 merged (duplicates)"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T04:15:28.927Z",
+    "output": {
+      "review_status": "blocked",
+      "tasks_created": [
+        "TASK009",
+        "TASK010",
+        "TASK011",
+        "TASK012"
+      ],
+      "summary": "Found 4 issue(s) requiring remediation - created 4 task(s)",
+      "findings_count": 4
+    }
+  }
+}

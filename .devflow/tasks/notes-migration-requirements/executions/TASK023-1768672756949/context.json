@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T17:59:16.949Z",
+    "featureSlug": "notes-migration-requirements",
+    "taskId": "TASK023",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] Missing data normalization layer violates service architecture pattern",
+    "sessionId": "019bcd1c-8506-7232-a69d-934b68363832",
+    "processId": 1768672756949,
+    "lastUpdated": "2026-01-17T18:04:27.832Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T17:59:16.951Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-17T18:04:27.710Z",
+    "output": {
+      "success": true,
+      "sessionId": "019bcd1c-8506-7232-a69d-934b68363832",
+      "processId": 86425,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\nFindings\n- High: `normalizeNoteData` doesn’t unwrap `{ data: [...] }` payloads, so `fetchNotesByProject/Task/Customer` can return a non-array; `noteService` then treats it as empty and wipes pagination, breaking notes lists if the backend sends wrapped responses. `src/api/notes.js:14-31` and `src/services/noteService.js:80-108`.\n- Medium: `createCustomer` builds an idempotency header but `dataService.post` drops the third argument, so the header is never sent and retries can create duplicates. `src/api/customersBackend.js:171-177` and `src/services/dataService.js:186-193`.\n\nOpen questions / assumptions\n- Does the notes API ever return `{ data: [...], pagination: ... }`? If yes, the current normalization will empty out note lists.\n- Should `dataService` support request config (headers) or should callers use a different client when they need headers?\n\nChange summary\n- No code changes (review only).\n\nTests\n- `npm test -- src/errors/__tests__/noteErrors.test.js` (passes; emits console.error from `withErrorHandling` as expected)."
+    }
+  },
+  "ValidateNode": {
+    "timestamp": "2026-01-17T18:04:27.830Z",
+    "output": {
+      "passed": false,
+      "buildPassed": false,
+      "buildErrors": "Build failed with exit code 1:\nnpm error Missing script: \"typecheck\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /Users/marcusswift/.npm/_logs/2026-01-17T18_04_27_800Z-debug-0.log\n",
+      "error": "Build verification failed"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T18:04:27.832Z",
+    "output": {
+      "taskStatus": "blocked",
+      "summary": "Task validation failed: Build verification failed",
+      "nextTaskTriggered": true
+    }
+  }
+}

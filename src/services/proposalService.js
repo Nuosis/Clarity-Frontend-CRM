@@ -178,7 +178,7 @@ export async function fetchCompleteProposalByToken(token) {
     const processedProposal = processProposalData(result.data);
     
     // WIREFRAME: Mock access logging - no real backend calls
-    console.log('[WIREFRAME] Mock logging proposal access:', processedProposal.id, token);
+    console.log('[WIREFRAME] Mock logging proposal access:', processedProposal.id);
     
     return {
       success: true,

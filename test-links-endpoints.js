@@ -10,7 +10,7 @@ import https from 'https';
 
 // Configuration
 const API_URL = 'https://api.claritybusinesssolutions.ca';
-const SECRET_KEY = 'QArxVv0J1xggzd8Ai_Sk7TfFzllOflBJjVxA4kazpDo';
+const SECRET_KEY = process.env.VITE_SECRET_KEY;
 const ORG_ID = '9816c057-b5d3-43a2-848f-99365ee6255e';
 
 // Test project ID (you may need to adjust this)
@@ -20,6 +20,9 @@ const TEST_PROJECT_ID = '0F9B8AE8-A6E4-4CCB-AA61-A63C6AB55009';
  * Generate HMAC-SHA256 signature for authentication
  */
 function generateHMACAuth(payload = '') {
+  if (!SECRET_KEY) {
+    throw new Error('Missing VITE_SECRET_KEY environment variable.');
+  }
   const timestamp = Math.floor(Date.now() / 1000);
   const message = `${timestamp}.${payload}`;
 

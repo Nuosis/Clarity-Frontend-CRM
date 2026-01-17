@@ -1,0 +1,797 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T01:02:34.348Z",
+    "featureSlug": "customers-backend-integration",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 3,
+    "featureName": "Customers Backend API Integration",
+    "mode": "autonomous",
+    "sessionId": "b8122f39-57df-4f90-b488-1c644b1a66be",
+    "processId": 1768611754348,
+    "lastUpdated": "2026-01-17T01:10:08.818Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-17T01:02:34.733Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Create backend API client for customer endpoints (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nConfirmed the existing customer requirements documentation was already implemented: the full 'requirements/customers/' folder structure and a comprehensive 'README.md' (plus 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md') were present and matched the standardized template used elsewhere (eg 'requirements/teams/README.md'). Verified the project build compiled successfully and checked that the backend API client could be imported and that 'dataService' exposed the expected methods. Key decision was to make no file changes since the required structure and documentation already existed and complied with the documented protocol/guidelines.'\n\n---\n\n### Implement environment-aware routing in API layer (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nImplemented environment-aware routing for the customer API so each customer operation routes via the FileMaker fm-gofer bridge in the FileMaker environment or via the web backend at '/contacts_api' with HMAC auth in the web app environment, while normalizing responses to a consistent shape and adding context-aware error handling. The primary code change was in 'src/api/customers.js', updating seven functions including 'fetchCustomers', 'fetchCustomerById', 'createCustomer', 'updateCustomer', 'toggleCustomerStatus', 'fetchActiveCustomers', and 'deleteCustomer' to use environment-aware routing through 'dataService'. Verification included a successful build and tracing the request flow through environment setup and the axios interceptor path, confirming no new endpoints or API signatures were invented and that existing endpoint mappings in 'dataService.js' were reused. Documentation artifacts were produced to capture implementation and verification details, including 'IMPLEMENTATION_VERIFICATION.md', 'TASK_COMPLETION_SUMMARY.md', 'DATA_FLOW_VERIFICATION.md', and 'VERIFICATION_CHECKLIST.md'.\n\n---\n\n### Create data transformation utilities for backend schema (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nImplemented bidirectional data transformation utilities to convert between FileMaker flat customer records and the backend relational schema, including nested emails, phones, and addresses, primary flag normalization, validation, batch transforms with per-record error recovery, and FileMaker '1' and '0' to boolean conversions. The core work was added to 'src/services/customerService.js' (10 new exported helpers such as 'transformFileMakerToBackend' and 'transformBackendToFileMaker'), with supporting JSDoc and integrity-focused helpers like 'mergeNestedContacts' and 'ensureSinglePrimary'. Verification included a temporary test script (created, executed, then removed) plus final build and import checks, and project tracking was updated in 'tasks.json'. Documentation of the implementation and usage was captured in 'TRANSFORMATION_UTILITIES_SUMMARY.md', and an explicit decision was made to be null-safe and preserve data round-trip while enforcing exactly one primary contact per type.\n\n---\n\n### Update customerService to process backend responses (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented backend response processing in customerService.js by adding processBackendCustomerList and processBackendCustomerDetail to normalize multiple backend envelope formats and preserve FileMaker compatibility. Updated existing utilities (sortCustomers, filterActiveCustomers, groupCustomersByStatus, validateCustomerData, and calculateCustomerStats) to operate safely on both FileMaker and backend customer shapes, including enhanced stats (withEmail, withPhone, withAddress) and multi-field sorting. Resolved a duplicate calculateCustomerStats definition, verified successful builds and exports, added then removed a temporary verification script, and updated tasks.json plus documentation files BACKEND_PROCESSING_IMPLEMENTATION.md, docs/CUSTOMER_SERVICE_API.md, and TSK0004_COMPLETION_SUMMARY.md to record completion and usage guidance.\n\n---\n\n### Update useCustomer hook for backend API (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nUpdated useCustomer hook to integrate with backend API while maintaining FileMaker compatibility. Added pagination state (total, limit, offset, has_more) and environment-aware processing using processBackendCustomerList/processBackendCustomerDetail for web app and processCustomerData for FileMaker. Updated all CRUD operations (loadCustomers, handleCustomerSelect, handleCustomerCreate, handleCustomerUpdate, handleCustomerStatusToggle, handleCustomerDelete) to detect environment via getEnvironmentContext() and route appropriately. Enhanced loadCustomers to accept pagination options (limit, offset, active, search, sort, order) which are passed to fetchCustomers API. Modified API layer (src/api/customers.js) fetchCustomers to support query parameters for backend pagination. Updated state management to handle both id/__ID and recordId for backward compatibility. Exported new backend processing functions from services/index.js. Build verified successfully. FileMaker dual-write pattern preserved in handleCustomerUpdate. All acceptance criteria met: pagination support, nested data handling, environment-aware routing, backward compatibility maintained.\n\n---\n\n### Add search functionality to useCustomer hook (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented customer search support in the 'useCustomer' hook backed by the new '/api/customers/search' endpoint, including debounced querying, query validation, loading and results state, and robust error handling with cleanup on unmount. Key changes were made in 'src/api/customers.js' (added 'searchCustomers' with environment-aware behavior and FileMaker fallback), 'src/hooks/useCustomer.js' (added 'handleCustomerSearch', 'searchQuery', 'searchResults', 'isSearching', and debounce logic), and 'src/api/index.js' (exported 'searchCustomers'). Important decisions included a 300ms configurable debounce, minimum 1-character queries with auto-clear on empty input, and preserving backward compatibility via client-side filtering when the backend endpoint is unavailable. Task tracking was updated in '.devflow/tasks/customers-backend-integration/tasks.json', and documentation was added in 'CUSTOMER_SEARCH_IMPLEMENTATION.md', 'TSK0006_COMPLETION_SUMMARY.md', and 'TSK0006_VERIFICATION.md', with a temporary verification script created and then removed after build validation.\n\n---\n\n### Update CustomerDetails to display nested data (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented nested contact rendering in the customer header by enhancing 'src/components/customers/CustomerHeader.jsx' to load emails, phones, and addresses from Supabase relational tables and display primary email and phone with '+N' badges and tooltips when additional contacts exist. Kept backward compatibility by falling back to the legacy flat FileMaker fields when nested data is missing, ensuring no prop or API changes and graceful handling of empty states. Added supporting verification and documentation in 'CUSTOMER_HEADER_NESTED_DATA_IMPLEMENTATION.md', reusing existing utilities like phone formatting and keeping the build clean aside from unrelated warnings.\n\n---\n\n### Update CustomerForm for new fields and nested data (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a full rewrite of the customer entry UI to support the new relational backend model by adding nested state and CRUD handlers for emails, phones, and addresses (including type selectors and enforcing exactly one primary per contact type), while supporting both create and edit modes via a new 'customer' prop and preserving contact IDs for updates. Updated submission and initialization logic in 'src/components/customers/CustomerForm.jsx' to be environment-aware, transforming data to nested arrays for the web app backend and to a flat primary-only payload for FileMaker, with legacy fields conditionally shown and FileMaker compatibility maintained. Marked the work complete in '.devflow/tasks/customers-backend-integration/tasks.json' and added documentation in 'TSK0008_CUSTOMER_FORM_COMPLETION.md' and 'docs/CUSTOMER_FORM_USAGE.md'. Verified the implementation with a successful 'npm run build' and import checks to ensure the component compiles and exports correctly.\n\n---\n\n### Add organization context to customer operations (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented organization context propagation for all customer backend calls by injecting an 'X-Organization-ID' header from 'env.authentication.user.supabaseOrgID' via the request interceptor in 'src/services/dataService.js', including non-blocking warnings when the org id is missing. Updated initialization in 'src/index.jsx' (web app and FileMaker flows) to refresh the dataService environment context after 'initializationService.fetchSupabaseUserId()' populates the full user object, ensuring the org id is available for subsequent requests. Documented the expanded user shape in 'src/context/AppStateContext.jsx' and marked the task complete in '.devflow/tasks/customers-backend-integration/tasks.json', with the key decision to centralize org scoping in the dataService interceptor so existing customer API calls (via 'dataService.get()') required no signature changes.\n\n---\n\n### Implement comprehensive error handling (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive customer API error handling system by adding a dedicated module in 'src/errors/customerErrors.js' (CustomerError extending ServiceError, 30+ error codes, parsers, org-scope validation, 'withErrorHandling' wrapper, and 'formatErrorForUI') and exporting utilities via 'src/errors/index.js'. Updated 'src/api/customers.js' to wrap all 8 customer operations with 'withErrorHandling', add organization scoping checks, and improve search query validation, and enhanced 'src/hooks/useCustomer.js' with 'formattedError' state plus a 'setErrorWithFormatting' helper to surface user-friendly messages and better validation parsing. Due to Jest import issues, verification pivoted to compile and import checks, with final confirmation via successful builds ('npm run build') and documentation delivered in 'ERROR_HANDLING_IMPLEMENTATION.md', 'ERROR_HANDLING_EXAMPLES.md', and 'TSK0010_COMPLETION_SUMMARY.md', alongside marking TSK0010 complete in '.devflow/tasks/customers-backend-integration/tasks.json'.\n\n---\n\n### Add pagination support to customer list (TSK0011)\n**Status:** done\n\n**Implementation Notes:**\nImplemented customer list pagination by adding a reusable pagination UI and wiring it into the existing customer data flow that already supported limit and offset plus pagination metadata. Key changes include creating 'src/components/common/PaginationControls.jsx', updating 'src/index.jsx' to track pagination state and add page and page-size handlers, and updating 'src/components/Sidebar.jsx' to accept new pagination props, render the controls in customer mode, and extend PropTypes. The approach deliberately leveraged existing backend and hook support ('src/api/customers.js', 'src/services/customerService.js', 'src/hooks/useCustomer.js') rather than altering API contracts, and included cleanup of temporary verification code plus a final build confirmation.\n\n---\n\n### Write unit tests for customer data transformations (TSK0012)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive Jest unit tests covering all customer data transformation logic between FileMaker and backend formats, including nested extraction, batch array transforms, validation, primary flag normalization, and response envelope processing plus key edge cases like nulls, whitespace, and invalid inputs. Added the new test suite in 'src/services/__tests__/customerTransformations.test.js' and documented coverage and scope in 'CUSTOMER_TRANSFORMATION_TESTS_SUMMARY.md'. Updated '.devflow/tasks/customers-backend-integration/tasks.json' to mark the task complete with notes, and adjusted a brittle assertion to validate thrown errors rather than exact messages due to differing error paths in 'processBackendCustomerDetail'.\n\n---\n\n### Write integration tests for API client (TSK0013)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive integration tests for the customer API client by adding 'src/api/__tests__/customers.test.js', covering all CRUD flows plus search, status toggling, org scoping, auth headers, data normalization, and extensive error handling across both FileMaker and backend API paths (46 tests total). Resolved Jest incompatibility with 'import.meta' in 'config.js' by shifting to a broader mocking strategy, ultimately mocking the 'supabaseService' and other config-dependent imports so the suite could execute reliably. Verified outputs by rerunning the full test suite and confirming strong coverage on 'customers.js' (96.42% statements, 82.35% branches) and a successful production build, ensuring all referenced endpoints, exports, and error codes matched the actual implementation.\n\n---\n\n### Update documentation for customer API integration (TSK0014)\n**Status:** done\n\n**Implementation Notes:**\nImplemented full customer API integration documentation by creating 'docs/CUSTOMER_API_INTEGRATION.md' as a comprehensive end to end guide (architecture, data models, auth, env routing, org scoping, migration from FileMaker, endpoint reference, troubleshooting, and layered code examples). Updated 'CLAUDE.md' to add a dedicated Customer API Integration section, expand Prospects vs Customers guidance, and extend Common Pitfalls and Documentation Resources with customer specific notes. Added 'docs/TSK0014_COMPLETION_SUMMARY.md' and 'docs/TSK0014_VERIFICATION_CHECKLIST.md' to capture deliverables, acceptance criteria validation, and build verification, and marked TSK0014 as done in 'tasks.json'. Key decisions included centralizing customer integration knowledge into a single canonical doc with cross references and explicitly documenting dual environment routing and FileMaker to backend migration strategy.\n\n---\n\n### Perform end-to-end testing in both environments (TSK0015)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive end-to-end validation for customer management across FileMaker and web app paths, including running the dev server, executing existing automated tests, verifying builds, and manually exercising backend endpoints via OpenAPI. Added testing deliverables: 'E2E_TEST_REPORT.md', 'test-customer-api.js' (HMAC-based), 'test-customer-frontend.html' (JWT-based), and 'TSK0015_COMPLETION_SUMMARY.md', and updated the task JSON to mark TSK0015 complete. Key decisions and findings: the only automated failure was a non-blocking 'import.meta.env' config issue, and API testing confirmed organization scoping requires JWT user context (HMAC alone lacks org context), with a noted data gap where most customer rows have NULL 'organization_id' pending migration/backfill.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 15,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 383
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-17T01:03:56.914Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "FileMaker Dual-Write Logic Not Removed (AC7 Violation)",
+          "description": "The acceptance criteria AC7 states that FileMaker dual-write logic should be completely removed, with specific verification that `src/hooks/useCustomer.js` should no longer call `updateCustomerInSupabase()`. However, the current implementation at lines 236-259 in useCustomer.js still contains the dual-write logic that updates Supabase after FileMaker updates. The code imports `useSupabaseCustomer` (line 53) and calls `updateCustomerInSupabase` (line 250) when in FileMaker environment with user.supabaseOrgID present.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Note: This may be intentional given the standing constraint 'MUST maintain FileMaker backward compatibility' and the migration plan showing Phase 5 (Cleanup) as a future phase. Clarify whether AC7 applies to the current 'customers-backend-integration' feature scope or is deferred to a future phase. If AC7 is in scope, remove lines 236-259 in useCustomer.js that handle Supabase dual-write, remove the useSupabaseCustomer import, and remove the dependency on updateCustomerInSupabase."
+        },
+        {
+          "id": "COM-002",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "useSupabaseCustomer.js File Not Removed (AC7 Violation)",
+          "description": "AC7 verification checklist states that `src/hooks/useSupabaseCustomer.js` should be 'removed or repurposed'. The file still exists (verified via bash check) and is still being imported and used in useCustomer.js (line 53). The acceptance criteria specifically references this as a 487-line file that should be removed in Phase 5: Cleanup.",
+          "file_paths": [
+            "src/hooks/useSupabaseCustomer.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Same caveat as above - this may be deferred to Phase 5. If AC7 is in current scope, either remove this file entirely or repurpose it for non-customer operations. If removal is premature due to FileMaker compatibility requirements, document this explicitly as 'deferred to Phase 5' in the task completion notes."
+        },
+        {
+          "id": "COM-003",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "FileMaker-Specific Code Still Present (AC7 Violation)",
+          "description": "AC7 verification includes removing FileMaker-specific code such as `formatCustomerForFileMaker`. This function is still present in customerService.js and is actively used in useCustomer.js at lines 188 and 232. The acceptance criteria states this should be removed as part of dual-write removal.",
+          "file_paths": [
+            "src/services/customerService.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "If maintaining FileMaker compatibility is still required (per standing constraints), these functions must remain. However, if the goal is full backend API migration per AC7, remove formatCustomerForFileMaker and related FileMaker transformation utilities. Clarify the expected state: is this a dual-environment codebase or backend-only?"
+        },
+        {
+          "id": "COM-004",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "Missing API Endpoint: fetchActiveCustomers",
+          "description": "Task TSK0001 acceptance criteria states 'API client supports all CRUD operations (list, get, create, update, delete)' and 'API client supports status toggle endpoint'. The requirements documentation (requirements/customers/README.md:150) references a `fetchActiveCustomers()` function as part of the API layer. While src/api/customers.js includes fetchCustomerStats() at line 205, there's no standalone fetchActiveCustomers() exported. This can be replaced by fetchCustomers({ active: true }), but the named export may be expected by existing code.",
+          "file_paths": [
+            "src/api/customers.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Verify if fetchActiveCustomers() is still referenced elsewhere in the codebase. If so, add a convenience wrapper: `export const fetchActiveCustomers = () => fetchCustomers({ active: true });`. If not referenced, document that this was replaced by the more flexible fetchCustomers() with an active filter parameter."
+        },
+        {
+          "id": "COM-005",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "Inconsistent API Endpoint Naming",
+          "description": "The API client uses PATCH for toggleCustomerStatus (line 167: `/api/customers/${customerId}/toggle-status`), but the documented backend API contract and TSK0001 acceptance criteria reference a 'status toggle endpoint' which typically would be PATCH `/api/customers/{id}/status` (without 'toggle-' prefix). The OpenAPI spec should be checked to confirm the correct endpoint path.",
+          "file_paths": [
+            "src/api/customers.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Verify the actual backend API endpoint path by checking the OpenAPI spec at https://api.claritybusinesssolutions.ca/openapi.json. Update the endpoint path to match the backend implementation exactly. If the backend uses /toggle-status, update documentation. If it uses /status, update the client code at line 167."
+        },
+        {
+          "id": "COM-006",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Standing Constraint Conflict with AC7",
+          "description": "There is an inherent conflict between the standing constraint 'MUST maintain FileMaker backward compatibility - FileMaker environment continues to work' and AC7 'Dual-Write Removal' which requires removing all FileMaker-specific code including dual-write logic, formatCustomerForFileMaker, and useSupabaseCustomer. The current implementation correctly maintains backward compatibility but violates AC7. The migration plan shows AC7 tasks belong to 'Phase 5: Cleanup (Week 4+)', suggesting they are out of scope for the current 'customers-backend-integration' feature.",
+          "file_paths": [
+            ".devflow/tasks/customers-backend-integration/tasks.json",
+            "requirements/customers/acceptance-criteria.md",
+            "requirements/customers/migration-plan.md"
+          ],
+          "code_snippet": null,
+          "recommendation": "Clarify the scope boundary: The 'customers-backend-integration' feature (TSK0001-TSK0015) appears to implement Phase 3 (Frontend Refactor with dual-environment support), while AC7 belongs to Phase 5 (Cleanup - FileMaker removal). Update the acceptance criteria document to clearly mark AC7 as 'Phase 5 - Out of Scope for Current Feature' or create a separate follow-up task/feature for FileMaker removal. The current implementation correctly satisfies the standing constraints."
+        }
+      ],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-17T01:05:31.784Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Unsafe Dual-Write Without Transaction Guarantees",
+          "description": "In useCustomer.js (lines 236-259), the handleCustomerUpdate function performs a dual-write pattern where FileMaker is updated first, then Supabase is updated separately with try-catch error handling that only logs warnings. If the Supabase update fails after FileMaker succeeds, the data becomes inconsistent between systems with no automatic rollback or compensation mechanism. The error is caught and logged but the operation is still considered successful from the caller's perspective.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "result = await updateCustomer(customerId, formattedData);\n// Update customer in Supabase after successful FileMaker update (dual-write)\nif (user && user.supabaseOrgID) {\n  try {\n    const supabaseResult = await updateCustomerInSupabase(customerId, supabaseCustomerData, user);\n    // ...\n  } catch (supabaseError) {\n    console.error('[useCustomer] Error updating customer in Supabase:', supabaseError);\n    // Error swallowed - no compensation logic\n  }\n}",
+          "recommendation": "Implement proper dual-write failure handling: (1) Add retry logic with exponential backoff for Supabase failures, (2) Store failed Supabase writes in a local queue for later reconciliation, (3) Alert the user when dual-write fails rather than silently logging, or (4) Consider the operation failed if either write fails and rollback FileMaker changes. At minimum, add a user-facing warning: showError('Customer updated in FileMaker but Supabase sync failed. Contact support.');"
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing Cleanup in handleCustomerSearch Debounce",
+          "description": "In useCustomer.js lines 381-437, handleCustomerSearch uses a setTimeout for debouncing but doesn't include the searchTimeoutRef in the useCallback dependency array (line 437). This means if searchTimeoutRef.current changes, the callback won't use the updated ref. More critically, the callback captures setErrorWithFormatting in its closure but doesn't include it in dependencies, which could lead to stale closure bugs. While there is a cleanup useEffect (lines 452-458), the handleCustomerSearch callback itself could create race conditions if called multiple times rapidly before the previous timeout completes, as each call creates a new async operation that all update the same state.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "const handleCustomerSearch = useCallback((query, options = {}) => {\n  // ...\n  searchTimeoutRef.current = setTimeout(async () => {\n    try {\n      const result = await searchCustomers(query, { limit });\n      // State updates here\n      setSearchResults(processedResults);\n    } catch (err) {\n      setErrorWithFormatting(err); // Uses captured closure\n    }\n  }, debounceMs);\n}, [setErrorWithFormatting]); // Missing searchTimeoutRef, missing other deps",
+          "recommendation": "Add proper dependency array to useCallback including all captured values: [setErrorWithFormatting, searchTimeoutRef]. However, refs don't need to be in deps since they're stable. More importantly, add race condition protection by storing a request ID and ignoring results from stale requests: const requestId = ++requestIdRef.current; ... if (requestId !== requestIdRef.current) return; // Ignore stale results"
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Potential Object Spread Ordering Bug in normalizeCustomerData",
+          "description": "In src/api/customers.js lines 14-29, the normalizeCustomerData function uses object spread with potentially incorrect ordering. For single objects (line 24-28), it spreads ...data AFTER setting id and __ID, meaning if data already contains these fields, they will overwrite the normalized values. This defeats the purpose of normalization. For arrays (lines 16-21), the same issue exists - the spread ...customer comes after id/__ID, so existing values overwrite the normalized ones.",
+          "file_paths": [
+            "src/api/customers.js"
+          ],
+          "code_snippet": "function normalizeCustomerData(data) {\n  if (Array.isArray(data)) {\n    return data.map(customer => ({\n      id: customer.id || customer.__ID,\n      __ID: customer.id || customer.__ID,\n      ...customer  // Overwrites id and __ID if present in customer\n    }));\n  }\n  return {\n    id: data.id || data.__ID,\n    __ID: data.id || data.__ID,\n    ...data  // Overwrites id and __ID if present in data\n  };\n}",
+          "recommendation": "Reverse the spread order to ensure normalized values take precedence: `return { ...customer, id: customer.id || customer.__ID, __ID: customer.id || customer.__ID }` for arrays, and `return { ...data, id: data.id || data.__ID, __ID: data.id || data.__ID }` for objects. This ensures the normalized values always override any existing conflicting fields."
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inefficient Multiple Array Iterations in calculateCustomerStats",
+          "description": "In src/services/customerService.js lines 161-207, calculateCustomerStats iterates through the customers array once using forEach (line 182) but could be more efficient. However, the actual issue is that this function is called in a useEffect (useCustomer.js line 73-77) that triggers on EVERY customers array change, even when just one customer is updated. This means for every customer update, the entire stats calculation re-runs. For large customer lists (1000+), this could cause performance issues.",
+          "file_paths": [
+            "src/services/customerService.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// In useCustomer.js\nuseEffect(() => {\n  if (customers.length > 0) {\n    setStats(calculateCustomerStats(customers));\n  }\n}, [customers]); // Triggers on every customer array change\n\n// In customerService.js - iterates entire array\ncustomers.forEach(customer => {\n  // Count stats...\n});",
+          "recommendation": "Add memoization using useMemo in the hook: `const stats = useMemo(() => calculateCustomerStats(customers), [customers]);` instead of useEffect. This prevents unnecessary re-calculations if the customers array reference changes but content is the same. Alternatively, for very large lists, consider incremental stats updates when single customers change rather than recalculating from scratch."
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Missing Null Check in searchCustomers Client-Side Filter",
+          "description": "In src/services/customerService.js lines 217-253, the searchCustomers function (client-side filter, not the API call) accesses nested properties without null checks. Lines 236-240 check if customer.emails exists and is an array before calling .some(), but lines 234-235 don't check if customer.Email or customer.email exist before calling .toLowerCase(). If these are null or undefined, this will throw TypeError: Cannot read property 'toLowerCase' of null.",
+          "file_paths": [
+            "src/services/customerService.js"
+          ],
+          "code_snippet": "// Line 234-235: No null check\nif (customer.Email && customer.Email.toLowerCase().includes(searchTerm)) return true;\nif (customer.email && customer.email.toLowerCase().includes(searchTerm)) return true;\n// This is safe:\nif (customer.Email && customer.Email.toLowerCase()...) // 'if (customer.Email' provides null check",
+          "recommendation": "Actually, on closer inspection, the code IS safe because of the && short-circuit evaluation. The 'if (customer.Email' check ensures .toLowerCase() is only called if Email is truthy. This is not a bug. No action needed. Retract this finding."
+        },
+        {
+          "id": "COD-006",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Weak Phone Validation Regex",
+          "description": "In src/services/customerService.js line 357, the isValidPhone regex `/^\\+?[\\d\\s-()]+$/` is extremely permissive and will accept invalid phone numbers like '123', '---', '(((', or '   '. This validation is used in validateCustomerData (lines 287-290 for backend, 302-304 for FileMaker) and will allow nonsensical phone numbers to pass validation. The regex only checks that the string contains digits, spaces, dashes, and parentheses but doesn't enforce any structure.",
+          "file_paths": [
+            "src/services/customerService.js"
+          ],
+          "code_snippet": "function isValidPhone(phone) {\n  const phoneRegex = /^\\+?[\\d\\s-()]+$/;\n  return phoneRegex.test(phone);\n}\n// Will accept: '123', '   ', '---', '()', '+++++12'",
+          "recommendation": "Implement more robust phone validation: (1) Require minimum number of digits (e.g., 7-15), (2) Ensure parentheses are balanced, (3) Consider using a library like libphonenumber-js for international phone validation, or (4) At minimum, update regex to: `/^\\+?[\\d\\s-()]{7,20}$/` and add logic to ensure at least 7 digits exist. Alternatively, move validation to backend and accept any reasonable input on frontend."
+        },
+        {
+          "id": "COD-007",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inconsistent Error Code Usage",
+          "description": "In src/api/customers.js, the code uses CustomerErrorCodes.MISSING_REQUIRED_FIELD (lines 84, 104, 122, 142, 161, 183) but the actual error code constant is likely REQUIRED_FIELD_MISSING based on the error codes defined in customerErrors.js. Checking the errors file (line 38), the constant is indeed REQUIRED_FIELD_MISSING, not MISSING_REQUIRED_FIELD. This mismatch means the error code being thrown doesn't match any defined constant, so getUserFriendlyMessage will fall back to the generic message.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/errors/customerErrors.js"
+          ],
+          "code_snippet": "// In customers.js line 84:\nthrow new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);\n\n// In customerErrors.js line 38:\nREQUIRED_FIELD_MISSING: 'CUSTOMER_REQUIRED_FIELD_MISSING',\n// Note: MISSING_REQUIRED_FIELD doesn't exist",
+          "recommendation": "Update all instances in customers.js to use the correct constant: CustomerErrorCodes.REQUIRED_FIELD_MISSING instead of CustomerErrorCodes.MISSING_REQUIRED_FIELD. Search and replace across the file to ensure consistency."
+        },
+        {
+          "id": "COD-008",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Race Condition in handleCustomerUpdate State Updates",
+          "description": "In useCustomer.js lines 267-278, handleCustomerUpdate updates local state using functional setState (setCustomers, setSelectedCustomer) but the updates occur AFTER the async updateCustomer call returns. If the user triggers multiple rapid updates or if another operation modifies customers state during the update, the state updates could be based on stale data. Additionally, line 270 uses spread operator to merge customerData into existing customer, but customerData might contain only partial fields - this could accidentally overwrite fields with undefined.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// Lines 267-278\nsetCustomers(prevCustomers =>\n  prevCustomers.map(customer =>\n    customer.id === customerId || customer.__ID === customerId\n      ? { ...customer, ...customerData }  // Partial merge - could overwrite with undefined\n      : customer\n  )\n);\n\nif (selectedCustomer?.id === customerId || selectedCustomer?.__ID === customerId) {\n  setSelectedCustomer(prev => ({ ...prev, ...customerData })); // Same issue\n}",
+          "recommendation": "Replace optimistic local state updates with a proper reload from the backend after successful update: `await loadCustomers()` and `await handleCustomerSelect(customerId)`. This ensures state is always in sync with backend. If optimistic updates are required for UX, store the API response and merge that instead of the input customerData: `const result = await updateCustomer(...); setCustomers(prev => prev.map(c => c.id === customerId ? result : c));`"
+        }
+      ],
+      "files_reviewed": 0,
+      "issues_found": 8
+    }
+  },
+  "SecurityCheckNode": {
+    "timestamp": "2026-01-17T01:08:03.561Z",
+    "output": {
+      "findings": [
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "critical",
+          "title": "Sensitive Authentication Data Logged to Console",
+          "description": "In src/services/dataService.js line 28, the entire authentication context object (including user data and organization IDs) is logged to the console using console.log(). This exposes sensitive authentication information in browser DevTools, potentially allowing attackers with physical or remote access to view or exfiltrate user sessions, organization IDs, and authentication tokens. Additionally, lines 123-143 log authentication state and organization IDs. In src/config.js lines 6-31, secret key lengths and existence flags are logged, which can help attackers identify environment configuration weaknesses.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/config.js"
+          ],
+          "code_snippet": "// dataService.js:28\nexport const setAuthenticationContext = (authState) => {\n  currentAuthentication = { ...authState };\n  console.log('[DataService] Authentication context set:', currentAuthentication);\n};\n\n// dataService.js:137\nconsole.log('[DataService] Added organization context:', auth.user.supabaseOrgID);\n\n// config.js:6-17\nconsole.log('[ENV-INVESTIGATION] Environment variable loading check:', {\n  viteSecretKeyExists: !!import.meta.env?.VITE_SECRET_KEY,\n  viteSecretKeyLength: import.meta.env?.VITE_SECRET_KEY?.length,\n  viteServiceRoleKeyExists: !!import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY,\n  viteServiceRoleKeyLength: import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY?.length\n});",
+          "recommendation": "Remove all console.log statements that expose authentication data, user context, organization IDs, or key existence/lengths. Replace with proper logging framework that can be disabled in production. At minimum, wrap in environment checks: `if (import.meta.env.DEV) { console.log(...); }` or use a dedicated debug flag. For production, implement server-side logging with proper sanitization."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "critical",
+          "title": "Supabase Service Role Key Exposed in Frontend Code",
+          "description": "In src/config.js line 22 and src/services/supabaseService.js lines 10, 16, 42-44, 48, 57, the VITE_SUPABASE_SERVICE_ROLE_KEY is imported and used in frontend code. The service role key bypasses ALL Row-Level Security (RLS) policies and grants unrestricted database access. Exposing this in frontend code means it's bundled in the client-side JavaScript and can be extracted by any user viewing the bundled application. This is a critical security breach allowing attackers to bypass all authorization and access/modify any data in the database across all organizations.",
+          "file_paths": [
+            "src/config.js",
+            "src/services/supabaseService.js"
+          ],
+          "code_snippet": "// config.js:22\nexport const supabaseServiceRoleKey = import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY;\n\n// supabaseService.js:10\nimport { supabaseServiceRoleKey } from '../config';\n\n// supabaseService.js:42-48\nconst performAdminOperation = async (operation) => {\n  if (!supabaseServiceRoleKey) {\n    console.warn('Service role key not available, using regular client');\n    return await operation(supabase);\n  }\n  const result = await operation(supabase, supabaseServiceRoleKey);\n  return result;\n};",
+          "recommendation": "IMMEDIATELY remove all references to VITE_SUPABASE_SERVICE_ROLE_KEY from frontend code. Service role keys must ONLY exist in secure backend environments. Move all admin operations (performAdminOperation) to backend API endpoints. Update migration scripts to run server-side only. If admin operations are needed from frontend, create dedicated backend API endpoints that validate user permissions before executing privileged operations. See MIGRATION_SCRIPTS_SECURITY.md which correctly identifies this issue."
+        },
+        {
+          "id": "SEC-003",
+          "category": "security",
+          "severity": "high",
+          "title": "Organization ID Authorization Bypass via Non-Blocking Warning",
+          "description": "In src/services/dataService.js lines 135-147, when organization ID (X-Organization-ID header) is missing from user context, the code only logs a console.warn and continues with the request (line 146 comment: 'Some endpoints may not require organization scoping'). However, src/errors/customerErrors.js checkOrganizationScope (lines 346-349) shows that customer operations should REQUIRE organization scope. This creates an inconsistency where requests can proceed without organization scoping, potentially allowing users to access or modify data across organizations if backend RLS policies are misconfigured or missing.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/errors/customerErrors.js"
+          ],
+          "code_snippet": "// dataService.js:135-147\nif (auth.user && auth.user.supabaseOrgID) {\n  config.headers['X-Organization-ID'] = auth.user.supabaseOrgID;\n  console.log('[DataService] Added organization context:', auth.user.supabaseOrgID);\n} else {\n  console.warn('[DataService] Organization ID not found in user context. This may cause authorization errors.', {\n    url: config.url,\n    method: config.method,\n    hasUser: !!auth.user,\n    userKeys: auth.user ? Object.keys(auth.user) : []\n  });\n  // Note: We don't throw an error here to allow initialization to complete\n  // Some endpoints may not require organization scoping\n}",
+          "recommendation": "Make organization scoping mandatory for ALL customer operations at the API client level, not just in error handlers. Add a whitelist of endpoints that explicitly don't require org scoping (e.g., /auth, /health). For customer endpoints (/api/customers/*), throw an error if organization ID is missing: `if (config.url.includes('/api/customers') && !auth.user?.supabaseOrgID) { throw new Error('Organization ID required for customer operations'); }`. This provides defense-in-depth against backend RLS misconfigurations."
+        },
+        {
+          "id": "SEC-004",
+          "category": "security",
+          "severity": "high",
+          "title": "Weak Input Validation Allows XSS via Malicious Customer Names",
+          "description": "Customer names (business_name, ContactPerson, primary_contact_name) are not sanitized before storage or display. In src/services/customerService.js validateCustomerData (lines 262-311), only length and required checks are performed - no HTML/script injection protection. Customer names containing malicious scripts like `<script>alert('XSS')</script>` or `<img src=x onerror=alert('XSS')>` could be stored and later rendered in components like CustomerHeader.jsx, CustomerDetails.jsx, and CustomerForm.jsx without sanitization. While React provides some XSS protection by default, if any component uses dangerouslySetInnerHTML or renders names in non-React contexts (PDF generation, emails, reports), XSS is possible.",
+          "file_paths": [
+            "src/services/customerService.js",
+            "src/components/customers/CustomerForm.jsx"
+          ],
+          "code_snippet": "// customerService.js:262-311 - No sanitization\nexport function validateCustomerData(data, format = 'filemaker') {\n  const errors = [];\n  if (format === 'backend') {\n    if (!data.business_name?.trim()) {\n      errors.push('Business name is required');\n    }\n    if (data.business_name && data.business_name.length > 255) {\n      errors.push('Business name must be 255 characters or less');\n    }\n    // No XSS/injection checks\n  }\n  // ...\n}",
+          "recommendation": "Add input sanitization to validateCustomerData: (1) Strip HTML tags from text fields: `business_name.replace(/<[^>]*>/g, '')`, (2) Encode special characters, (3) Add validation to reject strings containing `<script>`, `javascript:`, `onerror=`, etc. (4) Use a library like DOMPurify for robust sanitization. (5) Implement Content Security Policy (CSP) headers to prevent inline script execution. (6) For PDF/email generation (pdfReportService.js, proposalEmailService.js), ensure names are HTML-encoded before rendering."
+        },
+        {
+          "id": "SEC-005",
+          "category": "security",
+          "severity": "high",
+          "title": "SQL Injection Risk via Unsanitized Direct Supabase Queries",
+          "description": "In src/components/customers/CustomerHeader.jsx lines 34-71, direct Supabase queries are constructed using the `query()` function with user-controlled customer IDs from `customer?.__ID || customer?.id`. While Supabase's query builder provides parameterization, if customerId contains malicious input and the query function doesn't properly sanitize, SQL injection could occur. The code directly passes `value: customerId` to filter without validation. Additionally, the query function implementation is not shown, so we cannot verify it properly escapes parameters.",
+          "file_paths": [
+            "src/components/customers/CustomerHeader.jsx"
+          ],
+          "code_snippet": "// CustomerHeader.jsx:34-48\nconst customerId = customer?.__ID || customer?.id;\nif (!customerId) return;\n\nconst settingsResult = await query('customer_settings', {\n  select: '*',\n  filter: [\n    {\n      column: 'customer_id',\n      operator: 'eq',\n      value: customerId  // User-controlled input passed directly\n    },\n    {\n      column: 'type',\n      operator: 'eq',\n      value: 'VAPI_TEST'\n    }\n  ]\n});",
+          "recommendation": "Validate customerId format before using in queries: (1) Ensure customerId matches UUID format using regex: `/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i`, (2) Throw error if validation fails, (3) Review the `query()` function implementation in supabaseService.js to ensure it uses parameterized queries (not string concatenation), (4) Add input validation helper: `validateUUID(customerId)` that all components must call before database operations."
+        },
+        {
+          "id": "SEC-006",
+          "category": "security",
+          "severity": "medium",
+          "title": "Insufficient Email Validation Allows Email Header Injection",
+          "description": "In src/services/customerService.js line 352 and src/components/customers/CustomerForm.jsx line 282, email validation uses weak regex `/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/` and `/\\S+@\\S+\\.\\S+/` respectively. These patterns don't prevent emails with newlines, carriage returns, or other control characters like `test@example.com\\r\\nBcc:attacker@evil.com`. If these emails are used in email sending functions (mailjetService.js, proposalEmailService.js), attackers could inject additional email headers, leading to email spoofing, BCC injection, or spam relay attacks.",
+          "file_paths": [
+            "src/services/customerService.js",
+            "src/components/customers/CustomerForm.jsx"
+          ],
+          "code_snippet": "// customerService.js:351-354\nfunction isValidEmail(email) {\n  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n  return emailRegex.test(email);\n}\n\n// CustomerForm.jsx:282\nif (emailObj.email && !/\\S+@\\S+\\.\\S+/.test(emailObj.email)) {\n  newErrors[`email_${index}`] = 'Invalid email format';\n}",
+          "recommendation": "Strengthen email validation: (1) Explicitly reject emails containing control characters: `if (/[\\r\\n\\t\\x00-\\x1f]/.test(email)) { return false; }`, (2) Use RFC 5322 compliant regex or a library like `validator.js`: `validator.isEmail(email)`, (3) Reject emails with suspicious patterns like multiple @ symbols, (4) Before using emails in mailjet or other email services, add additional sanitization to strip control characters: `email.replace(/[\\r\\n\\t]/g, '')`."
+        },
+        {
+          "id": "SEC-007",
+          "category": "security",
+          "severity": "medium",
+          "title": "Missing Rate Limiting on Customer Search Endpoint",
+          "description": "In src/hooks/useCustomer.js lines 381-437, the handleCustomerSearch function implements client-side debouncing (300ms) but no rate limiting. An attacker could bypass the debounce by rapidly calling handleCustomerSearch with different query strings, triggering excessive backend API calls to `/api/customers/search`. This could lead to DoS attacks, database overload, or excessive API costs. The backend API may have rate limiting, but frontend should also implement protection.",
+          "file_paths": [
+            "src/hooks/useCustomer.js",
+            "src/api/customers.js"
+          ],
+          "code_snippet": "// useCustomer.js:381-414\nconst handleCustomerSearch = useCallback((query, options = {}) => {\n  const { limit = 20, debounceMs = 300 } = options;\n  \n  if (searchTimeoutRef.current) {\n    clearTimeout(searchTimeoutRef.current);\n  }\n  \n  // Only 300ms debounce - no rate limit\n  searchTimeoutRef.current = setTimeout(async () => {\n    try {\n      const result = await searchCustomers(query, { limit });\n      // Process results...\n    }\n  }, debounceMs);\n}, [setErrorWithFormatting]);",
+          "recommendation": "Implement client-side rate limiting: (1) Track number of search requests per time window (e.g., max 10 searches per 60 seconds), (2) Store request count and timestamp in a ref, (3) Reject searches exceeding limit with user message: 'Too many search requests. Please wait.', (4) Example: `const searchCount = useRef({ count: 0, resetTime: Date.now() }); if (searchCount.current.count > 10 && Date.now() - searchCount.current.resetTime < 60000) { return; }`. (5) Coordinate with backend team to implement backend rate limiting on `/api/customers/search` endpoint."
+        },
+        {
+          "id": "SEC-008",
+          "category": "security",
+          "severity": "medium",
+          "title": "HMAC Secret Key Used from Frontend Environment Variables",
+          "description": "In src/services/dataService.js line 61 and multiple other files (supabaseService.js:65, quickbooksApi.js:34, proposals.js:16, proposalExtended.js:20), VITE_SECRET_KEY is loaded from frontend environment variables and used to generate HMAC signatures. While Vite does not expose env vars to the public (they're bundled at build time), the secret can still be extracted from the compiled JavaScript bundle by determined attackers. HMAC secrets should never be in frontend code as they can be reverse-engineered from the bundle, allowing attackers to forge authenticated requests.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/services/supabaseService.js",
+            "src/api/quickbooksApi.js",
+            "src/api/proposals.js",
+            "src/api/proposalExtended.js"
+          ],
+          "code_snippet": "// dataService.js:61-67\nasync function generateBackendAuthHeader(payload = '') {\n  const secretKey = import.meta.env.VITE_SECRET_KEY;\n  \n  if (!secretKey) {\n    console.warn('[DataService] SECRET_KEY not available. Using development mode.');\n    return `Bearer dev-token.${timestamp}`;\n  }\n  // Uses secretKey to generate HMAC signature...\n}",
+          "recommendation": "CRITICAL: Remove HMAC signature generation from frontend entirely. Implement proper authentication flow: (1) User authenticates with Supabase (JWT), (2) Frontend sends JWT to backend with requests, (3) Backend validates JWT and generates HMAC signatures server-side before forwarding to internal APIs, (4) This prevents secret exposure and provides proper authentication chain. Alternative: Use Supabase Auth JWT tokens directly for backend API authentication instead of HMAC, allowing backend to validate tokens against Supabase without exposing secrets."
+        },
+        {
+          "id": "SEC-009",
+          "category": "security",
+          "severity": "medium",
+          "title": "Error Messages Expose Internal System Details",
+          "description": "In src/errors/customerErrors.js parseHttpError function (lines 128-254), detailed error responses including responseData objects are included in error details and logged to console (via useCustomer.js:65-69). These error details may expose internal system information like database table names, query structures, backend service names, or stack traces. Lines 163, 171, 178, 188, 194, 204, 215, 226, 235, 244, 252 all include `{ operation, status, responseData }` which could leak sensitive backend details to attackers via browser console.",
+          "file_paths": [
+            "src/errors/customerErrors.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// customerErrors.js:200-205\nif (status === 404) {\n  return new CustomerError(\n    responseData.message || 'Customer not found',\n    CustomerErrorCodes.NOT_FOUND,\n    { operation, status, responseData }  // Exposes backend response\n  );\n}\n\n// useCustomer.js:61-69\nconst setErrorWithFormatting = useCallback((err) => {\n  const formatted = formatErrorForUI(err);\n  setError(err);\n  setFormattedError(formatted);\n  console.error('[useCustomer] Error:', {\n    raw: err,\n    formatted,\n    stack: err.stack  // Exposes stack traces\n  });\n}, []);",
+          "recommendation": "Sanitize error responses before exposing to frontend: (1) In parseHttpError, create sanitized error details that only include safe user-facing information, (2) Remove responseData from production error details: `if (import.meta.env.PROD) { delete details.responseData; }`, (3) Only log full error details in development mode, (4) Backend should return generic error messages in production (e.g., 'An error occurred') and log detailed errors server-side only, (5) Use error tracking service (Sentry, etc.) for detailed error logging instead of console."
+        },
+        {
+          "id": "SEC-010",
+          "category": "security",
+          "severity": "low",
+          "title": "Missing HTTPS Enforcement for Backend API URLs",
+          "description": "In src/config.js lines 37-40, backend API URLs are hardcoded as https:// but there's no enforcement or validation that these URLs remain HTTPS. If these configuration values are ever changed to http:// (intentionally or via environment variable override), authentication credentials, HMAC signatures, and customer data would be transmitted in plaintext over the network, vulnerable to man-in-the-middle attacks.",
+          "file_paths": [
+            "src/config.js"
+          ],
+          "code_snippet": "// config.js:37-40\nexport const backendConfig = {\n  baseUrl: 'https://api.claritybusinesssolutions.ca',\n  fileMakerApiUrl: 'https://api.claritybusinesssolutions.ca/filemaker',\n  quickBooksApiUrl: 'https://api.claritybusinesssolutions.ca/quickbooks'\n};",
+          "recommendation": "Add URL validation: (1) Create validateBackendUrl function that ensures all backend URLs start with 'https://', (2) Throw error if non-HTTPS URL detected: `if (!url.startsWith('https://')) { throw new Error('Backend URLs must use HTTPS'); }`, (3) Apply validation when loading config, (4) Add Content-Security-Policy header to enforce HTTPS: `upgrade-insecure-requests`, (5) Consider implementing certificate pinning for additional security."
+        }
+      ],
+      "files_reviewed": 0,
+      "vulnerabilities_found": 10
+    }
+  },
+  "ArchitectureCheckNode": {
+    "timestamp": "2026-01-17T01:10:08.789Z",
+    "output": {
+      "findings": [
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent Organization Scope Validation Pattern",
+          "description": "The customer API implementation uses a custom checkOrganizationScope function defined locally in src/errors/customerErrors.js (lines 346-349), while other API modules (notes.js, projects.js, tasks.js, links.js, images.js) define their own identical checkOrganizationScope functions locally within each file. This violates DRY principles and creates inconsistent error handling. For example, notes.js lines 9-13 defines checkOrganizationScope that throws a generic Error, while customerErrors.js throws a CustomerError. Projects.js lines 42-46 also defines its own version throwing generic Error.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/notes.js",
+            "src/api/projects.js",
+            "src/errors/customerErrors.js"
+          ],
+          "code_snippet": "// notes.js:9-13 (duplicated pattern)\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n  if (!auth?.user?.supabaseOrgID) {\n    throw new Error(`Organization context required for ${operation}. Please authenticate.`);\n  }\n}\n\n// projects.js:42-46 (duplicated again)\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n  if (!auth?.user?.supabaseOrgID) {\n    throw new Error(`Organization context required for ${operation}. Please authenticate.`);\n  }\n}\n\n// customerErrors.js:346-349 (customer-specific version)\nexport function checkOrganizationScope(env, operation = 'unknown') {\n  if (env.type === 'webapp') {\n    if (!env.authentication?.user?.supabaseOrgID) {\n      throw new CustomerError(...);",
+          "recommendation": "Consolidate checkOrganizationScope into a shared utility module. Since it's already exported from src/errors/customerErrors.js and re-exported from src/errors/index.js, all API modules should import it from there instead of defining local versions. Update notes.js, projects.js, tasks.js, links.js, and images.js to: `import { checkOrganizationScope } from '../errors';` This ensures consistent error types (CustomerError vs generic Error) and centralized org scope logic."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent Data Access Pattern - Direct Supabase vs Backend API",
+          "description": "The codebase has two completely different architectural patterns for data access: (1) Customers use Backend API with HMAC authentication (src/api/customers.js uses dataService), and (2) Prospects use direct Supabase client calls (src/api/prospects.js creates its own Supabase client at line 20). This architectural inconsistency creates confusion about which pattern to follow for new features. Per CLAUDE.md, customers use 'Backend API Integration' while prospects remain on 'direct Supabase'. However, both entities use the same underlying database tables (customers table with type='CUSTOMER' vs type='PROSPECT'), suggesting they should use the same access pattern.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/prospects.js",
+            "src/hooks/useCustomer.js",
+            "src/hooks/useProspect.js"
+          ],
+          "code_snippet": "// customers.js:1 - Backend API pattern\nimport { dataService, getAuthenticationContext } from '../services/dataService';\n// Uses withErrorHandling wrapper and dataService.get/post/put/delete\n\n// prospects.js:16-20 - Direct Supabase pattern\nimport { createClient } from '@supabase/supabase-js'\nimport { supabaseUrl, supabaseAnonKey } from '../config.js'\nconst supabase = createClient(supabaseUrl, supabaseAnonKey)\n// Uses direct Supabase client: supabase.from('customers').select()...",
+          "recommendation": "Standardize on a single data access pattern. Recommended approach: (1) Migrate prospects to use Backend API for consistency with customers, OR (2) Document explicit decision criteria for when to use direct Supabase vs Backend API (e.g., 'Use Backend API for entities requiring cross-system integration, use Supabase for simple CRUD'). Add architecture decision record (ADR) to docs/ explaining the dual pattern and migration plan. Update CLAUDE.md to clarify the strategy. Consider creating a 'prospects' backend API endpoint following the same pattern as customers."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent Hook State Management Pattern",
+          "description": "Customer hook (useCustomer.js) implements complex state with pagination, search, and formattedError (lines 38-51), while similar hooks like useProspect.js (lines 11-14) and useTeam.js (lines 32-39) use simpler state structures. More critically, useCustomer returns a complex object with nested properties (lines 460-495) including actions, state, and utility functions, while useProspect returns a flat object. The pattern is inconsistent: useCustomer has 'activeCustomers' as a computed getter (line 476), but useProspect computes sortProspects inline (line 25). This makes hooks non-interchangeable and harder to understand.",
+          "file_paths": [
+            "src/hooks/useCustomer.js",
+            "src/hooks/useProspect.js",
+            "src/hooks/useTeam.js"
+          ],
+          "code_snippet": "// useCustomer.js:460-495 - Complex return structure\nreturn {\n  // State\n  loading, error, formattedError, customers, selectedCustomer, stats, pagination,\n  // Search state\n  searchResults, isSearching, searchQuery,\n  // Active customers getter\n  activeCustomers: customers.filter(customer => customer.isActive || customer.is_active),\n  // Actions\n  loadCustomers, handleCustomerSelect, handleCustomerCreate, ...\n  // Utility functions\n  clearError: () => { ... },\n  setPagination\n};\n\n// useProspect.js:218-230 - Simpler flat structure\nreturn {\n  prospects, loading, error, loadProspects, handleProspectSelect,\n  handleProspectCreate, handleProspectUpdate, handleProspectDelete,\n  handleConvertToCustomer, searchProspects\n}",
+          "recommendation": "Standardize hook return patterns across the codebase: (1) Define a consistent structure in architecture docs (e.g., always return { state: {...}, actions: {...}, computed: {...} }), (2) Update useCustomer to match simpler pattern used by useProspect/useTeam, removing inline computed properties like activeCustomers (compute in component instead), (3) Remove utility functions like clearError/clearSelectedCustomer from hook return (provide reset actions instead), (4) Standardize error handling - either all hooks return formattedError or none do."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing Error Handling Wrapper Pattern in API Calls",
+          "description": "Customer API operations in src/api/customers.js consistently use withErrorHandling wrapper (lines 44, 82, 102, etc.) for error processing, but other API modules like notes.js, projects.js, and prospects.js do not use any error handling wrapper - they rely on try-catch in hooks. This creates inconsistent error handling: customers get parsed HTTP errors with user-friendly messages via parseHttpError, while notes/projects throw raw errors that hooks must handle. The withErrorHandling pattern (defined in customerErrors.js lines 360+) is not reused elsewhere despite being a good architectural pattern.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/notes.js",
+            "src/api/projects.js",
+            "src/errors/customerErrors.js"
+          ],
+          "code_snippet": "// customers.js:43-74 - Uses withErrorHandling wrapper\nexport async function fetchCustomers(options = {}) {\n  return withErrorHandling(async () => {\n    const auth = getAuthenticationContext();\n    checkOrganizationScope({ authentication: auth }, 'fetchCustomers');\n    const response = await dataService.get('/api/customers', { params: queryParams });\n    return normalizeCustomerData(response.data || response);\n  }, 'fetchCustomers', { options });\n}\n\n// notes.js:31-82 - No error wrapper, raw errors\nexport async function createNote(data) {\n  if (!data) {\n    throw new Error('Data is required'); // Raw Error, not parsed\n  }\n  const auth = getAuthenticationContext();\n  checkOrganizationScope({ authentication: auth }, 'createNote');\n  const response = await dataService.post(endpoint, payload); // Can throw raw axios errors\n  return response.data || response;\n}",
+          "recommendation": "Create a generic withErrorHandling wrapper in src/errors/index.js (or src/services/errorHandling.js) that can be used by all API modules, not just customers. The wrapper should: (1) Parse HTTP errors consistently using parseHttpError, (2) Support different error code namespaces (CustomerErrorCodes, ProjectErrorCodes, etc.), (3) Be importable from shared location. Update notes.js, projects.js, tasks.js, etc. to wrap all API functions with this standardized error handler for consistency."
+        },
+        {
+          "id": "ARC-005",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Inconsistent Normalization Function Pattern",
+          "description": "Customer API has normalizeCustomerData function (src/api/customers.js lines 14-29) that is defined inline within the API module, while projects has identical normalizeProjectData function (src/api/projects.js lines 19-34). Both functions do the same thing: ensure id and __ID properties exist. This is duplicated code that should be abstracted. Additionally, the normalization logic has a bug (spread order issue identified in soundness review) that affects both implementations identically.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/projects.js"
+          ],
+          "code_snippet": "// customers.js:14-29\nfunction normalizeCustomerData(data) {\n  if (Array.isArray(data)) {\n    return data.map(customer => ({\n      id: customer.id || customer.__ID,\n      __ID: customer.id || customer.__ID,\n      ...customer\n    }));\n  }\n  return { id: data.id || data.__ID, __ID: data.id || data.__ID, ...data };\n}\n\n// projects.js:19-34 - Identical logic\nfunction normalizeProjectData(data) {\n  if (Array.isArray(data)) {\n    return data.map(project => ({\n      id: project.id,\n      __ID: project.id,\n      ...project\n    }));\n  }\n  return { id: data.id, __ID: data.id, ...data };\n}",
+          "recommendation": "Create a shared utility function in src/services/dataTransformations.js or similar: `export function normalizeIdFields(data) { ... }` that handles id/__ID normalization for any entity type. Update customers.js, projects.js, and any other modules to import and use this shared function. This ensures the normalization logic (and any bug fixes) propagate consistently across all entities."
+        },
+        {
+          "id": "ARC-006",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Service Layer Missing Business Logic Pattern",
+          "description": "The architecture documentation (Data Flow Pattern in CLAUDE.md) describes a layered architecture: API Layer → Service Layer → Hook Layer → Component Layer. However, customerService.js contains mostly data transformation utilities (transformFileMakerToBackend, validateCustomerData, etc.) but lacks true business logic. For comparison, other services like prospectService.js have processProspectData and validateProspectData that are used by hooks, following the expected pattern. Customer hooks (useCustomer.js) call API layer directly (lines 94, 143, 189, etc.) bypassing service layer for many operations, only using service for transformations.",
+          "file_paths": [
+            "src/services/customerService.js",
+            "src/hooks/useCustomer.js",
+            "src/hooks/useProspect.js"
+          ],
+          "code_snippet": "// useCustomer.js:88-94 - Calls API directly, bypasses service business logic\nconst loadCustomers = useCallback(async (options = {}) => {\n  try {\n    setLoading(true);\n    setError(null);\n    const env = getEnvironmentContext();\n    const result = await fetchCustomers(options); // Direct API call\n    // Then calls service for processing...\n\n// Compare to useProspect.js:19-31 - Better separation\nconst loadProspects = useCallback(async () => {\n  try {\n    const data = await prospectApi.fetchProspects(); // API layer\n    const processed = prospectService.processProspectData(data); // Service layer\n    setProspects(prospectService.sortProspects(processed)); // Service layer\n  }\n}, []);",
+          "recommendation": "Refactor customerService.js to follow the service layer pattern more consistently: (1) Add higher-level business logic functions like `fetchAndProcessCustomers(options)`, `createCustomerWithValidation(data)`, etc. that encapsulate API calls + transformations, (2) Update useCustomer hook to call these service functions instead of API layer directly, (3) This provides proper separation: Hook manages React state, Service manages business logic, API manages HTTP. Follow the pattern established in useProspect where service layer is the primary interface."
+        },
+        {
+          "id": "ARC-007",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Inconsistent Component Direct Database Access",
+          "description": "CustomerHeader.jsx (lines 34-71) makes direct Supabase queries using the query() function to load customer_email, customer_phone, and customer_address data, bypassing the API and hook layers entirely. This violates the established architecture where components should use hooks, hooks use services, and services use API. The pattern is inconsistent with how CustomerDetails and CustomerForm work (which use the useCustomer hook). Direct database access from components creates multiple sources of truth and makes it harder to maintain organization scoping and authentication.",
+          "file_paths": [
+            "src/components/customers/CustomerHeader.jsx",
+            "src/components/customers/CustomerDetails.jsx"
+          ],
+          "code_snippet": "// CustomerHeader.jsx:58-72 - Component making direct database queries\nconst [emailsResult, phonesResult, addressesResult] = await Promise.all([\n  query('customer_email', {\n    select: '*',\n    filter: { column: 'customer_id', operator: 'eq', value: customerId }\n  }),\n  query('customer_phone', {\n    select: '*',\n    filter: { column: 'customer_id', operator: 'eq', value: customerId }\n  }),\n  query('customer_address', {\n    select: '*',\n    filter: { column: 'customer_id', operator: 'eq', value: customerId }\n  })\n]);",
+          "recommendation": "Move database queries out of CustomerHeader component: (1) Add fetchCustomerContacts() function to src/api/customers.js that fetches nested emails/phones/addresses, (2) Add corresponding function to useCustomer hook: loadCustomerContacts(customerId), (3) Update CustomerHeader to call the hook function instead of direct queries, (4) This ensures consistent authentication, organization scoping, and error handling. Alternatively, enhance the existing fetchCustomerById to include nested contacts via include_related parameter."
+        }
+      ],
+      "patterns_reviewed": 0,
+      "violations_found": 7
+    }
+  },
+  "JudgeNode": {
+    "timestamp": "2026-01-17T01:10:08.792Z",
+    "output": {
+      "total_findings": 31,
+      "kept_findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "FileMaker Dual-Write Logic Not Removed (AC7 Violation)",
+          "description": "The acceptance criteria AC7 states that FileMaker dual-write logic should be completely removed, with specific verification that `src/hooks/useCustomer.js` should no longer call `updateCustomerInSupabase()`. However, the current implementation at lines 236-259 in useCustomer.js still contains the dual-write logic that updates Supabase after FileMaker updates. The code imports `useSupabaseCustomer` (line 53) and calls `updateCustomerInSupabase` (line 250) when in FileMaker environment with user.supabaseOrgID present.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Note: This may be intentional given the standing constraint 'MUST maintain FileMaker backward compatibility' and the migration plan showing Phase 5 (Cleanup) as a future phase. Clarify whether AC7 applies to the current 'customers-backend-integration' feature scope or is deferred to a future phase. If AC7 is in scope, remove lines 236-259 in useCustomer.js that handle Supabase dual-write, remove the useSupabaseCustomer import, and remove the dependency on updateCustomerInSupabase."
+        },
+        {
+          "id": "COM-002",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "useSupabaseCustomer.js File Not Removed (AC7 Violation)",
+          "description": "AC7 verification checklist states that `src/hooks/useSupabaseCustomer.js` should be 'removed or repurposed'. The file still exists (verified via bash check) and is still being imported and used in useCustomer.js (line 53). The acceptance criteria specifically references this as a 487-line file that should be removed in Phase 5: Cleanup.",
+          "file_paths": [
+            "src/hooks/useSupabaseCustomer.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Same caveat as above - this may be deferred to Phase 5. If AC7 is in current scope, either remove this file entirely or repurpose it for non-customer operations. If removal is premature due to FileMaker compatibility requirements, document this explicitly as 'deferred to Phase 5' in the task completion notes."
+        },
+        {
+          "id": "COM-006",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Standing Constraint Conflict with AC7",
+          "description": "There is an inherent conflict between the standing constraint 'MUST maintain FileMaker backward compatibility - FileMaker environment continues to work' and AC7 'Dual-Write Removal' which requires removing all FileMaker-specific code including dual-write logic, formatCustomerForFileMaker, and useSupabaseCustomer. The current implementation correctly maintains backward compatibility but violates AC7. The migration plan shows AC7 tasks belong to 'Phase 5: Cleanup (Week 4+)', suggesting they are out of scope for the current 'customers-backend-integration' feature.",
+          "file_paths": [
+            ".devflow/tasks/customers-backend-integration/tasks.json",
+            "requirements/customers/acceptance-criteria.md",
+            "requirements/customers/migration-plan.md"
+          ],
+          "code_snippet": null,
+          "recommendation": "Clarify the scope boundary: The 'customers-backend-integration' feature (TSK0001-TSK0015) appears to implement Phase 3 (Frontend Refactor with dual-environment support), while AC7 belongs to Phase 5 (Cleanup - FileMaker removal). Update the acceptance criteria document to clearly mark AC7 as 'Phase 5 - Out of Scope for Current Feature' or create a separate follow-up task/feature for FileMaker removal. The current implementation correctly satisfies the standing constraints."
+        },
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Unsafe Dual-Write Without Transaction Guarantees",
+          "description": "In useCustomer.js (lines 236-259), the handleCustomerUpdate function performs a dual-write pattern where FileMaker is updated first, then Supabase is updated separately with try-catch error handling that only logs warnings. If the Supabase update fails after FileMaker succeeds, the data becomes inconsistent between systems with no automatic rollback or compensation mechanism. The error is caught and logged but the operation is still considered successful from the caller's perspective.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "result = await updateCustomer(customerId, formattedData);\n// Update customer in Supabase after successful FileMaker update (dual-write)\nif (user && user.supabaseOrgID) {\n  try {\n    const supabaseResult = await updateCustomerInSupabase(customerId, supabaseCustomerData, user);\n    // ...\n  } catch (supabaseError) {\n    console.error('[useCustomer] Error updating customer in Supabase:', supabaseError);\n    // Error swallowed - no compensation logic\n  }\n}",
+          "recommendation": "Implement proper dual-write failure handling: (1) Add retry logic with exponential backoff for Supabase failures, (2) Store failed Supabase writes in a local queue for later reconciliation, (3) Alert the user when dual-write fails rather than silently logging, or (4) Consider the operation failed if either write fails and rollback FileMaker changes. At minimum, add a user-facing warning: showError('Customer updated in FileMaker but Supabase sync failed. Contact support.');"
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing Cleanup in handleCustomerSearch Debounce",
+          "description": "In useCustomer.js lines 381-437, handleCustomerSearch uses a setTimeout for debouncing but doesn't include the searchTimeoutRef in the useCallback dependency array (line 437). This means if searchTimeoutRef.current changes, the callback won't use the updated ref. More critically, the callback captures setErrorWithFormatting in its closure but doesn't include it in dependencies, which could lead to stale closure bugs. While there is a cleanup useEffect (lines 452-458), the handleCustomerSearch callback itself could create race conditions if called multiple times rapidly before the previous timeout completes, as each call creates a new async operation that all update the same state.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "const handleCustomerSearch = useCallback((query, options = {}) => {\n  // ...\n  searchTimeoutRef.current = setTimeout(async () => {\n    try {\n      const result = await searchCustomers(query, { limit });\n      // State updates here\n      setSearchResults(processedResults);\n    } catch (err) {\n      setErrorWithFormatting(err); // Uses captured closure\n    }\n  }, debounceMs);\n}, [setErrorWithFormatting]); // Missing searchTimeoutRef, missing other deps",
+          "recommendation": "Add proper dependency array to useCallback including all captured values: [setErrorWithFormatting, searchTimeoutRef]. However, refs don't need to be in deps since they're stable. More importantly, add race condition protection by storing a request ID and ignoring results from stale requests: const requestId = ++requestIdRef.current; ... if (requestId !== requestIdRef.current) return; // Ignore stale results"
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Potential Object Spread Ordering Bug in normalizeCustomerData",
+          "description": "In src/api/customers.js lines 14-29, the normalizeCustomerData function uses object spread with potentially incorrect ordering. For single objects (line 24-28), it spreads ...data AFTER setting id and __ID, meaning if data already contains these fields, they will overwrite the normalized values. This defeats the purpose of normalization. For arrays (lines 16-21), the same issue exists - the spread ...customer comes after id/__ID, so existing values overwrite the normalized ones.",
+          "file_paths": [
+            "src/api/customers.js"
+          ],
+          "code_snippet": "function normalizeCustomerData(data) {\n  if (Array.isArray(data)) {\n    return data.map(customer => ({\n      id: customer.id || customer.__ID,\n      __ID: customer.id || customer.__ID,\n      ...customer  // Overwrites id and __ID if present in customer\n    }));\n  }\n  return {\n    id: data.id || data.__ID,\n    __ID: data.id || data.__ID,\n    ...data  // Overwrites id and __ID if present in data\n  };\n}",
+          "recommendation": "Reverse the spread order to ensure normalized values take precedence: `return { ...customer, id: customer.id || customer.__ID, __ID: customer.id || customer.__ID }` for arrays, and `return { ...data, id: data.id || data.__ID, __ID: data.id || data.__ID }` for objects. This ensures the normalized values always override any existing conflicting fields."
+        },
+        {
+          "id": "COD-008",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Race Condition in handleCustomerUpdate State Updates",
+          "description": "In useCustomer.js lines 267-278, handleCustomerUpdate updates local state using functional setState (setCustomers, setSelectedCustomer) but the updates occur AFTER the async updateCustomer call returns. If the user triggers multiple rapid updates or if another operation modifies customers state during the update, the state updates could be based on stale data. Additionally, line 270 uses spread operator to merge customerData into existing customer, but customerData might contain only partial fields - this could accidentally overwrite fields with undefined.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// Lines 267-278\nsetCustomers(prevCustomers =>\n  prevCustomers.map(customer =>\n    customer.id === customerId || customer.__ID === customerId\n      ? { ...customer, ...customerData }  // Partial merge - could overwrite with undefined\n      : customer\n  )\n);\n\nif (selectedCustomer?.id === customerId || selectedCustomer?.__ID === customerId) {\n  setSelectedCustomer(prev => ({ ...prev, ...customerData })); // Same issue\n}",
+          "recommendation": "Replace optimistic local state updates with a proper reload from the backend after successful update: `await loadCustomers()` and `await handleCustomerSelect(customerId)`. This ensures state is always in sync with backend. If optimistic updates are required for UX, store the API response and merge that instead of the input customerData: `const result = await updateCustomer(...); setCustomers(prev => prev.map(c => c.id === customerId ? result : c));`"
+        },
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "critical",
+          "title": "Sensitive Authentication Data Logged to Console",
+          "description": "In src/services/dataService.js line 28, the entire authentication context object (including user data and organization IDs) is logged to the console using console.log(). This exposes sensitive authentication information in browser DevTools, potentially allowing attackers with physical or remote access to view or exfiltrate user sessions, organization IDs, and authentication tokens. Additionally, lines 123-143 log authentication state and organization IDs. In src/config.js lines 6-31, secret key lengths and existence flags are logged, which can help attackers identify environment configuration weaknesses.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/config.js"
+          ],
+          "code_snippet": "// dataService.js:28\nexport const setAuthenticationContext = (authState) => {\n  currentAuthentication = { ...authState };\n  console.log('[DataService] Authentication context set:', currentAuthentication);\n};\n\n// dataService.js:137\nconsole.log('[DataService] Added organization context:', auth.user.supabaseOrgID);\n\n// config.js:6-17\nconsole.log('[ENV-INVESTIGATION] Environment variable loading check:', {\n  viteSecretKeyExists: !!import.meta.env?.VITE_SECRET_KEY,\n  viteSecretKeyLength: import.meta.env?.VITE_SECRET_KEY?.length,\n  viteServiceRoleKeyExists: !!import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY,\n  viteServiceRoleKeyLength: import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY?.length\n});",
+          "recommendation": "Remove all console.log statements that expose authentication data, user context, organization IDs, or key existence/lengths. Replace with proper logging framework that can be disabled in production. At minimum, wrap in environment checks: `if (import.meta.env.DEV) { console.log(...); }` or use a dedicated debug flag. For production, implement server-side logging with proper sanitization."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "critical",
+          "title": "Supabase Service Role Key Exposed in Frontend Code",
+          "description": "In src/config.js line 22 and src/services/supabaseService.js lines 10, 16, 42-44, 48, 57, the VITE_SUPABASE_SERVICE_ROLE_KEY is imported and used in frontend code. The service role key bypasses ALL Row-Level Security (RLS) policies and grants unrestricted database access. Exposing this in frontend code means it's bundled in the client-side JavaScript and can be extracted by any user viewing the bundled application. This is a critical security breach allowing attackers to bypass all authorization and access/modify any data in the database across all organizations.",
+          "file_paths": [
+            "src/config.js",
+            "src/services/supabaseService.js"
+          ],
+          "code_snippet": "// config.js:22\nexport const supabaseServiceRoleKey = import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY;\n\n// supabaseService.js:10\nimport { supabaseServiceRoleKey } from '../config';\n\n// supabaseService.js:42-48\nconst performAdminOperation = async (operation) => {\n  if (!supabaseServiceRoleKey) {\n    console.warn('Service role key not available, using regular client');\n    return await operation(supabase);\n  }\n  const result = await operation(supabase, supabaseServiceRoleKey);\n  return result;\n};",
+          "recommendation": "IMMEDIATELY remove all references to VITE_SUPABASE_SERVICE_ROLE_KEY from frontend code. Service role keys must ONLY exist in secure backend environments. Move all admin operations (performAdminOperation) to backend API endpoints. Update migration scripts to run server-side only. If admin operations are needed from frontend, create dedicated backend API endpoints that validate user permissions before executing privileged operations. See MIGRATION_SCRIPTS_SECURITY.md which correctly identifies this issue."
+        },
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent Organization Scope Validation Pattern",
+          "description": "The customer API implementation uses a custom checkOrganizationScope function defined locally in src/errors/customerErrors.js (lines 346-349), while other API modules (notes.js, projects.js, tasks.js, links.js, images.js) define their own identical checkOrganizationScope functions locally within each file. This violates DRY principles and creates inconsistent error handling. For example, notes.js lines 9-13 defines checkOrganizationScope that throws a generic Error, while customerErrors.js throws a CustomerError. Projects.js lines 42-46 also defines its own version throwing generic Error.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/notes.js",
+            "src/api/projects.js",
+            "src/errors/customerErrors.js"
+          ],
+          "code_snippet": "// notes.js:9-13 (duplicated pattern)\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n  if (!auth?.user?.supabaseOrgID) {\n    throw new Error(`Organization context required for ${operation}. Please authenticate.`);\n  }\n}\n\n// projects.js:42-46 (duplicated again)\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n  if (!auth?.user?.supabaseOrgID) {\n    throw new Error(`Organization context required for ${operation}. Please authenticate.`);\n  }\n}\n\n// customerErrors.js:346-349 (customer-specific version)\nexport function checkOrganizationScope(env, operation = 'unknown') {\n  if (env.type === 'webapp') {\n    if (!env.authentication?.user?.supabaseOrgID) {\n      throw new CustomerError(...);",
+          "recommendation": "Consolidate checkOrganizationScope into a shared utility module. Since it's already exported from src/errors/customerErrors.js and re-exported from src/errors/index.js, all API modules should import it from there instead of defining local versions. Update notes.js, projects.js, tasks.js, links.js, and images.js to: `import { checkOrganizationScope } from '../errors';` This ensures consistent error types (CustomerError vs generic Error) and centralized org scope logic."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent Data Access Pattern - Direct Supabase vs Backend API",
+          "description": "The codebase has two completely different architectural patterns for data access: (1) Customers use Backend API with HMAC authentication (src/api/customers.js uses dataService), and (2) Prospects use direct Supabase client calls (src/api/prospects.js creates its own Supabase client at line 20). This architectural inconsistency creates confusion about which pattern to follow for new features. Per CLAUDE.md, customers use 'Backend API Integration' while prospects remain on 'direct Supabase'. However, both entities use the same underlying database tables (customers table with type='CUSTOMER' vs type='PROSPECT'), suggesting they should use the same access pattern.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/prospects.js",
+            "src/hooks/useCustomer.js",
+            "src/hooks/useProspect.js"
+          ],
+          "code_snippet": "// customers.js:1 - Backend API pattern\nimport { dataService, getAuthenticationContext } from '../services/dataService';\n// Uses withErrorHandling wrapper and dataService.get/post/put/delete\n\n// prospects.js:16-20 - Direct Supabase pattern\nimport { createClient } from '@supabase/supabase-js'\nimport { supabaseUrl, supabaseAnonKey } from '../config.js'\nconst supabase = createClient(supabaseUrl, supabaseAnonKey)\n// Uses direct Supabase client: supabase.from('customers').select()...",
+          "recommendation": "Standardize on a single data access pattern. Recommended approach: (1) Migrate prospects to use Backend API for consistency with customers, OR (2) Document explicit decision criteria for when to use direct Supabase vs Backend API (e.g., 'Use Backend API for entities requiring cross-system integration, use Supabase for simple CRUD'). Add architecture decision record (ADR) to docs/ explaining the dual pattern and migration plan. Update CLAUDE.md to clarify the strategy. Consider creating a 'prospects' backend API endpoint following the same pattern as customers."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent Hook State Management Pattern",
+          "description": "Customer hook (useCustomer.js) implements complex state with pagination, search, and formattedError (lines 38-51), while similar hooks like useProspect.js (lines 11-14) and useTeam.js (lines 32-39) use simpler state structures. More critically, useCustomer returns a complex object with nested properties (lines 460-495) including actions, state, and utility functions, while useProspect returns a flat object. The pattern is inconsistent: useCustomer has 'activeCustomers' as a computed getter (line 476), but useProspect computes sortProspects inline (line 25). This makes hooks non-interchangeable and harder to understand.",
+          "file_paths": [
+            "src/hooks/useCustomer.js",
+            "src/hooks/useProspect.js",
+            "src/hooks/useTeam.js"
+          ],
+          "code_snippet": "// useCustomer.js:460-495 - Complex return structure\nreturn {\n  // State\n  loading, error, formattedError, customers, selectedCustomer, stats, pagination,\n  // Search state\n  searchResults, isSearching, searchQuery,\n  // Active customers getter\n  activeCustomers: customers.filter(customer => customer.isActive || customer.is_active),\n  // Actions\n  loadCustomers, handleCustomerSelect, handleCustomerCreate, ...\n  // Utility functions\n  clearError: () => { ... },\n  setPagination\n};\n\n// useProspect.js:218-230 - Simpler flat structure\nreturn {\n  prospects, loading, error, loadProspects, handleProspectSelect,\n  handleProspectCreate, handleProspectUpdate, handleProspectDelete,\n  handleConvertToCustomer, searchProspects\n}",
+          "recommendation": "Standardize hook return patterns across the codebase: (1) Define a consistent structure in architecture docs (e.g., always return { state: {...}, actions: {...}, computed: {...} }), (2) Update useCustomer to match simpler pattern used by useProspect/useTeam, removing inline computed properties like activeCustomers (compute in component instead), (3) Remove utility functions like clearError/clearSelectedCustomer from hook return (provide reset actions instead), (4) Standardize error handling - either all hooks return formattedError or none do."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing Error Handling Wrapper Pattern in API Calls",
+          "description": "Customer API operations in src/api/customers.js consistently use withErrorHandling wrapper (lines 44, 82, 102, etc.) for error processing, but other API modules like notes.js, projects.js, and prospects.js do not use any error handling wrapper - they rely on try-catch in hooks. This creates inconsistent error handling: customers get parsed HTTP errors with user-friendly messages via parseHttpError, while notes/projects throw raw errors that hooks must handle. The withErrorHandling pattern (defined in customerErrors.js lines 360+) is not reused elsewhere despite being a good architectural pattern.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/notes.js",
+            "src/api/projects.js",
+            "src/errors/customerErrors.js"
+          ],
+          "code_snippet": "// customers.js:43-74 - Uses withErrorHandling wrapper\nexport async function fetchCustomers(options = {}) {\n  return withErrorHandling(async () => {\n    const auth = getAuthenticationContext();\n    checkOrganizationScope({ authentication: auth }, 'fetchCustomers');\n    const response = await dataService.get('/api/customers', { params: queryParams });\n    return normalizeCustomerData(response.data || response);\n  }, 'fetchCustomers', { options });\n}\n\n// notes.js:31-82 - No error wrapper, raw errors\nexport async function createNote(data) {\n  if (!data) {\n    throw new Error('Data is required'); // Raw Error, not parsed\n  }\n  const auth = getAuthenticationContext();\n  checkOrganizationScope({ authentication: auth }, 'createNote');\n  const response = await dataService.post(endpoint, payload); // Can throw raw axios errors\n  return response.data || response;\n}",
+          "recommendation": "Create a generic withErrorHandling wrapper in src/errors/index.js (or src/services/errorHandling.js) that can be used by all API modules, not just customers. The wrapper should: (1) Parse HTTP errors consistently using parseHttpError, (2) Support different error code namespaces (CustomerErrorCodes, ProjectErrorCodes, etc.), (3) Be importable from shared location. Update notes.js, projects.js, tasks.js, etc. to wrap all API functions with this standardized error handler for consistency."
+        }
+      ],
+      "dropped_findings": [
+        "COM-003",
+        "COM-004",
+        "COM-005",
+        "COD-004",
+        "COD-005",
+        "COD-006",
+        "COD-007",
+        "ARC-005",
+        "ARC-006",
+        "ARC-007"
+      ],
+      "merged_findings": [],
+      "decisions": [
+        {
+          "finding_id": "COM-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COM-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COM-006",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-008",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-001",
+          "action": "keep",
+          "reason": "critical severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-002",
+          "action": "keep",
+          "reason": "critical severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-004",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COM-003",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COM-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COM-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-006",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-007",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-006",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-007",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        }
+      ],
+      "summary": "Judge phase complete: 31 findings reviewed, 13 kept (critical/major), 10 dropped (minor/suggestion), 0 merged (duplicates)"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T01:10:08.818Z",
+    "output": {
+      "review_status": "blocked",
+      "tasks_created": [
+        "TASK016",
+        "TASK017",
+        "TASK018",
+        "TASK019",
+        "TASK020",
+        "TASK021",
+        "TASK022",
+        "TASK023",
+        "TASK024",
+        "TASK025",
+        "TASK026",
+        "TASK027",
+        "TASK028"
+      ],
+      "summary": "Found 13 issue(s) requiring remediation - created 13 task(s)",
+      "findings_count": 13
+    }
+  }
+}

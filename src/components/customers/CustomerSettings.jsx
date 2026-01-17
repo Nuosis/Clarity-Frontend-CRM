@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
-import { useAppState } from '../../context/AppStateContext';
-import { useSupabaseCustomer } from '../../hooks/useSupabaseCustomer';
 import { useCustomer } from '../../hooks/useCustomer';
 import { useSnackBar } from '../../context/SnackBarContext';
 import { query, insert, update, remove } from '../../services/supabaseService';
@@ -14,8 +12,6 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 function CustomerSettings({ customer }) {
   const { darkMode } = useTheme();
-  const { user, customerDetails } = useAppState();
-  const { updateCustomerInSupabase } = useSupabaseCustomer();
   const { handleCustomerUpdate } = useCustomer();
   const { showError } = useSnackBar();
 

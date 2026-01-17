@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T19:19:31.138Z",
+    "featureSlug": "projects-backend-integration",
+    "taskId": "TASK016",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] Direct Supabase client calls violate standing constraint",
+    "sessionId": "019bcd65-fa9c-7260-834f-d6ca2b0549ab",
+    "processId": 1768677571137,
+    "lastUpdated": "2026-01-17T19:21:01.021Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T19:19:31.145Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-17T19:21:00.883Z",
+    "output": {
+      "success": true,
+      "sessionId": "019bcd65-fa9c-7260-834f-d6ca2b0549ab",
+      "processId": 10838,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\nFindings\n- Critical: `src/api/prospects.js:16` and `src/api/prospects.js:20` use `createClient` + direct `supabase.from(...)` CRUD (`src/api/prospects.js:25` onward), violating the standing requirement in `ai_docs/tasks/feature_prospects.md` to use backend REST routes with HMAC and **no direct Supabase client**; this bypasses the backend auth/audit layer and conflicts with mandated architecture.\n- High: `src/api/teams.js:14` and `src/api/teams.js:18` initialize a direct Supabase client and perform queries (e.g., `src/api/teams.js:25`), bypassing the `supabaseService`/backend proxy design described in `src/services/supabaseService.js` and creating inconsistent auth/error handling.\n- High: `src/components/customers/CustomerSettings.jsx:8` and `src/components/customers/CustomerSettings.jsx:11` create a direct Supabase client for `customer_settings` reads/writes (`src/components/customers/CustomerSettings.jsx:139`, `src/components/customers/CustomerSettings.jsx:210`), violating the “no direct client” constraint and duplicating data access logic already available via `src/services/supabaseService.js`.\n\nQuestions / Assumptions\n- Should `teams` also be migrated to backend REST routes (similar to prospects), or is it expected to use `supabaseService` wrapper calls only?\n\nChange Summary\n- No code changes made; review only.\n\nTesting\n- Not run (no code changes)."
+    }
+  },
+  "ValidateNode": {
+    "timestamp": "2026-01-17T19:21:01.018Z",
+    "output": {
+      "passed": false,
+      "buildPassed": false,
+      "buildErrors": "Build failed with exit code 1:\nnpm error Missing script: \"typecheck\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /Users/marcusswift/.npm/_logs/2026-01-17T19_21_00_986Z-debug-0.log\n",
+      "error": "Build verification failed"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T19:21:01.021Z",
+    "output": {
+      "taskStatus": "blocked",
+      "summary": "Task validation failed: Build verification failed",
+      "nextTaskTriggered": true
+    }
+  }
+}

@@ -166,13 +166,7 @@ All operations should route through backend API endpoints with:
 - `src/hooks/useCustomer.js` - Main customer hook (268 lines)
   - State management for customers list and selected customer
   - All CRUD operations with loading/error states
-  - **Dual-write on update**: Lines 112-177 call `updateCustomerInSupabase()` after FM update
-
-- `src/hooks/useSupabaseCustomer.js` - Supabase-specific operations (487 lines)
-  - `createCustomerInSupabase(customer, user)` - Create customer + related records
-  - `updateCustomerInSupabase(customerId, customer, user)` - Update customer + related records
-  - `linkCustomerToOrganization(customerId, orgId)` - Link to org
-  - `fetchOrCreateCustomerInSupabase(customer, user)` - Find or create customer
+  - Backend API is the source of truth for customer CRUD in web app mode
 
 ### UI Components
 - `src/components/customers/CustomerDetails.jsx` - Customer detail view with tabs

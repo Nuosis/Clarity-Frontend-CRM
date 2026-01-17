@@ -1,13 +1,83 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-15T00:00:00Z",
+  "updated_at": "2026-01-17T04:15:28.926Z",
   "feature": {
     "name": "QuickBooks Backend Integration",
     "slug": "quickbooks-backend-integration",
     "description": "Integrate frontend with new backend QuickBooks API infrastructure for connection management, synchronization, and invoice operations",
-    "review_status": "pending",
-    "review_iteration": 0,
-    "implementation_notes": "IMPORTANT: Phase 1 (OAuth/Connection) can proceed using integration_tokens table. Phase 2 (Invoicing) BLOCKED until backend deploys customer_sales schema changes (is_billed, quickbooks_invoice_id, quickbooks_synced_at, billed_at columns). See QUICKBOOKS_IMPLEMENTATION_STATUS.md for details."
+    "review_status": "blocked",
+    "review_iteration": 2,
+    "review_stage": "finalizing",
+    "review_session_id": "154c5c27-7863-427e-b6bf-cc4f3985e654",
+    "updatedAt": "2026-01-17T04:15:28.928Z",
+    "last_review": {
+      "feature_slug": "quickbooks-backend-integration",
+      "reviewed_at": "2026-01-17T04:15:28.926Z",
+      "status": "blocked",
+      "iteration": 2,
+      "mode": "autonomous",
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Infinite re-render risk in QuickBooksConfigPanel useCallback dependency",
+          "description": "The loadConfiguration useCallback has 'config' (a state object) in its dependency array at line 108. Since config is initialized with a complex object literal and is updated by the same function, this creates a dependency cycle that could cause infinite re-renders. The useEffect at line 178-180 calls loadConfiguration, which then updates config, which causes loadConfiguration to be recreated, which triggers the useEffect again.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "const loadConfiguration = useCallback(async () => {\n  // ... code ...\n  if (savedConfig) {\n    const parsedConfig = JSON.parse(savedConfig);\n    setConfig(parsedConfig);\n    setInitialConfig(parsedConfig);\n  } else {\n    // Use default config\n    setInitialConfig(config);  // <-- Uses config from state\n  }\n}, [user?.supabaseOrgID, config]);  // <-- config in deps causes recreation",
+          "recommendation": "Remove 'config' from the dependency array and instead capture the default config in a constant or useMemo outside the callback. Example: const DEFAULT_CONFIG = useMemo(() => ({ cad_tax_code: 4, ... }), []); Then use DEFAULT_CONFIG instead of 'config' in the else branch."
+        },
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "critical",
+          "title": "SQL Injection vulnerability in deprecated legacy functions",
+          "description": "The deprecated functions listQBOCustomerByName (line 510) and getQBOAccount (line 543) construct SQL-like queries using string interpolation without proper sanitization. An attacker could inject malicious QuickBooks Query Language (QQL) statements by passing crafted input through the customerName or accountId parameters. For example: customerName = \"' OR 1=1--\" could return all customers instead of the intended match.",
+          "file_paths": [
+            "src/api/quickbooksApi.js"
+          ],
+          "code_snippet": "export const listQBOCustomerByName = async (customerName) => {\n  console.warn('listQBOCustomerByName is deprecated. Use executeQBOQuery with a custom query instead.');\n  const query = `SELECT * FROM Customer WHERE DisplayName LIKE '%${customerName}%'`;\n  return await executeQBOQuery(query);\n};\n\nexport const getQBOAccount = async (accountId) => {\n  console.warn('getQBOAccount is deprecated. Use executeQBOQuery instead.');\n  return await executeQBOQuery(`SELECT * FROM Account WHERE Id = '${accountId}'`);\n};",
+          "recommendation": "Remove these deprecated functions entirely (they're marked deprecated anyway) OR use parameterized queries if QuickBooks API supports it. Since these are deprecated and the comment suggests using executeQBOQuery directly, the best fix is to delete these functions and update any calling code to use the safer alternatives (searchQBOCustomers, listQBOItems with filters)."
+        },
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing service layer for QuickBooks business logic",
+          "description": "The QuickBooks integration lacks a dedicated service layer (quickbooksService.js) that sits between the API client and components. All other features follow the pattern: Component → Hook → Service → API. For example, Notes has noteService.js with transformBackendNote(), Customers has customerService.js with processBackendCustomerList(), and Projects has projectService.js. The QuickBooks components (QuickBooksConnectionPanel, QuickBooksSyncPanel, QuickBooksConfigPanel) call API functions directly, embedding business logic like validation, error formatting, and data transformation inside components.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx",
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "// QuickBooksConnectionPanel.jsx - Direct API calls in component\nconst response = await getQuickBooksStatus(user.supabaseOrgID);\nif (response.success) {\n  setConnectionStatus(response.data);\n}\n\n// QuickBooksSyncPanel.jsx - Business logic in component\nconst response = await syncInvoices({\n  start_date: dateRange.startDate,\n  end_date: dateRange.endDate,\n  full_sync: fullSync\n});\nif (response.success && response.data) {\n  setSyncStatus('success');\n  setLastSyncResult(response.data);\n  localStorage.setItem('qb_last_sync', JSON.stringify({...}));\n}",
+          "recommendation": "Create src/services/quickbooksService.js following the established pattern:\n\n// quickbooksService.js\nexport function transformQuickBooksStatus(response) {\n  return {\n    connected: response.data.connected,\n    realmId: response.data.realm_id,\n    expiresAt: response.data.expires_at,\n    isExpired: response.data.is_expired\n  };\n}\n\nexport function formatSyncResult(data) {\n  return {\n    invoicesSynced: data.invoices_synced,\n    newInvoices: data.new_invoices,\n    updatedInvoices: data.updated_invoices,\n    syncTimestamp: data.sync_timestamp\n  };\n}\n\nexport function validateSyncDateRange(startDate, endDate) {\n  if (!startDate || !endDate) {\n    throw new Error('Start and end dates are required');\n  }\n  if (new Date(startDate) > new Date(endDate)) {\n    throw new Error('Start date must be before end date');\n  }\n}\n\nThen refactor components to use the service layer."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing custom hook for QuickBooks state management",
+          "description": "The project follows a consistent pattern where complex feature state is managed through custom hooks (useCustomer, useNote, useProject, useTask, useTeam, etc.). These hooks encapsulate state management, loading states, error handling, and business operations. The QuickBooks panels directly manage their own state with useState/useCallback, duplicating patterns that should be centralized in a useQuickBooks hook. This violates the established architecture where components focus on rendering while hooks handle state and operations.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConnectionPanel.jsx",
+            "src/components/financial/QuickBooksSyncPanel.jsx",
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "// Current pattern - state management in component\nconst [connectionStatus, setConnectionStatus] = useState(null);\nconst [isLoading, setIsLoading] = useState(true);\nconst [error, setError] = useState(null);\nconst [companyInfo, setCompanyInfo] = useState(null);\n\nconst fetchConnectionStatus = useCallback(async () => {\n  setIsLoading(true);\n  setError(null);\n  try {\n    const response = await getQuickBooksStatus(user.supabaseOrgID);\n    setConnectionStatus(response.data);\n  } catch (err) {\n    setError(err.message);\n  } finally {\n    setIsLoading(false);\n  }\n}, [user?.supabaseOrgID]);",
+          "recommendation": "Create src/hooks/useQuickBooks.js following the established pattern:\n\n// useQuickBooks.js\nimport { useState, useCallback } from 'react';\nimport { useSnackBar } from '../context/SnackBarContext';\nimport { getQuickBooksStatus, syncInvoices, getQuickBooksConfig, updateQuickBooksConfig } from '../api/quickbooksApi';\nimport { transformQuickBooksStatus, formatSyncResult } from '../services/quickbooksService';\n\nexport function useQuickBooks() {\n  const [loading, setLoading] = useState(false);\n  const [error, setError] = useState(null);\n  const [connectionStatus, setConnectionStatus] = useState(null);\n  const [syncResult, setSyncResult] = useState(null);\n  const [config, setConfig] = useState(null);\n  const { showError, showSuccess } = useSnackBar();\n\n  const loadConnectionStatus = useCallback(async (organizationId) => {\n    try {\n      setLoading(true);\n      setError(null);\n      const response = await getQuickBooksStatus(organizationId);\n      const status = transformQuickBooksStatus(response);\n      setConnectionStatus(status);\n      return status;\n    } catch (err) {\n      setError(err);\n      showError(err.message);\n      return null;\n    } finally {\n      setLoading(false);\n    }\n  }, [showError]);\n\n  const performSync = useCallback(async (params) => {\n    // Similar pattern...\n  }, [showError, showSuccess]);\n\n  return {\n    loading,\n    error,\n    connectionStatus,\n    syncResult,\n    config,\n    loadConnectionStatus,\n    performSync,\n    loadConfig,\n    saveConfig\n  };\n}\n\nThen simplify components to just call hook methods."
+        }
+      ],
+      "tasks_created": [
+        "TASK009",
+        "TASK010",
+        "TASK011",
+        "TASK012"
+      ],
+      "summary": "Found 4 issue(s) requiring remediation - created 4 task(s)"
+    }
   },
   "standing_constraints": [
     "Backend schema must be verified deployed before implementing frontend features",
@@ -21,294 +91,207 @@
   "tasks": [
     {
       "id": "TSK0001",
+      "feature": "quickbooks-backend-integration",
       "title": "Verify backend schema deployment",
-      "description": "SSH into backend server and verify quickbooks_tokens and organization_quickbooks_config tables exist with expected schema. Verify customer_sales table has new columns (is_billed, quickbooks_invoice_id, quickbooks_synced_at, billed_at). Document any missing schema elements.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [],
-      "acceptance_criteria": [
-        "\u2705 Token storage verified - integration_tokens table exists (use provider='quickbooks')",
-        "\u26a0\ufe0f Config table does not exist - can use meta_data field as workaround",
-        "\u274c customer_sales MISSING QuickBooks columns - blocks Phase 2 implementation",
-        "\u26a0\ufe0f RLS policies need verification after schema deployment",
-        "\u274c QuickBooks indexes do not exist yet",
-        "\u2705 Complete documentation created (BACKEND_SCHEMA_VERIFICATION_QUICKBOOKS.md, QUICKBOOKS_IMPLEMENTATION_STATUS.md)"
-      ],
-      "estimated_hours": 1,
-      "actual_hours": 1,
-      "completed_at": "2026-01-15T00:00:00Z",
-      "notes": "Discovered integration_tokens table can be used instead of dedicated quickbooks_tokens table. Phase 1 (OAuth) can proceed, Phase 2 (invoicing) blocked until customer_sales schema deployed.",
-      "artifacts": [
-        "BACKEND_SCHEMA_VERIFICATION_QUICKBOOKS.md",
-        "QUICKBOOKS_IMPLEMENTATION_STATUS.md"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "SSH into backend server and verify quickbooks_tokens and organization_quickbooks_config tables exist with expected schema. Verify customer_sales table has new columns (is_billed, quickbooks_invoice_id, quickbooks_synced_at, billed_at). Document any missing schema elements.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented a backend schema verification for QuickBooks integration by SSHing into the server, confirming that QuickBooks-specific tables are absent and that 'customer_sales' exists but lacks the four required QuickBooks columns, along with identifying the existing legacy index 'idx_customer_sales_unbilled_org' that should be supplemented with a future 'is_billed' index rather than replaced. Discovered and validated that the generic 'integration_tokens' table is suitable for QuickBooks OAuth token storage (via a 'provider' field), which enables Phase 1 work (OAuth, token refresh, connection status, disconnect) without schema changes. Created/updated two docs, 'BACKEND_SCHEMA_VERIFICATION_QUICKBOOKS.md' and 'QUICKBOOKS_IMPLEMENTATION_STATUS.md', and updated the task JSON to mark TSK0001 complete while noting Phase 2 is blocked pending a migration to add 'is_billed', 'quickbooks_invoice_id', 'quickbooks_synced_at', and 'billed_at' plus new indexes for invoice lookup and unbilled filtering.",
-      "feature": "quickbooks-backend-integration"
+      "depends_on": []
     },
     {
       "id": "TSK0002",
+      "feature": "quickbooks-backend-integration",
       "title": "Test backend QuickBooks endpoints",
-      "description": "Test all new backend endpoints using cURL or API client. Verify /quickbooks/status, /quickbooks/unbilled-records, /quickbooks/invoices/from-records, /quickbooks/sync-invoices endpoints work correctly with HMAC authentication. Document request/response formats.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0001"
-      ],
-      "acceptance_criteria": [
-        "\u2705 GET /quickbooks/status returns connection status (200 OK with org_id param)",
-        "\u26a0\ufe0f GET /quickbooks/unbilled-records returns 403 (requires billing role, not available via HMAC)",
-        "\u26a0\ufe0f POST /quickbooks/invoices/from-records returns 403 (requires billing role, not available via HMAC)",
-        "\u26a0\ufe0f POST /quickbooks/sync-invoices returns 403 (requires billing role, not available via HMAC)",
-        "\u2705 All endpoints return proper error responses for auth failures",
-        "\u2705 Request/response formats documented in QUICKBOOKS_BACKEND_API_TESTS.md"
-      ],
-      "estimated_hours": 2,
-      "actual_hours": 2,
-      "completed_at": "2026-01-15T23:50:00Z",
-      "notes": "All endpoints are deployed and responding correctly. Status endpoint works with HMAC auth when organization_id is provided as query param. Unbilled records, invoice creation, and sync endpoints require user roles (admin/billing/owner) which are not provided by HMAC authentication - these should be called with JWT auth from authenticated user context. Created comprehensive documentation and reusable Node.js test script.",
-      "artifacts": [
-        "docs/QUICKBOOKS_BACKEND_API_TESTS.md",
-        "test-qb-endpoints.js"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Test all new backend endpoints using cURL or API client. Verify /quickbooks/status, /quickbooks/unbilled-records, /quickbooks/invoices/from-records, /quickbooks/sync-invoices endpoints work correctly with HMAC authentication. Document request/response formats.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Created and executed Node.js test script (test-qb-endpoints.js) using proper HMAC-SHA256 authentication to test QuickBooks backend endpoints. Verified that /quickbooks/status endpoint works correctly (200 OK) when organization_id is provided as query parameter. Discovered that /quickbooks/unbilled-records, /quickbooks/invoices/from-records, and /quickbooks/sync-invoices all require billing-related user roles (admin/billing/owner) and return 403 errors with HMAC auth since HMAC does not carry user role information. These endpoints are designed for JWT-based user authentication. Created comprehensive documentation (QUICKBOOKS_BACKEND_API_TESTS.md) covering all endpoints with request/response formats, authentication details, role requirements, error codes, and frontend integration examples. All endpoints are production-ready and operational.",
-      "feature": "quickbooks-backend-integration"
+      "depends_on": []
     },
     {
       "id": "TSK0003",
+      "feature": "quickbooks-backend-integration",
       "title": "Update quickbooksApi.js with new endpoint functions",
-      "description": "Add functions to src/api/quickbooksApi.js for new endpoints: getQuickBooksStatus(), getUnbilledRecords(), createInvoiceFromRecords(), syncInvoices(). Follow existing HMAC authentication pattern. Add JSDoc documentation.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0002"
-      ],
-      "acceptance_criteria": [
-        "\u2705 getQuickBooksStatus() function implemented and tested",
-        "\u2705 getUnbilledRecords(params) function implemented",
-        "\u2705 createInvoiceFromRecords(data) function implemented",
-        "\u2705 syncInvoices(data) function implemented",
-        "\u2705 All functions use HMAC authentication correctly via makeRequest()",
-        "\u2705 JSDoc comments added for all new functions with detailed param/return docs",
-        "\u2705 Functions handle errors and return consistent format (success/error pattern)",
-        "\u2705 All functions added to default export for backward compatibility",
-        "\u2705 Build verification passed"
-      ],
-      "estimated_hours": 3,
-      "actual_hours": 1,
-      "completed_at": "2026-01-15T23:55:00Z",
-      "notes": "Added four new API client functions following existing patterns. All functions use the shared makeRequest() helper which handles HMAC authentication, organization headers, and error handling. Comprehensive JSDoc documentation added with parameter descriptions, return types, examples, and role requirement warnings. Verified with backend endpoint tests - getQuickBooksStatus works correctly, other endpoints return expected 403 errors due to role requirements (they need JWT auth, not HMAC). Build verification passed with no compilation errors.",
-      "artifacts": [
-        "src/api/quickbooksApi.js (updated)"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Add functions to src/api/quickbooksApi.js for new endpoints: getQuickBooksStatus(), getUnbilledRecords(), createInvoiceFromRecords(), syncInvoices(). Follow existing HMAC authentication pattern. Add JSDoc documentation.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented four new QuickBooks API client functions in 'src/api/quickbooksApi.js' for the added endpoints: 'getQuickBooksStatus', 'getUnbilledRecords', 'createInvoiceFromRecords', and 'syncInvoices', all using the existing 'makeRequest()' HMAC authentication pattern with consistent error handling and added JSDoc. Updated both named exports and the default export to include the new functions, then verified compilation via a successful build. Confirmed runtime behavior using the existing 'test-qb-endpoints.js' script: status succeeds via HMAC, while the other role-protected endpoints correctly return 403 because they require JWT-based roles. Marked the work complete by updating '.devflow/tasks/quickbooks-backend-integration/tasks.json' for TSK0003.",
-      "feature": "quickbooks-backend-integration"
+      "depends_on": []
     },
     {
       "id": "TSK0004",
+      "feature": "quickbooks-backend-integration",
       "title": "Create QuickBooksConnectionPanel component",
-      "description": "Create new UI component at src/components/financial/QuickBooksConnectionPanel.jsx for managing QuickBooks connection. Show connection status, connect/disconnect buttons, OAuth flow integration. Use getQuickBooksStatus() API function.",
-      "status": "done",
       "priority": "medium",
-      "dependencies": [
-        "TSK0003"
-      ],
-      "acceptance_criteria": [
-        "\u2705 Component shows connection status (connected/disconnected)",
-        "\u2705 Connect button initiates OAuth flow via backend",
-        "\u26a0\ufe0f Disconnect button not implemented (reconnect only - no disconnect endpoint available)",
-        "\u2705 Shows QB company name when connected",
-        "\u2705 Shows token expiration status with color-coded badges",
-        "\u2705 Loading states during OAuth flow",
-        "\u2705 Error messages for connection failures",
-        "\u2705 Component is responsive and follows design system",
-        "\u2705 Build verification passed"
-      ],
-      "estimated_hours": 4,
-      "actual_hours": 2,
-      "completed_at": "2026-01-16T00:30:00Z",
-      "notes": "Component successfully created with connection status display, OAuth flow integration, and company info fetching. Implemented expiration status badges with color coding (green=valid, yellow=expiring soon, red=expired). Handles OAuth callback URL cleanup. Uses organization ID from AppStateContext user object. No disconnect functionality as backend does not expose a disconnect/revoke endpoint - users can reconnect to refresh tokens.",
-      "artifacts": [
-        "src/components/financial/QuickBooksConnectionPanel.jsx"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Create new UI component at src/components/financial/QuickBooksConnectionPanel.jsx for managing QuickBooks connection. Show connection status, connect/disconnect buttons, OAuth flow integration. Use getQuickBooksStatus() API function.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented a new QuickBooks connection management UI by adding the QuickBooksConnectionPanel component in 'src/components/financial/QuickBooksConnectionPanel.jsx', integrating it with the existing QuickBooks APIs ('getQuickBooksStatus', 'getQBOAuthorizationUrl', 'getQBOCompanyInfo') to handle OAuth initiation, callback detection, status refresh, and display of company info plus token expiration states. Wired the panel into 'src/components/financial/FinancialActivity.jsx' as a new 'QuickBooks Connection' tab, sourcing the organization id from AppStateContext ('user.supabaseOrgID') and matching existing Tailwind and darkMode patterns. Added supporting documentation in 'docs/QUICKBOOKS_CONNECTION_PANEL.md' and updated the task tracking JSON to mark TSK0004 complete, with the key decision to omit a disconnect action since no backend revocation endpoint exists (reconnect supported instead).",
-      "feature": "quickbooks-backend-integration"
+      "depends_on": []
     },
     {
       "id": "TSK0005",
+      "feature": "quickbooks-backend-integration",
       "title": "Create QuickBooksSyncPanel component",
-      "description": "Create new UI component at src/components/financial/QuickBooksSyncPanel.jsx for triggering and monitoring financial record synchronization. Show sync progress, status, and errors. Use syncInvoices() API function.",
-      "status": "done",
       "priority": "medium",
-      "dependencies": [
-        "TSK0003"
-      ],
-      "acceptance_criteria": [
-        "\u2705 Component has Sync Now button to trigger sync",
-        "\u2705 Shows sync status (idle, in-progress, success, error)",
-        "\u2705 Displays progress indicator during sync",
-        "\u2705 Shows last sync timestamp with localStorage persistence",
-        "\u2705 Shows sync summary (invoices synced, new, updated)",
-        "\u2705 Error display with retry option",
-        "\u2705 Component is responsive and follows design system",
-        "\u2705 Date range selection with quick presets (current/previous month)",
-        "\u2705 Full sync option for thorough synchronization",
-        "\u2705 Dark mode support",
-        "\u2705 Integrated into FinancialActivity as 'Invoice Sync' tab",
-        "\u2705 Build verification passed"
-      ],
-      "estimated_hours": 4,
-      "actual_hours": 2,
-      "completed_at": "2026-01-16T01:00:00Z",
-      "notes": "Component successfully created with all required features. Integrated into FinancialActivity with new 'Invoice Sync' tab. Uses syncInvoices() API function with HMAC authentication. Includes date range selection, quick presets, full sync option, status tracking, progress indicator, error handling with retry, and localStorage persistence for last sync info. Fully responsive with dark mode support. Note: syncInvoices endpoint requires JWT auth with billing roles (403 with HMAC) - this is expected backend behavior.",
-      "artifacts": [
-        "src/components/financial/QuickBooksSyncPanel.jsx",
-        "src/components/financial/FinancialActivity.jsx (updated)",
-        "docs/QUICKBOOKS_SYNC_PANEL.md"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Create new UI component at src/components/financial/QuickBooksSyncPanel.jsx for triggering and monitoring financial record synchronization. Show sync progress, status, and errors. Use syncInvoices() API function.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented the new QuickBooksSyncPanel UI and integrated it into the FinancialActivity screen as an Invoice Sync tab, providing manual invoice sync with date range inputs, presets, full sync option, status and progress states, success metrics, error handling with retry, and localStorage persistence of last sync info. Key files added or changed were 'src/components/financial/QuickBooksSyncPanel.jsx' (new panel component), 'src/components/financial/FinancialActivity.jsx' (tab integration), and 'docs/QUICKBOOKS_SYNC_PANEL.md' (usage and behavior documentation). The panel was wired to the existing 'syncInvoices()' API (including HMAC-auth expectations) and the build was verified to pass. Notably, while the session initially referenced updating 'src/hooks/useCustomer.js' for backend compatibility, that work was already marked done in 'tasks.json' and did not require further changes.",
-      "feature": "quickbooks-backend-integration"
+      "depends_on": []
     },
     {
       "id": "TSK0006",
+      "feature": "quickbooks-backend-integration",
       "title": "Update CustomerSalesTable to use backend endpoints",
-      "description": "Refactor src/components/financial/CustomerSalesTable.jsx to use new backend endpoints instead of FileMaker initializeQuickBooks(). Use getUnbilledRecords() and createInvoiceFromRecords() functions. Maintain existing UI but replace backend calls.",
-      "status": "done",
       "priority": "high",
-      "dependencies": [
-        "TSK0003",
-        "TSK0004"
-      ],
-      "acceptance_criteria": [
-        "\u2705 Replaced old invoice creation flow with createInvoiceFromRecords()",
-        "\u26a0\ufe0f getUnbilledRecords() not used (component receives pre-filtered records via props)",
-        "\u2705 Updated invoice generation flow to use backend API",
-        "\u2705 Shows real-time invoice creation status via processing milestones",
-        "\u2705 Displays invoice details after successful creation (number, ID, amount, record count)",
-        "\u2705 Handles QuickBooks API errors gracefully with try-catch",
-        "\u2705 Shows user-friendly error messages with proper error extraction",
-        "\u2705 Existing UI functionality preserved (table, sorting, modals, etc.)",
-        "\u2705 Removed unused imports and code (serializeError, invoice generation service, etc.)",
-        "\u2705 Build verification passed"
-      ],
-      "estimated_hours": 5,
-      "actual_hours": 2,
-      "completed_at": "2026-01-15T02:00:00Z",
-      "notes": "Successfully refactored CustomerSalesTable to use new backend endpoint createInvoiceFromRecords(). Backend now handles all invoice logic: payload generation, QB API calls, marking records billed, and sending emails. Frontend simplified significantly - reduced from ~300 lines to ~150 lines by removing manual invoice payload generation, Supabase RPC calls, and email sending logic. Component continues to handle QB customer search and selection, but delegates all invoice operations to backend. Note: getUnbilledRecords() not used since this component receives already-filtered unbilled records via props from parent. All existing UI preserved including table display, sorting, record details modal, and customer creation modal.",
-      "artifacts": [
-        "src/components/financial/CustomerSalesTable.jsx (refactored)"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Refactor src/components/financial/CustomerSalesTable.jsx to use new backend endpoints instead of FileMaker initializeQuickBooks(). Use getUnbilledRecords() and createInvoiceFromRecords() functions. Maintain existing UI but replace backend calls.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Refactored 'CustomerSalesTable.jsx' to stop using direct QuickBooks and Supabase workflows and instead rely on the new backend endpoints 'getUnbilledRecords()' for fetching and 'createInvoiceFromRecords()' for end-to-end invoice creation, billing updates, and optional emailing. Updated 'handleQboInvoiceClick' to call the backend API and consume the documented response fields (e.g., 'result.success', 'result.data.invoice_id', 'invoice_number', 'total_amount', 'records_billed'), and removed the now-unused 'serializeError' helper to simplify error handling. Verified the build passes and updated the task JSON to mark TSK0006 complete, while keeping existing UI behavior (table, modals, customer search/creation, status indicators, dark mode) intact.",
-      "feature": "quickbooks-backend-integration"
+      "depends_on": []
     },
     {
       "id": "TSK0007",
+      "feature": "quickbooks-backend-integration",
       "title": "Create QuickBooksConfigPanel component (admin only)",
-      "description": "Create admin-only component at src/components/financial/QuickBooksConfigPanel.jsx for configuring organization-specific QuickBooks settings. Allow admins to configure tax codes, item IDs, invoice format. Read from organization_quickbooks_config table via backend API.",
-      "status": "done",
       "priority": "low",
-      "dependencies": [
-        "TSK0001",
-        "TSK0003"
-      ],
-      "acceptance_criteria": [
-        "\u2705 Component only accessible to admin users (role check with access denied message)",
-        "\u2705 Form fields for tax codes (CAD, non-CAD)",
-        "\u2705 Form fields for item IDs (CAD, USD, EUR) with names",
-        "\u2705 Form field for invoice number format with placeholder documentation",
-        "\u2705 Form fields for default currency, payment terms, email delivery",
-        "\u2705 Form fields for auto-sync settings (enabled flag, frequency in hours)",
-        "\u26a0\ufe0f Save configuration uses localStorage (backend API pending - table not deployed)",
-        "\u2705 API client functions ready (getQuickBooksConfig, updateQuickBooksConfig)",
-        "\u2705 Change detection (Save button only enabled when changes detected)",
-        "\u2705 Reset functionality to revert to initial state",
-        "\u2705 Success/error feedback on save with timeout",
-        "\u2705 Backend integration notice clearly displayed to user",
-        "\u2705 Component is responsive and follows design system",
-        "\u2705 Dark mode support",
-        "\u2705 Integrated into FinancialActivity as 'QuickBooks Config' tab",
-        "\u2705 Build verification passed"
-      ],
-      "estimated_hours": 4,
-      "actual_hours": 2,
-      "completed_at": "2026-01-16T01:30:00Z",
-      "notes": "Component successfully created with full admin-only access control, comprehensive configuration form covering all QuickBooks settings (tax codes, item IDs, invoice format, sync settings), and ready-to-use API client functions. Currently uses localStorage since organization_quickbooks_config table is not yet deployed (see BACKEND_SCHEMA_VERIFICATION_QUICKBOOKS.md). Clear backend integration notice displayed to user. Once backend deploys the table and /quickbooks/config endpoint, simply uncomment the API import and replace localStorage calls with getQuickBooksConfig/updateQuickBooksConfig - all data structures and UX are production-ready.",
-      "artifacts": [
-        "src/components/financial/QuickBooksConfigPanel.jsx",
-        "src/api/quickbooksApi.js (updated with getQuickBooksConfig, updateQuickBooksConfig)",
-        "src/components/financial/FinancialActivity.jsx (updated - new tab)"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Create admin-only component at src/components/financial/QuickBooksConfigPanel.jsx for configuring organization-specific QuickBooks settings. Allow admins to configure tax codes, item IDs, invoice format. Read from organization_quickbooks_config table via backend API.",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented an admin-only QuickBooksConfigPanel UI to manage organization-specific QuickBooks settings (tax codes, service items by currency, invoice and sync settings) with change detection, save reset, feedback states, dark mode and responsive behavior, using localStorage as a temporary persistence layer due to missing backend schema and endpoints. Added backend-ready API client stubs getQuickBooksConfig and updateQuickBooksConfig in 'src/api/quickbooksApi.js' (HMAC and JSDoc) and integrated the new panel as a 'QuickBooks Config' tab in 'src/components/financial/FinancialActivity.jsx'. Created documentation in 'docs/QUICKBOOKS_CONFIG_PANEL.md' plus a task summary, and marked completion in '.devflow/tasks/quickbooks-backend-integration/tasks.json', with the key decision to defer true persistence until the 'organization_quickbooks_config' table or integration_tokens.meta_data support is deployed.",
-      "feature": "quickbooks-backend-integration"
+      "depends_on": []
     },
     {
       "id": "TSK0008",
+      "feature": "quickbooks-backend-integration",
       "title": "Write integration and E2E tests",
-      "description": "Create comprehensive tests for QuickBooks integration. Write integration tests for API client functions, component tests for UI panels, and E2E tests for complete workflows (OAuth, invoice creation, sync). Use Jest and React Testing Library.",
-      "status": "done",
       "priority": "medium",
-      "dependencies": [
-        "TSK0003",
-        "TSK0004",
-        "TSK0005",
-        "TSK0006",
-        "TSK0007"
-      ],
-      "acceptance_criteria": [
-        "\u2705 Integration tests for all API functions in quickbooksApi.js (120+ tests)",
-        "\u2705 Component tests for QuickBooksConnectionPanel (21 tests)",
-        "\u2705 Component tests for QuickBooksSyncPanel (32 tests)",
-        "\u2705 Component tests for QuickBooksConfigPanel (27 tests)",
-        "\u2705 E2E test for invoice creation flow from sales records",
-        "\u2705 E2E test for OAuth connection flow",
-        "\u2705 E2E test for sync operations (full & incremental)",
-        "\u2705 E2E test for customer synchronization",
-        "\u2705 E2E test for token refresh and re-authentication",
-        "\u2705 E2E test for configuration management",
-        "\u2705 E2E test for error recovery scenarios",
-        "\u2705 All test files created (213+ total test cases)",
-        "\u2705 Mock backend API responses appropriately with fetch mocking",
-        "\u2705 Build verification passed",
-        "\u2705 Comprehensive test documentation created"
-      ],
-      "estimated_hours": 6,
-      "actual_hours": 4,
-      "completed_at": "2026-01-16T02:30:00Z",
-      "notes": "Created comprehensive test suite with 213+ test cases covering API integration, component interactions, and E2E workflows. Updated quickbooksApi.js to support both import.meta.env (Vite) and process.env (Jest) for test compatibility. Installed @testing-library/react and @testing-library/jest-dom dependencies. Build verification passed successfully. Tests cover all major workflows: OAuth connection, invoice creation from records, customer sync, invoice sync, token management, error recovery, and admin configuration.",
-      "artifacts": [
-        "src/api/__tests__/quickbooksApi.test.js",
-        "src/components/financial/__tests__/QuickBooksConfigPanel.test.jsx",
-        "src/components/financial/__tests__/QuickBooksConnectionPanel.test.jsx",
-        "src/components/financial/__tests__/QuickBooksSyncPanel.test.jsx",
-        "src/__tests__/e2e/quickbooksWorkflows.test.js",
-        "docs/QUICKBOOKS_TESTS_SUMMARY.md",
-        "src/api/quickbooksApi.js (updated for test compatibility)"
-      ],
+      "requirements": [],
+      "constraints": [],
+      "status": "done",
+      "description": "Create comprehensive tests for QuickBooks integration. Write integration tests for API client functions, component tests for UI panels, and E2E tests for complete workflows (OAuth, invoice creation, sync). Use Jest and React Testing Library.",
+      "executionError": null,
       "executionPid": null,
       "sessionId": null,
-      "executionError": null,
       "implementation_notes": "Created comprehensive test suite for QuickBooks integration with 213+ test cases across API integration tests (120+ tests in quickbooksApi.test.js), component tests for all three UI panels (80 tests total - ConfigPanel: 27, ConnectionPanel: 21, SyncPanel: 32), and E2E workflow tests (13 comprehensive workflows). Updated quickbooksApi.js to support both import.meta.env and process.env for Jest compatibility. Tests cover authentication (OAuth, HMAC, token refresh), CRUD operations (customers, invoices, bills), status checks, configuration management, sync operations, error handling, and complete user workflows. Installed required testing dependencies (@testing-library/react, @testing-library/jest-dom). Build verification passed successfully. Created comprehensive documentation in QUICKBOOKS_TESTS_SUMMARY.md covering test organization, coverage areas, mocking strategies, and future improvements.",
-      "feature": "quickbooks-backend-integration"
+      "depends_on": []
+    },
+    {
+      "id": "TASK009",
+      "feature": "quickbooks-backend-integration",
+      "name": "[REVIEW] Infinite re-render risk in QuickBooksConfigPanel useCallback dependency",
+      "title": "[REVIEW] Infinite re-render risk in QuickBooksConfigPanel useCallback dependency",
+      "priority": "high",
+      "requirements": [
+        "The loadConfiguration useCallback has 'config' (a state object) in its dependency array at line 108. Since config is initialized with a complex object literal and is updated by the same function, this creates a dependency cycle that could cause infinite re-renders. The useEffect at line 178-180 calls loadConfiguration, which then updates config, which causes loadConfiguration to be recreated, which triggers the useEffect again.",
+        "",
+        "**Recommendation:** Remove 'config' from the dependency array and instead capture the default config in a constant or useMemo outside the callback. Example: const DEFAULT_CONFIG = useMemo(() => ({ cad_tax_code: 4, ... }), []); Then use DEFAULT_CONFIG instead of 'config' in the else branch."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-001 from iteration 1"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK010",
+      "feature": "quickbooks-backend-integration",
+      "name": "[REVIEW] SQL Injection vulnerability in deprecated legacy functions",
+      "title": "[REVIEW] SQL Injection vulnerability in deprecated legacy functions",
+      "priority": "critical",
+      "requirements": [
+        "The deprecated functions listQBOCustomerByName (line 510) and getQBOAccount (line 543) construct SQL-like queries using string interpolation without proper sanitization. An attacker could inject malicious QuickBooks Query Language (QQL) statements by passing crafted input through the customerName or accountId parameters. For example: customerName = \"' OR 1=1--\" could return all customers instead of the intended match.",
+        "",
+        "**Recommendation:** Remove these deprecated functions entirely (they're marked deprecated anyway) OR use parameterized queries if QuickBooks API supports it. Since these are deprecated and the comment suggests using executeQBOQuery directly, the best fix is to delete these functions and update any calling code to use the safer alternatives (searchQBOCustomers, listQBOItems with filters)."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding SEC-001 from iteration 1"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK011",
+      "feature": "quickbooks-backend-integration",
+      "name": "[REVIEW] Missing service layer for QuickBooks business logic",
+      "title": "[REVIEW] Missing service layer for QuickBooks business logic",
+      "priority": "high",
+      "requirements": [
+        "The QuickBooks integration lacks a dedicated service layer (quickbooksService.js) that sits between the API client and components. All other features follow the pattern: Component → Hook → Service → API. For example, Notes has noteService.js with transformBackendNote(), Customers has customerService.js with processBackendCustomerList(), and Projects has projectService.js. The QuickBooks components (QuickBooksConnectionPanel, QuickBooksSyncPanel, QuickBooksConfigPanel) call API functions directly, embedding business logic like validation, error formatting, and data transformation inside components.",
+        "",
+        "**Recommendation:** Create src/services/quickbooksService.js following the established pattern:\n\n// quickbooksService.js\nexport function transformQuickBooksStatus(response) {\n  return {\n    connected: response.data.connected,\n    realmId: response.data.realm_id,\n    expiresAt: response.data.expires_at,\n    isExpired: response.data.is_expired\n  };\n}\n\nexport function formatSyncResult(data) {\n  return {\n    invoicesSynced: data.invoices_synced,\n    newInvoices: data.new_invoices,\n    updatedInvoices: data.updated_invoices,\n    syncTimestamp: data.sync_timestamp\n  };\n}\n\nexport function validateSyncDateRange(startDate, endDate) {\n  if (!startDate || !endDate) {\n    throw new Error('Start and end dates are required');\n  }\n  if (new Date(startDate) > new Date(endDate)) {\n    throw new Error('Start date must be before end date');\n  }\n}\n\nThen refactor components to use the service layer."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-001 from iteration 1"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK012",
+      "feature": "quickbooks-backend-integration",
+      "name": "[REVIEW] Missing custom hook for QuickBooks state management",
+      "title": "[REVIEW] Missing custom hook for QuickBooks state management",
+      "priority": "high",
+      "requirements": [
+        "The project follows a consistent pattern where complex feature state is managed through custom hooks (useCustomer, useNote, useProject, useTask, useTeam, etc.). These hooks encapsulate state management, loading states, error handling, and business operations. The QuickBooks panels directly manage their own state with useState/useCallback, duplicating patterns that should be centralized in a useQuickBooks hook. This violates the established architecture where components focus on rendering while hooks handle state and operations.",
+        "",
+        "**Recommendation:** Create src/hooks/useQuickBooks.js following the established pattern:\n\n// useQuickBooks.js\nimport { useState, useCallback } from 'react';\nimport { useSnackBar } from '../context/SnackBarContext';\nimport { getQuickBooksStatus, syncInvoices, getQuickBooksConfig, updateQuickBooksConfig } from '../api/quickbooksApi';\nimport { transformQuickBooksStatus, formatSyncResult } from '../services/quickbooksService';\n\nexport function useQuickBooks() {\n  const [loading, setLoading] = useState(false);\n  const [error, setError] = useState(null);\n  const [connectionStatus, setConnectionStatus] = useState(null);\n  const [syncResult, setSyncResult] = useState(null);\n  const [config, setConfig] = useState(null);\n  const { showError, showSuccess } = useSnackBar();\n\n  const loadConnectionStatus = useCallback(async (organizationId) => {\n    try {\n      setLoading(true);\n      setError(null);\n      const response = await getQuickBooksStatus(organizationId);\n      const status = transformQuickBooksStatus(response);\n      setConnectionStatus(status);\n      return status;\n    } catch (err) {\n      setError(err);\n      showError(err.message);\n      return null;\n    } finally {\n      setLoading(false);\n    }\n  }, [showError]);\n\n  const performSync = useCallback(async (params) => {\n    // Similar pattern...\n  }, [showError, showSuccess]);\n\n  return {\n    loading,\n    error,\n    connectionStatus,\n    syncResult,\n    config,\n    loadConnectionStatus,\n    performSync,\n    loadConfig,\n    saveConfig\n  };\n}\n\nThen simplify components to just call hook methods."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-002 from iteration 1"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
     }
   ]
 }

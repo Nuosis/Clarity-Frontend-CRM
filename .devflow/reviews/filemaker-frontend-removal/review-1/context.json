@@ -1,0 +1,821 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T04:43:12.361Z",
+    "featureSlug": "filemaker-frontend-removal",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "iteration": 1,
+    "featureName": "FileMaker Frontend Removal",
+    "mode": "autonomous",
+    "sessionId": "7a05767a-83c2-4205-acf7-a3afc1266e8e",
+    "processId": 1768624992358,
+    "lastUpdated": "2026-01-17T04:54:00.558Z"
+  },
+  "PrepareContextNode": {
+    "timestamp": "2026-01-17T04:43:14.001Z",
+    "output": {
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Verify all feature backend integrations complete (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a full verification of backend integrations across prerequisite features by reviewing the OpenAPI spec, checking key API integration points for customers, projects, tasks, notes, links, financial records, QuickBooks, and teams, and confirming auth and endpoint availability. Added documentation outputs in 'BACKEND_INTEGRATION_VERIFICATION.md', '.devflow/tasks/filemaker-frontend-removal/TSK0001_COMPLETION_SUMMARY.md', and '.devflow/tasks/filemaker-frontend-removal/README.md', and updated '.devflow/tasks/filemaker-frontend-removal/tasks.json' to mark 'TSK0001' complete. Confirmed the project compiles cleanly via 'npm run build' and noted the key decision that several features are already backend-only while customers, projects, and tasks still retain FileMaker fallbacks for compatibility.\n\n---\n\n### Audit FileMaker references in codebase (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive audit of all FileMaker references across the codebase and produced two new deliverables: 'FILEMAKER_AUDIT_REPORT.md' (inventory of 85 files, categorized into 6 reference types with per-file removal safety analysis, dependency graph, backend verification checklist, and a 6-phase removal plan) and 'AUDIT_SUMMARY.md' (executive stats, readiness assessment, risks, and next steps). Key decisions included categorizing references by integration pattern (API calls, environment detection, auth/config, utilities, UI, tests) and defining a phased deprecation approach that keeps core environment detection until the final phase while removing low-risk examples first. Verified report completeness and confirmed the build still succeeds after generating the documentation.\n\n---\n\n### Create feature flag system for gradual rollout (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a feature flag system to support gradual rollout of backend API migrations, including a new FeatureFlagContext provider with localStorage persistence and CRUD operations plus hooks for basic access, environment-aware flag behavior, and declarative routing. Key files added or updated include 'src/context/FeatureFlagContext.jsx', 'src/hooks/useFeatureFlag.js', 'src/hooks/index.js', and integration of the FeatureFlagProvider into the app provider hierarchy in 'src/main.jsx' (placed after AppStateProvider). Added comprehensive documentation in 'docs/FEATURE_FLAGS.md' and 'docs/FEATURE_FLAG_MIGRATION_EXAMPLE.md', and updated 'CLAUDE.md' with usage patterns, available flags, and debugging notes; builds were run and confirmed successful to validate compilation.\n\n---\n\n### Update customers API to use backend endpoints (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented the switch from legacy '/contacts_api' routes to the real backend customer endpoints by updating 'src/api/customers.js' to call '/api/customers' for all CRUD operations (and aligning status toggling to use '/api/customers/{id}/status' with an 'is_active' boolean plus updating active-customer filtering to use 'active=true'), while confirming '/api/customers/search' was already correct. Updated 'src/services/dataService.js' to remap 'devCustomers' from 'contacts_api' to 'api/customers' so frontend requests resolve through the Vite '/api' proxy correctly. Kept the existing environment-aware routing to preserve FileMaker compatibility and noted the existing 'use_backend_customers' feature flag for future rollout rather than changing behavior now. Also recorded completion by updating 'tasks.json' and adding 'TSK0004_COMPLETION_SUMMARY.md'.\n\n---\n\n### Update projects API to use backend endpoints (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented backend-ready projects API routing by updating the client in 'projects.js' to consistently use REST-style backend endpoints with the '/api' prefix (covering core project CRUD plus related objectives, steps, images, notes, status, and reorder operations) while retaining FileMaker fallback and existing org scoping and normalization. Fixed response handling in 'fetchProjectsForCustomers' to correctly unwrap array payloads when aggregating results across multiple customers. Deliberately kept feature flag logic out of the API layer after confirming hooks are not usable there, aligning with the established pattern in 'customers.js' where the 'use_backend_projects' rollout flag (default false) is enforced at the service or hook level. Added a completion note in '.devflow/tasks/projects-backend-integration/TSK0002_COMPLETION_SUMMARY.md' and verified changes via a successful build.\n\n---\n\n### Update tasks API to use backend endpoints (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented TSK0006 by migrating the frontend tasks API to environment-aware backend endpoints using dataService instead of a hardcoded USE_BACKEND_API flag, while preserving the FileMaker fallback via getEnvironmentContext and ENVIRONMENT_TYPES. Updated src/api/tasks.js to route task CRUD through '/api/tasks' (including toggle-completion) and reworked timer operations to use the '/time-entries/*' pattern rather than '/tasks/{id}/timer/*', keeping data transformations and handleApiError consistency. Marked the work complete in '.devflow/tasks/filemaker-frontend-removal/tasks.json' and added documentation in '.devflow/tasks/filemaker-frontend-removal/TSK0006_COMPLETION_SUMMARY.md' and '.devflow/tasks/filemaker-frontend-removal/TSK0006_QUICK_REFERENCE.md', with builds verified via 'npm run build'.\n\n---\n\n### Update notes API to use backend endpoints (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nVerified that TSK0007 was already complete: the notes API in 'src/api/notes.js' uses backend endpoints via 'dataService.get post patch delete' for project, task, and customer notes, with org scoping and no FileMaker-specific logic in the notes layer (environment routing remains centralized in 'dataService'). Confirmed supporting layers in 'src/services/noteService.js' (snake_case to camelCase, 'note' to 'content', backward-compatible 'fieldData') and 'src/hooks/useNote.js' (CRUD and per-entity pagination) are backend-ready, and validated feature flags 'use_backend_project_notes' and 'use_backend_task_notes' are enabled. Marked TSK0007 done in 'tasks.json' and added verification and reference docs ('TSK0007_COMPLETION_SUMMARY.md', 'TSK0007_QUICK_REFERENCE.md', 'TSK0007_VERIFICATION_REPORT.md') after confirming the build passes.\n\n---\n\n### Update links API to use backend endpoints (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented full cleanup of remaining FileMaker legacy logic in the Links feature now that the API layer already targets backend '/links' endpoints. Updated 'src/services/linkService.js' to remove the FileMaker-only 'processLinks' formatter plus environment-context imports and conditional routing, and updated 'src/hooks/useLink.js' to drop environment checks and simplify create handling to backend responses only. Enabled the 'use_backend_links' flag by default in 'src/context/FeatureFlagContext.jsx', then verified the build, removed remaining FileMaker references, and added completion and verification docs while marking the task complete in 'tasks.json'.\n\n---\n\n### Update financial records API to use backend endpoints (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented TSK0009 by migrating the financial records client API from direct Supabase RPC usage to backend REST endpoints under '/api/financial-records/*', routing all operations through 'dataService' with HMAC-authenticated requests. The primary change was in 'src/api/financialRecords.js', updating all fetch, create, summary, and mark-billed flows to call endpoints like '/query', '/unpaid', '/summary/{monthly|quarterly|yearly}', '/create', and '/mark-billed', and revising 'normalizeFinancialRecords()' to match the backend schema (including parsing numeric strings and supporting fields like 'project_id', 'billing_status', 'time_entry_id', and 'configuration_data') while preserving the legacy 'fieldData' wrapper. Important decisions included keeping backward compatibility by deprecating get-by-ID helpers (no backend endpoint available) with console warnings and fallback full-table scans, and relying on the already-enabled feature flag 'use_backend_financial_records'. Added completion docs ('TSK0009_COMPLETION_SUMMARY.md', 'TSK0009_QUICK_REFERENCE.md') and marked the task complete in 'tasks.json', with builds verified successful.\n\n---\n\n### Replace QuickBooks FileMaker scripts with backend API (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nImplemented the QuickBooks migration by removing the unused FileMaker-based 'initializeQuickBooks' function from 'src/api/fileMaker.js' and dropping its export from 'src/api/index.js', replacing it with exports for the backend QuickBooks API (status, unbilled records, invoice creation, sync, config, and customer search). Added a new feature flag 'use_backend_quickbooks' (default true) in 'src/context/FeatureFlagContext.jsx' to control rollout, and documented it in 'docs/FEATURE_FLAGS.md'. Created a completion and migration guide in 'TSK0010_COMPLETION_SUMMARY.md' and marked the work complete in 'tasks.json', with a successful build confirming no breaking changes since the removed function had no callers.'\n\n---\n\n### Update dualWriteService for Supabase-only mode (TSK0011)\n**Status:** done\n\n**Implementation Notes:**\nDeprecated dualWriteService.js by adding comprehensive deprecation notices to the file header explaining the service is obsolete now that backend API handles all writes (TSK0004-TSK0006 complete). Added @deprecated JSDoc tags and console.warn() calls to all exported functions: withDualWrite(), stopTimerWithDualWrite(), dualWriteConfig methods, and isDualWriteEnabled(). Created DUAL_WRITE_SERVICE_DEPRECATION.md with full migration paths showing how to use backend API endpoints instead. Updated CLAUDE.md to mark dualWriteService as deprecated. Verified via grep that no production code imports or uses this service. Build passes with npm run build. Service remains in codebase as deprecated reference until TSK0025 final cleanup.\n\n---\n\n### Remove FileMaker reconciliation from financialSyncService (TSK0012)\n**Status:** done\n\n**Implementation Notes:**\nImplemented TSK0012 by removing FileMaker reconciliation from financialSyncService, deleting 9 FileMaker-specific helpers (about 298 LOC) and refactoring synchronizeFinancialRecords and getFinancialSyncStatus to run in validation-only, Supabase-only mode with deprecation warnings directing developers to the Backend API. Key code changes were focused in the financialSyncService module (imports cleaned to retain only the essential query path) and tasks.json was updated to mark TSK0012 complete. Created new documentation artifacts including TSK0012_COMPLETION_SUMMARY.md, TSK0012_QUICK_REFERENCE.md, and TSK0012_VERIFICATION_REPORT.md, and updated CLAUDE.md to reflect the migration guidance. Multiple npm run build checks confirmed no compilation errors and maintained backward compatibility while significantly reducing the service footprint (final file about 284 lines).\n\n---\n\n### Remove FileMaker environment detection from initializationService (TSK0013)\n**Status:** done\n\n**Implementation Notes:**\nImplemented TSK0013 by stripping all FileMaker-specific initialization logic and environment readiness handling, making initialization Supabase-only while keeping shared methods like 'fetchSupabaseUserId', 'preloadData', and 'loadProducts'. Key changes were in 'initializationService.js' (removed 'waitForFileMaker', 'loadUserContext', 'delay', retry constants, and FileMaker imports) and 'index.jsx' (removed 'useFileMakerBridge' usage, FileMaker init block, readiness UI, and related effect dependencies). Added a deliberate deprecation path that detects 'ENVIRONMENT_TYPES.FILEMAKER', logs a warning, sets a user-facing error, and aborts initialization. Updated 'tasks.json' to mark TSK0013 complete and added task docs ('TSK0013_COMPLETION_SUMMARY.md', 'TSK0013_QUICK_REFERENCE.md', 'TSK0013_VERIFICATION_REPORT.md') with successful build verification noted.\n\n---\n\n### Remove FileMaker auth from SignIn component (TSK0014)\n**Status:** done\n\n**Implementation Notes:**\nImplemented removal of FileMaker authentication and detection from the SignIn flow, leaving Supabase-only auth and aligning behavior with the feature flag context expectations. Updated 'src/components/SignIn.jsx' to drop detectFileMaker logic and related callback props, and updated 'src/index.jsx' to remove FileMaker handlers and simplify SignIn usage while ensuring Supabase auth sets the WEBAPP environment. Marked 'TSK0014' complete in 'tasks.json' and added supporting docs in 'TSK0014_COMPLETION_SUMMARY.md' and 'TSK0014_QUICK_REFERENCE.md', with the key decision to keep 'setEnvironmentDetectionComplete' in app state operations since it may be used elsewhere.\n\n---\n\n### Simplify dataService to single routing path (TSK0015)\n**Status:** done\n\n**Implementation Notes:**\nImplemented TSK0015 by refactoring the frontend to a single backend-only routing path using an authentication context pattern, removing FileMaker environment detection and related code paths. Key updates included changes to 'src/index.jsx', 'src/context/FeatureFlagContext.jsx', 'src/hooks/useProject.js', 'src/services/taskService.js', and cleanup in 'src/api/index.js' plus multiple API modules such as 'src/api/tasks.js', 'src/api/projects.js', and 'src/api/links.js' to resolve missing exports and replace 'fetchTaskLinks' with 'fetchLinks' using a task_id filter. Important decisions were to drop 'ENVIRONMENT_TYPES' usage, remove FileMaker-specific project data functions from the API surface, and keep the build green after fixing export mismatches, with completion documented in '.devflow/tasks/filemaker-frontend-removal/TSK0015_COMPLETION_SUMMARY.md' and the task marked complete in 'tasks.json'.\n\n---\n\n### Remove useFileMakerBridge hook (TSK0016)\n**Status:** done\n\n**Implementation Notes:**\nRemoved the unused React hook 'useFileMakerBridge' from 'src/hooks/index.js', including its associated logic and an unused React import, after confirming there were no real imports or usages anywhere in 'src'. Verified the build still compiles successfully and that the only remaining 'useFileMakerBridge' string is a boolean flag variable in 'src/api/fileMaker.js' (not the hook). Updated 'tasks.json' to mark TSK0016 complete and added supporting docs in 'TSK0016_COMPLETION_SUMMARY.md' and 'TSK0016_QUICK_REFERENCE.md'.\n\n---\n\n### Delete FileMaker API files (TSK0017)\n**Status:** done\n\n**Implementation Notes:**\nImplemented removal of legacy FileMaker integration by deleting 'src/api/fileMaker.js' and 'src/api/fileMakerEdgeFunction.js', then updating the codebase to eliminate or stub all remaining imports and usage. Key changes included exporting 'generateBackendAuthHeader' from 'src/api/dataService.js' and switching 'src/api/mailjet.js' to use it, removing FileMaker exports from 'src/api/index.js', and commenting out FileMaker-dependent functionality in 'src/components/financial/QboTestPanel.jsx', 'src/api/prospects.js', 'src/services/recordQueueManager.js', and related example/test/context files (including 'src/context/ProjectContext.jsx'). FileMaker-specific modules still referenced by product flows (notably 'src/api/customerActivity.js' and the queue manager) were left in place but explicitly marked deprecated, and the build was re-run to confirm compilation succeeds before updating 'tasks.json' and documenting the work in 'TSK0017_COMPLETION_SUMMARY.md'.\n\n---\n\n### Remove fm-gofer dependency (TSK0018)\n**Status:** done\n\n**Implementation Notes:**\nImplemented removal of the 'fm-gofer' dependency by deleting it from 'package.json' and updating 'package-lock.json', then verifying the app still builds cleanly. Updated 'src/services/mailjetService.js' to deprecate the FileMaker-proxy Mailjet integration: the 'fm-gofer' import was removed (left only as a commented reference) and FileMaker-dependent functions like 'sendEmailWithAttachment' and 'isMailjetConfigured' were stubbed to return clear unavailability errors while keeping non-FM helpers intact. Key decision: because email sending is still used in production and no backend email endpoint exists yet, the integration was intentionally disabled with explicit warnings and documentation rather than replaced, and a backend change request plus task completion and audit docs were added (including updates to 'tasks.json').\n\n---\n\n### Remove FileMaker environment variables (TSK0019)\n**Status:** done\n\n**Implementation Notes:**\nImplemented removal of FileMaker environment variable documentation after confirming via repo-wide searches that no code referenced them. Updated '/CLAUDE.md' and '/README.md' to drop the FileMaker variable/config sections and add a migration note indicating legacy vars can be removed. Marked the corresponding task as done in '.devflow/tasks/filemaker-frontend-removal/tasks.json' (noting the task appeared as TSK0019 rather than TSK0016) and verified the changes by running 'npm run build' with only pre-existing warnings.\n\n---\n\n### Remove FileMaker deployment scripts (TSK0020)\n**Status:** done\n\n**Implementation Notes:**\nImplemented removal of legacy FileMaker deployment commands by deleting the 'upload', 'build:upload', and 'deploy-to-fm' scripts from 'package.json' while intentionally preserving 'scripts/upload.js' and 'widget.config.js' in the repo for historical reference. Updated docs to eliminate or replace FileMaker deployment guidance, with edits in 'CLAUDE.md', 'README.md', and 'AGENTS.md' to reflect a web-only deployment approach and include migration notes. Marked 'TSK0020' as done in 'tasks.json' with timestamp and verification notes, and added supporting artifacts 'TSK0020_COMPLETION_SUMMARY.md', 'TSK0020_QUICK_REFERENCE.md', and 'TSK0020_VERIFICATION_REPORT.md'. Verified the build still passes and confirmed the removed scripts no longer run or appear in the available script list.\n\n---\n\n### Update CLAUDE.md to remove FileMaker references (TSK0021)\n**Status:** done\n\n**Implementation Notes:**\nImplemented TSK0021 by comprehensively updating 'CLAUDE.md' to be Supabase-first, removing FileMaker-specific architecture, auth, API routing, integrations, env vars, and pitfall guidance while preserving migration context via a brief historical note and references to obsolete flags. Updated '.devflow/tasks/filemaker-frontend-removal/tasks.json' to mark the task complete and added three deliverables: '.devflow/tasks/filemaker-frontend-removal/TSK0021_COMPLETION_SUMMARY.md', 'TSK0021_QUICK_REFERENCE.md', and 'TSK0021_VERIFICATION_REPORT.md'. Verified the changes by running 'npm run build' successfully, noting that remaining proposal export warnings were pre-existing and unrelated.\n\n---\n\n### Update README.md to remove FileMaker references (TSK0022)\n**Status:** done\n\n**Implementation Notes:**\nImplemented documentation updates to reflect a Supabase-only architecture by revising 'README.md' to remove outdated FileMaker references, adding a prominent migration-completed notice (Jan 2026), and rewriting the architecture and migration history sections to clearly describe Supabase, backend API usage, org scoping, and RLS. Verified the project still builds successfully after the doc changes. Updated task tracking by marking TSK0022 as done in '.devflow/tasks/filemaker-frontend-removal/tasks.json' with completion notes. Created supporting deliverables 'TSK0022_COMPLETION_SUMMARY.md', 'TSK0022_VERIFICATION_REPORT.md', and 'TSK0022_QUICK_REFERENCE.md' to capture outcomes and verification.\n\n---\n\n### Update test mocks to remove FileMaker fixtures (TSK0023)\n**Status:** done\n\n**Implementation Notes:**\nImplemented TSK0023 by removing FileMaker-specific test fixtures and updating tests to rely on backend API mocks instead. Key changes included cleaning up fixture data in 'src/__fixtures__/tasks.js', 'src/__fixtures__/timers.js', and 'src/__fixtures__/financialRecords.js' (removing FileMaker-only mocks and fields), refactoring 'tasksApi.test.js' to replace 'fileMakerApi' usage with 'dataService' and dropping obsolete FileMaker fallback and 'validateParams' tests, and updating 'useLink.test.js' to remove FILEMAKER environment coverage. Kept 'customerTransformations.test.js' and 'dataMappers.test.js' intact for backward compatibility based on current usage and migration considerations, and documented completion by updating '.devflow/tasks/filemaker-frontend-removal/tasks.json' and adding 'TSK0023_COMPLETION_SUMMARY.md' plus 'TSK0023_QUICK_REFERENCE.md'.\n\n---\n\n### Run full regression test suite (TSK0024)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive post-migration regression testing workflow: verified production build, confirmed Supabase schema (85 tables) and executed integration tests, with teams tests passing 9 of 9 after fixing test setup. Key changes were made to the integration test scripts and config, including adding dotenv loading to the teams test, adding missing test IDs to '.env', fixing a task lifecycle test name collision (renamed conflicting 'generateReport'), and updating backend API request handling to include 'X-Organization-ID' and correct HMAC signing (message format and timestamp precision) to resolve 401 auth failures. Added/updated regression documentation artifacts ('REGRESSION_TEST_RESULTS.md', 'REGRESSION_TEST_SUMMARY.md', 'TSK0024_COMPLETION_SUMMARY.md', 'TSK0024_QUICK_REFERENCE.md') and marked the task as done, with the main decision to skip completing task lifecycle execution due to required test fixtures after auth moved from 401 to 400.\n\n---\n\n### Remove feature flags and finalize migration (TSK0025)\n**Status:** done\n\n**Implementation Notes:**\nImplemented final migration cleanup by removing the entire feature flag system (deleted 'src/context/FeatureFlagContext.jsx', 'src/hooks/useFeatureFlag.js', and related docs) and updating app wiring to drop 'FeatureFlagProvider' from 'src/main.jsx' and remove exports from 'src/hooks/index.js'. Updated documentation by stripping feature flag references from 'CLAUDE.md' while intentionally keeping deprecated FileMaker services as warning-only documentation. Added migration deliverables ('FILEMAKER_MIGRATION_COMPLETION_REPORT.md', '.devflow/tasks/filemaker-frontend-removal/TSK0025_COMPLETION_SUMMARY.md', '.devflow/tasks/filemaker-frontend-removal/TSK0025_QUICK_REFERENCE.md') and marked TSK0025 complete in '.devflow/tasks/filemaker-frontend-removal/tasks.json' after a successful build verification.\n\n---\n\n## Project Documentation\n\n",
+      "projectType": "unknown",
+      "taskCount": 25,
+      "notesGenerated": 0,
+      "contextLoadTimeMs": 1633
+    }
+  },
+  "ComplianceCheckNode": {
+    "timestamp": "2026-01-17T04:44:56.430Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "TSK0015: ENVIRONMENT_TYPES constants not fully removed",
+          "description": "Task TSK0015 requires simplifying dataService to a single routing path and removing ENVIRONMENT_TYPES constants. However, ENVIRONMENT_TYPES is still exported from dataService.js and actively used in production code in CustomerForm.jsx and useCustomer.js hook. These files contain conditional logic checking 'env.type === ENVIRONMENT_TYPES.FILEMAKER' which contradicts the requirement to remove dual-environment routing.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/components/customers/CustomerForm.jsx",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Remove ENVIRONMENT_TYPES export from dataService.js and eliminate all conditional FileMaker environment checks in CustomerForm.jsx and useCustomer.js. Replace with single-path backend API logic as specified in TSK0015."
+        },
+        {
+          "id": "COM-002",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "TSK0014/TSK0021: FileMaker example UI not removed from AppStateContext",
+          "description": "Tasks TSK0014 and TSK0021 require removing FileMaker-specific UI and references. However, AppStateContext.jsx still contains showFileMakerExample state, SET_SHOW_FILEMAKER_EXAMPLE action type, and setShowFileMakerExample operation. This state is actively used in MainContent.jsx and Sidebar.jsx components, providing a UI option to show FileMaker examples despite FileMaker being removed.",
+          "file_paths": [
+            "src/context/AppStateContext.jsx",
+            "src/components/MainContent.jsx",
+            "src/components/layout/Sidebar.jsx"
+          ],
+          "code_snippet": null,
+          "recommendation": "Remove all showFileMakerExample-related code from AppStateContext, including the action type, state property, reducer case, and operation function. Remove FileMaker example UI buttons/logic from MainContent.jsx and Sidebar.jsx."
+        },
+        {
+          "id": "COM-003",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "TSK0017: FileMaker.PerformScript calls not removed",
+          "description": "Task TSK0017 requires deleting FileMaker API files and ensuring no FileMaker imports remain. However, ActivityReportModal.jsx contains direct FileMaker API calls using 'FileMaker.PerformScript' and checks for 'typeof FileMaker === \"undefined\"'. This represents active FileMaker integration code that contradicts the completion status of TSK0017.",
+          "file_paths": [
+            "src/components/customers/ActivityReportModal.jsx"
+          ],
+          "code_snippet": null,
+          "recommendation": "Remove the sendToFileMaker function and all FileMaker.PerformScript calls from ActivityReportModal.jsx. Replace with backend API endpoint for PDF export or mark the feature as deprecated until backend migration is complete."
+        },
+        {
+          "id": "COM-004",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "TSK0021/TSK0022: Documentation still references FileMaker",
+          "description": "Tasks TSK0021 and TSK0022 require removing FileMaker references from documentation while preserving migration history. CLAUDE.md contains 3 FileMaker references and README.md contains 2 references. While some historical context is acceptable, the current implementation may contain more active references than intended for a 'Supabase-first' approach.",
+          "file_paths": [
+            "CLAUDE.md",
+            "README.md"
+          ],
+          "code_snippet": null,
+          "recommendation": "Audit remaining FileMaker references in documentation to ensure they are only historical/migration notes and not active guidance. Move detailed FileMaker migration history to a separate MIGRATION_HISTORY.md file to keep main docs clean."
+        },
+        {
+          "id": "COM-005",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "TSK0023: FileMaker transformation utilities still exported",
+          "description": "Task TSK0023 requires updating test mocks to remove FileMaker fixtures. While test files were updated, the production utilities in dataMappers.js and customerService still export FileMaker-specific transformation functions like convertDateToFileMaker, formatCustomerForFileMaker, transformFileMakerToBackend, and transformBackendToFileMaker. These are imported and referenced in useCustomer.js despite FileMaker being removed.",
+          "file_paths": [
+            "src/utils/dataMappers.js",
+            "src/services/customerService.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Deprecate FileMaker transformation utilities with @deprecated JSDoc tags and console warnings. Remove imports from production hooks like useCustomer.js. Consider moving to a legacy/ folder or removing entirely if no longer needed for backward compatibility."
+        },
+        {
+          "id": "COM-006",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "TSK0011: dualWriteService not removed as planned",
+          "description": "Task TSK0011 states 'TSK0025: Complete removal of this file after validation' in the deprecation notice, and TSK0025 completion summary claims final cleanup was done. However, dualWriteService.js still exists in the codebase with deprecation warnings. The standing constraint 'Keep audit trail of what was removed and why' may justify keeping it, but TSK0025's scope of 'Remove feature flags and finalize migration' suggests it should have been removed.",
+          "file_paths": [
+            "src/services/dualWriteService.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Either complete the removal of dualWriteService.js as indicated in TSK0025's scope, or update TSK0025 completion notes to explicitly state that deprecated services were intentionally preserved for audit trail purposes per standing constraints."
+        },
+        {
+          "id": "COM-007",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "Missing completion report in expected location",
+          "description": "The implementation notes reference 'FILEMAKER_MIGRATION_COMPLETION_REPORT.md' as a TSK0025 deliverable, but this file exists at the root level rather than in .devflow/tasks/filemaker-frontend-removal/ directory where other completion summaries are located. This inconsistency makes it harder to find the final completion report alongside other task artifacts.",
+          "file_paths": [
+            "FILEMAKER_MIGRATION_COMPLETION_REPORT.md",
+            ".devflow/tasks/filemaker-frontend-removal/"
+          ],
+          "code_snippet": null,
+          "recommendation": "Move FILEMAKER_MIGRATION_COMPLETION_REPORT.md to .devflow/tasks/filemaker-frontend-removal/ directory to maintain consistency with other task completion artifacts, or add a reference link in the tasks directory."
+        }
+      ],
+      "tasks_reviewed": 0,
+      "compliant_tasks": 0
+    }
+  },
+  "CodeSoundnessNode": {
+    "timestamp": "2026-01-17T04:46:55.747Z",
+    "output": {
+      "findings": [
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Dead code execution in deprecated dual-environment logic",
+          "description": "The useCustomer hook and CustomerForm component contain extensive conditional logic checking for ENVIRONMENT_TYPES.FILEMAKER that can never execute since TSK0013 and TSK0015 removed FileMaker environment detection. The getEnvironmentContext() function now always returns type: 'webapp', meaning all FileMaker branches (lines 99-107, 147-150, 186-189, 230-259, 419-422 in useCustomer.js and lines 295-298, 377-428 in CustomerForm.jsx) are unreachable dead code. This creates maintainability issues and potential confusion.",
+          "file_paths": [
+            "src/hooks/useCustomer.js",
+            "src/components/customers/CustomerForm.jsx"
+          ],
+          "code_snippet": "if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {\n  // This code can never execute - getEnvironmentContext() always returns WEBAPP\n  processedCustomers = processCustomerData(result);\n}",
+          "recommendation": "Remove all ENVIRONMENT_TYPES.FILEMAKER conditional branches from useCustomer.js and CustomerForm.jsx. Simplify the code to only execute the backend/webapp path. Remove imports of formatCustomerForFileMaker, transformFileMakerToBackend, transformBackendToFileMaker from useCustomer.js."
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing null check before accessing FileMaker global object",
+          "description": "In ActivityReportModal.jsx, the sendToFileMaker function checks 'typeof FileMaker === \"undefined\"' but then immediately calls FileMaker.PerformScript without verifying that PerformScript is a function. Line 30 executes 'FileMaker.PerformScript(\"save base64 from JS\", payload)' which could throw a runtime error if FileMaker object exists but PerformScript is not defined or not a function.",
+          "file_paths": [
+            "src/components/customers/ActivityReportModal.jsx"
+          ],
+          "code_snippet": "if (typeof FileMaker === \"undefined\" || !FileMaker.PerformScript) {\n  showError(\"FileMaker object is unavailable\");\n  return;\n}\nFileMaker.PerformScript(\"save base64 from JS\", payload); // PerformScript already checked above",
+          "recommendation": "This code should be removed entirely per TSK0017 (Delete FileMaker API files). If it must remain temporarily, the existing null check at line 14 is actually correct and sufficient - the issue is that this entire integration contradicts the migration completion status."
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Dual-write logic still executed despite deprecation",
+          "description": "In useCustomer.js lines 236-259, the handleCustomerUpdate function contains a complex dual-write block that updates both FileMaker and Supabase when env.type === ENVIRONMENT_TYPES.FILEMAKER. This includes try-catch logic for Supabase updates, error logging, and fallback handling. Since FileMaker environment can never be true (per TSK0015), this entire 24-line block is dead code that still executes environment checks and includes logic that references the deprecated dual-write pattern.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {\n  // Update customer in Supabase after successful FileMaker update (dual-write)\n  if (user && user.supabaseOrgID) {\n    try {\n      const supabaseResult = await updateCustomerInSupabase(...);\n      // This entire dual-write coordination block is dead code\n    } catch (supabaseError) { ... }\n  }\n}",
+          "recommendation": "Remove the entire FileMaker conditional block (lines 230-259) and the else branch logic should become the only path. Remove the import of updateCustomerInSupabase if it's only used in this dead code path."
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Potential race condition in customer auto-selection",
+          "description": "In CustomerForm.jsx line 368-374, after creating a new customer, the code uses setTimeout(..., 100) to delay auto-selecting the newly created customer. This arbitrary 100ms delay is a race condition anti-pattern - there's no guarantee that loadCustomers() has completed or that the customer list has been refreshed. The try-catch silently swallows errors with console.warn, potentially hiding real issues.",
+          "file_paths": [
+            "src/components/customers/CustomerForm.jsx"
+          ],
+          "code_snippet": "setTimeout(async () => {\n  try {\n    await handleCustomerSelect(result.id);\n  } catch (error) {\n    console.warn('Could not auto-select newly created customer:', error);\n  }\n}, 100);",
+          "recommendation": "Replace setTimeout with proper async sequencing: await the loadCustomers() call first (which is already called in handleCustomerCreate), then immediately call handleCustomerSelect(result.id) with proper error handling that surfaces errors to the user via showError instead of silently logging."
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Search debounce timeout not cleared on query change",
+          "description": "In useCustomer.js, the handleSearch function sets a new timeout at line 411 (searchTimeoutRef.current = setTimeout(...)) but doesn't clear any existing timeout first. If the user types quickly, multiple setTimeout calls could stack up, with only the ref pointing to the latest one. The clearSearch function does clear the timeout, but handleSearch itself doesn't, leading to potential memory leaks and redundant API calls.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "const handleSearch = useCallback(async (query, options = {}) => {\n  // Missing: clearTimeout(searchTimeoutRef.current) before setting new timeout\n  searchTimeoutRef.current = setTimeout(async () => {\n    // Search logic\n  }, debounceMs);\n}, [setErrorWithFormatting]);",
+          "recommendation": "Add clearTimeout(searchTimeoutRef.current) at the beginning of handleSearch (before line 411) to cancel any pending debounced search before scheduling a new one. This is standard debounce pattern implementation."
+        },
+        {
+          "id": "COD-006",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inconsistent error handling - showError used for success message",
+          "description": "In CustomerForm.jsx lines 360 and 364, the code calls showError() to display success messages ('Customer updated successfully', 'Customer created successfully'). This is semantically incorrect - showError is meant for error messages based on the SnackBarContext API. This could lead to visual inconsistency (success messages styled as errors) and confuse debugging.",
+          "file_paths": [
+            "src/components/customers/CustomerForm.jsx"
+          ],
+          "code_snippet": "await updateCustomer(customer.id || customer.__ID, customerData);\nshowError('Customer updated successfully'); // Should be showSuccess\n\nconst result = await createCustomer(customerData);\nshowError('Customer created successfully'); // Should be showSuccess",
+          "recommendation": "Import showSuccess from useSnackBar hook (line 21 already has showError destructured) and use it for success messages. Change showError to showSuccess on lines 360 and 364."
+        },
+        {
+          "id": "COD-007",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Inefficient array filtering on every render",
+          "description": "In useCustomer.js line 476, the activeCustomers getter creates a new filtered array on every access: 'activeCustomers: customers.filter(customer => customer.isActive || customer.is_active)'. Since this is in the return object of the hook, if components access this getter multiple times per render, it will execute the filter multiple times, which is inefficient for large customer lists.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "return {\n  // ...\n  activeCustomers: customers.filter(customer => customer.isActive || customer.is_active),\n  // This filter runs on every destructure of the hook result\n};",
+          "recommendation": "Use useMemo to compute activeCustomers once per customers array change: const activeCustomers = useMemo(() => customers.filter(c => c.isActive || c.is_active), [customers]); Then return activeCustomers in the hook return object."
+        },
+        {
+          "id": "COD-008",
+          "category": "code_soundness",
+          "severity": "minor",
+          "title": "Console.warn used for deprecation notices in hot paths",
+          "description": "In dataService.js lines 294 and 304, the deprecated functions setEnvironmentContext and getEnvironmentContext call console.warn on every invocation. Since getEnvironmentContext is called in multiple hot paths (every customer load, create, update operation in useCustomer.js), this generates excessive console noise in production and could impact performance with large numbers of operations.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "export const getEnvironmentContext = () => {\n  console.warn('[DataService] getEnvironmentContext is deprecated...'); // Called in hot loops\n  return { type: ENVIRONMENT_TYPES.WEBAPP, authentication: currentAuthentication };\n};",
+          "recommendation": "Since TSK0015 was marked complete and these are deprecated exports, either: 1) Remove the exports entirely and update callers to use getAuthenticationContext, or 2) Use a flag to only warn once per session instead of on every call, or 3) Keep the warning but update all callers (useCustomer.js, CustomerForm.jsx) to stop using the deprecated function."
+        }
+      ],
+      "files_reviewed": 0,
+      "issues_found": 8
+    }
+  },
+  "SecurityCheckNode": {
+    "timestamp": "2026-01-17T04:49:58.977Z",
+    "output": {
+      "findings": [
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "critical",
+          "title": "Supabase Service Role Key exposed to frontend bundle",
+          "description": "The Supabase service role key (VITE_SUPABASE_SERVICE_ROLE_KEY) is imported and exposed in the frontend application via config.js line 22 and used in supabaseService.js. The service role key bypasses ALL Row-Level Security (RLS) policies and grants unrestricted database access. Because it's prefixed with VITE_, it gets bundled into the frontend JavaScript and is visible to anyone who inspects the production bundle. An attacker can extract this key from the compiled JavaScript and use it to bypass all security policies, accessing, modifying, or deleting any data in the entire Supabase database across all organizations.",
+          "file_paths": [
+            "src/config.js",
+            "src/services/supabaseService.js"
+          ],
+          "code_snippet": "// src/config.js:22\nexport const supabaseServiceRoleKey = import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY;\n\n// src/supabaseService.js:10\nimport { supabaseServiceRoleKey } from '../config';\n\n// src/supabaseService.js:16-18\nif (!supabaseServiceRoleKey) {\n  console.warn('Missing Supabase service role key - admin functions will not work');\n}",
+          "recommendation": "IMMEDIATE ACTION REQUIRED: 1) Remove VITE_SUPABASE_SERVICE_ROLE_KEY from all frontend code and .env files. 2) Rotate the service role key immediately via Supabase dashboard as it is now compromised. 3) The service role key must ONLY be used in backend/server environments, never in the browser. 4) Remove the export from config.js and all imports in supabaseService.js. 5) Refactor any admin operations to go through backend API endpoints that use the service role key server-side. 6) Add validation to build process to detect and block any VITE_*SERVICE*ROLE* environment variables."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "critical",
+          "title": "HMAC secret key exposed to frontend bundle enabling authentication bypass",
+          "description": "The VITE_SECRET_KEY used for HMAC authentication is embedded in the frontend bundle (dataService.js line 61, supabaseService.js line 65, and multiple other files). Since this is prefixed with VITE_, it becomes part of the compiled JavaScript visible in the browser. An attacker can extract this secret key from the production bundle and use it to forge valid HMAC signatures, allowing them to impersonate the application and make authenticated requests to the backend API with arbitrary payloads, completely bypassing authentication. The fallback 'dev-token' and 'fallback-token' patterns (lines 67, 74, 102) also represent authentication bypasses if the secret is missing or crypto fails.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/services/supabaseService.js",
+            "src/api/proposals.js",
+            "src/api/proposalExtended.js",
+            "src/api/marketing.js",
+            "src/components/proposals/SourceDocumentViewerModal.jsx"
+          ],
+          "code_snippet": "// dataService.js:60-67\nexport const generateBackendAuthHeader = async (payload = '') => {\n  const secretKey = import.meta.env.VITE_SECRET_KEY;\n  \n  if (!secretKey) {\n    console.warn('[DataService] SECRET_KEY not available. Using development mode.');\n    const timestamp = Math.floor(Date.now() / 1000);\n    return `Bearer dev-token.${timestamp}`; // Weak fallback\n  }\n  // ... HMAC generation with exposed secret",
+          "recommendation": "CRITICAL FIX REQUIRED: 1) The HMAC secret must NEVER be in the frontend. The current architecture is fundamentally insecure. 2) Implement proper backend authentication using Supabase JWT tokens - the backend should verify the JWT from Supabase auth.getSession() instead of HMAC. 3) Remove all VITE_SECRET_KEY references from frontend code. 4) Rotate the HMAC secret immediately. 5) Remove all fallback token patterns (dev-token, fallback-token) as they bypass authentication entirely. 6) Backend API should validate Supabase JWT tokens and extract organization_id from verified claims, not from a frontend-controllable header."
+        },
+        {
+          "id": "SEC-003",
+          "category": "security",
+          "severity": "high",
+          "title": "Organization ID from untrusted source enables authorization bypass",
+          "description": "The X-Organization-ID header (dataService.js line 136) is set client-side from auth.user.supabaseOrgID and sent with every backend request. Since the frontend is untrusted, an attacker can modify this header value in their browser or via a proxy to access data from other organizations. While the backend should validate this, relying on a client-provided organization ID is an anti-pattern. The code even warns when org ID is missing (line 139) but still allows the request to proceed, potentially allowing unauthorized access to endpoints that should require org scoping.",
+          "file_paths": [
+            "src/services/dataService.js"
+          ],
+          "code_snippet": "// dataService.js:134-147\nif (auth.user && auth.user.supabaseOrgID) {\n  config.headers['X-Organization-ID'] = auth.user.supabaseOrgID;\n  console.log('[DataService] Added organization context:', auth.user.supabaseOrgID);\n} else {\n  console.warn('[DataService] Organization ID not found in user context...');\n  // Note: We don't throw an error here to allow initialization to complete\n  // Some endpoints may not require organization scoping\n}",
+          "recommendation": "1) Backend must extract organization_id from verified Supabase JWT token claims, NOT from request headers. 2) Backend should reject any request with a client-provided X-Organization-ID header to prevent confusion. 3) Frontend should only send the Supabase JWT token and let the backend extract all authorization context server-side. 4) Implement proper RLS policies in Supabase and use service-level JWT verification in the backend API. 5) Remove the permissive 'allow initialization to complete' logic - all authenticated endpoints must validate org context."
+        },
+        {
+          "id": "SEC-004",
+          "category": "security",
+          "severity": "high",
+          "title": "Sensitive configuration data stored in localStorage without encryption",
+          "description": "QuickBooks configuration (potentially including OAuth tokens, API credentials, or sensitive business rules) is stored in browser localStorage in plaintext (QuickBooksConfigPanel.jsx lines 92, 129). LocalStorage is accessible to any JavaScript running on the same origin, including third-party scripts or XSS payloads. The storage key 'qb_config_{orgID}' is predictable, making it easy to target. Additionally, localStorage persists across sessions and survives browser restarts, increasing exposure window.",
+          "file_paths": [
+            "src/components/financial/QuickBooksConfigPanel.jsx"
+          ],
+          "code_snippet": "// QuickBooksConfigPanel.jsx:91-92, 128-129\nconst storageKey = `qb_config_${user.supabaseOrgID}`;\nconst savedConfig = localStorage.getItem(storageKey);\n// ...\nlocalStorage.setItem(storageKey, JSON.stringify(config));",
+          "recommendation": "1) NEVER store sensitive configuration in localStorage. 2) Store all QuickBooks configuration server-side in Supabase with proper RLS policies. 3) If client-side storage is absolutely necessary, use sessionStorage (expires on tab close) instead of localStorage. 4) Encrypt any sensitive values before storage using Web Crypto API with a session-specific key. 5) The TODO comments indicate this is temporary - prioritize migrating to backend storage immediately. 6) Implement Content Security Policy to reduce XSS risk."
+        },
+        {
+          "id": "SEC-005",
+          "category": "security",
+          "severity": "high",
+          "title": "Missing security headers enabling XSS and clickjacking attacks",
+          "description": "The application does not set critical security headers in index.html or via server configuration. Missing headers include: Content-Security-Policy (allowing any inline scripts and external resources, enabling XSS), X-Frame-Options (allowing the app to be embedded in iframes for clickjacking), X-Content-Type-Options (allowing MIME-sniffing attacks), Referrer-Policy (leaking sensitive URLs), and Permissions-Policy. The Vite proxy configuration (vite.config.js) also doesn't add security headers. This is a web application handling authentication and sensitive customer data, making these headers critical.",
+          "file_paths": [
+            "index.html",
+            "vite.config.js"
+          ],
+          "code_snippet": "// index.html - missing <meta> tags for security headers\n<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <!-- NO SECURITY HEADERS -->\n  </head>",
+          "recommendation": "1) Add Content-Security-Policy meta tag: <meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.claritybusinesssolutions.ca https://supabase.claritybusinesssolutions.ca\">. 2) Add X-Frame-Options: <meta http-equiv=\"X-Frame-Options\" content=\"DENY\">. 3) Configure production server (nginx/caddy) to send: X-Content-Type-Options: nosniff, Referrer-Policy: strict-origin-when-cross-origin, Permissions-Policy. 4) Add Strict-Transport-Security for HTTPS enforcement. 5) Remove 'unsafe-inline' from CSP after auditing inline styles."
+        },
+        {
+          "id": "SEC-006",
+          "category": "security",
+          "severity": "medium",
+          "title": "Proposal access tokens logged to console exposing sensitive URLs",
+          "description": "Proposal access tokens are logged to the browser console (proposals.js line 223: 'console.log(\"[Proposals] Fetched proposal by token:\", token)'). These tokens grant access to private proposal documents and should be treated as sensitive credentials. Console logs persist in browser DevTools history and can be accessed by browser extensions, compromising proposal access control. The proposalService.js line 181 also logs tokens.",
+          "file_paths": [
+            "src/api/proposals.js",
+            "src/services/proposalService.js"
+          ],
+          "code_snippet": "// proposals.js:223\nconsole.log('[Proposals] Fetched proposal by token:', token)\n\n// proposalService.js:181\nconsole.log('[WIREFRAME] Mock logging proposal access:', processedProposal.id, token);",
+          "recommendation": "1) Remove all console.log statements that include tokens, secrets, or access credentials. 2) Replace with generic success messages that don't include sensitive values: console.log('[Proposals] Fetched proposal successfully'). 3) Implement a logging utility that automatically redacts sensitive fields in production builds. 4) Use a proper logging library that respects environment (debug logs only in development). 5) Audit entire codebase for other credential logging with: grep -r 'console.log.*token'."
+        },
+        {
+          "id": "SEC-007",
+          "category": "security",
+          "severity": "medium",
+          "title": "Environment variable key lengths logged exposing implementation details",
+          "description": "The config.js file logs the exact length of secret keys and service role keys to the console (lines 12-16, 28-30). This information disclosure helps attackers understand the entropy and key format, potentially aiding brute-force or cryptanalysis attacks. The logs also reveal whether critical secrets are configured, helping attackers identify weak deployments. These logs run on every page load and are visible in production.",
+          "file_paths": [
+            "src/config.js"
+          ],
+          "code_snippet": "// config.js:6-16\nconsole.log('[ENV-INVESTIGATION] Environment variable loading check:', {\n  timestamp: new Date().toISOString(),\n  viteSupabaseAnonKeyLength: import.meta.env?.VITE_SUPABASE_ANON_KEY?.length,\n  viteServiceRoleKeyExists: !!import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY,\n  viteServiceRoleKeyLength: import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY?.length,\n  viteSecretKeyLength: import.meta.env?.VITE_SECRET_KEY?.length\n});",
+          "recommendation": "1) Remove all console.log statements from config.js that log key lengths or existence checks. 2) Move these diagnostic logs behind a debug flag that is disabled in production. 3) If environment validation is needed, do it server-side during build/deployment. 4) Never log information about secret key formats, lengths, or presence in production. 5) Use proper environment validation tooling (like dotenv-safe) during build instead of runtime logging."
+        },
+        {
+          "id": "SEC-008",
+          "category": "security",
+          "severity": "medium",
+          "title": "Missing input validation on email and phone fields enabling injection attacks",
+          "description": "The CustomerForm.jsx performs basic regex validation for email (line 282) and phone (line 289) but these patterns are insufficient and can be bypassed. Email regex '/\\S+@\\S+\\.\\S+/' accepts malicious payloads like '<script>@example.com' or 'test@<img src=x onerror=alert(1)>.com'. Phone regex '/^\\+?[\\d\\s-()]+$/' is more restrictive but still allows unusual patterns. More critically, there's no validation of business_name, primary_contact_name, or address fields which accept any string and are later rendered in the UI, potentially enabling stored XSS attacks.",
+          "file_paths": [
+            "src/components/customers/CustomerForm.jsx"
+          ],
+          "code_snippet": "// CustomerForm.jsx:280-292\nemails.forEach((emailObj, index) => {\n  if (emailObj.email && !/\\S+@\\S+\\.\\S+/.test(emailObj.email)) {\n    newErrors[`email_${index}`] = 'Invalid email format';\n  }\n});\nphones.forEach((phoneObj, index) => {\n  if (phoneObj.phone && !/^\\+?[\\d\\s-()]+$/.test(phoneObj.phone)) {\n    newErrors[`phone_${index}`] = 'Invalid phone format';\n  }\n});\n// NO VALIDATION for business_name, addresses, etc.",
+          "recommendation": "1) Use a proper email validation library like 'validator.js' or 'email-validator'. 2) Add strict validation for business_name: max length, no HTML tags, whitelist allowed characters. 3) Validate and sanitize all address fields. 4) Implement server-side validation in the backend API as primary defense - never trust client-side validation. 5) Use React's built-in XSS protection (JSX escaping) but add explicit DOMPurify sanitization for user-generated content. 6) Add max length constraints on all text inputs (business_name, contact names, addresses)."
+        },
+        {
+          "id": "SEC-009",
+          "category": "security",
+          "severity": "medium",
+          "title": "Axios timeout of 30 seconds enables resource exhaustion DoS",
+          "description": "The axios client is configured with a 30-second timeout (dataService.js line 112). While this prevents hanging indefinitely, 30 seconds is excessively long for an API request. If an attacker can trigger slow backend responses (via slow queries, resource exhaustion, or malicious payloads), they can tie up browser resources for 30 seconds per request. With multiple tabs or rapid requests, this can freeze the user's browser and consume memory. Combined with the lack of client-side rate limiting, this enables a client-side DoS attack.",
+          "file_paths": [
+            "src/services/dataService.js"
+          ],
+          "code_snippet": "// dataService.js:110-116\nconst client = axios.create({\n  baseURL: backendConfig.baseUrl,\n  timeout: 30000, // 30 seconds - too long\n  headers: {\n    'Content-Type': 'application/json'\n  }\n});",
+          "recommendation": "1) Reduce timeout to 10-15 seconds for most API calls. 2) Implement request-specific timeouts - use shorter timeouts (5s) for quick operations and longer ones only for known slow operations like file uploads. 3) Add client-side request cancellation using AbortController for navigation or component unmount. 4) Implement exponential backoff for retries instead of immediate retry. 5) Add request debouncing for user-triggered operations. 6) Show loading states with cancel buttons for long operations."
+        },
+        {
+          "id": "SEC-010",
+          "category": "security",
+          "severity": "low",
+          "title": "Authentication context stored in global mutable variable enabling tampering",
+          "description": "The authentication context is stored in a module-level global variable 'currentAuthentication' (dataService.js line 15) that can be mutated by any code via setAuthenticationContext(). While this is a frontend application where all client-side data is ultimately untrusted, this pattern makes it easier for malicious scripts or browser extensions to modify authentication state, potentially bypassing client-side checks or causing the app to send requests with manipulated org IDs. The setter doesn't validate the shape of the incoming authState object.",
+          "file_paths": [
+            "src/services/dataService.js"
+          ],
+          "code_snippet": "// dataService.js:15-29\nlet currentAuthentication = {\n  isAuthenticated: false,\n  user: null\n};\n\nexport const setAuthenticationContext = (authState) => {\n  currentAuthentication = { ...authState }; // No validation\n  console.log('[DataService] Authentication context set:', currentAuthentication);\n};",
+          "recommendation": "1) Add validation in setAuthenticationContext to verify authState structure and user object fields. 2) Make currentAuthentication private (remove export) and only expose getAuthenticationContext. 3) Use Object.freeze() on the returned value from getAuthenticationContext to prevent mutation. 4) Consider using React Context or Redux for authentication state instead of module-level globals. 5) Add TypeScript or PropTypes validation for authState shape. 6) Remember that true security must be enforced server-side - this is defense-in-depth only."
+        }
+      ],
+      "files_reviewed": 0,
+      "vulnerabilities_found": 10
+    }
+  },
+  "ArchitectureCheckNode": {
+    "timestamp": "2026-01-17T04:52:42.685Z",
+    "output": {
+      "findings": [
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Duplicate HMAC authentication logic violates DRY and single responsibility",
+          "description": "The generateBackendAuthHeader function is duplicated across multiple files (dataService.js, supabaseService.js, proposals.js, proposalExtended.js, SourceDocumentViewerModal.jsx, and marketing.js uses a variant called getAuthHeader). Each implementation is identical (~50 lines of crypto code), representing ~300+ lines of duplicated code. This violates DRY principles and creates maintenance burden - a security fix or algorithm change must be applied in 6+ places. The architecture documentation (CLAUDE.md lines 244-248) specifies the API Layer should use dataService for authentication, but proposals.js and marketing.js bypass this.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/services/supabaseService.js",
+            "src/api/proposals.js",
+            "src/api/proposalExtended.js",
+            "src/api/marketing.js",
+            "src/components/proposals/SourceDocumentViewerModal.jsx"
+          ],
+          "code_snippet": "// proposals.js:15-58 - Duplicates dataService.js:60-104\nasync function generateBackendAuthHeader(payload = '') {\n  const secretKey = import.meta.env.VITE_SECRET_KEY\n  if (!secretKey) {\n    return `Bearer dev-token.${timestamp}`\n  }\n  // ... 40+ lines of identical crypto code\n}\n\n// marketing.js:42-50 - Variant implementation\nasync function getAuthHeader(payload) {\n  const secret = import.meta.env.VITE_SECRET_KEY;\n  // Different approach but same purpose\n}",
+          "recommendation": "1) Consolidate all HMAC generation into dataService.generateBackendAuthHeader and export it. 2) Update proposals.js, proposalExtended.js, and marketing.js to import from dataService instead of defining local versions. 3) Remove duplicate implementations from supabaseService.js and SourceDocumentViewerModal.jsx. 4) The pattern should be: API layer imports dataService.generateBackendAuthHeader, or better yet, API layer uses dataService.post/get/put which automatically adds auth via interceptor. 5) This aligns with the documented architecture where API layer uses dataService for backend communication."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent error handling abstraction across API modules",
+          "description": "The customers.js API module uses a sophisticated error handling pattern with withErrorHandling wrapper, CustomerError class, and checkOrganizationScope from a centralized errors module. However, other API modules (projects.js, notes.js, tasks.js, links.js, images.js) implement inline checkOrganizationScope functions (5 duplicate implementations found) and don't use withErrorHandling or custom error classes. This creates inconsistency: customers API has structured error codes and UI-formatted errors, while other APIs return raw exceptions. The architecture specifies API layer should have 'API abstraction and error handling' (CLAUDE.md line 241), but only customers.js follows this pattern.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/projects.js",
+            "src/api/notes.js",
+            "src/api/tasks.js",
+            "src/api/links.js",
+            "src/api/images.js"
+          ],
+          "code_snippet": "// customers.js - Centralized error handling\nimport { withErrorHandling, checkOrganizationScope, CustomerError } from '../errors/customerErrors';\nexport async function fetchCustomers(options = {}) {\n  return withErrorHandling(async () => {\n    checkOrganizationScope({ authentication: auth }, 'fetchCustomers');\n    // ...\n  }, 'fetchCustomers', { options });\n}\n\n// projects.js - Inline implementation\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n  if (!auth?.user?.supabaseOrgID) {\n    throw new Error(`Organization context required for ${operation}`);\n  }\n}\nexport async function fetchProjectsForCustomer(customerId) {\n  checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomer');\n  // No withErrorHandling wrapper, no custom error class\n}",
+          "recommendation": "1) Generalize the error handling pattern from customerErrors.js into a shared errors/apiErrors.js module with ProjectError, TaskError, NoteError classes. 2) Export a single checkOrganizationScope utility from errors/apiErrors.js and remove the 5 duplicate implementations. 3) Apply withErrorHandling wrapper to all API functions in projects.js, tasks.js, notes.js, links.js, images.js. 4) Define error code enums for each domain (ProjectErrorCodes, TaskErrorCodes, etc.). 5) This creates architectural consistency where all API modules follow the same error handling pattern as documented."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Service layer violates separation of concerns with API communication",
+          "description": "The architecture documentation (CLAUDE.md lines 239-242) defines clear layer responsibilities: Services layer handles 'business logic and data processing', while API layer handles 'Direct API communication'. However, proposals.js (API layer) contains extensive business logic: UUID generation, token generation, price parsing, field mapping, date calculation (expires_at), and schema transformation (lines 73-104). Similarly, marketing.js contains CSV parsing business logic (lines 57-101) in the API layer. This violates separation of concerns - API modules should be thin wrappers that call dataService, not contain business rules.",
+          "file_paths": [
+            "src/api/proposals.js",
+            "src/api/marketing.js"
+          ],
+          "code_snippet": "// proposals.js:73-104 - Business logic in API layer\nexport async function createProposal(proposalData) {\n  const backendProposalData = {\n    id: proposalData.id || crypto.randomUUID(), // UUID generation\n    // Field mapping and transformation\n    total_price: parseFloat(proposalData.totalPrice || proposalData.total_price || 0),\n    // ...\n  }\n  if (!isUpdate) {\n    backendProposalData.access_token = generateSecureToken() // Token generation\n    backendProposalData.expires_at = new Date(Date.now() + 30*24*60*60*1000).toISOString() // Date calc\n  }\n  // This should be in proposalService.js\n}\n\n// marketing.js:57-101 - CSV parsing in API layer\nfunction parseCSV(csvText) {\n  // 40+ lines of CSV parsing logic\n  // Should be in marketingService.js\n}",
+          "recommendation": "1) Move proposal data transformation logic from proposals.js to src/services/proposalService.js. Create functions like prepareProposalForBackend(), generateProposalToken(), calculateExpirationDate(). 2) Move parseCSV and email eligibility filtering from marketing.js to src/services/marketingService.js. 3) API layer functions should become thin: fetch data via dataService, pass to service layer for transformation, return result. 4) This aligns with the documented pattern where 'Services Layer' handles 'Business logic and data processing' while 'API Layer' only does 'Direct API communication'."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Data transformation in wrong direction violates migration goals",
+          "description": "The customerService.js transforms backend data TO FileMaker format (transformBackendToFileMaker) after receiving it from the backend API, then useCustomer.js and components work with FileMaker-formatted data. This is architecturally backwards - TSK0015 removed FileMaker environment detection to create a 'single backend-only routing path'. The service layer should transform data FROM legacy FileMaker format (for backward compatibility) TO a canonical frontend format, not perpetuate FileMaker conventions. Lines 34, 50, 63, 100 in customerService.js convert every backend response to FileMaker format, making the 'backend migration' superficial.",
+          "file_paths": [
+            "src/services/customerService.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// customerService.js:30-50 - Transforms backend TO FileMaker\nexport function processBackendCustomerList(response) {\n  return {\n    customers: response.map(customer => transformBackendToFileMaker(customer)),\n    // Every backend response converted to FileMaker format\n  };\n}\n\n// useCustomer.js:307-308 - Works with FileMaker fields\nsetCustomers(prevCustomers =>\n  prevCustomers.map(customer =>\n    // Updates both is_active AND f_active (FileMaker field)\n    { ...customer, isActive: active, is_active: active, f_active: active ? \"1\" : \"0\" }\n  )\n);",
+          "recommendation": "1) Define a canonical frontend customer model (business_name, is_active, emails[], phones[], addresses[]) that matches the backend schema. 2) Reverse the transformation: keep transformFileMakerToBackend for legacy data migration, but remove transformBackendToFileMaker. 3) Update useCustomer.js to work with canonical format, removing FileMaker-specific fields like f_active, recordId. 4) If backward compatibility is needed, create a compatibility layer in components, not in the core data flow. 5) This completes the migration - backend API format becomes the application's native format, not FileMaker."
+        },
+        {
+          "id": "ARC-005",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Inconsistent use of dataService across API modules",
+          "description": "The architecture pattern (CLAUDE.md line 245) specifies API layer should use dataService for backend communication with HMAC auth. However, implementation is inconsistent: customers.js, projects.js, tasks.js, notes.js, links.js, images.js all use dataService.get/post/put correctly (9 files total). But proposals.js, proposalExtended.js, and marketing.js bypass dataService and make direct axios calls with manual auth header generation. This creates two different HTTP client patterns in the same layer, duplicating interceptor logic (org header, HMAC auth) and making it impossible to add cross-cutting concerns like retry logic or logging uniformly.",
+          "file_paths": [
+            "src/api/proposals.js",
+            "src/api/proposalExtended.js",
+            "src/api/marketing.js"
+          ],
+          "code_snippet": "// proposals.js:109-125 - Manual axios call, bypassing dataService\nconst authHeader = await generateBackendAuthHeader(payload)\nconst response = await axios.post(\n  `${backendConfig.baseUrl}/proposals`,\n  backendProposalData,\n  {\n    headers: {\n      'Content-Type': 'application/json',\n      'Authorization': authHeader\n    }\n  }\n)\n// No X-Organization-ID header, no error interceptor, no retry logic\n\n// Should be:\nconst response = await dataService.post('/api/proposals', backendProposalData);",
+          "recommendation": "1) Refactor proposals.js to use dataService.post('/api/proposals', data) instead of manual axios calls. 2) Remove all manual authHeader generation and axios imports from proposals.js, proposalExtended.js, marketing.js. 3) Let dataService interceptor handle HMAC auth and X-Organization-ID header automatically. 4) This ensures all API calls benefit from the centralized request/response interceptors in dataService (auth, org scoping, error handling, logging). 5) Reduces duplication and aligns with the documented 'All data operations use Backend API or direct Supabase calls' pattern via dataService."
+        },
+        {
+          "id": "ARC-006",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Missing service layer for several API modules breaks layered architecture",
+          "description": "Architecture documentation (CLAUDE.md lines 234-248) defines a 6-layer pattern: App → Layout → View → Hooks → Services → API. Hooks should call Services for 'business logic and data processing', and Services call API for 'Direct API communication'. However, several domains bypass the service layer: notes (no noteService.js exists in imports - actually there is one but it's for transformation only), links (linkService.js exists but is minimal), images (no imageService.js). This means hooks call API directly, putting business logic in hooks instead of services, violating the separation of concerns.",
+          "file_paths": [
+            "src/hooks/useNote.js",
+            "src/hooks/useLink.js",
+            "src/api/notes.js",
+            "src/api/links.js"
+          ],
+          "code_snippet": "// useNote.js - Hook calls API directly, no service layer\nimport { createNote, fetchNotesByProject, updateNote, deleteNote } from '../api/notes';\n\nconst handleNoteCreate = useCallback(async (noteData) => {\n  const result = await createNote(noteData); // Direct API call\n  // Business logic in hook: entity type detection, pagination state management\n  const entityKey = `${entityType}-${entityId}`;\n  updatePagination(entityKey, { /* pagination logic */ });\n}, []);\n\n// Expected pattern:\nimport { noteService } from '../services/noteService';\nconst result = await noteService.createNote(noteData); // Service handles business logic",
+          "recommendation": "1) Create/expand service modules for notes, links, images with business logic: noteService.js should handle entity type routing, pagination calculation, data transformation. 2) Move pagination state management logic from useNote.js to noteService. 3) Hooks should call service methods, not API methods directly. 4) Services become the coordination layer between hooks and API. 5) This completes the 6-layer architecture pattern and ensures business logic is centralized in services, not scattered across hooks. Note: Some service files exist but are underutilized - expand them to handle all business logic."
+        },
+        {
+          "id": "ARC-007",
+          "category": "architectural_fit",
+          "severity": "medium",
+          "title": "Inconsistent authentication context access pattern",
+          "description": "API modules access authentication context in two different ways: some import getAuthenticationContext from dataService (customers.js, projects.js, notes.js, tasks.js), while others don't access it at all and rely on dataService interceptor to add auth automatically. Additionally, the authentication is checked at different layers: API layer in some cases (checkOrganizationScope in API functions), not checked in others (dataService interceptor warns but doesn't fail). This creates confusion about where authentication validation should happen and whether it's required or optional.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/projects.js",
+            "src/api/notes.js",
+            "src/services/dataService.js"
+          ],
+          "code_snippet": "// customers.js - Explicit auth check in API layer\nconst auth = getAuthenticationContext();\ncheckOrganizationScope({ authentication: auth }, 'fetchCustomers');\nconst response = await dataService.get('/api/customers', { params: queryParams });\n\n// dataService.js interceptor - Warns but allows request without org ID\nif (auth.user && auth.user.supabaseOrgID) {\n  config.headers['X-Organization-ID'] = auth.user.supabaseOrgID;\n} else {\n  console.warn('[DataService] Organization ID not found...');\n  // Note: We don't throw an error here to allow initialization to complete\n}",
+          "recommendation": "1) Standardize on a single pattern: dataService interceptor should be responsible for authentication. 2) Make org ID validation strict in dataService - throw error if missing for non-public endpoints. 3) Remove checkOrganizationScope calls from API functions - this is cross-cutting concern handled by interceptor. 4) API functions should trust that dataService adds correct auth, not duplicate checks. 5) If some endpoints don't require org ID, use a whitelist in dataService interceptor or a special header flag. 6) This creates a single source of truth for authentication and reduces code duplication."
+        },
+        {
+          "id": "ARC-008",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Inconsistent normalization function placement and naming",
+          "description": "Data normalization functions are placed inconsistently: customers.js has normalizeCustomerData as a private function in the API module, projects.js has normalizeProjectData also in API module, but customerService has transformBackendToFileMaker as an exported service function. The naming is also inconsistent: 'normalize' vs 'transform' vs 'process'. Per the architecture, data processing should be in the Services layer, not API layer. Having normalization in both places creates confusion about responsibilities.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/projects.js",
+            "src/services/customerService.js"
+          ],
+          "code_snippet": "// customers.js:14-29 - Private normalization in API layer\nfunction normalizeCustomerData(data) {\n  if (Array.isArray(data)) {\n    return data.map(customer => ({ id: customer.id || customer.__ID, ... }));\n  }\n  // ...\n}\n\n// customerService.js:462 - Public transformation in service layer\nexport function transformBackendToFileMaker(backendCustomer) {\n  // Similar purpose, different layer, different name\n}",
+          "recommendation": "1) Move all data normalization/transformation to the Services layer. 2) Use consistent naming: normalize*() for simple field mapping, transform*() for complex business logic. 3) API layer should return raw backend responses, Service layer does all transformation. 4) If API needs to normalize response envelope (unwrap data field), keep it minimal and consistent. 5) Export transformation functions from services so they can be tested and reused. 6) This clarifies that Services own data processing, API just communicates."
+        }
+      ],
+      "patterns_reviewed": 0,
+      "violations_found": 8
+    }
+  },
+  "JudgeNode": {
+    "timestamp": "2026-01-17T04:52:42.687Z",
+    "output": {
+      "total_findings": 33,
+      "kept_findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "TSK0015: ENVIRONMENT_TYPES constants not fully removed",
+          "description": "Task TSK0015 requires simplifying dataService to a single routing path and removing ENVIRONMENT_TYPES constants. However, ENVIRONMENT_TYPES is still exported from dataService.js and actively used in production code in CustomerForm.jsx and useCustomer.js hook. These files contain conditional logic checking 'env.type === ENVIRONMENT_TYPES.FILEMAKER' which contradicts the requirement to remove dual-environment routing.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/components/customers/CustomerForm.jsx",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Remove ENVIRONMENT_TYPES export from dataService.js and eliminate all conditional FileMaker environment checks in CustomerForm.jsx and useCustomer.js. Replace with single-path backend API logic as specified in TSK0015."
+        },
+        {
+          "id": "COM-002",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "TSK0014/TSK0021: FileMaker example UI not removed from AppStateContext",
+          "description": "Tasks TSK0014 and TSK0021 require removing FileMaker-specific UI and references. However, AppStateContext.jsx still contains showFileMakerExample state, SET_SHOW_FILEMAKER_EXAMPLE action type, and setShowFileMakerExample operation. This state is actively used in MainContent.jsx and Sidebar.jsx components, providing a UI option to show FileMaker examples despite FileMaker being removed.",
+          "file_paths": [
+            "src/context/AppStateContext.jsx",
+            "src/components/MainContent.jsx",
+            "src/components/layout/Sidebar.jsx"
+          ],
+          "code_snippet": null,
+          "recommendation": "Remove all showFileMakerExample-related code from AppStateContext, including the action type, state property, reducer case, and operation function. Remove FileMaker example UI buttons/logic from MainContent.jsx and Sidebar.jsx."
+        },
+        {
+          "id": "COM-003",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "TSK0017: FileMaker.PerformScript calls not removed",
+          "description": "Task TSK0017 requires deleting FileMaker API files and ensuring no FileMaker imports remain. However, ActivityReportModal.jsx contains direct FileMaker API calls using 'FileMaker.PerformScript' and checks for 'typeof FileMaker === \"undefined\"'. This represents active FileMaker integration code that contradicts the completion status of TSK0017.",
+          "file_paths": [
+            "src/components/customers/ActivityReportModal.jsx"
+          ],
+          "code_snippet": null,
+          "recommendation": "Remove the sendToFileMaker function and all FileMaker.PerformScript calls from ActivityReportModal.jsx. Replace with backend API endpoint for PDF export or mark the feature as deprecated until backend migration is complete."
+        },
+        {
+          "id": "COD-001",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Dead code execution in deprecated dual-environment logic",
+          "description": "The useCustomer hook and CustomerForm component contain extensive conditional logic checking for ENVIRONMENT_TYPES.FILEMAKER that can never execute since TSK0013 and TSK0015 removed FileMaker environment detection. The getEnvironmentContext() function now always returns type: 'webapp', meaning all FileMaker branches (lines 99-107, 147-150, 186-189, 230-259, 419-422 in useCustomer.js and lines 295-298, 377-428 in CustomerForm.jsx) are unreachable dead code. This creates maintainability issues and potential confusion.",
+          "file_paths": [
+            "src/hooks/useCustomer.js",
+            "src/components/customers/CustomerForm.jsx"
+          ],
+          "code_snippet": "if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {\n  // This code can never execute - getEnvironmentContext() always returns WEBAPP\n  processedCustomers = processCustomerData(result);\n}",
+          "recommendation": "Remove all ENVIRONMENT_TYPES.FILEMAKER conditional branches from useCustomer.js and CustomerForm.jsx. Simplify the code to only execute the backend/webapp path. Remove imports of formatCustomerForFileMaker, transformFileMakerToBackend, transformBackendToFileMaker from useCustomer.js."
+        },
+        {
+          "id": "COD-002",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Missing null check before accessing FileMaker global object",
+          "description": "In ActivityReportModal.jsx, the sendToFileMaker function checks 'typeof FileMaker === \"undefined\"' but then immediately calls FileMaker.PerformScript without verifying that PerformScript is a function. Line 30 executes 'FileMaker.PerformScript(\"save base64 from JS\", payload)' which could throw a runtime error if FileMaker object exists but PerformScript is not defined or not a function.",
+          "file_paths": [
+            "src/components/customers/ActivityReportModal.jsx"
+          ],
+          "code_snippet": "if (typeof FileMaker === \"undefined\" || !FileMaker.PerformScript) {\n  showError(\"FileMaker object is unavailable\");\n  return;\n}\nFileMaker.PerformScript(\"save base64 from JS\", payload); // PerformScript already checked above",
+          "recommendation": "This code should be removed entirely per TSK0017 (Delete FileMaker API files). If it must remain temporarily, the existing null check at line 14 is actually correct and sufficient - the issue is that this entire integration contradicts the migration completion status."
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Dual-write logic still executed despite deprecation",
+          "description": "In useCustomer.js lines 236-259, the handleCustomerUpdate function contains a complex dual-write block that updates both FileMaker and Supabase when env.type === ENVIRONMENT_TYPES.FILEMAKER. This includes try-catch logic for Supabase updates, error logging, and fallback handling. Since FileMaker environment can never be true (per TSK0015), this entire 24-line block is dead code that still executes environment checks and includes logic that references the deprecated dual-write pattern.",
+          "file_paths": [
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {\n  // Update customer in Supabase after successful FileMaker update (dual-write)\n  if (user && user.supabaseOrgID) {\n    try {\n      const supabaseResult = await updateCustomerInSupabase(...);\n      // This entire dual-write coordination block is dead code\n    } catch (supabaseError) { ... }\n  }\n}",
+          "recommendation": "Remove the entire FileMaker conditional block (lines 230-259) and the else branch logic should become the only path. Remove the import of updateCustomerInSupabase if it's only used in this dead code path."
+        },
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "critical",
+          "title": "Supabase Service Role Key exposed to frontend bundle",
+          "description": "The Supabase service role key (VITE_SUPABASE_SERVICE_ROLE_KEY) is imported and exposed in the frontend application via config.js line 22 and used in supabaseService.js. The service role key bypasses ALL Row-Level Security (RLS) policies and grants unrestricted database access. Because it's prefixed with VITE_, it gets bundled into the frontend JavaScript and is visible to anyone who inspects the production bundle. An attacker can extract this key from the compiled JavaScript and use it to bypass all security policies, accessing, modifying, or deleting any data in the entire Supabase database across all organizations.",
+          "file_paths": [
+            "src/config.js",
+            "src/services/supabaseService.js"
+          ],
+          "code_snippet": "// src/config.js:22\nexport const supabaseServiceRoleKey = import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY;\n\n// src/supabaseService.js:10\nimport { supabaseServiceRoleKey } from '../config';\n\n// src/supabaseService.js:16-18\nif (!supabaseServiceRoleKey) {\n  console.warn('Missing Supabase service role key - admin functions will not work');\n}",
+          "recommendation": "IMMEDIATE ACTION REQUIRED: 1) Remove VITE_SUPABASE_SERVICE_ROLE_KEY from all frontend code and .env files. 2) Rotate the service role key immediately via Supabase dashboard as it is now compromised. 3) The service role key must ONLY be used in backend/server environments, never in the browser. 4) Remove the export from config.js and all imports in supabaseService.js. 5) Refactor any admin operations to go through backend API endpoints that use the service role key server-side. 6) Add validation to build process to detect and block any VITE_*SERVICE*ROLE* environment variables."
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "critical",
+          "title": "HMAC secret key exposed to frontend bundle enabling authentication bypass",
+          "description": "The VITE_SECRET_KEY used for HMAC authentication is embedded in the frontend bundle (dataService.js line 61, supabaseService.js line 65, and multiple other files). Since this is prefixed with VITE_, it becomes part of the compiled JavaScript visible in the browser. An attacker can extract this secret key from the production bundle and use it to forge valid HMAC signatures, allowing them to impersonate the application and make authenticated requests to the backend API with arbitrary payloads, completely bypassing authentication. The fallback 'dev-token' and 'fallback-token' patterns (lines 67, 74, 102) also represent authentication bypasses if the secret is missing or crypto fails.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/services/supabaseService.js",
+            "src/api/proposals.js",
+            "src/api/proposalExtended.js",
+            "src/api/marketing.js",
+            "src/components/proposals/SourceDocumentViewerModal.jsx"
+          ],
+          "code_snippet": "// dataService.js:60-67\nexport const generateBackendAuthHeader = async (payload = '') => {\n  const secretKey = import.meta.env.VITE_SECRET_KEY;\n  \n  if (!secretKey) {\n    console.warn('[DataService] SECRET_KEY not available. Using development mode.');\n    const timestamp = Math.floor(Date.now() / 1000);\n    return `Bearer dev-token.${timestamp}`; // Weak fallback\n  }\n  // ... HMAC generation with exposed secret",
+          "recommendation": "CRITICAL FIX REQUIRED: 1) The HMAC secret must NEVER be in the frontend. The current architecture is fundamentally insecure. 2) Implement proper backend authentication using Supabase JWT tokens - the backend should verify the JWT from Supabase auth.getSession() instead of HMAC. 3) Remove all VITE_SECRET_KEY references from frontend code. 4) Rotate the HMAC secret immediately. 5) Remove all fallback token patterns (dev-token, fallback-token) as they bypass authentication entirely. 6) Backend API should validate Supabase JWT tokens and extract organization_id from verified claims, not from a frontend-controllable header."
+        },
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Duplicate HMAC authentication logic violates DRY and single responsibility",
+          "description": "The generateBackendAuthHeader function is duplicated across multiple files (dataService.js, supabaseService.js, proposals.js, proposalExtended.js, SourceDocumentViewerModal.jsx, and marketing.js uses a variant called getAuthHeader). Each implementation is identical (~50 lines of crypto code), representing ~300+ lines of duplicated code. This violates DRY principles and creates maintenance burden - a security fix or algorithm change must be applied in 6+ places. The architecture documentation (CLAUDE.md lines 244-248) specifies the API Layer should use dataService for authentication, but proposals.js and marketing.js bypass this.",
+          "file_paths": [
+            "src/services/dataService.js",
+            "src/services/supabaseService.js",
+            "src/api/proposals.js",
+            "src/api/proposalExtended.js",
+            "src/api/marketing.js",
+            "src/components/proposals/SourceDocumentViewerModal.jsx"
+          ],
+          "code_snippet": "// proposals.js:15-58 - Duplicates dataService.js:60-104\nasync function generateBackendAuthHeader(payload = '') {\n  const secretKey = import.meta.env.VITE_SECRET_KEY\n  if (!secretKey) {\n    return `Bearer dev-token.${timestamp}`\n  }\n  // ... 40+ lines of identical crypto code\n}\n\n// marketing.js:42-50 - Variant implementation\nasync function getAuthHeader(payload) {\n  const secret = import.meta.env.VITE_SECRET_KEY;\n  // Different approach but same purpose\n}",
+          "recommendation": "1) Consolidate all HMAC generation into dataService.generateBackendAuthHeader and export it. 2) Update proposals.js, proposalExtended.js, and marketing.js to import from dataService instead of defining local versions. 3) Remove duplicate implementations from supabaseService.js and SourceDocumentViewerModal.jsx. 4) The pattern should be: API layer imports dataService.generateBackendAuthHeader, or better yet, API layer uses dataService.post/get/put which automatically adds auth via interceptor. 5) This aligns with the documented architecture where API layer uses dataService for backend communication."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent error handling abstraction across API modules",
+          "description": "The customers.js API module uses a sophisticated error handling pattern with withErrorHandling wrapper, CustomerError class, and checkOrganizationScope from a centralized errors module. However, other API modules (projects.js, notes.js, tasks.js, links.js, images.js) implement inline checkOrganizationScope functions (5 duplicate implementations found) and don't use withErrorHandling or custom error classes. This creates inconsistency: customers API has structured error codes and UI-formatted errors, while other APIs return raw exceptions. The architecture specifies API layer should have 'API abstraction and error handling' (CLAUDE.md line 241), but only customers.js follows this pattern.",
+          "file_paths": [
+            "src/api/customers.js",
+            "src/api/projects.js",
+            "src/api/notes.js",
+            "src/api/tasks.js",
+            "src/api/links.js",
+            "src/api/images.js"
+          ],
+          "code_snippet": "// customers.js - Centralized error handling\nimport { withErrorHandling, checkOrganizationScope, CustomerError } from '../errors/customerErrors';\nexport async function fetchCustomers(options = {}) {\n  return withErrorHandling(async () => {\n    checkOrganizationScope({ authentication: auth }, 'fetchCustomers');\n    // ...\n  }, 'fetchCustomers', { options });\n}\n\n// projects.js - Inline implementation\nfunction checkOrganizationScope({ authentication: auth }, operation) {\n  if (!auth?.user?.supabaseOrgID) {\n    throw new Error(`Organization context required for ${operation}`);\n  }\n}\nexport async function fetchProjectsForCustomer(customerId) {\n  checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomer');\n  // No withErrorHandling wrapper, no custom error class\n}",
+          "recommendation": "1) Generalize the error handling pattern from customerErrors.js into a shared errors/apiErrors.js module with ProjectError, TaskError, NoteError classes. 2) Export a single checkOrganizationScope utility from errors/apiErrors.js and remove the 5 duplicate implementations. 3) Apply withErrorHandling wrapper to all API functions in projects.js, tasks.js, notes.js, links.js, images.js. 4) Define error code enums for each domain (ProjectErrorCodes, TaskErrorCodes, etc.). 5) This creates architectural consistency where all API modules follow the same error handling pattern as documented."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Service layer violates separation of concerns with API communication",
+          "description": "The architecture documentation (CLAUDE.md lines 239-242) defines clear layer responsibilities: Services layer handles 'business logic and data processing', while API layer handles 'Direct API communication'. However, proposals.js (API layer) contains extensive business logic: UUID generation, token generation, price parsing, field mapping, date calculation (expires_at), and schema transformation (lines 73-104). Similarly, marketing.js contains CSV parsing business logic (lines 57-101) in the API layer. This violates separation of concerns - API modules should be thin wrappers that call dataService, not contain business rules.",
+          "file_paths": [
+            "src/api/proposals.js",
+            "src/api/marketing.js"
+          ],
+          "code_snippet": "// proposals.js:73-104 - Business logic in API layer\nexport async function createProposal(proposalData) {\n  const backendProposalData = {\n    id: proposalData.id || crypto.randomUUID(), // UUID generation\n    // Field mapping and transformation\n    total_price: parseFloat(proposalData.totalPrice || proposalData.total_price || 0),\n    // ...\n  }\n  if (!isUpdate) {\n    backendProposalData.access_token = generateSecureToken() // Token generation\n    backendProposalData.expires_at = new Date(Date.now() + 30*24*60*60*1000).toISOString() // Date calc\n  }\n  // This should be in proposalService.js\n}\n\n// marketing.js:57-101 - CSV parsing in API layer\nfunction parseCSV(csvText) {\n  // 40+ lines of CSV parsing logic\n  // Should be in marketingService.js\n}",
+          "recommendation": "1) Move proposal data transformation logic from proposals.js to src/services/proposalService.js. Create functions like prepareProposalForBackend(), generateProposalToken(), calculateExpirationDate(). 2) Move parseCSV and email eligibility filtering from marketing.js to src/services/marketingService.js. 3) API layer functions should become thin: fetch data via dataService, pass to service layer for transformation, return result. 4) This aligns with the documented pattern where 'Services Layer' handles 'Business logic and data processing' while 'API Layer' only does 'Direct API communication'."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Data transformation in wrong direction violates migration goals",
+          "description": "The customerService.js transforms backend data TO FileMaker format (transformBackendToFileMaker) after receiving it from the backend API, then useCustomer.js and components work with FileMaker-formatted data. This is architecturally backwards - TSK0015 removed FileMaker environment detection to create a 'single backend-only routing path'. The service layer should transform data FROM legacy FileMaker format (for backward compatibility) TO a canonical frontend format, not perpetuate FileMaker conventions. Lines 34, 50, 63, 100 in customerService.js convert every backend response to FileMaker format, making the 'backend migration' superficial.",
+          "file_paths": [
+            "src/services/customerService.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// customerService.js:30-50 - Transforms backend TO FileMaker\nexport function processBackendCustomerList(response) {\n  return {\n    customers: response.map(customer => transformBackendToFileMaker(customer)),\n    // Every backend response converted to FileMaker format\n  };\n}\n\n// useCustomer.js:307-308 - Works with FileMaker fields\nsetCustomers(prevCustomers =>\n  prevCustomers.map(customer =>\n    // Updates both is_active AND f_active (FileMaker field)\n    { ...customer, isActive: active, is_active: active, f_active: active ? \"1\" : \"0\" }\n  )\n);",
+          "recommendation": "1) Define a canonical frontend customer model (business_name, is_active, emails[], phones[], addresses[]) that matches the backend schema. 2) Reverse the transformation: keep transformFileMakerToBackend for legacy data migration, but remove transformBackendToFileMaker. 3) Update useCustomer.js to work with canonical format, removing FileMaker-specific fields like f_active, recordId. 4) If backward compatibility is needed, create a compatibility layer in components, not in the core data flow. 5) This completes the migration - backend API format becomes the application's native format, not FileMaker."
+        }
+      ],
+      "dropped_findings": [
+        "COM-004",
+        "COM-005",
+        "COM-006",
+        "COM-007",
+        "COD-004",
+        "COD-005",
+        "COD-006",
+        "COD-007",
+        "COD-008",
+        "ARC-008"
+      ],
+      "merged_findings": [],
+      "decisions": [
+        {
+          "finding_id": "COM-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COM-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COM-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COD-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-001",
+          "action": "keep",
+          "reason": "critical severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-002",
+          "action": "keep",
+          "reason": "critical severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-004",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COM-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COM-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COM-006",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COM-007",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-006",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-007",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-008",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-008",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        }
+      ],
+      "summary": "Judge phase complete: 33 findings reviewed, 12 kept (critical/major), 10 dropped (minor/suggestion), 0 merged (duplicates)"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-17T04:54:00.558Z",
+    "output": {
+      "review_status": "blocked",
+      "tasks_created": [
+        "TASK026",
+        "TASK027",
+        "TASK028",
+        "TASK029",
+        "TASK030",
+        "TASK031",
+        "TASK032",
+        "TASK033",
+        "TASK034",
+        "TASK035",
+        "TASK036",
+        "TASK037",
+        "TASK038",
+        "TASK039",
+        "TASK040"
+      ],
+      "summary": "Found 15 issue(s) requiring remediation - created 15 task(s)",
+      "findings_count": 15
+    }
+  }
+}

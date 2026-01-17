@@ -12,7 +12,7 @@ import https from 'https';
 
 // Configuration
 const API_URL = 'https://api.claritybusinesssolutions.ca';
-const SECRET_KEY = 'QArxVv0J1xggzd8Ai_Sk7TfFzllOflBJjVxA4kazpDo';
+const SECRET_KEY = process.env.VITE_SECRET_KEY;
 const ORG_ID = '9816c057-b5d3-43a2-848f-99365ee6255e';
 
 /**
@@ -21,6 +21,9 @@ const ORG_ID = '9816c057-b5d3-43a2-848f-99365ee6255e';
  * @returns {string} Authorization header value
  */
 function generateAuthHeader(payload = '') {
+  if (!SECRET_KEY) {
+    throw new Error('Missing VITE_SECRET_KEY environment variable.');
+  }
   const timestamp = Math.floor(Date.now() / 1000);
   const message = `${timestamp}.${payload}`;
 

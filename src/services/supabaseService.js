@@ -56,54 +56,72 @@ const performAdminOperation = async (operation) => {
 // For backward compatibility, create a minimal admin reference
 const supabaseAdmin = supabaseServiceRoleKey ? supabase : null;
 
+const emptyPayloadTokenCache = { token: null, expiresAt: 0 };
+
+const parseBackendAuthError = async (response) => {
+  try {
+    const errorText = await response.text();
+    if (!errorText) return `HTTP ${response.status}: ${response.statusText}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      return errorJson.detail || errorJson.message || errorText;
+    } catch {
+      return errorText;
+    }
+  } catch {
+    return `HTTP ${response.status}: ${response.statusText}`;
+  }
+};
+
+const requestBackendAuthToken = async (payload) => {
+  const sessionResult = await supabase.auth.getSession();
+  const sessionToken = sessionResult?.data?.session?.access_token || null;
+
+  if (!sessionToken) {
+    throw new Error('Supabase access token unavailable.');
+  }
+
+  const response = await fetch(`${backendConfig.baseUrl}/auth/generate-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${sessionToken}`
+    },
+    body: JSON.stringify({ payload })
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseBackendAuthError(response));
+  }
+
+  const data = await response.json();
+  if (!data?.token) {
+    throw new Error('Backend token missing in response.');
+  }
+
+  return data;
+};
+
 /**
- * Generate HMAC-SHA256 authentication header for backend API
- * @param {string} payload - Request payload
+ * Generate authentication header for backend API
+ * Uses the backend token endpoint to avoid client-side HMAC secrets.
  * @returns {Promise<string>} Authorization header
  */
 async function generateBackendAuthHeader(payload = '') {
-    const secretKey = import.meta.env.VITE_SECRET_KEY;
-    
-    if (!secretKey) {
-        console.warn('[Supabase] SECRET_KEY not available. Using development mode.');
-        const timestamp = Math.floor(Date.now() / 1000);
-        return `Bearer dev-token.${timestamp}`;
+    if (!payload && emptyPayloadTokenCache.token && Date.now() < emptyPayloadTokenCache.expiresAt) {
+        return emptyPayloadTokenCache.token;
     }
-    
-    // Check if Web Crypto API is available
-    if (typeof crypto === 'undefined' || !crypto.subtle) {
-        console.warn('[Supabase] Web Crypto API not available. Using fallback auth.');
-        const timestamp = Math.floor(Date.now() / 1000);
-        return `Bearer fallback-token.${timestamp}`;
+
+    const tokenResponse = await requestBackendAuthToken(payload);
+    const token = tokenResponse.token;
+
+    if (!payload) {
+        const ttlMs = Math.max(0, (tokenResponse.expires_in || 300) - 30) * 1000;
+        emptyPayloadTokenCache.token = token;
+        emptyPayloadTokenCache.expiresAt = Date.now() + ttlMs;
     }
-    
-    const timestamp = Math.floor(Date.now() / 1000);
-    const message = `${timestamp}.${payload}`;
-    
-    try {
-        const encoder = new TextEncoder();
-        const keyData = encoder.encode(secretKey);
-        const messageData = encoder.encode(message);
-        
-        const cryptoKey = await crypto.subtle.importKey(
-            'raw',
-            keyData,
-            { name: 'HMAC', hash: 'SHA-256' },
-            false,
-            ['sign']
-        );
-        
-        const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-        const signatureHex = Array.from(new Uint8Array(signature))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('');
-        
-        return `Bearer ${signatureHex}.${timestamp}`;
-    } catch (error) {
-        console.warn('[Supabase] Crypto operation failed, using fallback:', error);
-        const timestamp = Math.floor(Date.now() / 1000);
-        return `Bearer fallback-token.${timestamp}`;
-    }
+
+    return token;
 }
 
 /**

@@ -638,6 +638,7 @@ function TaskList({
         handleNoteDelete,
         handleFetchNotes,
         getPagination,
+        updatePagination,
         loading: noteLoading
     } = useNote();
 
@@ -655,10 +656,17 @@ function TaskList({
 
     // Update allTaskNotes when taskNotes changes
     React.useEffect(() => {
-        if (taskNotes) {
+        if (taskNotes && selectedTask?.id) {
             setAllTaskNotes(taskNotes);
+            const currentPagination = getPagination('task', selectedTask.id);
+            updatePagination('task', selectedTask.id, {
+                offset: 0,
+                limit: currentPagination.limit,
+                hasMore: taskNotes.length >= currentPagination.limit,
+                total: taskNotes.length
+            });
         }
-    }, [taskNotes]);
+    }, [taskNotes, selectedTask, getPagination, updatePagination]);
 
     // Memoized handlers
     const handleLoadMoreNotes = useCallback(async (taskId) => {

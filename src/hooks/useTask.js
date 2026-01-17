@@ -31,11 +31,16 @@ export function useTask(projectId = null) {
     const [timer, setTimer] = useState(() => {
         const savedTimer = localStorage.getItem('activeTimer');
         if (savedTimer) {
-            const parsed = JSON.parse(savedTimer);
-            return {
-                ...parsed,
-                pauseStartTime: parsed.pauseStartTime ? new Date(parsed.pauseStartTime) : null
-            };
+            try {
+                const parsed = JSON.parse(savedTimer);
+                return {
+                    ...parsed,
+                    pauseStartTime: parsed.pauseStartTime ? new Date(parsed.pauseStartTime) : null
+                };
+            } catch (error) {
+                console.warn('[useTask] Failed to parse saved timer from localStorage', error);
+                localStorage.removeItem('activeTimer');
+            }
         }
         return {
             recordId: null,

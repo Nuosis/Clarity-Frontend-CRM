@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-17T06:09:37.131Z",
+    "featureSlug": "notes-migration-requirements",
+    "taskId": "TASK022",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] Missing withErrorHandling wrapper violates established API layer pattern",
+    "sessionId": null,
+    "processId": 1768630177131
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-17T06:09:37.132Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null
+    }
+  }
+}

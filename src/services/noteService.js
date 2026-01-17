@@ -1,5 +1,20 @@
 import { createNote, fetchProjectNotes, deleteNote, updateNote } from '../api/notes';
 
+function sanitizeNoteContent(value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+
+    const input = String(value);
+
+    if (typeof DOMParser !== 'undefined') {
+        const doc = new DOMParser().parseFromString(input, 'text/html');
+        return doc.body.textContent || '';
+    }
+
+    return input.replace(/<[^>]*>/g, '');
+}
+
 /**
  * Creates a new note via backend API
  *
@@ -29,14 +44,16 @@ export async function createNewNote(entityTypeOrId, entityIdOrContent, noteConte
         type = noteContentOrType || 'general';
     }
 
-    if (!entityId || !noteContent?.trim()) {
+    const sanitizedContent = sanitizeNoteContent(noteContent).trim();
+
+    if (!entityId || !sanitizedContent) {
         throw new Error('Entity ID and note content are required');
     }
 
     // Build payload based on entity type
     const payload = {
-        content: noteContent.trim(),
-        note: noteContent.trim(), // Alias for backend API
+        content: sanitizedContent,
+        note: sanitizedContent, // Alias for backend API
         type
     };
 
@@ -59,7 +76,7 @@ export async function createNewNote(entityTypeOrId, entityIdOrContent, noteConte
  * Fetch notes for a project via backend API
  * @param {string} projectId - The project ID
  * @param {Object} options - Query options (limit, offset)
- * @returns {Promise<Array>} Array of notes
+ * @returns {Promise<Object>} Notes with pagination metadata
  */
 export async function fetchNotesByProject(projectId, options = {}) {
     if (!projectId) {
@@ -67,16 +84,21 @@ export async function fetchNotesByProject(projectId, options = {}) {
     }
 
     const result = await fetchProjectNotes(projectId, options);
+    const notes = Array.isArray(result?.notes) ? result.notes : Array.isArray(result) ? result : [];
+    const pagination = result?.pagination || null;
 
-    // Backend API returns array directly - transform to normalized format
-    return Array.isArray(result) ? result.map(transformBackendNote) : [];
+    // Backend API returns notes with pagination - transform to normalized format
+    return {
+        notes: notes.map(transformBackendNote),
+        pagination
+    };
 }
 
 /**
  * Fetch notes for a task via backend API
  * @param {string} taskId - The task ID
  * @param {Object} options - Query options (limit, offset)
- * @returns {Promise<Array>} Array of notes
+ * @returns {Promise<Object>} Notes with pagination metadata
  */
 export async function fetchNotesByTask(taskId, options = {}) {
     if (!taskId) {
@@ -85,16 +107,21 @@ export async function fetchNotesByTask(taskId, options = {}) {
 
     const { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');
     const result = await fetchTaskNotesAPI(taskId, options);
+    const notes = Array.isArray(result?.notes) ? result.notes : Array.isArray(result) ? result : [];
+    const pagination = result?.pagination || null;
 
-    // Backend API returns array directly - transform to normalized format
-    return Array.isArray(result) ? result.map(transformBackendNote) : [];
+    // Backend API returns notes with pagination - transform to normalized format
+    return {
+        notes: notes.map(transformBackendNote),
+        pagination
+    };
 }
 
 /**
  * Fetch notes for a customer via backend API
  * @param {string} customerId - The customer ID
  * @param {Object} options - Query options (limit, offset)
- * @returns {Promise<Array>} Array of notes
+ * @returns {Promise<Object>} Notes with pagination metadata
  */
 export async function fetchNotesByCustomer(customerId, options = {}) {
     if (!customerId) {
@@ -103,9 +130,14 @@ export async function fetchNotesByCustomer(customerId, options = {}) {
 
     const { fetchNotesByCustomer: fetchCustomerNotesAPI } = await import('../api/notes');
     const result = await fetchCustomerNotesAPI(customerId, options);
+    const notes = Array.isArray(result?.notes) ? result.notes : Array.isArray(result) ? result : [];
+    const pagination = result?.pagination || null;
 
-    // Backend API returns array directly - transform to normalized format
-    return Array.isArray(result) ? result.map(transformBackendNote) : [];
+    // Backend API returns notes with pagination - transform to normalized format
+    return {
+        notes: notes.map(transformBackendNote),
+        pagination
+    };
 }
 
 /**
@@ -126,7 +158,21 @@ export async function updateNoteById(noteId, data) {
         throw new Error('Update data is required (content or type)');
     }
 
-    const result = await updateNote(noteId, data);
+    const sanitizedData = { ...data };
+
+    if (data.content !== undefined) {
+        sanitizedData.content = sanitizeNoteContent(data.content).trim();
+    }
+
+    if (data.note !== undefined) {
+        sanitizedData.note = sanitizeNoteContent(data.note).trim();
+    }
+
+    if ((data.content !== undefined || data.note !== undefined) && !sanitizedData.content && !sanitizedData.note) {
+        throw new Error('Update data is required (content or type)');
+    }
+
+    const result = await updateNote(noteId, sanitizedData);
 
     // Transform the backend response to normalized format
     return transformBackendNote(result);
@@ -158,7 +204,7 @@ export function transformBackendNote(note) {
 
     return {
         id: note.id,
-        content: note.note, // Backend uses 'note', frontend uses 'content'
+        content: sanitizeNoteContent(note.note), // Backend uses 'note', frontend uses 'content'
         type: note.type || 'general',
         createdAt: note.created_at,
         updatedAt: note.updated_at,
@@ -172,8 +218,7 @@ export function transformBackendNote(note) {
         // Legacy fieldData for backward compatibility with components expecting it
         fieldData: {
             __ID: note.id,
-            note: note.note
+            note: sanitizeNoteContent(note.note)
         }
     };
 }
-

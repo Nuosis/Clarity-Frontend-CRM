@@ -121,42 +121,7 @@ FileMaker Data API: PATCH /fmi/data/v1/databases/clarityCRM/layouts/devCustomers
     ↓
 ✓ FileMaker Update Successful
     ↓
-IF user.supabaseOrgID exists:
-    ↓
-    updateCustomerInSupabase(customerId, supabaseCustomerData, user)  [src/hooks/useSupabaseCustomer.js:203-367]
-        ↓
-        1. Update customers table (business_name)
-            update('customers', { business_name: Name }, { id: customerId })  [supabaseService.js]
-                ↓
-            Backend API: POST /api/supabase/update
-                ↓
-            Supabase SQL: UPDATE customers SET business_name = $1 WHERE id = $2
-
-        2. Update/Create customer_email
-            query('customer_email', { filter: { customer_id: customerId } })
-                ↓
-            IF email exists:
-                update('customer_email', { email }, { customer_id: customerId })
-            ELSE:
-                insert('customer_email', { customer_id, email, is_primary: true })
-
-        3. Update/Create customer_phone
-            query('customer_phone', { filter: { customer_id: customerId } })
-                ↓
-            IF phone exists:
-                update('customer_phone', { phone }, { customer_id: customerId })
-            ELSE:
-                insert('customer_phone', { customer_id, phone, is_primary: true })
-
-        4. Update/Create customer_address
-            query('customer_address', { filter: { customer_id: customerId } })
-                ↓
-            IF address exists:
-                update('customer_address', addressData, { customer_id: customerId })
-            ELSE:
-                insert('customer_address', { customer_id, ...addressData })
-    ↓
-    ✓ Supabase Update Successful (or warn if fails, don't fail entire operation)
+Backend API update only (Supabase dual-write removed from frontend)
     ↓
 setCustomers() → Update local state
     ↓
@@ -254,29 +219,10 @@ setCustomers() → Filter out deleted customer by recordId
   - `loadCustomers()` - Fetch all customers
   - `handleCustomerSelect(customerId)` - Select customer by ID
   - `handleCustomerCreate(customerData)` - Create new customer
-  - `handleCustomerUpdate(customerId, customerData)` - Update customer + dual-write to Supabase
+  - `handleCustomerUpdate(customerId, customerData)` - Update customer
   - `handleCustomerStatusToggle(recordId, active)` - Toggle active status
   - `handleCustomerDelete(recordId)` - Delete customer
-- **Dual-Write Logic**: Lines 112-177
-  - Updates FileMaker first
-  - If successful + `user.supabaseOrgID` exists → calls `updateCustomerInSupabase()`
-  - Doesn't fail entire operation if Supabase update fails (logs warning)
-
-**src/hooks/useSupabaseCustomer.js** (487 lines)
-- **Supabase-specific operations** (not directly called by UI, used by useCustomer)
-- `createCustomerInSupabase(customer, user)`:
-  - Creates customer record (id, business_name, type='CUSTOMER')
-  - Links to organization (customer_organization table)
-  - Creates related records (email, phone, address)
-- `updateCustomerInSupabase(customerId, customer, user)`:
-  - Updates customers.business_name
-  - Updates/creates customer_email (query first, update or insert)
-  - Updates/creates customer_phone (query first, update or insert)
-  - Updates/creates customer_address (query first, update or insert)
-- `fetchOrCreateCustomerInSupabase(customer, user)`:
-  - Query customers by business_name
-  - If not found → create customer
-  - If found → ensure linked to organization
+- Backend API is the source of truth in web app mode (no frontend Supabase dual-write)
 
 ### Layer 3: Services
 
@@ -454,17 +400,6 @@ Backend API (https://api.claritybusinesssolutions.ca/filemaker/devCustomers/...)
 FileMaker Data API (server-side)
     ↓
 FileMaker Database (devCustomers layout)
-```
-
-**[Optional Dual-Write on Update Only]**
-```
-useSupabaseCustomer Hook
-    ↓
-supabaseService.js (generic CRUD)
-    ↓
-Backend API (/api/supabase/update)
-    ↓ (HMAC Auth)
-Supabase Database (customers + related tables)
 ```
 
 ### ID Usage Patterns
@@ -733,21 +668,13 @@ CREATE TABLE customer_organization (
 
 5. **Notes/Links** - Can be associated with customer
 
-### Impact of Missing Dual-Write
-
-If customer is FileMaker-only (not in Supabase):
-- Can't create proposals (requires Supabase customer_id)
-- Financial reports won't show customer data
-- Can't associate notes/links in Supabase
-
 ## Code References Summary
 
 | File | Lines | Purpose |
 |------|-------|---------|
 | `src/api/customers.js` | 135 | FileMaker API calls |
 | `src/services/customerService.js` | 162 | Business logic, validation, formatting |
-| `src/hooks/useCustomer.js` | 268 | Main customer hook, dual-write on update |
-| `src/hooks/useSupabaseCustomer.js` | 487 | Supabase operations for customers |
+| `src/hooks/useCustomer.js` | 268 | Main customer hook, backend API operations |
 | `src/services/dualWriteService.js` | 359 | Generic dual-write (not used for customers) |
 | `src/components/customers/CustomerDetails.jsx` | ~300 | Customer detail view |
 | `src/components/customers/CustomerForm.jsx` | ~200 | Create/edit form |

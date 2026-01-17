@@ -1,4 +1,41 @@
 import { dataService, getAuthenticationContext } from '../services/dataService';
+import { withNoteErrorHandling } from '../errors';
+
+/**
+ * Normalize task data from backend responses
+ * @param {Object|Array} data - Raw task data or response wrapper
+ * @returns {Object|Array} Normalized task data
+ */
+function normalizeTaskData(data) {
+    const payload = data && Object.prototype.hasOwnProperty.call(data, 'data') ? data.data : data;
+
+    if (Array.isArray(payload)) {
+        return payload.map(task => ({
+            id: task.id || task.__ID,
+            __ID: task.id || task.__ID,
+            ...task
+        }));
+    }
+
+    if (payload && typeof payload === 'object') {
+        return {
+            id: payload.id || payload.__ID,
+            __ID: payload.id || payload.__ID,
+            ...payload
+        };
+    }
+
+    return payload;
+}
+
+/**
+ * Normalize timer data from backend responses
+ * @param {Object|Array} data - Raw timer data or response wrapper
+ * @returns {Object|Array} Unwrapped timer data
+ */
+function normalizeTimerData(data) {
+    return data && Object.prototype.hasOwnProperty.call(data, 'data') ? data.data : data;
+}
 
 /**
  * Check organization scope
@@ -76,8 +113,8 @@ export async function fetchTasksForProject(projectId) {
         const response = await dataService.get('/api/tasks', {
             params: { project_id: projectId }
         });
-        console.log('[Tasks API] Tasks fetched successfully:', response.data);
-        return response.data;
+        console.log('[Tasks API] Tasks fetched successfully:', response);
+        return normalizeTaskData(response);
     } catch (error) {
         handleApiError(error, 'Fetch tasks for project');
     }
@@ -99,8 +136,8 @@ export async function createTask(data) {
     try {
         console.log('[Tasks API] Creating task:', data);
         const response = await dataService.post('/api/tasks', data);
-        console.log('[Tasks API] Task created successfully:', response.data);
-        return response.data;
+        console.log('[Tasks API] Task created successfully:', response);
+        return normalizeTaskData(response);
     } catch (error) {
         handleApiError(error, 'Create task');
     }
@@ -123,8 +160,8 @@ export async function updateTask(taskId, data) {
     try {
         console.log('[Tasks API] Updating task:', taskId, data);
         const response = await dataService.patch(`/api/tasks/${taskId}`, data);
-        console.log('[Tasks API] Task updated successfully:', response.data);
-        return response.data;
+        console.log('[Tasks API] Task updated successfully:', response);
+        return normalizeTaskData(response);
     } catch (error) {
         handleApiError(error, 'Update task');
     }
@@ -147,8 +184,8 @@ export async function updateTaskStatus(taskId, completed) {
     try {
         console.log('[Tasks API] Updating task status:', taskId, completed);
         const response = await dataService.post(`/api/tasks/${taskId}/toggle-completion`);
-        console.log('[Tasks API] Task status updated successfully:', response.data);
-        return response.data;
+        console.log('[Tasks API] Task status updated successfully:', response);
+        return normalizeTaskData(response);
     } catch (error) {
         handleApiError(error, 'Update task status');
     }
@@ -170,8 +207,8 @@ export async function deleteTask(taskId) {
     try {
         console.log('[Tasks API] Deleting task:', taskId);
         const response = await dataService.delete(`/api/tasks/${taskId}`);
-        console.log('[Tasks API] Task deleted successfully:', response.data);
-        return response.data;
+        console.log('[Tasks API] Task deleted successfully:', response);
+        return response;
     } catch (error) {
         handleApiError(error, 'Delete task');
     }
@@ -198,8 +235,8 @@ export async function startTaskTimer(taskId, selectedTask) {
             staff_id: selectedTask._staffID || selectedTask.staff_id,
             is_billable: true
         });
-        console.log('[Tasks API] Timer started successfully:', response.data);
-        return response.data;
+        console.log('[Tasks API] Timer started successfully:', response);
+        return normalizeTimerData(response);
     } catch (error) {
         handleApiError(error, 'Start timer');
     }
@@ -231,11 +268,11 @@ export async function stopTaskTimer(entryId, description = '', saveImmediately =
 
         const response = await dataService.post(`/time-entries/${entryId}/stop`, requestData);
 
-        console.log('[Tasks API] Timer stopped successfully:', response.data);
+        console.log('[Tasks API] Timer stopped successfully:', response);
 
         // Backend handles financial record creation atomically
         // Response includes both time entry and financial record (if created)
-        return response.data;
+        return normalizeTimerData(response);
     } catch (error) {
         handleApiError(error, 'Stop timer');
     }
@@ -257,8 +294,8 @@ export async function pauseTimer(entryId) {
     try {
         console.log('[Tasks API] Pausing timer:', entryId);
         const response = await dataService.post(`/time-entries/${entryId}/pause`);
-        console.log('[Tasks API] Timer paused successfully:', response.data);
-        return response.data;
+        console.log('[Tasks API] Timer paused successfully:', response);
+        return normalizeTimerData(response);
     } catch (error) {
         handleApiError(error, 'Pause timer');
     }
@@ -280,8 +317,8 @@ export async function resumeTimer(entryId) {
     try {
         console.log('[Tasks API] Resuming timer:', entryId);
         const response = await dataService.post(`/time-entries/${entryId}/resume`);
-        console.log('[Tasks API] Timer resumed successfully:', response.data);
-        return response.data;
+        console.log('[Tasks API] Timer resumed successfully:', response);
+        return normalizeTimerData(response);
     } catch (error) {
         handleApiError(error, 'Resume timer');
     }
@@ -306,8 +343,8 @@ export async function getActiveTimer(staffId = null) {
 
         const response = await dataService.get('/time-entries/active', { params });
 
-        console.log('[Tasks API] Active timer fetched:', response.data);
-        return response.data;
+        console.log('[Tasks API] Active timer fetched:', response);
+        return normalizeTimerData(response);
     } catch (error) {
         // 404 is expected when no active timer exists
         if (error.response?.status === 404) {
@@ -342,8 +379,8 @@ export async function fetchTaskTimers(taskId, filters = {}) {
             }
         });
 
-        console.log('[Tasks API] Timers fetched successfully:', response.data);
-        return response.data;
+        console.log('[Tasks API] Timers fetched successfully:', response);
+        return normalizeTimerData(response);
     } catch (error) {
         handleApiError(error, 'Fetch task timers');
     }
@@ -356,11 +393,10 @@ export async function fetchTaskTimers(taskId, filters = {}) {
  * @returns {Promise<Array>} Array of task notes
  */
 export async function fetchTaskNotes(taskId, options = {}) {
-    if (!taskId) {
-        throw new Error('Task ID is required');
-    }
-
-    // Use the notes.js API client
-    const { fetchNotesByTask } = await import('./notes');
-    return await fetchNotesByTask(taskId, options);
+    return withNoteErrorHandling(async () => {
+        // Use the notes.js API client
+        const { fetchNotesByTask } = await import('./notes');
+        const result = await fetchNotesByTask(taskId, options);
+        return result?.notes || result;
+    }, 'fetchTaskNotes', { taskId, options });
 }

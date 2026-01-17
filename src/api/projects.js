@@ -398,7 +398,8 @@ export async function deleteProjectImage(imageId) {
  */
 export async function fetchProjectNotes(projectId, options = {}) {
     // Delegate to notes.js API client for consistent note handling
-    return fetchNotesByProject(projectId, options);
+    const result = await fetchNotesByProject(projectId, options);
+    return result?.notes || result;
 }
 
 /**

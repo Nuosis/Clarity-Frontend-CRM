@@ -8,7 +8,7 @@ import crypto from 'crypto';
 import axios from 'axios';
 
 const API_BASE = 'https://api.claritybusinesssolutions.ca';
-const SECRET_KEY = 'QArxVv0J1xggzd8Ai_Sk7TfFzllOflBJjVxA4kazpDo';
+const SECRET_KEY = process.env.VITE_SECRET_KEY;
 const ORGANIZATION_ID = '9816c057-b5d3-43a2-848f-99365ee6255e'; // Clarity Business Solutions
 
 // Test results tracker
@@ -22,6 +22,9 @@ const results = {
  * Generate HMAC-SHA256 authentication header
  */
 function generateHMACAuth(payload = '') {
+  if (!SECRET_KEY) {
+    throw new Error('Missing VITE_SECRET_KEY environment variable.');
+  }
   const timestamp = Math.floor(Date.now() / 1000);
   const message = `${timestamp}.${payload}`;
   const signature = crypto
