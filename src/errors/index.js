@@ -1,6 +1,6 @@
 /**
  * Error handling utilities
- * Exports customer, note, and project error handling
+ * Exports customer, note, project, and link error handling
  */
 
 export {
@@ -30,3 +30,13 @@ export {
     withErrorHandling as withProjectErrorHandling,
     formatErrorForUI as formatProjectErrorForUI
 } from './projectErrors';
+
+export {
+    LinkError,
+    LinkErrorCodes,
+    parseHttpError as parseLinkHttpError,
+    parseValidationError as parseLinkValidationError,
+    checkOrganizationScope as checkLinkOrganizationScope,
+    withErrorHandling as withLinkErrorHandling,
+    formatErrorForUI as formatLinkErrorForUI
+} from './linkErrors';

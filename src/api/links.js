@@ -1,16 +1,11 @@
 import { dataService, getAuthenticationContext } from '../services/dataService';
-
-/**
- * Check organization scope
- * @param {Object} auth - Authentication context
- * @param {string} operation - Operation name for error messages
- * @throws {Error} If organization ID is missing
- */
-function checkOrganizationScope({ authentication: auth }, operation) {
-    if (!auth?.user?.supabaseOrgID) {
-        throw new Error(`Organization context required for ${operation}. Please authenticate.`);
-    }
-}
+import {
+    withErrorHandling,
+    checkOrganizationScope,
+    LinkErrorCodes,
+    LinkError
+} from '../errors/linkErrors';
+import { validateUUID } from '../utils/validation';
 
 /**
  * Creates a new link via backend API
@@ -29,32 +24,34 @@ function checkOrganizationScope({ authentication: auth }, operation) {
  * @note Backend automatically sets organization context from JWT
  */
 export async function createLink(data) {
-    if (!data) {
-        throw new Error('Data is required');
-    }
+    return withErrorHandling(async () => {
+        if (!data) {
+            throw new LinkError('Data is required', LinkErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    const linkUrl = data.link || data.url;
-    if (!linkUrl) {
-        throw new Error('Link URL is required');
-    }
+        const linkUrl = data.link || data.url;
+        if (!linkUrl) {
+            throw new LinkError('Link URL is required', LinkErrorCodes.REQUIRED_FIELD_MISSING, { field: 'link' });
+        }
 
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'createLink');
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'createLink');
 
-    // Build payload matching backend schema
-    // Note: Backend uses 'link' field, not 'url'
-    const payload = {
-        link: linkUrl,
-        project_id: data.project_id || null,
-        customer_id: data.customer_id || null,
-        task_id: data.task_id || null,
-        organization_id: data.organization_id || null
-    };
+        // Build payload matching backend schema
+        // Note: Backend uses 'link' field, not 'url'
+        const payload = {
+            link: linkUrl,
+            project_id: data.project_id || null,
+            customer_id: data.customer_id || null,
+            task_id: data.task_id || null,
+            organization_id: data.organization_id || null
+        };
 
-    // Backend API: POST /links
-    const response = await dataService.post('/links', payload);
-    return response.data || response;
+        // Backend API: POST /links
+        const response = await dataService.post('/links', payload);
+        return response.data || response;
+    }, 'createLink', { data });
 }
 
 /**
@@ -72,22 +69,30 @@ export async function createLink(data) {
  * @note Backend endpoint requires JWT authentication (not HMAC)
  */
 export async function fetchLinks(filters = {}) {
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchLinks');
+    return withErrorHandling(async () => {
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'fetchLinks');
 
-    // Backend API: GET /links?project_id={id}&...
-    const params = {};
+        // Validate UUIDs if provided
+        if (filters.project_id) validateUUID(filters.project_id, 'Project ID');
+        if (filters.customer_id) validateUUID(filters.customer_id, 'Customer ID');
+        if (filters.task_id) validateUUID(filters.task_id, 'Task ID');
+        if (filters.organization_id) validateUUID(filters.organization_id, 'Organization ID');
 
-    if (filters.project_id) params.project_id = filters.project_id;
-    if (filters.customer_id) params.customer_id = filters.customer_id;
-    if (filters.task_id) params.task_id = filters.task_id;
-    if (filters.organization_id) params.organization_id = filters.organization_id;
-    if (filters.limit) params.limit = filters.limit;
-    if (filters.offset) params.offset = filters.offset;
+        // Backend API: GET /links?project_id={id}&...
+        const params = {};
 
-    const response = await dataService.get('/links', { params });
-    return response.data || response;
+        if (filters.project_id) params.project_id = filters.project_id;
+        if (filters.customer_id) params.customer_id = filters.customer_id;
+        if (filters.task_id) params.task_id = filters.task_id;
+        if (filters.organization_id) params.organization_id = filters.organization_id;
+        if (filters.limit) params.limit = filters.limit;
+        if (filters.offset) params.offset = filters.offset;
+
+        const response = await dataService.get('/links', { params });
+        return response.data || response;
+    }, 'fetchLinks', { filters });
 }
 
 /**
@@ -100,26 +105,30 @@ export async function fetchLinks(filters = {}) {
  * @returns {Promise<Object>} Updated link record
  */
 export async function updateLink(linkId, data) {
-    if (!linkId) {
-        throw new Error('Link ID is required');
-    }
-    if (!data) {
-        throw new Error('Update data is required');
-    }
+    return withErrorHandling(async () => {
+        if (!linkId) {
+            throw new LinkError('Link ID is required', LinkErrorCodes.REQUIRED_FIELD_MISSING, { field: 'linkId' });
+        }
+        if (!data) {
+            throw new LinkError('Update data is required', LinkErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'updateLink');
+        validateUUID(linkId, 'Link ID');
 
-    // Build payload - backend uses 'link' field
-    const payload = {};
-    if (data.link || data.url) {
-        payload.link = data.link || data.url;
-    }
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'updateLink');
 
-    // Backend API: PATCH /links/{link_id}
-    const response = await dataService.patch(`/links/${linkId}`, payload);
-    return response.data || response;
+        // Build payload - backend uses 'link' field
+        const payload = {};
+        if (data.link || data.url) {
+            payload.link = data.link || data.url;
+        }
+
+        // Backend API: PATCH /links/{link_id}
+        const response = await dataService.patch(`/links/${linkId}`, payload);
+        return response.data || response;
+    }, 'updateLink', { linkId, data });
 }
 
 /**
@@ -129,15 +138,19 @@ export async function updateLink(linkId, data) {
  * @returns {Promise<Object>} Deletion result
  */
 export async function deleteLink(linkId) {
-    if (!linkId) {
-        throw new Error('Link ID is required');
-    }
+    return withErrorHandling(async () => {
+        if (!linkId) {
+            throw new LinkError('Link ID is required', LinkErrorCodes.REQUIRED_FIELD_MISSING, { field: 'linkId' });
+        }
 
-    // Check organization scope
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'deleteLink');
+        validateUUID(linkId, 'Link ID');
 
-    // Backend API: DELETE /links/{link_id}
-    const response = await dataService.delete(`/links/${linkId}`);
-    return response.data || response;
+        // Check organization scope
+        const auth = getAuthenticationContext();
+        checkOrganizationScope({ authentication: auth }, 'deleteLink');
+
+        // Backend API: DELETE /links/{link_id}
+        const response = await dataService.delete(`/links/${linkId}`);
+        return response.data || response;
+    }, 'deleteLink', { linkId });
 }
