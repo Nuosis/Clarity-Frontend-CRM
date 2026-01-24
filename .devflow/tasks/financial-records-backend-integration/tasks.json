@@ -5,7 +5,7 @@
     "name": "Financial Records Backend Integration",
     "slug": "financial-records-backend-integration",
     "description": "Migrate financial records from FileMaker to Supabase backend APIs",
-    "review_status": "blocked",
+    "review_status": "pending",
     "review_iteration": 2,
     "review_stage": "finalizing",
     "review_session_id": "855fef77-dca8-4604-91ef-d2ca8d6714b1",

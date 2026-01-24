@@ -72,6 +72,10 @@ export async function createLink(data) {
  * @note Backend endpoint requires JWT authentication (not HMAC)
  */
 export async function fetchLinks(filters = {}) {
+    // Check organization scope
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'fetchLinks');
+
     // Backend API: GET /links?project_id={id}&...
     const params = {};
 
@@ -103,6 +107,10 @@ export async function updateLink(linkId, data) {
         throw new Error('Update data is required');
     }
 
+    // Check organization scope
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'updateLink');
+
     // Build payload - backend uses 'link' field
     const payload = {};
     if (data.link || data.url) {
@@ -124,6 +132,10 @@ export async function deleteLink(linkId) {
     if (!linkId) {
         throw new Error('Link ID is required');
     }
+
+    // Check organization scope
+    const auth = getAuthenticationContext();
+    checkOrganizationScope({ authentication: auth }, 'deleteLink');
 
     // Backend API: DELETE /links/{link_id}
     const response = await dataService.delete(`/links/${linkId}`);

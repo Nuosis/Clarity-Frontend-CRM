@@ -5,7 +5,7 @@
     "name": "FileMaker Frontend Removal",
     "slug": "filemaker-frontend-removal",
     "description": "Remove all FileMaker dependencies from the frontend, transitioning to pure Supabase + Backend API architecture",
-    "review_status": "blocked",
+    "review_status": "pending",
     "review_iteration": 2,
     "review_stage": "finalizing",
     "review_session_id": "593ea30a-7d83-4fa9-b4c8-543c2f55791f",

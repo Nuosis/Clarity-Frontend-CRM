@@ -5,7 +5,7 @@
     "name": "Notes Migration Requirements",
     "slug": "notes-migration-requirements",
     "description": "Create comprehensive requirements documentation for migrating Notes feature from FileMaker to Supabase, including data model design, API contracts, and migration planning",
-    "review_status": "blocked",
+    "review_status": "pending",
     "review_iteration": 9,
     "updatedAt": "2026-01-17T00:52:38.467Z",
     "last_review": {

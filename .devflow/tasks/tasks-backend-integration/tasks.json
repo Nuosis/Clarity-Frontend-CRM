@@ -5,7 +5,7 @@
     "name": "Tasks Backend Integration",
     "slug": "tasks-backend-integration",
     "description": "Integrate tasks and timer features with new Supabase-backed backend APIs, replacing FileMaker implementation",
-    "review_status": "blocked",
+    "review_status": "pending",
     "review_iteration": 2,
     "updatedAt": "2026-01-17T00:37:14.053Z",
     "last_review": {

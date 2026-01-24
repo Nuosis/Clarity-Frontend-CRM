@@ -5,7 +5,7 @@
     "name": "Notes Backend Integration",
     "slug": "notes-backend-integration",
     "description": "Migrate notes functionality from FileMaker to backend Supabase API",
-    "review_status": "blocked",
+    "review_status": "pending",
     "review_iteration": 2,
     "review_stage": "finalizing",
     "review_session_id": "48bd3236-5964-4f04-8ecf-3e9569b570c1",

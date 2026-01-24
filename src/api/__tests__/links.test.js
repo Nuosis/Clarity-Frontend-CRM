@@ -90,7 +90,37 @@ describe('Links API Integration Tests', () => {
             expect(dataService.getAuthenticationContext).toHaveBeenCalled();
         });
 
-        it('should throw error if organization scope is missing', async () => {
+        it('should check organization scope for fetchLinks', async () => {
+            dataService.dataService.get.mockResolvedValue({
+                data: []
+            });
+
+            await linksApi.fetchLinks({ project_id: 'proj-123' });
+
+            expect(dataService.getAuthenticationContext).toHaveBeenCalled();
+        });
+
+        it('should check organization scope for updateLink', async () => {
+            dataService.dataService.patch.mockResolvedValue({
+                data: { id: 'link-1', link: 'https://updated.com' }
+            });
+
+            await linksApi.updateLink('link-1', { link: 'https://updated.com' });
+
+            expect(dataService.getAuthenticationContext).toHaveBeenCalled();
+        });
+
+        it('should check organization scope for deleteLink', async () => {
+            dataService.dataService.delete.mockResolvedValue({
+                data: { success: true }
+            });
+
+            await linksApi.deleteLink('link-1');
+
+            expect(dataService.getAuthenticationContext).toHaveBeenCalled();
+        });
+
+        it('should throw error if organization scope is missing in createLink', async () => {
             const mockAuthNoOrg = {
                 isAuthenticated: true,
                 method: 'supabase',
@@ -108,6 +138,45 @@ describe('Links API Integration Tests', () => {
                 link: 'https://example.com',
                 project_id: 'proj-123'
             })).rejects.toThrow('Organization context required');
+        });
+
+        it('should throw error if organization scope is missing in fetchLinks', async () => {
+            const mockAuthNoOrg = {
+                isAuthenticated: true,
+                method: 'supabase',
+                user: {} // Missing supabaseOrgID
+            };
+
+            dataService.getAuthenticationContext.mockReturnValue(mockAuthNoOrg);
+
+            await expect(linksApi.fetchLinks({ project_id: 'proj-123' }))
+                .rejects.toThrow('Organization context required');
+        });
+
+        it('should throw error if organization scope is missing in updateLink', async () => {
+            const mockAuthNoOrg = {
+                isAuthenticated: true,
+                method: 'supabase',
+                user: {} // Missing supabaseOrgID
+            };
+
+            dataService.getAuthenticationContext.mockReturnValue(mockAuthNoOrg);
+
+            await expect(linksApi.updateLink('link-1', { link: 'https://updated.com' }))
+                .rejects.toThrow('Organization context required');
+        });
+
+        it('should throw error if organization scope is missing in deleteLink', async () => {
+            const mockAuthNoOrg = {
+                isAuthenticated: true,
+                method: 'supabase',
+                user: {} // Missing supabaseOrgID
+            };
+
+            dataService.getAuthenticationContext.mockReturnValue(mockAuthNoOrg);
+
+            await expect(linksApi.deleteLink('link-1'))
+                .rejects.toThrow('Organization context required');
         });
     });
 

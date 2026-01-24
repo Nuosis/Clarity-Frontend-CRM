@@ -5,7 +5,7 @@
     "name": "Projects Backend Integration",
     "slug": "projects-backend-integration",
     "description": "Migrate Projects feature from FileMaker to new backend API endpoints with full CRUD operations for projects, objectives, steps, images, links, and notes",
-    "review_status": "blocked",
+    "review_status": "pending",
     "review_iteration": 3,
     "review_stage": "finalizing",
     "review_session_id": "41b9e038-4178-4334-9e33-abc5901fc028",

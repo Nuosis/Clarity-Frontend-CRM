@@ -5,7 +5,7 @@
     "name": "QuickBooks Backend Integration",
     "slug": "quickbooks-backend-integration",
     "description": "Integrate frontend with new backend QuickBooks API infrastructure for connection management, synchronization, and invoice operations",
-    "review_status": "blocked",
+    "review_status": "pending",
     "review_iteration": 2,
     "review_stage": "finalizing",
     "review_session_id": "154c5c27-7863-427e-b6bf-cc4f3985e654",

@@ -477,7 +477,7 @@
   "FinalizeNode": {
     "timestamp": "2026-01-17T03:37:27.281Z",
     "output": {
-      "review_status": "blocked",
+      "review_status": "pending",
       "tasks_created": [
         "TASK011",
         "TASK012",
