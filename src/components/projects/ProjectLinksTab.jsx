@@ -104,7 +104,7 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
     return () => {
       cancelled = true;
     };
-  }, [localProject?.links, project?.links, ghMeta]);
+  }, [localProject?.links, project?.links]);
 
   // Memoized renderers
   const renderLink = useCallback((link) => {
