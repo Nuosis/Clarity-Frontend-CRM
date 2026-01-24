@@ -15,6 +15,7 @@ import { fetchLinks } from '../api/links';
 import { fetchFinancialRecordByRecordId, createFinancialRecord } from '../api/financialRecords';
 import { createSaleFromFinancialRecord } from './salesService';
 import { getSupabaseClient } from './supabaseService';
+import { getEnvironmentContext, ENVIRONMENT_TYPES } from './dataService';
 import { v4 as uuidv4 } from 'uuid';
 import { sanitizeText, FIELD_LIMITS } from '../utils/inputSanitization';
 
@@ -39,6 +40,9 @@ export async function loadProjectTasks(projectId) {
  * @returns {Promise<Object>} Task details including timers, notes, and links
  */
 export async function loadTaskDetails(taskId) {
+    const env = getEnvironmentContext();
+    const source = env.type === ENVIRONMENT_TYPES.FILEMAKER ? 'filemaker' : 'backend';
+
     const [timerResult, notesResult, linksResult] = await Promise.all([
         fetchTaskTimers(taskId),
         fetchTaskNotes(taskId),
@@ -48,7 +52,7 @@ export async function loadTaskDetails(taskId) {
     return {
         timers: processTimerRecords(timerResult),
         notes: processTaskNotes(notesResult),
-        links: processTaskLinks(linksResult, taskId, 'filemaker')
+        links: processTaskLinks(linksResult, taskId, source)
     };
 }
 

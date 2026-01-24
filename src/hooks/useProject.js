@@ -33,6 +33,7 @@ import {
     updateProjectRecordsBillableStatus
 } from '../services/projectService';
 import { createSalesFromProjectValue } from '../services/salesService';
+import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
 
 /**
  * Hook for managing project state and operations
@@ -66,20 +67,23 @@ export function useProject(customerId = null) {
             setLoading(true);
             setError(null);
 
+            const env = getEnvironmentContext();
+            const source = env.type === ENVIRONMENT_TYPES.FILEMAKER ? 'filemaker' : 'backend';
+
             if (custId) {
                 // Fetch projects for specific customer
                 const projectResult = await fetchProjectsForCustomer(custId);
 
-                // Process backend data
-                const processedProjects = processProjectData(projectResult, {}, 'backend');
+                // Process data with environment-aware routing
+                const processedProjects = processProjectData(projectResult, {}, source);
 
                 setProjects(processedProjects);
             } else {
                 // Load all projects when no customer ID provided
                 const projectResult = await fetchProjectsForCustomers([]);
 
-                // Process backend data
-                const processedProjects = processProjectData(projectResult, {}, 'backend');
+                // Process data with environment-aware routing
+                const processedProjects = processProjectData(projectResult, {}, source);
 
                 setProjects(processedProjects);
             }
@@ -97,11 +101,13 @@ export function useProject(customerId = null) {
      */
     const loadProjectDetails = useCallback(async (projectId) => {
         try {
-            // Backend API: Use single endpoint that returns nested data
+            const env = getEnvironmentContext();
+            const source = env.type === ENVIRONMENT_TYPES.FILEMAKER ? 'filemaker' : 'backend';
+
+            // Use single endpoint that returns nested data
             const projectWithDetails = await fetchProjectWithDetails(projectId);
 
-            // Process the backend response
-            const source = 'backend';
+            // Process the response with environment-aware routing
             const processedImages = processProjectImages(projectWithDetails.images || [], projectId, source);
             const processedLinks = processProjectLinks(projectWithDetails.links || [], projectId, source);
             const processedObjectives = processProjectObjectives(
