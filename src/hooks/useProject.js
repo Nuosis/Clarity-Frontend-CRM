@@ -43,10 +43,23 @@ export function useProject(customerId = null) {
     const [error, setError] = useState(null);
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
+    const [pagination, setPagination] = useState({
+        total: 0,
+        limit: 50,
+        offset: 0,
+        has_more: false
+    });
     const projectSelectionRequestId = useRef(0);
+    const paginationRef = useRef(pagination);
     const projectRecords = useProjectRecords();
     const { showError } = useSnackBar();
     const { user } = useAppState();
+
+    // Keep paginationRef in sync with pagination state
+    useEffect(() => {
+        paginationRef.current = pagination;
+    }, [pagination]);
+
     // Load projects when customerId changes
     useEffect(() => {
         if (customerId) {
@@ -59,34 +72,84 @@ export function useProject(customerId = null) {
 
 
     /**
-     * Loads projects for a customer
+     * Loads projects for a customer with pagination support
      * Uses backend API
+     * @param {string} custId - Customer ID (optional)
+     * @param {Object} options - Load options
+     * @param {number} options.limit - Number of records per page (default: 50, max: 200)
+     * @param {number} options.offset - Pagination offset (default: 0)
+     * @param {boolean} options.append - Append results to existing projects (for "load more")
      */
-    const loadProjects = useCallback(async (custId) => {
+    const loadProjects = useCallback(async (custId, options = {}) => {
         try {
             setLoading(true);
             setError(null);
 
             const env = getEnvironmentContext();
             const source = env.type === ENVIRONMENT_TYPES.FILEMAKER ? 'filemaker' : 'backend';
+            const currentPagination = paginationRef.current;
+
+            // Merge options with current pagination state
+            const effectiveOptions = {
+                limit: currentPagination.limit,
+                offset: currentPagination.offset,
+                ...options
+            };
+
+            let projectResult;
+            let processedProjects;
+            let paginationInfo;
 
             if (custId) {
                 // Fetch projects for specific customer
-                const projectResult = await fetchProjectsForCustomer(custId);
-
-                // Process data with environment-aware routing
-                const processedProjects = processProjectData(projectResult, {}, source);
-
-                setProjects(processedProjects);
+                projectResult = await fetchProjectsForCustomer(custId, effectiveOptions);
             } else {
                 // Load all projects when no customer ID provided
-                const projectResult = await fetchProjectsForCustomers([]);
+                projectResult = await fetchProjectsForCustomers([], effectiveOptions);
+            }
 
-                // Process data with environment-aware routing
-                const processedProjects = processProjectData(projectResult, {}, source);
+            // Process data with environment-aware routing
+            if (env.type === ENVIRONMENT_TYPES.FILEMAKER) {
+                // FileMaker environment - no pagination support
+                processedProjects = processProjectData(projectResult, {}, source);
+                paginationInfo = {
+                    total: processedProjects.length,
+                    limit: processedProjects.length,
+                    offset: 0,
+                    has_more: false
+                };
+            } else {
+                // Backend environment - extract pagination from response
+                if (projectResult.pagination) {
+                    // Backend returns pagination metadata
+                    processedProjects = processProjectData(projectResult.data || projectResult.projects || [], {}, source);
+                    paginationInfo = {
+                        total: projectResult.pagination.total || processedProjects.length,
+                        limit: effectiveOptions.limit,
+                        offset: effectiveOptions.offset,
+                        has_more: projectResult.pagination.has_more || false
+                    };
+                } else {
+                    // No pagination metadata - treat as single page
+                    processedProjects = processProjectData(projectResult, {}, source);
+                    paginationInfo = {
+                        total: processedProjects.length,
+                        limit: effectiveOptions.limit,
+                        offset: 0,
+                        has_more: false
+                    };
+                }
+            }
 
+            // Update projects state - append if requested, otherwise replace
+            if (options.append) {
+                setProjects(prevProjects => [...prevProjects, ...processedProjects]);
+            } else {
                 setProjects(processedProjects);
             }
+
+            // Update pagination state
+            setPagination(paginationInfo);
         } catch (err) {
             setError(err.message);
             console.error('Error loading projects:', err);
@@ -844,6 +907,24 @@ export function useProject(customerId = null) {
         }
     }, [selectedProject]);
 
+    /**
+     * Loads more projects (pagination helper)
+     * Appends next page of projects to current list
+     */
+    const loadMoreProjects = useCallback(async () => {
+        if (!pagination.has_more) {
+            console.warn('No more projects to load');
+            return;
+        }
+
+        const nextOffset = pagination.offset + pagination.limit;
+        await loadProjects(customerId, {
+            offset: nextOffset,
+            limit: pagination.limit,
+            append: true
+        });
+    }, [customerId, pagination, loadProjects]);
+
     return {
         // State
         loading,
@@ -851,12 +932,14 @@ export function useProject(customerId = null) {
         projects,
         selectedProject,
         projectRecords,
+        pagination,
 
         // Getters
         activeProjects: projects.filter(project => project.status === 'Open'),
 
         // Actions
         loadProjects,
+        loadMoreProjects,
         loadProjectDetails,
         handleProjectSelect,
         handleProjectCreate,
@@ -876,6 +959,7 @@ export function useProject(customerId = null) {
         getProjectCompletion,
         clearError: () => setError(null),
         clearSelectedProject: () => setSelectedProject(null),
+        setPagination,
         isLoading: loading
     };
 }

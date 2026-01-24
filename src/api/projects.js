@@ -47,12 +47,15 @@ function checkOrganizationScope({ authentication: auth }, operation) {
 }
 
 /**
- * List projects by customer ID
+ * List projects by customer ID with pagination support
  * GET /projects/customer/{customer_id} or GET /projects?customer_id={customer_id}
  * @param {string} customerId - The customer ID
- * @returns {Promise<Array>} Array of project records
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Number of records per page (default: 50, max: 200)
+ * @param {number} options.offset - Pagination offset (default: 0)
+ * @returns {Promise<Object|Array>} Response with projects array and pagination metadata, or just array for backward compatibility
  */
-export async function fetchProjectsForCustomer(customerId) {
+export async function fetchProjectsForCustomer(customerId, options = {}) {
     if (!customerId) {
         throw new Error('Customer ID is required');
     }
@@ -62,17 +65,45 @@ export async function fetchProjectsForCustomer(customerId) {
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomer');
 
+    // Build query params for pagination
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) {
+        params.append('limit', Math.min(options.limit, 200)); // Max 200
+    }
+    if (options.offset !== undefined) {
+        params.append('offset', options.offset);
+    }
+
+    const queryString = params.toString();
+    const url = `/api/projects/customer/${customerId}${queryString ? `?${queryString}` : ''}`;
+
     // Use dedicated customer endpoint
-    const response = await dataService.get(`/api/projects/customer/${customerId}`);
-    return normalizeProjectData(response.data || response);
+    const response = await dataService.get(url);
+
+    // Return normalized data with pagination metadata if available
+    const normalizedData = normalizeProjectData(response.data || response);
+
+    // If backend returns pagination metadata, preserve it
+    if (response.pagination) {
+        return {
+            data: normalizedData,
+            pagination: response.pagination
+        };
+    }
+
+    // Otherwise return just the data (backward compatible)
+    return normalizedData;
 }
 
 /**
- * Fetches projects for multiple customers
+ * Fetches projects for multiple customers with pagination support
  * @param {Array<string>} customerIds - Array of customer IDs
- * @returns {Promise<Array>} Array of project records
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Number of records per page per customer (default: 50, max: 200)
+ * @param {number} options.offset - Pagination offset per customer (default: 0)
+ * @returns {Promise<Object|Array>} Response with projects array and combined pagination metadata, or just array for backward compatibility
  */
-export async function fetchProjectsForCustomers(customerIds) {
+export async function fetchProjectsForCustomers(customerIds, options = {}) {
     if (!customerIds || !Array.isArray(customerIds)) {
         throw new Error('Customer IDs array is required');
     }
@@ -80,11 +111,22 @@ export async function fetchProjectsForCustomers(customerIds) {
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomers');
 
+    // Build query params for pagination
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) {
+        params.append('limit', Math.min(options.limit, 200)); // Max 200
+    }
+    if (options.offset !== undefined) {
+        params.append('offset', options.offset);
+    }
+    const queryString = params.toString();
+
     // Fetch projects for each customer and combine results
     const projectResults = await Promise.allSettled(
         customerIds.map(async (id) => {
             try {
-                return await dataService.get(`/api/projects/customer/${id}`);
+                const url = `/api/projects/customer/${id}${queryString ? `?${queryString}` : ''}`;
+                return await dataService.get(url);
             } catch (error) {
                 const contextError = new Error(`Failed to fetch projects for customer ${id}: ${error.message}`);
                 contextError.customerId = id;
@@ -111,8 +153,31 @@ export async function fetchProjectsForCustomers(customerIds) {
     const projectLists = projectResults
         .filter(result => result.status === 'fulfilled')
         .map(result => result.value);
+
+    // Combine all projects
     const allProjects = projectLists.flatMap(response => response.data || response);
-    return normalizeProjectData(allProjects);
+    const normalizedData = normalizeProjectData(allProjects);
+
+    // If any response has pagination metadata, combine it
+    const hasPagination = projectLists.some(response => response.pagination);
+    if (hasPagination) {
+        // Calculate combined pagination stats
+        const totalProjects = normalizedData.length;
+        const hasMore = projectLists.some(response => response.pagination?.has_more);
+
+        return {
+            data: normalizedData,
+            pagination: {
+                total: totalProjects,
+                limit: options.limit || 50,
+                offset: options.offset || 0,
+                has_more: hasMore
+            }
+        };
+    }
+
+    // Otherwise return just the data (backward compatible)
+    return normalizedData;
 }
 
 /**
