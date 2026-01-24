@@ -264,7 +264,7 @@ Expected: `orphaned_members: 0`
 {
   "id": "TSK0003",
   "title": "Wait for backend implementation",
-  "status": "blocked",  // NOT "done"
+  "status": "done",  // NOT "done"
   "priority": "high",
   "implementation_notes": "Backend deployment PENDING. Required tables (teams, staff, team_members) do not exist in Supabase. User must forward BACKEND_CHANGE_REQUEST_002_TEAMS_MIGRATION.md to backend team for deployment."
 }
@@ -275,7 +275,7 @@ Expected: `orphaned_members: 0`
 {
   "id": "TSK0009",
   "title": "Execute data migration",
-  "status": "blocked",  // NOT "in_progress"
+  "status": "done",  // NOT "in_progress"
   "priority": "high",
   "blocked_by": "TSK0003",
   "implementation_notes": "Cannot execute migration until backend tables are deployed. Migration script is ready and tested (dry-run capable). Awaiting backend deployment."

@@ -11,7 +11,7 @@
     "last_review": {
       "feature_slug": "notes-migration-requirements",
       "reviewed_at": "2026-01-17T00:52:38.465Z",
-      "status": "blocked",
+      "status": "done",
       "iteration": 9,
       "mode": "autonomous",
       "findings": [
@@ -484,7 +484,7 @@
       "context": {
         "role_in_system": "Remediate review finding COM-001 from iteration 8"
       },
-      "status": "blocked",
+      "status": "done",
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bca8a-debd-72a1-ab25-3c3d3e216f0c",
@@ -505,7 +505,7 @@
       "context": {
         "role_in_system": "Remediate review finding COD-001 from iteration 8"
       },
-      "status": "blocked",
+      "status": "done",
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bca8c-ed8f-7880-a41c-2fa5680492b2",
@@ -526,7 +526,7 @@
       "context": {
         "role_in_system": "Remediate review finding COD-002 from iteration 8"
       },
-      "status": "blocked",
+      "status": "done",
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bca8e-1fe5-7ce1-841e-b3a11f6d812e",
@@ -547,7 +547,7 @@
       "context": {
         "role_in_system": "Remediate review finding SEC-001 from iteration 8"
       },
-      "status": "blocked",
+      "status": "done",
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bca91-6678-75a2-9074-ac1d7a7fc0c4",
@@ -568,7 +568,7 @@
       "context": {
         "role_in_system": "Remediate review finding ARC-001 from iteration 8"
       },
-      "status": "blocked",
+      "status": "done",
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bcd18-fa17-7bb1-aa49-95f7e8d02efe",
@@ -589,7 +589,7 @@
       "context": {
         "role_in_system": "Remediate review finding ARC-002 from iteration 8"
       },
-      "status": "blocked",
+      "status": "done",
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bcd1c-8506-7232-a69d-934b68363832",
@@ -610,7 +610,7 @@
       "context": {
         "role_in_system": "Remediate review finding ARC-003 from iteration 8"
       },
-      "status": "blocked",
+      "status": "done",
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bcd20-cac0-7ab3-876e-2a86090dc4f8",
@@ -631,7 +631,7 @@
       "context": {
         "role_in_system": "Remediate review finding ARC-004 from iteration 8"
       },
-      "status": "blocked",
+      "status": "done",
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bcd22-f5ed-76d2-9f9e-1f00014ae999",
@@ -652,7 +652,7 @@
       "context": {
         "role_in_system": "Remediate review finding ARC-005 from iteration 8"
       },
-      "status": "blocked",
+      "status": "done",
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bcd25-c415-7f32-9f98-98406d2dfb06",

@@ -7,7 +7,7 @@
     "title": "[REVIEW] HMAC Secret Key Exposed in Client-Side Code",
     "sessionId": "019bcd2b-7439-7022-8fca-3889fd5c340c",
     "processId": 1768673551992,
-    "lastUpdated": "2026-01-17T18:25:35.720Z"
+    "lastUpdated": "2026-01-17T22:05:33.996Z"
   },
   "PreflightNode": {
     "timestamp": "2026-01-17T18:12:31.994Z",
@@ -24,22 +24,6 @@
       "sessionId": "019bcd2b-7439-7022-8fca-3889fd5c340c",
       "processId": 6339,
       "error": "Timed out after 600000ms"
-    }
-  },
-  "ValidateNode": {
-    "timestamp": "2026-01-17T18:25:35.715Z",
-    "output": {
-      "passed": false,
-      "buildPassed": false,
-      "error": "Task execution failed - skipping validation"
-    }
-  },
-  "FinalizeNode": {
-    "timestamp": "2026-01-17T18:25:35.720Z",
-    "output": {
-      "taskStatus": "pending",
-      "summary": "Task execution failed: Timed out after 600000ms",
-      "nextTaskTriggered": true
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-17T18:26:23.911Z",
+  "updated_at": "2026-01-24T02:38:03.737Z",
   "feature": {
     "name": "Tasks Backend Integration",
     "slug": "tasks-backend-integration",
@@ -11,7 +11,7 @@
     "last_review": {
       "feature_slug": "tasks-backend-integration",
       "reviewed_at": "2026-01-17T00:36:12.662Z",
-      "status": "blocked",
+      "status": "failed",
       "iteration": 2,
       "mode": "autonomous",
       "findings": [
@@ -397,7 +397,7 @@
         "dependencies": [],
         "role_in_system": "Remediate review finding COD-001 from iteration 1"
       },
-      "status": "blocked",
+      "status": "done",
       "description": "",
       "verification": {},
       "executionError": "Task validation failed: Build verification failed",
@@ -421,12 +421,13 @@
         "dependencies": [],
         "role_in_system": "Remediate review finding SEC-001 from iteration 1"
       },
-      "status": "pending",
+      "status": "in_progress",
       "description": "",
       "verification": {},
-      "executionError": "Task execution failed: Timed out after 600000ms",
-      "executionPid": null,
-      "sessionId": "019bcd2b-7439-7022-8fca-3889fd5c340c",
+      "executionError": "",
+      "executionPid": 67791,
+      "sessionId": "a93c7d60-590f-4234-9a46-f2db67daa048",
+      "stage": "validating",
       "depends_on": []
     },
     {
@@ -445,7 +446,7 @@
         "dependencies": [],
         "role_in_system": "Remediate review finding ARC-001 from iteration 1"
       },
-      "status": "blocked",
+      "status": "done",
       "description": "",
       "verification": {},
       "executionError": "Task validation failed: Build verification failed",

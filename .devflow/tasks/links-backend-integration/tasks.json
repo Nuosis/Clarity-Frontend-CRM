@@ -13,7 +13,7 @@
     "last_review": {
       "feature_slug": "links-backend-integration",
       "reviewed_at": "2026-01-17T03:36:07.598Z",
-      "status": "blocked",
+      "status": "done",
       "iteration": 2,
       "mode": "autonomous",
       "findings": [

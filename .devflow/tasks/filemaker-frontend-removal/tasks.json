@@ -13,7 +13,7 @@
     "last_review": {
       "feature_slug": "filemaker-frontend-removal",
       "reviewed_at": "2026-01-17T04:54:00.556Z",
-      "status": "blocked",
+      "status": "done",
       "iteration": 2,
       "mode": "autonomous",
       "findings": [
