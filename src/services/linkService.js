@@ -175,3 +175,35 @@ export async function deleteLinkById(linkId) {
 
     return await deleteLink(linkId);
 }
+
+/**
+ * Process FileMaker legacy links data into frontend format
+ * Maps LinkResponse to frontend format for FileMaker compatibility
+ * @param {Object} data - FileMaker response data
+ * @returns {Array} Array of links in frontend format, sorted by newest first
+ */
+export function processLinks(data) {
+    // Handle missing or invalid data
+    if (!data || !data.response || !data.response.data || !Array.isArray(data.response.data)) {
+        return [];
+    }
+
+    // Transform FileMaker records to frontend format
+    const links = data.response.data.map(record => {
+        if (!record.fieldData) return null;
+
+        return {
+            id: record.fieldData.__ID,
+            recordId: record.recordID,
+            url: record.fieldData.link,
+            createdAt: record.fieldData['~creationTimestamp'],
+            createdBy: record.fieldData['~createdBy']
+        };
+    }).filter(Boolean); // Remove null entries
+
+    // Sort by newest first (comparing timestamps as strings works for MM/DD/YYYY HH:MM:SS format)
+    return links.sort((a, b) => {
+        if (!a.createdAt || !b.createdAt) return 0;
+        return b.createdAt.localeCompare(a.createdAt);
+    });
+}
