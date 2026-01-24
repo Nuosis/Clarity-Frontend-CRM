@@ -275,10 +275,18 @@ function ProjectLinksTab({ project, darkMode, localProject, setLocalProject }) {
                 }
 
                 // Create a temporary link object with a temporary ID
+                // Generate title from hostname with fallback to URL string
+                let tempTitle;
+                try {
+                  tempTitle = new URL(trimmed).hostname;
+                } catch {
+                  tempTitle = trimmed;
+                }
+
                 const tempLink = {
                   id: `temp-${Date.now()}`,
                   url: trimmed,
-                  title: new URL(trimmed).hostname
+                  title: tempTitle
                 };
                 
                 // Optimistically update the UI by adding the new link to the local project state
