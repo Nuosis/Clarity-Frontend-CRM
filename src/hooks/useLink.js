@@ -50,10 +50,20 @@ export function useLink() {
                 throw new Error('Failed to create link: No ID returned');
             }
 
+            // Generate title from hostname with fallback to URL string
+            let title = result.title;
+            if (!title) {
+                try {
+                    title = new URL(trimmedUrl).hostname;
+                } catch {
+                    title = trimmedUrl;
+                }
+            }
+
             const newLink = {
                 id: result.id,
                 url: result.url || trimmedUrl,
-                title: result.title || new URL(trimmedUrl).hostname,
+                title: title,
                 createdAt: result.createdAt || new Date().toISOString()
             };
 
