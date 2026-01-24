@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-17T19:12:42.696Z",
+  "updated_at": "2026-01-24T02:40:54.262Z",
   "feature": {
     "name": "Customers Backend API Integration",
     "slug": "customers-backend-integration",
@@ -11,7 +11,7 @@
     "last_review": {
       "feature_slug": "customers-backend-integration",
       "reviewed_at": "2026-01-17T01:10:08.816Z",
-      "status": "done",
+      "status": "passed",
       "iteration": 4,
       "mode": "autonomous",
       "findings": [
@@ -627,10 +627,11 @@
       "context": {
         "role_in_system": "Remediate review finding SEC-002 from iteration 3"
       },
-      "status": "pending",
+      "status": "in_progress",
       "executionError": "Task execution failed: Process exited with code 1",
-      "executionPid": null,
-      "sessionId": "ddae6303-5229-4009-9f38-424985f4ee6f",
+      "executionPid": 70842,
+      "sessionId": "42a35bd9-0d00-4355-a980-13516f4ada27",
+      "stage": "validating",
       "depends_on": []
     },
     {
@@ -648,7 +649,7 @@
       "context": {
         "role_in_system": "Remediate review finding ARC-001 from iteration 3"
       },
-      "status": "pending",
+      "status": "queued",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -669,7 +670,7 @@
       "context": {
         "role_in_system": "Remediate review finding ARC-002 from iteration 3"
       },
-      "status": "pending",
+      "status": "queued",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -690,7 +691,7 @@
       "context": {
         "role_in_system": "Remediate review finding ARC-003 from iteration 3"
       },
-      "status": "pending",
+      "status": "queued",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
@@ -711,7 +712,7 @@
       "context": {
         "role_in_system": "Remediate review finding ARC-004 from iteration 3"
       },
-      "status": "pending",
+      "status": "queued",
       "executionError": null,
       "executionPid": null,
       "sessionId": null,
