@@ -15,6 +15,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { supabaseUrl, supabaseAnonKey } from '../config.js'
+import { validateUUID } from '../utils/validation'
 
 // Initialize Supabase client
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -182,6 +183,8 @@ export const createProspect = async (prospectData) => {
  * Handles updates to customers table and related tables (email, phone, address, settings)
  */
 export const updateProspect = async (id, prospectData) => {
+  validateUUID(id, 'Prospect ID')
+
   // Step 1: Extract fields that belong to related tables
   const { Email, Phone, AddressLine1, AddressLine2, City, State, PostalCode, Country, Industry, FirstName, LastName, ...customerFields } = prospectData
   
@@ -389,6 +392,8 @@ export const updateProspect = async (id, prospectData) => {
  * Delete prospect
  */
 export const deleteProspect = async (id) => {
+  validateUUID(id, 'Prospect ID')
+
   const { error } = await supabase
     .from('customers')
     .delete()
@@ -410,6 +415,8 @@ export const deleteProspect = async (id) => {
  */
 export const convertProspectToCustomer = async (prospectId, customerType = 'CUSTOMER') => {
   console.log('[Prospect Conversion] Starting conversion for ID:', prospectId)
+
+  validateUUID(prospectId, 'Prospect ID')
 
   // Step 1: First, try to fetch the record without type filter to see if it exists
   const { data: recordCheck, error: checkError } = await supabase

@@ -7,6 +7,7 @@
 import axios from 'axios'
 import { backendConfig } from '../config'
 import { generateBackendAuthHeader } from '../services/dataService'
+import { validateUUID } from '../utils/validation'
 
 /**
  * Generate secure access token for proposals
@@ -115,6 +116,8 @@ export async function createProposal(proposalData) {
  */
 export async function fetchProposalsForProject(projectId, page = 1, pageSize = 50) {
   try {
+    validateUUID(projectId, 'Project ID')
+
     const authHeader = await generateBackendAuthHeader()
 
     const response = await axios({
@@ -205,9 +208,11 @@ export async function fetchProposalByToken(token) {
  */
 export async function fetchProposalsByProject(projectId) {
   try {
+    validateUUID(projectId, 'Project ID')
+
     // WIREFRAME: Mock implementation - no real backend calls
     await new Promise(resolve => setTimeout(resolve, 500))
-    
+
     console.log('[WIREFRAME] Mock fetching proposals for project:', projectId)
     
     const mockProposals = [
@@ -247,6 +252,8 @@ export async function fetchProposalsByProject(projectId) {
  */
 export async function updateProposalStatus(proposalId, status) {
   try {
+    validateUUID(proposalId, 'Proposal ID')
+
     const updateData = { status }
     const payload = JSON.stringify(updateData)
     const authHeader = await generateBackendAuthHeader(payload)
@@ -293,6 +300,8 @@ export async function updateProposalStatus(proposalId, status) {
  */
 export async function addProposalConcept(proposalId, conceptData) {
   try {
+    validateUUID(proposalId, 'Proposal ID')
+
     const conceptWithProposal = {
       ...conceptData,
       proposal_id: proposalId
@@ -340,6 +349,8 @@ export async function addProposalConcept(proposalId, conceptData) {
  */
 export async function addProposalDeliverable(proposalId, deliverableData) {
   try {
+    validateUUID(proposalId, 'Proposal ID')
+
     const deliverableWithProposal = {
       ...deliverableData,
       proposal_id: proposalId
@@ -387,6 +398,8 @@ export async function addProposalDeliverable(proposalId, deliverableData) {
  */
 export async function updateDeliverableSelections(proposalId, selectedDeliverableIds) {
   try {
+    validateUUID(proposalId, 'Proposal ID')
+
     const updateData = { selected_deliverable_ids: selectedDeliverableIds }
     const payload = JSON.stringify(updateData)
     const authHeader = await generateBackendAuthHeader(payload)
@@ -434,13 +447,15 @@ export async function updateDeliverableSelections(proposalId, selectedDeliverabl
  */
 export async function approveProposal(proposalId, selectedDeliverableIds, totalPrice) {
   try {
+    validateUUID(proposalId, 'Proposal ID')
+
     const approvalData = {
       status: 'approved',
       selected_deliverable_ids: selectedDeliverableIds,
       selected_price: totalPrice,
       approved_at: new Date().toISOString()
     }
-    
+
     const payload = JSON.stringify(approvalData)
     const authHeader = await generateBackendAuthHeader(payload)
 
@@ -482,6 +497,8 @@ export async function approveProposal(proposalId, selectedDeliverableIds, totalP
  */
 export async function deleteProposal(proposalId) {
   try {
+    validateUUID(proposalId, 'Proposal ID')
+
     const authHeader = await generateBackendAuthHeader('')
 
     const response = await axios({

@@ -13,6 +13,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { supabaseUrl, supabaseAnonKey } from '../config.js'
+import { validateUUID } from '../utils/validation'
 
 // Initialize Supabase client
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -45,6 +46,8 @@ export async function fetchTeamById(teamId) {
     throw new Error('Team ID is required')
   }
 
+  validateUUID(teamId, 'Team ID')
+
   const { data, error } = await supabase
     .from('teams')
     .select('*')
@@ -68,6 +71,8 @@ export async function fetchTeamStaff(teamId) {
   if (!teamId) {
     throw new Error('Team ID is required')
   }
+
+  validateUUID(teamId, 'Team ID')
 
   const { data, error } = await supabase
     .from('team_members')
@@ -116,6 +121,8 @@ export async function fetchTeamProjects(teamId) {
   if (!teamId) {
     throw new Error('Team ID is required')
   }
+
+  validateUUID(teamId, 'Team ID')
 
   const { data, error } = await supabase
     .from('projects')
@@ -171,6 +178,8 @@ export async function updateTeam(teamId, teamData) {
     throw new Error('Team ID is required')
   }
 
+  validateUUID(teamId, 'Team ID')
+
   if (!teamData || !teamData.name) {
     throw new Error('Team name is required')
   }
@@ -203,6 +212,8 @@ export async function deleteTeam(teamId) {
     throw new Error('Team ID is required')
   }
 
+  validateUUID(teamId, 'Team ID')
+
   const { error } = await supabase
     .from('teams')
     .delete()
@@ -227,6 +238,10 @@ export async function assignStaffToTeam(teamId, staffId, role = '', organization
   if (!teamId || !staffId) {
     throw new Error('Team ID and Staff ID are required')
   }
+
+  validateUUID(teamId, 'Team ID')
+  validateUUID(staffId, 'Staff ID')
+  validateUUID(organizationId, 'Organization ID')
 
   if (!organizationId) {
     throw new Error('Organization ID is required')
@@ -299,6 +314,8 @@ export async function removeStaffFromTeam(teamMemberId) {
     throw new Error('Team member ID is required')
   }
 
+  validateUUID(teamMemberId, 'Team member ID')
+
   const { error } = await supabase
     .from('team_members')
     .delete()
@@ -321,6 +338,9 @@ export async function assignProjectToTeam(projectId, teamId) {
   if (!projectId || !teamId) {
     throw new Error('Project ID and Team ID are required')
   }
+
+  validateUUID(projectId, 'Project ID')
+  validateUUID(teamId, 'Team ID')
 
   const { data, error } = await supabase
     .from('projects')
@@ -347,6 +367,8 @@ export async function removeProjectFromTeam(projectId) {
   if (!projectId) {
     throw new Error('Project ID is required')
   }
+
+  validateUUID(projectId, 'Project ID')
 
   const { data, error } = await supabase
     .from('projects')
@@ -443,6 +465,8 @@ export async function updateStaff(staffId, staffData) {
     throw new Error('Staff ID is required')
   }
 
+  validateUUID(staffId, 'Staff ID')
+
   if (!staffData || Object.keys(staffData).length === 0) {
     throw new Error('Staff data is required')
   }
@@ -481,6 +505,8 @@ export async function deleteStaff(staffId) {
     throw new Error('Staff ID is required')
   }
 
+  validateUUID(staffId, 'Staff ID')
+
   const { error } = await supabase
     .from('staff')
     .delete()
@@ -503,6 +529,8 @@ export async function updateTeamMemberRole(teamMemberId, role) {
   if (!teamMemberId) {
     throw new Error('Team member ID is required')
   }
+
+  validateUUID(teamMemberId, 'Team member ID')
 
   const { data, error } = await supabase
     .from('team_members')

@@ -1,5 +1,6 @@
 import { dataService, getAuthenticationContext } from '../services/dataService';
 import { withNoteErrorHandling } from '../errors';
+import { validateUUID } from '../utils/validation';
 
 /**
  * Normalize task data from backend responses
@@ -105,6 +106,8 @@ export async function fetchTasksForProject(projectId) {
         throw new Error('Project ID is required');
     }
 
+    validateUUID(projectId, 'Project ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'fetchTasksForProject');
 
@@ -154,6 +157,8 @@ export async function updateTask(taskId, data) {
         throw new Error('Task ID and data are required');
     }
 
+    validateUUID(taskId, 'Task ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'updateTask');
 
@@ -178,6 +183,8 @@ export async function updateTaskStatus(taskId, completed) {
         throw new Error('Task ID is required');
     }
 
+    validateUUID(taskId, 'Task ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'updateTaskStatus');
 
@@ -200,6 +207,8 @@ export async function deleteTask(taskId) {
     if (!taskId) {
         throw new Error('Task ID is required');
     }
+
+    validateUUID(taskId, 'Task ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'deleteTask');
@@ -224,6 +233,8 @@ export async function startTaskTimer(taskId, selectedTask) {
     if (!taskId || !selectedTask) {
         throw new Error('Task ID and selected task are required');
     }
+
+    validateUUID(taskId, 'Task ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'startTaskTimer');
@@ -254,6 +265,8 @@ export async function stopTaskTimer(entryId, description = '', saveImmediately =
     if (!entryId) {
         throw new Error('Entry ID is required');
     }
+
+    validateUUID(entryId, 'Entry ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'stopTaskTimer');
@@ -288,6 +301,8 @@ export async function pauseTimer(entryId) {
         throw new Error('Entry ID is required');
     }
 
+    validateUUID(entryId, 'Entry ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'pauseTimer');
 
@@ -310,6 +325,8 @@ export async function resumeTimer(entryId) {
     if (!entryId) {
         throw new Error('Entry ID is required');
     }
+
+    validateUUID(entryId, 'Entry ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'resumeTimer');
@@ -365,6 +382,8 @@ export async function fetchTaskTimers(taskId, filters = {}) {
     if (!taskId) {
         throw new Error('Task ID is required');
     }
+
+    validateUUID(taskId, 'Task ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'fetchTaskTimers');

@@ -5,6 +5,7 @@ import {
     NoteError,
     NoteErrorCodes
 } from '../errors';
+import { validateUUID } from '../utils/validation';
 
 /**
  * Normalize note data from backend API
@@ -107,6 +108,11 @@ export async function createNote(data) {
             );
         }
 
+        // Validate UUID format for whichever parent ID is provided
+        if (projectId) validateUUID(projectId, 'Project ID');
+        if (customerId) validateUUID(customerId, 'Customer ID');
+        if (taskId) validateUUID(taskId, 'Task ID');
+
         // Check organization scope
         const auth = getAuthenticationContext();
         checkNoteOrganizationScope({ authentication: auth }, 'createNote');
@@ -154,6 +160,8 @@ export async function fetchNotesByProject(projectId, options = {}) {
             });
         }
 
+        validateUUID(projectId, 'Project ID');
+
         // Check organization scope
         const auth = getAuthenticationContext();
         checkNoteOrganizationScope({ authentication: auth }, 'fetchNotesByProject');
@@ -185,6 +193,8 @@ export async function fetchNotesByTask(taskId, options = {}) {
             });
         }
 
+        validateUUID(taskId, 'Task ID');
+
         // Check organization scope
         const auth = getAuthenticationContext();
         checkNoteOrganizationScope({ authentication: auth }, 'fetchNotesByTask');
@@ -215,6 +225,8 @@ export async function fetchNotesByCustomer(customerId, options = {}) {
                 field: 'customerId'
             });
         }
+
+        validateUUID(customerId, 'Customer ID');
 
         // Check organization scope
         const auth = getAuthenticationContext();
@@ -265,6 +277,8 @@ export async function updateNote(noteId, data) {
             });
         }
 
+        validateUUID(noteId, 'Note ID');
+
         // Check organization scope
         const auth = getAuthenticationContext();
         checkNoteOrganizationScope({ authentication: auth }, 'updateNote');
@@ -296,6 +310,8 @@ export async function deleteNote(noteId) {
                 field: 'noteId'
             });
         }
+
+        validateUUID(noteId, 'Note ID');
 
         // Check organization scope
         const auth = getAuthenticationContext();

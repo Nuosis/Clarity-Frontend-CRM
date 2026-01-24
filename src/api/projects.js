@@ -10,6 +10,7 @@
 
 import { dataService, getAuthenticationContext } from '../services/dataService';
 import { fetchNotesByProject } from './notes';
+import { validateUUID } from '../utils/validation';
 
 /**
  * Normalize project data
@@ -55,6 +56,8 @@ export async function fetchProjectsForCustomer(customerId) {
     if (!customerId) {
         throw new Error('Customer ID is required');
     }
+
+    validateUUID(customerId, 'Customer ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomer');
@@ -123,6 +126,8 @@ export async function fetchProjectById(projectId) {
         throw new Error('Project ID is required');
     }
 
+    validateUUID(projectId, 'Project ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'fetchProjectById');
 
@@ -143,6 +148,8 @@ export async function fetchProjectWithDetails(projectId) {
     if (!projectId) {
         throw new Error('Project ID is required');
     }
+
+    validateUUID(projectId, 'Project ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'fetchProjectWithDetails');
@@ -181,6 +188,8 @@ export async function updateProject(projectId, data) {
         throw new Error('Project ID and data are required');
     }
 
+    validateUUID(projectId, 'Project ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'updateProject');
 
@@ -198,6 +207,8 @@ export async function deleteProject(projectId) {
     if (!projectId) {
         throw new Error('Project ID is required');
     }
+
+    validateUUID(projectId, 'Project ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'deleteProject');
@@ -218,6 +229,8 @@ export async function updateProjectStatus(projectId, status) {
         throw new Error('Project ID and status are required');
     }
 
+    validateUUID(projectId, 'Project ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'updateProjectStatus');
 
@@ -236,6 +249,8 @@ export async function fetchProjectObjectives(projectId) {
     if (!projectId) {
         throw new Error('Project ID is required');
     }
+
+    validateUUID(projectId, 'Project ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'fetchProjectObjectives');
@@ -274,6 +289,8 @@ export async function updateObjective(objectiveId, data) {
         throw new Error('Objective ID and data are required');
     }
 
+    validateUUID(objectiveId, 'Objective ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'updateObjective');
 
@@ -293,6 +310,8 @@ export async function deleteObjective(objectiveId) {
         throw new Error('Objective ID is required');
     }
 
+    validateUUID(objectiveId, 'Objective ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'deleteObjective');
 
@@ -311,6 +330,8 @@ export async function reorderObjectives(projectId, objectiveIds) {
     if (!projectId || !objectiveIds) {
         throw new Error('Project ID and objective IDs are required');
     }
+
+    validateUUID(projectId, 'Project ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'reorderObjectives');
@@ -333,6 +354,8 @@ export async function toggleObjectiveCompleted(objectiveId) {
         throw new Error('Objective ID is required');
     }
 
+    validateUUID(objectiveId, 'Objective ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'toggleObjectiveCompleted');
 
@@ -350,6 +373,8 @@ export async function fetchProjectImages(projectId) {
     if (!projectId) {
         throw new Error('Project ID is required');
     }
+
+    validateUUID(projectId, 'Project ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'fetchProjectImages');
@@ -370,6 +395,8 @@ export async function createProjectImage(projectId, data) {
         throw new Error('Project ID and data are required');
     }
 
+    validateUUID(projectId, 'Project ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'createProjectImage');
 
@@ -389,6 +416,8 @@ export async function updateProjectImage(imageId, data) {
         throw new Error('Image ID and data are required');
     }
 
+    validateUUID(imageId, 'Image ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'updateProjectImage');
 
@@ -406,6 +435,8 @@ export async function deleteProjectImage(imageId) {
     if (!imageId) {
         throw new Error('Image ID is required');
     }
+
+    validateUUID(imageId, 'Image ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'deleteProjectImage');
@@ -459,6 +490,8 @@ export async function updateStep(stepId, data) {
         throw new Error('Step ID and data are required');
     }
 
+    validateUUID(stepId, 'Step ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'updateStep');
 
@@ -476,6 +509,8 @@ export async function deleteStep(stepId) {
     if (!stepId) {
         throw new Error('Step ID is required');
     }
+
+    validateUUID(stepId, 'Step ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'deleteStep');
@@ -495,6 +530,8 @@ export async function toggleStepCompleted(stepId) {
         throw new Error('Step ID is required');
     }
 
+    validateUUID(stepId, 'Step ID');
+
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'toggleStepCompleted');
 
@@ -513,6 +550,8 @@ export async function reorderSteps(objectiveId, stepIds) {
     if (!objectiveId || !stepIds) {
         throw new Error('Objective ID and step IDs are required');
     }
+
+    validateUUID(objectiveId, 'Objective ID');
 
     const auth = getAuthenticationContext();
     checkOrganizationScope({ authentication: auth }, 'reorderSteps');

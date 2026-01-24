@@ -5,6 +5,7 @@ import {
     CustomerErrorCodes,
     CustomerError
 } from '../errors/customerErrors';
+import { validateUUID } from '../utils/validation';
 
 /**
  * Normalize customer data
@@ -104,6 +105,8 @@ export async function fetchCustomerById(customerId) {
             throw new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
         }
 
+        validateUUID(customerId, 'Customer ID');
+
         const auth = getAuthenticationContext();
         checkOrganizationScope({ authentication: auth }, 'fetchCustomerById');
 
@@ -123,6 +126,8 @@ export async function updateCustomer(customerId, data) {
         if (!customerId || !data) {
             throw new CustomerError('Customer ID and data are required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
         }
+
+        validateUUID(customerId, 'Customer ID');
 
         const auth = getAuthenticationContext();
         checkOrganizationScope({ authentication: auth }, 'updateCustomer');
@@ -162,6 +167,8 @@ export async function deleteCustomer(customerId) {
             throw new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
         }
 
+        validateUUID(customerId, 'Customer ID');
+
         const auth = getAuthenticationContext();
         checkOrganizationScope({ authentication: auth }, 'deleteCustomer');
 
@@ -180,6 +187,8 @@ export async function toggleCustomerStatus(customerId) {
         if (!customerId) {
             throw new CustomerError('Customer ID is required', CustomerErrorCodes.MISSING_REQUIRED_FIELD);
         }
+
+        validateUUID(customerId, 'Customer ID');
 
         const auth = getAuthenticationContext();
         checkOrganizationScope({ authentication: auth }, 'toggleCustomerStatus');
