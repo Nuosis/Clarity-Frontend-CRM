@@ -1,6 +1,6 @@
 /**
  * Error handling utilities
- * Exports customer error handling and can be extended for other modules
+ * Exports customer, note, and project error handling
  */
 
 export {
@@ -21,3 +21,12 @@ export {
     checkOrganizationScope as checkNoteOrganizationScope,
     withErrorHandling as withNoteErrorHandling
 } from './noteErrors';
+
+export {
+    ProjectError,
+    ProjectErrorCodes,
+    parseHttpError as parseProjectHttpError,
+    checkOrganizationScope as checkProjectOrganizationScope,
+    withErrorHandling as withProjectErrorHandling,
+    formatErrorForUI as formatProjectErrorForUI
+} from './projectErrors';

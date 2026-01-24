@@ -11,6 +11,12 @@
 import { dataService, getAuthenticationContext } from '../services/dataService';
 import { fetchNotesByProject } from './notes';
 import { validateUUID } from '../utils/validation';
+import {
+    withProjectErrorHandling,
+    checkProjectOrganizationScope,
+    ProjectError,
+    ProjectErrorCodes
+} from '../errors';
 
 /**
  * Normalize project data
@@ -34,17 +40,6 @@ function normalizeProjectData(data) {
     };
 }
 
-/**
- * Check organization scope
- * @param {Object} auth - Authentication context
- * @param {string} operation - Operation name for error messages
- * @throws {Error} If organization ID is missing
- */
-function checkOrganizationScope({ authentication: auth }, operation) {
-    if (!auth?.user?.supabaseOrgID) {
-        throw new Error(`Organization context required for ${operation}. Please authenticate.`);
-    }
-}
 
 /**
  * List projects by customer ID with pagination support
@@ -56,43 +51,45 @@ function checkOrganizationScope({ authentication: auth }, operation) {
  * @returns {Promise<Object|Array>} Response with projects array and pagination metadata, or just array for backward compatibility
  */
 export async function fetchProjectsForCustomer(customerId, options = {}) {
-    if (!customerId) {
-        throw new Error('Customer ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!customerId) {
+            throw new ProjectError('Customer ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'customerId' });
+        }
 
-    validateUUID(customerId, 'Customer ID');
+        validateUUID(customerId, 'Customer ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomer');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomer');
 
-    // Build query params for pagination
-    const params = new URLSearchParams();
-    if (options.limit !== undefined) {
-        params.append('limit', Math.min(options.limit, 200)); // Max 200
-    }
-    if (options.offset !== undefined) {
-        params.append('offset', options.offset);
-    }
+        // Build query params for pagination
+        const params = new URLSearchParams();
+        if (options.limit !== undefined) {
+            params.append('limit', Math.min(options.limit, 200)); // Max 200
+        }
+        if (options.offset !== undefined) {
+            params.append('offset', options.offset);
+        }
 
-    const queryString = params.toString();
-    const url = `/api/projects/customer/${customerId}${queryString ? `?${queryString}` : ''}`;
+        const queryString = params.toString();
+        const url = `/api/projects/customer/${customerId}${queryString ? `?${queryString}` : ''}`;
 
-    // Use dedicated customer endpoint
-    const response = await dataService.get(url);
+        // Use dedicated customer endpoint
+        const response = await dataService.get(url);
 
-    // Return normalized data with pagination metadata if available
-    const normalizedData = normalizeProjectData(response.data || response);
+        // Return normalized data with pagination metadata if available
+        const normalizedData = normalizeProjectData(response.data || response);
 
-    // If backend returns pagination metadata, preserve it
-    if (response.pagination) {
-        return {
-            data: normalizedData,
-            pagination: response.pagination
-        };
-    }
+        // If backend returns pagination metadata, preserve it
+        if (response.pagination) {
+            return {
+                data: normalizedData,
+                pagination: response.pagination
+            };
+        }
 
-    // Otherwise return just the data (backward compatible)
-    return normalizedData;
+        // Otherwise return just the data (backward compatible)
+        return normalizedData;
+    }, 'fetchProjectsForCustomer', { customerId, options });
 }
 
 /**
@@ -104,12 +101,13 @@ export async function fetchProjectsForCustomer(customerId, options = {}) {
  * @returns {Promise<Object|Array>} Response with projects array and combined pagination metadata, or just array for backward compatibility
  */
 export async function fetchProjectsForCustomers(customerIds, options = {}) {
-    if (!customerIds || !Array.isArray(customerIds)) {
-        throw new Error('Customer IDs array is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!customerIds || !Array.isArray(customerIds)) {
+            throw new ProjectError('Customer IDs array is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'customerIds' });
+        }
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomers');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'fetchProjectsForCustomers');
 
     // Build query params for pagination
     const params = new URLSearchParams();
@@ -176,8 +174,9 @@ export async function fetchProjectsForCustomers(customerIds, options = {}) {
         };
     }
 
-    // Otherwise return just the data (backward compatible)
-    return normalizedData;
+        // Otherwise return just the data (backward compatible)
+        return normalizedData;
+    }, 'fetchProjectsForCustomers', { customerIds, options });
 }
 
 /**
@@ -187,19 +186,21 @@ export async function fetchProjectsForCustomers(customerIds, options = {}) {
  * @returns {Promise<Object>} Project record
  */
 export async function fetchProjectById(projectId) {
-    if (!projectId) {
-        throw new Error('Project ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!projectId) {
+            throw new ProjectError('Project ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'projectId' });
+        }
 
-    validateUUID(projectId, 'Project ID');
+        validateUUID(projectId, 'Project ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchProjectById');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'fetchProjectById');
 
-    const response = await dataService.get(`/api/projects/${projectId}`);
-    // Backend returns { success: true, data: project } for single get
-    const projectData = response.data || response;
-    return normalizeProjectData(projectData);
+        const response = await dataService.get(`/api/projects/${projectId}`);
+        // Backend returns { success: true, data: project } for single get
+        const projectData = response.data || response;
+        return normalizeProjectData(projectData);
+    }, 'fetchProjectById', { projectId });
 }
 
 /**
@@ -210,17 +211,19 @@ export async function fetchProjectById(projectId) {
  * @returns {Promise<Object>} Project with nested details
  */
 export async function fetchProjectWithDetails(projectId) {
-    if (!projectId) {
-        throw new Error('Project ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!projectId) {
+            throw new ProjectError('Project ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'projectId' });
+        }
 
-    validateUUID(projectId, 'Project ID');
+        validateUUID(projectId, 'Project ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchProjectWithDetails');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'fetchProjectWithDetails');
 
-    const response = await dataService.get(`/api/projects/${projectId}/detail`);
-    return normalizeProjectData(response.data || response);
+        const response = await dataService.get(`/api/projects/${projectId}/detail`);
+        return normalizeProjectData(response.data || response);
+    }, 'fetchProjectWithDetails', { projectId });
 }
 
 /**
@@ -230,15 +233,17 @@ export async function fetchProjectWithDetails(projectId) {
  * @returns {Promise<Object>} Created project record
  */
 export async function createProject(data) {
-    if (!data) {
-        throw new Error('Project data is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!data) {
+            throw new ProjectError('Project data is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'createProject');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'createProject');
 
-    const response = await dataService.post('/api/projects', data);
-    return normalizeProjectData(response.data || response);
+        const response = await dataService.post('/api/projects', data);
+        return normalizeProjectData(response.data || response);
+    }, 'createProject', { data });
 }
 
 /**
@@ -249,17 +254,22 @@ export async function createProject(data) {
  * @returns {Promise<Object>} Updated project record
  */
 export async function updateProject(projectId, data) {
-    if (!projectId || !data) {
-        throw new Error('Project ID and data are required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!projectId) {
+            throw new ProjectError('Project ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'projectId' });
+        }
+        if (!data) {
+            throw new ProjectError('Project data is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    validateUUID(projectId, 'Project ID');
+        validateUUID(projectId, 'Project ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'updateProject');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'updateProject');
 
-    const response = await dataService.put(`/api/projects/${projectId}`, data);
-    return normalizeProjectData(response.data || response);
+        const response = await dataService.put(`/api/projects/${projectId}`, data);
+        return normalizeProjectData(response.data || response);
+    }, 'updateProject', { projectId, data });
 }
 
 /**
@@ -269,17 +279,19 @@ export async function updateProject(projectId, data) {
  * @returns {Promise<Object>} Result of the delete operation
  */
 export async function deleteProject(projectId) {
-    if (!projectId) {
-        throw new Error('Project ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!projectId) {
+            throw new ProjectError('Project ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'projectId' });
+        }
 
-    validateUUID(projectId, 'Project ID');
+        validateUUID(projectId, 'Project ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'deleteProject');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'deleteProject');
 
-    const response = await dataService.delete(`/api/projects/${projectId}`);
-    return response.data || response;
+        const response = await dataService.delete(`/api/projects/${projectId}`);
+        return response.data || response;
+    }, 'deleteProject', { projectId });
 }
 
 /**
@@ -290,18 +302,23 @@ export async function deleteProject(projectId) {
  * @returns {Promise<Object>} Updated project record
  */
 export async function updateProjectStatus(projectId, status) {
-    if (!projectId || !status) {
-        throw new Error('Project ID and status are required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!projectId) {
+            throw new ProjectError('Project ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'projectId' });
+        }
+        if (!status) {
+            throw new ProjectError('Status is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'status' });
+        }
 
-    validateUUID(projectId, 'Project ID');
+        validateUUID(projectId, 'Project ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'updateProjectStatus');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'updateProjectStatus');
 
-    // Backend has dedicated status endpoint with business logic hooks
-    const response = await dataService.patch(`/api/projects/${projectId}/status`, { status });
-    return normalizeProjectData(response.data || response);
+        // Backend has dedicated status endpoint with business logic hooks
+        const response = await dataService.patch(`/api/projects/${projectId}/status`, { status });
+        return normalizeProjectData(response.data || response);
+    }, 'updateProjectStatus', { projectId, status });
 }
 
 /**
@@ -311,17 +328,19 @@ export async function updateProjectStatus(projectId, status) {
  * @returns {Promise<Array>} Array of objective records with nested steps
  */
 export async function fetchProjectObjectives(projectId) {
-    if (!projectId) {
-        throw new Error('Project ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!projectId) {
+            throw new ProjectError('Project ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'projectId' });
+        }
 
-    validateUUID(projectId, 'Project ID');
+        validateUUID(projectId, 'Project ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchProjectObjectives');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'fetchProjectObjectives');
 
-    const response = await dataService.get(`/api/objectives/project/${projectId}`);
-    return response.data || response;
+        const response = await dataService.get(`/api/objectives/project/${projectId}`);
+        return response.data || response;
+    }, 'fetchProjectObjectives', { projectId });
 }
 
 /**
@@ -331,15 +350,17 @@ export async function fetchProjectObjectives(projectId) {
  * @returns {Promise<Object>} Created objective record
  */
 export async function createObjective(data) {
-    if (!data) {
-        throw new Error('Objective data is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!data) {
+            throw new ProjectError('Objective data is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'createObjective');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'createObjective');
 
-    const response = await dataService.post('/api/objectives', data);
-    return response.data || response;
+        const response = await dataService.post('/api/objectives', data);
+        return response.data || response;
+    }, 'createObjective', { data });
 }
 
 /**
@@ -350,17 +371,22 @@ export async function createObjective(data) {
  * @returns {Promise<Object>} Updated objective record
  */
 export async function updateObjective(objectiveId, data) {
-    if (!objectiveId || !data) {
-        throw new Error('Objective ID and data are required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!objectiveId) {
+            throw new ProjectError('Objective ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'objectiveId' });
+        }
+        if (!data) {
+            throw new ProjectError('Objective data is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    validateUUID(objectiveId, 'Objective ID');
+        validateUUID(objectiveId, 'Objective ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'updateObjective');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'updateObjective');
 
-    const response = await dataService.patch(`/api/objectives/${objectiveId}`, data);
-    return response.data || response;
+        const response = await dataService.patch(`/api/objectives/${objectiveId}`, data);
+        return response.data || response;
+    }, 'updateObjective', { objectiveId, data });
 }
 
 /**
@@ -371,17 +397,19 @@ export async function updateObjective(objectiveId, data) {
  * @returns {Promise<Object>} Result of the delete operation
  */
 export async function deleteObjective(objectiveId) {
-    if (!objectiveId) {
-        throw new Error('Objective ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!objectiveId) {
+            throw new ProjectError('Objective ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'objectiveId' });
+        }
 
-    validateUUID(objectiveId, 'Objective ID');
+        validateUUID(objectiveId, 'Objective ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'deleteObjective');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'deleteObjective');
 
-    const response = await dataService.delete(`/api/objectives/${objectiveId}`);
-    return response.data || response;
+        const response = await dataService.delete(`/api/objectives/${objectiveId}`);
+        return response.data || response;
+    }, 'deleteObjective', { objectiveId });
 }
 
 /**
@@ -392,20 +420,25 @@ export async function deleteObjective(objectiveId) {
  * @returns {Promise<Array>} Updated array of objectives
  */
 export async function reorderObjectives(projectId, objectiveIds) {
-    if (!projectId || !objectiveIds) {
-        throw new Error('Project ID and objective IDs are required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!projectId) {
+            throw new ProjectError('Project ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'projectId' });
+        }
+        if (!objectiveIds) {
+            throw new ProjectError('Objective IDs are required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'objectiveIds' });
+        }
 
-    validateUUID(projectId, 'Project ID');
+        validateUUID(projectId, 'Project ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'reorderObjectives');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'reorderObjectives');
 
-    const response = await dataService.post(
-        `/api/objectives/projects/${projectId}/reorder`,
-        objectiveIds
-    );
-    return response.data || response;
+        const response = await dataService.post(
+            `/api/objectives/projects/${projectId}/reorder`,
+            objectiveIds
+        );
+        return response.data || response;
+    }, 'reorderObjectives', { projectId, objectiveIds });
 }
 
 /**
@@ -415,17 +448,19 @@ export async function reorderObjectives(projectId, objectiveIds) {
  * @returns {Promise<Object>} Updated objective record
  */
 export async function toggleObjectiveCompleted(objectiveId) {
-    if (!objectiveId) {
-        throw new Error('Objective ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!objectiveId) {
+            throw new ProjectError('Objective ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'objectiveId' });
+        }
 
-    validateUUID(objectiveId, 'Objective ID');
+        validateUUID(objectiveId, 'Objective ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'toggleObjectiveCompleted');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'toggleObjectiveCompleted');
 
-    const response = await dataService.patch(`/api/objectives/${objectiveId}/completed`);
-    return response.data || response;
+        const response = await dataService.patch(`/api/objectives/${objectiveId}/completed`);
+        return response.data || response;
+    }, 'toggleObjectiveCompleted', { objectiveId });
 }
 
 /**
@@ -435,17 +470,19 @@ export async function toggleObjectiveCompleted(objectiveId) {
  * @returns {Promise<Array>} Array of image records
  */
 export async function fetchProjectImages(projectId) {
-    if (!projectId) {
-        throw new Error('Project ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!projectId) {
+            throw new ProjectError('Project ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'projectId' });
+        }
 
-    validateUUID(projectId, 'Project ID');
+        validateUUID(projectId, 'Project ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'fetchProjectImages');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'fetchProjectImages');
 
-    const response = await dataService.get(`/api/projects/${projectId}/images`);
-    return response.data || response;
+        const response = await dataService.get(`/api/projects/${projectId}/images`);
+        return response.data || response;
+    }, 'fetchProjectImages', { projectId });
 }
 
 /**
@@ -456,17 +493,22 @@ export async function fetchProjectImages(projectId) {
  * @returns {Promise<Object>} Created image record
  */
 export async function createProjectImage(projectId, data) {
-    if (!projectId || !data) {
-        throw new Error('Project ID and data are required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!projectId) {
+            throw new ProjectError('Project ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'projectId' });
+        }
+        if (!data) {
+            throw new ProjectError('Image data is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    validateUUID(projectId, 'Project ID');
+        validateUUID(projectId, 'Project ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'createProjectImage');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'createProjectImage');
 
-    const response = await dataService.post(`/api/projects/${projectId}/images`, data);
-    return response.data || response;
+        const response = await dataService.post(`/api/projects/${projectId}/images`, data);
+        return response.data || response;
+    }, 'createProjectImage', { projectId, data });
 }
 
 /**
@@ -477,17 +519,22 @@ export async function createProjectImage(projectId, data) {
  * @returns {Promise<Object>} Updated image record
  */
 export async function updateProjectImage(imageId, data) {
-    if (!imageId || !data) {
-        throw new Error('Image ID and data are required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!imageId) {
+            throw new ProjectError('Image ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'imageId' });
+        }
+        if (!data) {
+            throw new ProjectError('Image data is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    validateUUID(imageId, 'Image ID');
+        validateUUID(imageId, 'Image ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'updateProjectImage');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'updateProjectImage');
 
-    const response = await dataService.put(`/api/projects/images/${imageId}`, data);
-    return response.data || response;
+        const response = await dataService.put(`/api/projects/images/${imageId}`, data);
+        return response.data || response;
+    }, 'updateProjectImage', { imageId, data });
 }
 
 /**
@@ -497,17 +544,19 @@ export async function updateProjectImage(imageId, data) {
  * @returns {Promise<Object>} Result of the delete operation
  */
 export async function deleteProjectImage(imageId) {
-    if (!imageId) {
-        throw new Error('Image ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!imageId) {
+            throw new ProjectError('Image ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'imageId' });
+        }
 
-    validateUUID(imageId, 'Image ID');
+        validateUUID(imageId, 'Image ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'deleteProjectImage');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'deleteProjectImage');
 
-    const response = await dataService.delete(`/api/projects/images/${imageId}`);
-    return response.data || response;
+        const response = await dataService.delete(`/api/projects/images/${imageId}`);
+        return response.data || response;
+    }, 'deleteProjectImage', { imageId });
 }
 
 /**
@@ -532,15 +581,17 @@ export async function fetchProjectNotes(projectId, options = {}) {
  * @returns {Promise<Object>} Created step record
  */
 export async function createStep(data) {
-    if (!data) {
-        throw new Error('Step data is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!data) {
+            throw new ProjectError('Step data is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'createStep');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'createStep');
 
-    const response = await dataService.post('/api/steps', data);
-    return response.data || response;
+        const response = await dataService.post('/api/steps', data);
+        return response.data || response;
+    }, 'createStep', { data });
 }
 
 /**
@@ -551,17 +602,22 @@ export async function createStep(data) {
  * @returns {Promise<Object>} Updated step record
  */
 export async function updateStep(stepId, data) {
-    if (!stepId || !data) {
-        throw new Error('Step ID and data are required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!stepId) {
+            throw new ProjectError('Step ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'stepId' });
+        }
+        if (!data) {
+            throw new ProjectError('Step data is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'data' });
+        }
 
-    validateUUID(stepId, 'Step ID');
+        validateUUID(stepId, 'Step ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'updateStep');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'updateStep');
 
-    const response = await dataService.patch(`/api/steps/${stepId}`, data);
-    return response.data || response;
+        const response = await dataService.patch(`/api/steps/${stepId}`, data);
+        return response.data || response;
+    }, 'updateStep', { stepId, data });
 }
 
 /**
@@ -571,17 +627,19 @@ export async function updateStep(stepId, data) {
  * @returns {Promise<Object>} Result of the delete operation
  */
 export async function deleteStep(stepId) {
-    if (!stepId) {
-        throw new Error('Step ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!stepId) {
+            throw new ProjectError('Step ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'stepId' });
+        }
 
-    validateUUID(stepId, 'Step ID');
+        validateUUID(stepId, 'Step ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'deleteStep');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'deleteStep');
 
-    const response = await dataService.delete(`/api/steps/${stepId}`);
-    return response.data || response;
+        const response = await dataService.delete(`/api/steps/${stepId}`);
+        return response.data || response;
+    }, 'deleteStep', { stepId });
 }
 
 /**
@@ -591,17 +649,19 @@ export async function deleteStep(stepId) {
  * @returns {Promise<Object>} Updated step record
  */
 export async function toggleStepCompleted(stepId) {
-    if (!stepId) {
-        throw new Error('Step ID is required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!stepId) {
+            throw new ProjectError('Step ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'stepId' });
+        }
 
-    validateUUID(stepId, 'Step ID');
+        validateUUID(stepId, 'Step ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'toggleStepCompleted');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'toggleStepCompleted');
 
-    const response = await dataService.patch(`/api/steps/${stepId}/completed`);
-    return response.data || response;
+        const response = await dataService.patch(`/api/steps/${stepId}/completed`);
+        return response.data || response;
+    }, 'toggleStepCompleted', { stepId });
 }
 
 /**
@@ -612,18 +672,23 @@ export async function toggleStepCompleted(stepId) {
  * @returns {Promise<Array>} Updated array of steps
  */
 export async function reorderSteps(objectiveId, stepIds) {
-    if (!objectiveId || !stepIds) {
-        throw new Error('Objective ID and step IDs are required');
-    }
+    return withProjectErrorHandling(async () => {
+        if (!objectiveId) {
+            throw new ProjectError('Objective ID is required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'objectiveId' });
+        }
+        if (!stepIds) {
+            throw new ProjectError('Step IDs are required', ProjectErrorCodes.REQUIRED_FIELD_MISSING, { field: 'stepIds' });
+        }
 
-    validateUUID(objectiveId, 'Objective ID');
+        validateUUID(objectiveId, 'Objective ID');
 
-    const auth = getAuthenticationContext();
-    checkOrganizationScope({ authentication: auth }, 'reorderSteps');
+        const auth = getAuthenticationContext();
+        checkProjectOrganizationScope({ authentication: auth }, 'reorderSteps');
 
-    const response = await dataService.post(
-        `/api/steps/objectives/${objectiveId}/reorder`,
-        stepIds
-    );
-    return response.data || response;
+        const response = await dataService.post(
+            `/api/steps/objectives/${objectiveId}/reorder`,
+            stepIds
+        );
+        return response.data || response;
+    }, 'reorderSteps', { objectiveId, stepIds });
 }

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-17T03:17:46.639Z",
+  "updated_at": "2026-01-24T21:40:50.603Z",
   "feature": {
     "name": "Notes Backend Integration",
     "slug": "notes-backend-integration",
@@ -13,7 +13,7 @@
     "last_review": {
       "feature_slug": "notes-backend-integration",
       "reviewed_at": "2026-01-17T03:16:39.256Z",
-      "status": "done",
+      "status": "passed",
       "iteration": 2,
       "mode": "autonomous",
       "findings": [
@@ -354,12 +354,13 @@
         "dependencies": [],
         "role_in_system": "Remediate review finding ARC-001 from iteration 2"
       },
-      "status": "pending",
+      "status": "in_progress",
       "description": "",
       "verification": {},
       "executionError": null,
-      "executionPid": null,
-      "sessionId": null,
+      "executionPid": 51486,
+      "sessionId": "c4880592-d0ba-42fe-8fa8-f48ae9c78a25",
+      "stage": "validating",
       "depends_on": []
     }
   ]
