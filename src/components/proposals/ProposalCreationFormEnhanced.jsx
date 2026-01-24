@@ -6,6 +6,7 @@ import ProposalTabs from './ProposalTabs';
 import styled from 'styled-components';
 import { useAppState } from '../../context/AppStateContext';
 import { fetchProposalRequests } from '../../api/proposalExtended';
+import { FIELD_LIMITS } from '../../utils/inputSanitization';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -441,6 +442,7 @@ const ProposalCreationFormEnhanced = ({ project, proposal, repositoryConfig, dar
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
               placeholder="Enter a descriptive title for this proposal"
+              maxLength={FIELD_LIMITS.PROPOSAL_TITLE}
               required
             />
           </div>
@@ -451,6 +453,7 @@ const ProposalCreationFormEnhanced = ({ project, proposal, repositoryConfig, dar
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
               placeholder="Provide a brief description of what this proposal covers..."
+              maxLength={FIELD_LIMITS.PROPOSAL_DESCRIPTION}
             />
           </div>
         </BasicInfoSection>

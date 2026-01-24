@@ -3,6 +3,12 @@ import PropTypes from 'prop-types';
 import { useSnackBar } from '../../context/SnackBarContext';
 import { useAppStateOperations } from '../../context/AppStateContext';
 import useProspect from '../../hooks/useProspect';
+import {
+  sanitizeText,
+  validateEmail,
+  validatePhone,
+  FIELD_LIMITS
+} from '../../utils/inputSanitization';
 
 /**
  * Prospect form component for creating or updating a prospect
@@ -59,22 +65,67 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
   // Validate form
   const validateForm = () => {
     const newErrors = {};
-    
-    // Required fields
-    if (!formData.FirstName.trim()) {
+
+    // Sanitize and validate First Name
+    const sanitizedFirstName = sanitizeText(formData.FirstName);
+    if (!sanitizedFirstName.trim()) {
       newErrors.FirstName = 'First name is required';
+    } else if (sanitizedFirstName.length > FIELD_LIMITS.GENERIC_SHORT_TEXT) {
+      newErrors.FirstName = `First name must be ${FIELD_LIMITS.GENERIC_SHORT_TEXT} characters or less`;
     }
-    
-    if (!formData.LastName.trim()) {
+
+    // Sanitize and validate Last Name
+    const sanitizedLastName = sanitizeText(formData.LastName);
+    if (!sanitizedLastName.trim()) {
       newErrors.LastName = 'Last name is required';
+    } else if (sanitizedLastName.length > FIELD_LIMITS.GENERIC_SHORT_TEXT) {
+      newErrors.LastName = `Last name must be ${FIELD_LIMITS.GENERIC_SHORT_TEXT} characters or less`;
     }
-    
-    if (!formData.Email.trim()) {
-      newErrors.Email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.Email)) {
-      newErrors.Email = 'Email is invalid';
+
+    // Validate Email using utility
+    const emailValidation = validateEmail(formData.Email);
+    if (!emailValidation.isValid) {
+      newErrors.Email = emailValidation.error;
     }
-    
+
+    // Validate Phone if provided
+    if (formData.Phone && formData.Phone.trim()) {
+      const phoneValidation = validatePhone(formData.Phone);
+      if (!phoneValidation.isValid) {
+        newErrors.Phone = phoneValidation.error;
+      }
+    }
+
+    // Validate Industry
+    if (formData.Industry && formData.Industry.length > FIELD_LIMITS.GENERIC_SHORT_TEXT) {
+      newErrors.Industry = `Industry must be ${FIELD_LIMITS.GENERIC_SHORT_TEXT} characters or less`;
+    }
+
+    // Validate Address fields
+    if (formData.AddressLine1 && formData.AddressLine1.length > FIELD_LIMITS.CUSTOMER_ADDRESS_LINE) {
+      newErrors.AddressLine1 = `Address Line 1 must be ${FIELD_LIMITS.CUSTOMER_ADDRESS_LINE} characters or less`;
+    }
+
+    if (formData.AddressLine2 && formData.AddressLine2.length > FIELD_LIMITS.CUSTOMER_ADDRESS_LINE) {
+      newErrors.AddressLine2 = `Address Line 2 must be ${FIELD_LIMITS.CUSTOMER_ADDRESS_LINE} characters or less`;
+    }
+
+    if (formData.City && formData.City.length > FIELD_LIMITS.CUSTOMER_CITY) {
+      newErrors.City = `City must be ${FIELD_LIMITS.CUSTOMER_CITY} characters or less`;
+    }
+
+    if (formData.State && formData.State.length > FIELD_LIMITS.CUSTOMER_STATE) {
+      newErrors.State = `State must be ${FIELD_LIMITS.CUSTOMER_STATE} characters or less`;
+    }
+
+    if (formData.PostalCode && formData.PostalCode.length > FIELD_LIMITS.CUSTOMER_POSTAL_CODE) {
+      newErrors.PostalCode = `Postal Code must be ${FIELD_LIMITS.CUSTOMER_POSTAL_CODE} characters or less`;
+    }
+
+    if (formData.Country && formData.Country.length > FIELD_LIMITS.CUSTOMER_COUNTRY) {
+      newErrors.Country = `Country must be ${FIELD_LIMITS.CUSTOMER_COUNTRY} characters or less`;
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -149,6 +200,7 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="FirstName"
                   value={formData.FirstName}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.GENERIC_SHORT_TEXT}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
@@ -167,6 +219,7 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="LastName"
                   value={formData.LastName}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.GENERIC_SHORT_TEXT}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
@@ -185,6 +238,7 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="Email"
                   value={formData.Email}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_EMAIL}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
@@ -203,12 +257,15 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="Phone"
                   value={formData.Phone}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_PHONE}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
+                    ${errors.Phone ? 'border-red-500' : ''}
                   `}
                   placeholder="Phone number"
                 />
+                {errors.Phone && <p className="mt-1 text-red-500 text-sm">{errors.Phone}</p>}
               </div>
               <div>
                 <label className="block mb-1 font-medium">
@@ -219,12 +276,15 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="Industry"
                   value={formData.Industry}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.GENERIC_SHORT_TEXT}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
+                    ${errors.Industry ? 'border-red-500' : ''}
                   `}
                   placeholder="e.g., Technology, Healthcare"
                 />
+                {errors.Industry && <p className="mt-1 text-red-500 text-sm">{errors.Industry}</p>}
               </div>
               <div className="md:col-span-2">
                 <label className="block mb-1 font-medium">
@@ -235,12 +295,15 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="AddressLine1"
                   value={formData.AddressLine1}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_ADDRESS_LINE}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
+                    ${errors.AddressLine1 ? 'border-red-500' : ''}
                   `}
                   placeholder="Street address"
                 />
+                {errors.AddressLine1 && <p className="mt-1 text-red-500 text-sm">{errors.AddressLine1}</p>}
               </div>
               <div className="md:col-span-2">
                 <label className="block mb-1 font-medium">
@@ -251,12 +314,15 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="AddressLine2"
                   value={formData.AddressLine2}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_ADDRESS_LINE}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
+                    ${errors.AddressLine2 ? 'border-red-500' : ''}
                   `}
                   placeholder="Apartment, suite, etc. (optional)"
                 />
+                {errors.AddressLine2 && <p className="mt-1 text-red-500 text-sm">{errors.AddressLine2}</p>}
               </div>
               <div>
                 <label className="block mb-1 font-medium">
@@ -267,12 +333,15 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="City"
                   value={formData.City}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_CITY}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
+                    ${errors.City ? 'border-red-500' : ''}
                   `}
                   placeholder="City"
                 />
+                {errors.City && <p className="mt-1 text-red-500 text-sm">{errors.City}</p>}
               </div>
               <div>
                 <label className="block mb-1 font-medium">
@@ -283,12 +352,15 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="PostalCode"
                   value={formData.PostalCode}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_POSTAL_CODE}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
+                    ${errors.PostalCode ? 'border-red-500' : ''}
                   `}
                   placeholder="Postal code"
                 />
+                {errors.PostalCode && <p className="mt-1 text-red-500 text-sm">{errors.PostalCode}</p>}
               </div>
               <div>
                 <label className="block mb-1 font-medium">
@@ -299,6 +371,7 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="State"
                   value={formData.State}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_STATE}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
@@ -317,12 +390,15 @@ function ProspectForm({ prospect = null, onClose, darkMode = false }) {
                   name="Country"
                   value={formData.Country}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_COUNTRY}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
+                    ${errors.Country ? 'border-red-500' : ''}
                   `}
                   placeholder="Country"
                 />
+                {errors.Country && <p className="mt-1 text-red-500 text-sm">{errors.Country}</p>}
               </div>
             </div>
           </div>

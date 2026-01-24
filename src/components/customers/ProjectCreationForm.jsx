@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
+import { sanitizeText, FIELD_LIMITS } from '../../utils/inputSanitization';
 
 function ProjectCreationForm({ 
   customer, 
@@ -33,20 +34,24 @@ function ProjectCreationForm({
 
   const validate = () => {
     const newErrors = {};
-    
-    if (!projectName.trim()) {
+
+    // Sanitize and validate project name
+    const sanitizedName = sanitizeText(projectName);
+    if (!sanitizedName.trim()) {
       newErrors.projectName = 'Project name is required';
+    } else if (sanitizedName.length > FIELD_LIMITS.PROJECT_NAME) {
+      newErrors.projectName = `Project name must be ${FIELD_LIMITS.PROJECT_NAME} characters or less`;
     }
-    
-    if ((projectType === 'fixed' || projectType === 'subscription') && 
+
+    if ((projectType === 'fixed' || projectType === 'subscription') &&
         (!value || isNaN(parseFloat(value)) || parseFloat(value) <= 0)) {
       newErrors.value = 'Value is required and must be a positive number';
     }
-    
+
     if (projectType === 'subscription' && !dateStart) {
       newErrors.dateStart = 'Start date is required for subscription projects';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -110,10 +115,11 @@ function ProjectCreationForm({
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               placeholder="Enter project name..."
+              maxLength={FIELD_LIMITS.PROJECT_NAME}
               className={`
                 w-full p-2 rounded-md border
-                ${darkMode 
-                  ? 'bg-gray-700 border-gray-600 text-white' 
+                ${darkMode
+                  ? 'bg-gray-700 border-gray-600 text-white'
                   : 'bg-white border-gray-300 text-gray-900'}
                 ${errors.projectName ? 'border-red-500' : ''}
               `}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '../layout/AppLayout';
 import { validateTaskData } from '../../services/taskService';
+import { sanitizeText, FIELD_LIMITS } from '../../utils/inputSanitization';
 
 /**
  * TaskForm - Create or edit task with full validation
@@ -196,6 +197,7 @@ function TaskForm({
               type="text"
               value={formData.title}
               onChange={(e) => handleChange('title', e.target.value)}
+              maxLength={FIELD_LIMITS.TASK_TITLE}
               placeholder="Enter task title..."
               className={`
                 w-full p-2 rounded-md border
@@ -277,6 +279,7 @@ function TaskForm({
               type="text"
               value={formData.task_type}
               onChange={(e) => handleChange('task_type', e.target.value)}
+              maxLength={FIELD_LIMITS.TASK_TYPE}
               placeholder="e.g., Development, Design, Review..."
               className={`
                 w-full p-2 rounded-md border
@@ -349,6 +352,7 @@ function TaskForm({
             <textarea
               value={formData.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
+              maxLength={FIELD_LIMITS.TASK_NOTES}
               placeholder="Additional task details..."
               className={`
                 w-full p-2 rounded-md border resize-none
@@ -360,6 +364,9 @@ function TaskForm({
               rows={4}
               disabled={isSubmitting}
             />
+            <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              {formData.notes.length} / {FIELD_LIMITS.TASK_NOTES} characters
+            </div>
             {errors.notes && (
               <p className="text-red-500 text-xs mt-1">{errors.notes}</p>
             )}

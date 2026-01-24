@@ -16,6 +16,7 @@ import { fetchFinancialRecordByRecordId, createFinancialRecord } from '../api/fi
 import { createSaleFromFinancialRecord } from './salesService';
 import { getSupabaseClient } from './supabaseService';
 import { v4 as uuidv4 } from 'uuid';
+import { sanitizeText, FIELD_LIMITS } from '../utils/inputSanitization';
 
 /**
  * Loads tasks for a project with processing and sorting

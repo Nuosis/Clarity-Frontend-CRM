@@ -6,6 +6,12 @@ import { useSnackBar } from '../../context/SnackBarContext';
 import { useAppStateOperations } from '../../context/AppStateContext';
 import { useCustomer } from '../../hooks/useCustomer';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../../services/dataService';
+import {
+  sanitizeText,
+  validateEmail,
+  validatePhone,
+  FIELD_LIMITS
+} from '../../utils/inputSanitization';
 
 /**
  * Customer form component for creating/editing customers
@@ -269,22 +275,58 @@ function CustomerForm({ customer = null, onClose, darkMode = false }) {
   const validateForm = () => {
     const newErrors = {};
 
-    // Required field: business_name
-    if (!formData.business_name.trim()) {
+    // Required field: business_name with length limit
+    const sanitizedBusinessName = sanitizeText(formData.business_name);
+    if (!sanitizedBusinessName.trim()) {
       newErrors.business_name = 'Business name is required';
+    } else if (sanitizedBusinessName.length > FIELD_LIMITS.CUSTOMER_BUSINESS_NAME) {
+      newErrors.business_name = `Business name must be ${FIELD_LIMITS.CUSTOMER_BUSINESS_NAME} characters or less`;
+    }
+
+    // Validate primary_contact_name length
+    if (formData.primary_contact_name && formData.primary_contact_name.length > FIELD_LIMITS.CUSTOMER_PRIMARY_CONTACT) {
+      newErrors.primary_contact_name = `Contact name must be ${FIELD_LIMITS.CUSTOMER_PRIMARY_CONTACT} characters or less`;
     }
 
     // Validate emails
     emails.forEach((emailObj, index) => {
-      if (emailObj.email && !/\S+@\S+\.\S+/.test(emailObj.email)) {
-        newErrors[`email_${index}`] = 'Invalid email format';
+      if (emailObj.email) {
+        const emailValidation = validateEmail(emailObj.email);
+        if (!emailValidation.isValid) {
+          newErrors[`email_${index}`] = emailValidation.error;
+        }
       }
     });
 
     // Validate phones
     phones.forEach((phoneObj, index) => {
-      if (phoneObj.phone && !/^\+?[\d\s-()]+$/.test(phoneObj.phone)) {
-        newErrors[`phone_${index}`] = 'Invalid phone format';
+      if (phoneObj.phone) {
+        const phoneValidation = validatePhone(phoneObj.phone);
+        if (!phoneValidation.isValid) {
+          newErrors[`phone_${index}`] = phoneValidation.error;
+        }
+      }
+    });
+
+    // Validate address fields length
+    addresses.forEach((addressObj, index) => {
+      if (addressObj.address_line1 && addressObj.address_line1.length > FIELD_LIMITS.CUSTOMER_ADDRESS_LINE) {
+        newErrors[`address_${index}_line1`] = `Address line 1 must be ${FIELD_LIMITS.CUSTOMER_ADDRESS_LINE} characters or less`;
+      }
+      if (addressObj.address_line2 && addressObj.address_line2.length > FIELD_LIMITS.CUSTOMER_ADDRESS_LINE) {
+        newErrors[`address_${index}_line2`] = `Address line 2 must be ${FIELD_LIMITS.CUSTOMER_ADDRESS_LINE} characters or less`;
+      }
+      if (addressObj.city && addressObj.city.length > FIELD_LIMITS.CUSTOMER_CITY) {
+        newErrors[`address_${index}_city`] = `City must be ${FIELD_LIMITS.CUSTOMER_CITY} characters or less`;
+      }
+      if (addressObj.state && addressObj.state.length > FIELD_LIMITS.CUSTOMER_STATE) {
+        newErrors[`address_${index}_state`] = `State must be ${FIELD_LIMITS.CUSTOMER_STATE} characters or less`;
+      }
+      if (addressObj.postal_code && addressObj.postal_code.length > FIELD_LIMITS.CUSTOMER_POSTAL_CODE) {
+        newErrors[`address_${index}_postal`] = `Postal code must be ${FIELD_LIMITS.CUSTOMER_POSTAL_CODE} characters or less`;
+      }
+      if (addressObj.country && addressObj.country.length > FIELD_LIMITS.CUSTOMER_COUNTRY) {
+        newErrors[`address_${index}_country`] = `Country must be ${FIELD_LIMITS.CUSTOMER_COUNTRY} characters or less`;
       }
     });
 
@@ -477,6 +519,7 @@ function CustomerForm({ customer = null, onClose, darkMode = false }) {
                   name="business_name"
                   value={formData.business_name}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_BUSINESS_NAME}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
@@ -495,12 +538,15 @@ function CustomerForm({ customer = null, onClose, darkMode = false }) {
                   name="primary_contact_name"
                   value={formData.primary_contact_name}
                   onChange={handleChange}
+                  maxLength={FIELD_LIMITS.CUSTOMER_PRIMARY_CONTACT}
                   className={`
                     w-full p-2 rounded-md border
                     ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
+                    ${errors.primary_contact_name ? 'border-red-500' : ''}
                   `}
                   placeholder="Contact person name"
                 />
+                {errors.primary_contact_name && <p className="mt-1 text-red-500 text-sm">{errors.primary_contact_name}</p>}
               </div>
               <div>
                 <label className="block mb-1 font-medium">
@@ -556,6 +602,7 @@ function CustomerForm({ customer = null, onClose, darkMode = false }) {
                     type="email"
                     value={emailObj.email}
                     onChange={(e) => updateEmail(index, 'email', e.target.value)}
+                    maxLength={FIELD_LIMITS.CUSTOMER_EMAIL}
                     className={`
                       w-full p-2 rounded-md border
                       ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
@@ -621,6 +668,7 @@ function CustomerForm({ customer = null, onClose, darkMode = false }) {
                     type="tel"
                     value={phoneObj.phone}
                     onChange={(e) => updatePhone(index, 'phone', e.target.value)}
+                    maxLength={FIELD_LIMITS.CUSTOMER_PHONE}
                     className={`
                       w-full p-2 rounded-md border
                       ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}
@@ -688,54 +736,66 @@ function CustomerForm({ customer = null, onClose, darkMode = false }) {
                       type="text"
                       value={addressObj.address_line1}
                       onChange={(e) => updateAddress(index, 'address_line1', e.target.value)}
-                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+                      maxLength={FIELD_LIMITS.CUSTOMER_ADDRESS_LINE}
+                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} ${errors[`address_${index}_line1`] ? 'border-red-500' : ''}`}
                       placeholder="Address Line 1"
                     />
+                    {errors[`address_${index}_line1`] && <p className="mt-1 text-red-500 text-sm">{errors[`address_${index}_line1`]}</p>}
                   </div>
                   <div className="md:col-span-2">
                     <input
                       type="text"
                       value={addressObj.address_line2}
                       onChange={(e) => updateAddress(index, 'address_line2', e.target.value)}
-                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+                      maxLength={FIELD_LIMITS.CUSTOMER_ADDRESS_LINE}
+                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} ${errors[`address_${index}_line2`] ? 'border-red-500' : ''}`}
                       placeholder="Address Line 2 (optional)"
                     />
+                    {errors[`address_${index}_line2`] && <p className="mt-1 text-red-500 text-sm">{errors[`address_${index}_line2`]}</p>}
                   </div>
                   <div>
                     <input
                       type="text"
                       value={addressObj.city}
                       onChange={(e) => updateAddress(index, 'city', e.target.value)}
-                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+                      maxLength={FIELD_LIMITS.CUSTOMER_CITY}
+                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} ${errors[`address_${index}_city`] ? 'border-red-500' : ''}`}
                       placeholder="City"
                     />
+                    {errors[`address_${index}_city`] && <p className="mt-1 text-red-500 text-sm">{errors[`address_${index}_city`]}</p>}
                   </div>
                   <div>
                     <input
                       type="text"
                       value={addressObj.state}
                       onChange={(e) => updateAddress(index, 'state', e.target.value)}
-                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+                      maxLength={FIELD_LIMITS.CUSTOMER_STATE}
+                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} ${errors[`address_${index}_state`] ? 'border-red-500' : ''}`}
                       placeholder="State/Province"
                     />
+                    {errors[`address_${index}_state`] && <p className="mt-1 text-red-500 text-sm">{errors[`address_${index}_state`]}</p>}
                   </div>
                   <div>
                     <input
                       type="text"
                       value={addressObj.postal_code}
                       onChange={(e) => updateAddress(index, 'postal_code', e.target.value)}
-                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+                      maxLength={FIELD_LIMITS.CUSTOMER_POSTAL_CODE}
+                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} ${errors[`address_${index}_postal`] ? 'border-red-500' : ''}`}
                       placeholder="Postal/Zip Code"
                     />
+                    {errors[`address_${index}_postal`] && <p className="mt-1 text-red-500 text-sm">{errors[`address_${index}_postal`]}</p>}
                   </div>
                   <div>
                     <input
                       type="text"
                       value={addressObj.country}
                       onChange={(e) => updateAddress(index, 'country', e.target.value)}
-                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+                      maxLength={FIELD_LIMITS.CUSTOMER_COUNTRY}
+                      className={`w-full p-2 rounded-md border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} ${errors[`address_${index}_country`] ? 'border-red-500' : ''}`}
                       placeholder="Country"
                     />
+                    {errors[`address_${index}_country`] && <p className="mt-1 text-red-500 text-sm">{errors[`address_${index}_country`]}</p>}
                   </div>
                   <div className="flex items-center justify-between md:col-span-2">
                     <div className="flex items-center">

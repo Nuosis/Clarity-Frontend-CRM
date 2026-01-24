@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { createTeam } from '../../api/teams';
 import { useSnackBar } from '../../context/SnackBarContext';
 import { useAppStateOperations, useAppState } from '../../context/AppStateContext';
+import { sanitizeText, FIELD_LIMITS } from '../../utils/inputSanitization';
 
 /**
  * Team form component for creating a new team
@@ -45,12 +46,15 @@ function TeamForm({ onClose, darkMode = false }) {
   // Validate form
   const validateForm = () => {
     const newErrors = {};
-    
-    // Required fields
-    if (!formData.name.trim()) {
+
+    // Sanitize and validate team name
+    const sanitizedName = sanitizeText(formData.name);
+    if (!sanitizedName.trim()) {
       newErrors.name = 'Team name is required';
+    } else if (sanitizedName.length > FIELD_LIMITS.TEAM_NAME) {
+      newErrors.name = `Team name must be ${FIELD_LIMITS.TEAM_NAME} characters or less`;
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -128,6 +132,7 @@ function TeamForm({ onClose, darkMode = false }) {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                maxLength={FIELD_LIMITS.TEAM_NAME}
                 className={`
                   w-full p-2 rounded-md border
                   ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}

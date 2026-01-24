@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { useDispatch, useSelector } from 'react-redux'
 import { createProposal, selectProposalCreating, selectProposalError } from '../../store/slices/proposalSlice'
+import { sanitizeText, FIELD_LIMITS } from '../../utils/inputSanitization'
 
 /**
  * Enhanced Proposal Creation Form Component
@@ -237,6 +238,7 @@ const ProposalCreationForm = ({ project, onProposalCreate }) => {
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
                 placeholder="Enter a descriptive title for this proposal"
+                maxLength={FIELD_LIMITS.PROPOSAL_TITLE}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -251,6 +253,7 @@ const ProposalCreationForm = ({ project, onProposalCreate }) => {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 placeholder="Brief description of the proposal"
+                maxLength={FIELD_LIMITS.PROPOSAL_DESCRIPTION}
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical"
               />
@@ -272,6 +275,7 @@ const ProposalCreationForm = ({ project, onProposalCreate }) => {
                 value={formData.requestSummary.overview}
                 onChange={(e) => handleRequestSummaryChange('overview', e.target.value)}
                 placeholder="Provide a comprehensive overview of the project requirements and goals"
+                maxLength={FIELD_LIMITS.GENERIC_VERY_LONG_TEXT}
                 rows={6}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical"
@@ -288,6 +292,7 @@ const ProposalCreationForm = ({ project, onProposalCreate }) => {
                       value={objective}
                       onChange={(e) => handleObjectiveChange(index, e.target.value)}
                       placeholder={`Objective ${index + 1}`}
+                      maxLength={FIELD_LIMITS.GENERIC_MEDIUM_TEXT}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     {formData.requestSummary.objectives.length > 1 && (
@@ -322,6 +327,7 @@ const ProposalCreationForm = ({ project, onProposalCreate }) => {
                   value={formData.requestSummary.timeline}
                   onChange={(e) => handleRequestSummaryChange('timeline', e.target.value)}
                   placeholder="e.g., 4-6 weeks"
+                  maxLength={FIELD_LIMITS.GENERIC_SHORT_TEXT}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -365,6 +371,7 @@ const ProposalCreationForm = ({ project, onProposalCreate }) => {
                   type="text"
                   id="conceptTitle"
                   placeholder="e.g., Homepage Wireframe, Logo Concepts, User Flow"
+                  maxLength={FIELD_LIMITS.GENERIC_SHORT_TEXT}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -392,6 +399,7 @@ const ProposalCreationForm = ({ project, onProposalCreate }) => {
               <textarea
                 id="conceptDescription"
                 placeholder="Describe this concept, its purpose, key features, or any important details the client should know..."
+                maxLength={FIELD_LIMITS.GENERIC_LONG_TEXT}
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical"
               />

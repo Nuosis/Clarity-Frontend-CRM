@@ -4,6 +4,7 @@ import { useTheme } from '../layout/AppLayout';
 import { useProducts } from '../../hooks/useProducts';
 import { useSnackBar } from '../../context/SnackBarContext';
 import ProductRequirementsBuilder from './ProductRequirementsBuilder';
+import { sanitizeText, FIELD_LIMITS } from '../../utils/inputSanitization';
 
 function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
   const { darkMode } = useTheme();
@@ -61,12 +62,27 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
   const validate = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) {
+    // Sanitize and validate product name
+    const sanitizedName = sanitizeText(formData.name);
+    if (!sanitizedName.trim()) {
       newErrors.name = 'Product name is required';
+    } else if (sanitizedName.length > FIELD_LIMITS.PRODUCT_NAME) {
+      newErrors.name = `Product name must be ${FIELD_LIMITS.PRODUCT_NAME} characters or less`;
     }
 
+    // Validate description length
+    if (formData.description && formData.description.length > FIELD_LIMITS.PRODUCT_DESCRIPTION) {
+      newErrors.description = `Description must be ${FIELD_LIMITS.PRODUCT_DESCRIPTION} characters or less`;
+    }
+
+    // Validate price
     if (formData.price < 0) {
       newErrors.price = 'Price cannot be negative';
+    }
+
+    // Validate unit type
+    if (formData.unit_type && formData.unit_type.length > FIELD_LIMITS.GENERIC_SHORT_TEXT) {
+      newErrors.unit_type = `Unit type must be ${FIELD_LIMITS.GENERIC_SHORT_TEXT} characters or less`;
     }
 
     setErrors(newErrors);
@@ -132,10 +148,11 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
             name="name"
             value={formData.name}
             onChange={handleChange}
+            maxLength={FIELD_LIMITS.PRODUCT_NAME}
             className={`
               w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2
-              ${darkMode 
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600' 
+              ${darkMode
+                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}
               ${errors.name ? (darkMode ? 'border-red-500' : 'border-red-500') : ''}
             `}
@@ -186,13 +203,21 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
             value={formData.description}
             onChange={handleChange}
             rows="4"
+            maxLength={FIELD_LIMITS.PRODUCT_DESCRIPTION}
             className={`
               w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2
               ${darkMode
                 ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}
+              ${errors.description ? 'border-red-500' : ''}
             `}
           />
+          {errors.description && (
+            <p className="mt-1 text-sm text-red-500">{errors.description}</p>
+          )}
+          <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            {formData.description.length} / {FIELD_LIMITS.PRODUCT_DESCRIPTION} characters
+          </div>
         </div>
 
         {/* Product Type Checkboxes */}
@@ -269,13 +294,18 @@ function ProductForm({ product, onSubmit, onCancel, isEditing = false }) {
                   value={formData.unit_type}
                   onChange={handleChange}
                   placeholder="minutes"
+                  maxLength={FIELD_LIMITS.GENERIC_SHORT_TEXT}
                   className={`
                     w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2
                     ${darkMode
                       ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-600'
                       : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}
+                    ${errors.unit_type ? 'border-red-500' : ''}
                   `}
                 />
+                {errors.unit_type && (
+                  <p className="mt-1 text-sm text-red-500">{errors.unit_type}</p>
+                )}
               </div>
             </div>
 
