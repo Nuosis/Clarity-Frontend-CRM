@@ -37,6 +37,7 @@ jest.mock('../../services/dataService', () => ({
         put: jest.fn()
     },
     getEnvironmentContext: jest.fn(),
+    getAuthenticationContext: jest.fn(),
     setEnvironmentContext: jest.fn(),
     ENVIRONMENT_TYPES: {
         FILEMAKER: 'filemaker',
@@ -57,14 +58,18 @@ describe('Links API Integration Tests', () => {
         jest.clearAllMocks();
 
         // Default to webapp environment with organization scope
+        const mockAuth = {
+            isAuthenticated: true,
+            method: 'supabase',
+            user: { supabaseOrgID: 'org-123' }
+        };
+
         dataService.getEnvironmentContext.mockReturnValue({
             type: dataService.ENVIRONMENT_TYPES.WEBAPP,
-            authentication: {
-                isAuthenticated: true,
-                method: 'supabase',
-                user: { supabaseOrgID: 'org-123' }
-            }
+            authentication: mockAuth
         });
+
+        dataService.getAuthenticationContext.mockReturnValue(mockAuth);
     });
 
     afterEach(() => {
@@ -82,18 +87,22 @@ describe('Links API Integration Tests', () => {
                 project_id: 'proj-123'
             });
 
-            expect(dataService.getEnvironmentContext).toHaveBeenCalled();
+            expect(dataService.getAuthenticationContext).toHaveBeenCalled();
         });
 
         it('should throw error if organization scope is missing', async () => {
+            const mockAuthNoOrg = {
+                isAuthenticated: true,
+                method: 'supabase',
+                user: {} // Missing supabaseOrgID
+            };
+
             dataService.getEnvironmentContext.mockReturnValue({
                 type: dataService.ENVIRONMENT_TYPES.WEBAPP,
-                authentication: {
-                    isAuthenticated: true,
-                    method: 'supabase',
-                    user: {} // Missing supabaseOrgID
-                }
+                authentication: mockAuthNoOrg
             });
+
+            dataService.getAuthenticationContext.mockReturnValue(mockAuthNoOrg);
 
             await expect(linksApi.createLink({
                 link: 'https://example.com',
