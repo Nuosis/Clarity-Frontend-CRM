@@ -34,6 +34,7 @@ import {
 } from '../services/projectService';
 import { createSalesFromProjectValue } from '../services/salesService';
 import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataService';
+import { formatProjectErrorForUI } from '../errors';
 
 /**
  * Hook for managing project state and operations
@@ -41,6 +42,7 @@ import { getEnvironmentContext, ENVIRONMENT_TYPES } from '../services/dataServic
 export function useProject(customerId = null) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [formattedError, setFormattedError] = useState(null);
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
     const [pagination, setPagination] = useState({
@@ -54,6 +56,26 @@ export function useProject(customerId = null) {
     const projectRecords = useProjectRecords();
     const { showError } = useSnackBar();
     const { user } = useAppState();
+
+    /**
+     * Helper function to set error state with formatting
+     * @param {Error} err - Error object
+     */
+    const setErrorWithFormatting = useCallback((err) => {
+        const formatted = formatProjectErrorForUI(err);
+        setError(formatted.message);
+        setFormattedError(formatted);
+        console.error('[useProject] Error:', {
+            raw: err,
+            formatted,
+            stack: err?.stack
+        });
+    }, []);
+
+    const clearErrorState = useCallback(() => {
+        setError(null);
+        setFormattedError(null);
+    }, []);
 
     // Keep paginationRef in sync with pagination state
     useEffect(() => {
@@ -83,7 +105,7 @@ export function useProject(customerId = null) {
     const loadProjects = useCallback(async (custId, options = {}) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const env = getEnvironmentContext();
             const source = env.type === ENVIRONMENT_TYPES.FILEMAKER ? 'filemaker' : 'backend';
@@ -151,7 +173,7 @@ export function useProject(customerId = null) {
             // Update pagination state
             setPagination(paginationInfo);
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error loading projects:', err);
         } finally {
             setLoading(false);
@@ -211,7 +233,7 @@ export function useProject(customerId = null) {
         const requestId = ++projectSelectionRequestId.current;
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Handle both project object and project ID
             const projectId = typeof projectOrId === 'string' ? projectOrId : projectOrId.id;
@@ -238,7 +260,7 @@ export function useProject(customerId = null) {
             }
         } catch (err) {
             if (projectSelectionRequestId.current === requestId) {
-                setError(err.message);
+                setErrorWithFormatting(err);
                 console.error('Error selecting project:', err);
             }
         } finally {
@@ -255,7 +277,7 @@ export function useProject(customerId = null) {
     const handleProjectCreate = useCallback(async (projectData) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             console.log('Project creation data received:', projectData);
 
@@ -340,7 +362,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error creating project:', err);
             showError(err.message);
             console.log('Error displayed in snackbar:', err.message);
@@ -357,7 +379,7 @@ export function useProject(customerId = null) {
     const handleProjectUpdate = useCallback(async (projectId, projectData) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Find the project in the state
             const project = projects.find(p => p.id === projectId);
@@ -446,7 +468,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error updating project:', err);
             throw err;
         } finally {
@@ -463,7 +485,7 @@ export function useProject(customerId = null) {
     const handleProjectStatusChange = useCallback(async (projectId, status) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Find the project in the state
             const project = projects.find(p => p.id === projectId);
@@ -491,7 +513,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error updating project status:', err);
             throw err;
         } finally {
@@ -514,7 +536,7 @@ export function useProject(customerId = null) {
     const handleProjectDelete = useCallback(async (projectId) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Find the project in the state
             const project = projects.find(p => p.id === projectId);
@@ -537,7 +559,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error deleting project:', err);
             throw err;
         } finally {
@@ -554,7 +576,7 @@ export function useProject(customerId = null) {
     const handleProjectTeamChange = useCallback(async (projectId, teamId) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Find the project in the state
             const project = projects.find(p => p.id === projectId);
@@ -585,7 +607,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error updating project team:', err);
             throw err;
         } finally {
@@ -600,7 +622,7 @@ export function useProject(customerId = null) {
     const handleObjectiveCreate = useCallback(async (projectId, objectiveText) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Prepare objective data for backend
             const objectiveData = {
@@ -620,7 +642,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error creating objective:', err);
             throw err;
         } finally {
@@ -635,7 +657,7 @@ export function useProject(customerId = null) {
     const handleObjectiveUpdate = useCallback(async (objectiveId, updateData) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Format data for backend
             const formattedData = {
@@ -673,7 +695,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error updating objective:', err);
             throw err;
         } finally {
@@ -689,7 +711,7 @@ export function useProject(customerId = null) {
     const handleObjectiveDelete = useCallback(async (objectiveId) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Delete via backend API
             const result = await deleteObjective(objectiveId);
@@ -716,7 +738,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error deleting objective:', err);
             throw err;
         } finally {
@@ -731,7 +753,7 @@ export function useProject(customerId = null) {
     const handleStepCreate = useCallback(async (objectiveId, stepText) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Prepare step data for backend
             const stepData = {
@@ -751,7 +773,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error creating step:', err);
             throw err;
         } finally {
@@ -766,7 +788,7 @@ export function useProject(customerId = null) {
     const handleStepUpdate = useCallback(async (stepId, updateData) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Format data for backend
             const formattedData = {
@@ -809,7 +831,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error updating step:', err);
             throw err;
         } finally {
@@ -824,7 +846,7 @@ export function useProject(customerId = null) {
     const handleStepDelete = useCallback(async (stepId) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Delete via backend API
             const result = await deleteStep(stepId);
@@ -852,7 +874,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error deleting step:', err);
             throw err;
         } finally {
@@ -867,7 +889,7 @@ export function useProject(customerId = null) {
     const handleStepToggle = useCallback(async (stepId) => {
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Use dedicated toggle endpoint
             const result = await toggleStepCompleted(stepId);
@@ -899,7 +921,7 @@ export function useProject(customerId = null) {
 
             return result;
         } catch (err) {
-            setError(err.message);
+            setErrorWithFormatting(err);
             console.error('Error toggling step:', err);
             throw err;
         } finally {
@@ -929,6 +951,7 @@ export function useProject(customerId = null) {
         // State
         loading,
         error,
+        formattedError,
         projects,
         selectedProject,
         projectRecords,
@@ -957,7 +980,7 @@ export function useProject(customerId = null) {
 
         // Utilities
         getProjectCompletion,
-        clearError: () => setError(null),
+        clearError: clearErrorState,
         clearSelectedProject: () => setSelectedProject(null),
         setPagination,
         isLoading: loading

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useSnackBar } from '../context/SnackBarContext';
 import { createNewLink, fetchLinksByProject, updateExistingLink, deleteLinkById } from '../services/linkService';
 import { parseGitHubUrl } from '../utils/githubUtils';
+import { formatLinkErrorForUI } from '../errors';
 
 /**
  * Hook for managing link operations
@@ -10,7 +11,28 @@ import { parseGitHubUrl } from '../utils/githubUtils';
 export function useLink() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [formattedError, setFormattedError] = useState(null);
     const { showError } = useSnackBar();
+
+    /**
+     * Helper function to set error state with formatting
+     * @param {Error} err - Error object
+     */
+    const setErrorWithFormatting = useCallback((err) => {
+        const formatted = formatLinkErrorForUI(err);
+        setError(formatted.message);
+        setFormattedError(formatted);
+        console.error('[useLink] Error:', {
+            raw: err,
+            formatted,
+            stack: err?.stack
+        });
+    }, []);
+
+    const clearErrorState = useCallback(() => {
+        setError(null);
+        setFormattedError(null);
+    }, []);
 
     /**
      * Create a new link for a record.
@@ -31,7 +53,7 @@ export function useLink() {
 
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const trimmedUrl = linkUrl.trim();
 
@@ -74,14 +96,13 @@ export function useLink() {
 
             return newLink;
         } catch (err) {
-            const errorMessage = err.message || 'Error creating link';
-            setError(errorMessage);
-            showError(errorMessage);
+            setErrorWithFormatting(err);
+            showError(err.message || 'Error creating link');
             return null;
         } finally {
             setLoading(false);
         }
-    }, [showError]);
+    }, [showError, setErrorWithFormatting]);
 
     /**
      * Fetch links for a project
@@ -97,19 +118,18 @@ export function useLink() {
 
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const links = await fetchLinksByProject(projectId);
             return links;
         } catch (err) {
-            const errorMessage = err.message || 'Error fetching links';
-            setError(errorMessage);
-            showError(errorMessage);
+            setErrorWithFormatting(err);
+            showError(err.message || 'Error fetching links');
             return [];
         } finally {
             setLoading(false);
         }
-    }, [showError]);
+    }, [showError, setErrorWithFormatting]);
 
     /**
      * Update an existing link
@@ -132,7 +152,7 @@ export function useLink() {
 
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const updatedLink = await updateExistingLink(linkId, data);
 
@@ -153,14 +173,13 @@ export function useLink() {
 
             return updatedLink;
         } catch (err) {
-            const errorMessage = err.message || 'Error updating link';
-            setError(errorMessage);
-            showError(errorMessage);
+            setErrorWithFormatting(err);
+            showError(err.message || 'Error updating link');
             return null;
         } finally {
             setLoading(false);
         }
-    }, [showError]);
+    }, [showError, setErrorWithFormatting]);
 
     /**
      * Delete a link
@@ -176,27 +195,27 @@ export function useLink() {
 
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             await deleteLinkById(linkId);
             return true;
         } catch (err) {
-            const errorMessage = err.message || 'Error deleting link';
-            setError(errorMessage);
-            showError(errorMessage);
+            setErrorWithFormatting(err);
+            showError(err.message || 'Error deleting link');
             return false;
         } finally {
             setLoading(false);
         }
-    }, [showError]);
+    }, [showError, setErrorWithFormatting]);
 
     return {
         loading,
         error,
+        formattedError,
         handleLinkCreate,
         handleFetchLinks,
         handleLinkUpdate,
         handleLinkDelete,
-        clearError: () => setError(null)
+        clearError: clearErrorState
     };
 }

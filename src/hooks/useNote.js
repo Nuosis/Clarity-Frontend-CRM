@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useSnackBar } from '../context/SnackBarContext';
 import { createNewNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, deleteNoteById, updateNoteById } from '../services/noteService';
+import { formatNoteErrorForUI } from '../errors';
 
 /**
  * Hook for managing note operations via backend API
@@ -8,11 +9,32 @@ import { createNewNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCusto
 export function useNote() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [formattedError, setFormattedError] = useState(null);
 
     // Separate pagination state for each entity type
     const [paginationByEntity, setPaginationByEntity] = useState({});
 
     const { showError } = useSnackBar();
+
+    /**
+     * Helper function to set error state with formatting
+     * @param {Error} err - Error object
+     */
+    const setErrorWithFormatting = useCallback((err) => {
+        const formatted = formatNoteErrorForUI(err);
+        setError(formatted.message);
+        setFormattedError(formatted);
+        console.error('[useNote] Error:', {
+            raw: err,
+            formatted,
+            stack: err?.stack
+        });
+    }, []);
+
+    const clearErrorState = useCallback(() => {
+        setError(null);
+        setFormattedError(null);
+    }, []);
 
     /**
      * Get pagination state for a specific entity
@@ -108,7 +130,7 @@ export function useNote() {
 
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             // Call service with new signature
             const result = await createNewNote(entityType, entityId, noteContent.trim(), type);
@@ -120,15 +142,13 @@ export function useNote() {
             console.log('[useNote] Note created successfully:', { id: result.id, entityType, entityId });
             return result;
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.message || 'Error creating note';
-            setError(errorMessage);
-            showError(errorMessage);
-            console.error('[useNote] handleNoteCreate error:', err);
+            setErrorWithFormatting(err);
+            showError(err.message || 'Error creating note');
             return null;
         } finally {
             setLoading(false);
         }
-    }, [showError]);
+    }, [showError, clearErrorState, setErrorWithFormatting]);
 
     /**
      * Fetch notes for any entity type with pagination support via backend API
@@ -170,7 +190,7 @@ export function useNote() {
 
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const currentPagination = getPagination(entityType, entityId);
             const {
@@ -218,15 +238,13 @@ export function useNote() {
             });
             return notes;
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.message || 'Error fetching notes';
-            setError(errorMessage);
-            showError(errorMessage);
-            console.error('[useNote] handleFetchNotes error:', err);
+            setErrorWithFormatting(err);
+            showError(err.message || 'Error fetching notes');
             return [];
         } finally {
             setLoading(false);
         }
-    }, [showError, getPagination, updatePagination]);
+    }, [showError, clearErrorState, setErrorWithFormatting, getPagination, updatePagination]);
 
     /**
      * Update a note via backend API
@@ -255,7 +273,7 @@ export function useNote() {
 
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             const result = await updateNoteById(noteId, data);
 
@@ -266,15 +284,13 @@ export function useNote() {
             console.log('[useNote] Note updated successfully:', { id: result.id });
             return result;
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.message || 'Error updating note';
-            setError(errorMessage);
-            showError(errorMessage);
-            console.error('[useNote] handleNoteUpdate error:', err);
+            setErrorWithFormatting(err);
+            showError(err.message || 'Error updating note');
             return null;
         } finally {
             setLoading(false);
         }
-    }, [showError]);
+    }, [showError, clearErrorState, setErrorWithFormatting]);
 
     /**
      * Delete a note via backend API
@@ -292,26 +308,25 @@ export function useNote() {
 
         try {
             setLoading(true);
-            setError(null);
+            clearErrorState();
 
             await deleteNoteById(noteId);
 
             console.log('[useNote] Note deleted successfully:', { id: noteId });
             return true;
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.message || 'Error deleting note';
-            setError(errorMessage);
-            showError(errorMessage);
-            console.error('[useNote] handleNoteDelete error:', err);
+            setErrorWithFormatting(err);
+            showError(err.message || 'Error deleting note');
             return false;
         } finally {
             setLoading(false);
         }
-    }, [showError]);
+    }, [showError, clearErrorState, setErrorWithFormatting]);
 
     return {
         loading,
         error,
+        formattedError,
         handleNoteCreate,
         handleFetchNotes,
         handleNoteUpdate,
@@ -320,6 +335,6 @@ export function useNote() {
         updatePagination,
         clearPagination,
         clearAllPagination,
-        clearError: () => setError(null)
+        clearError: clearErrorState
     };
 }
