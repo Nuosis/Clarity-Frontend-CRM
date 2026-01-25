@@ -1,4 +1,11 @@
-import { createNote, fetchProjectNotes, deleteNote, updateNote } from '../api/notes';
+import {
+    createNote,
+    fetchProjectNotes,
+    fetchNotesByTask as fetchTaskNotesAPI,
+    fetchNotesByCustomer as fetchCustomerNotesAPI,
+    deleteNote,
+    updateNote
+} from '../api/notes';
 
 function sanitizeNoteContent(value) {
     if (value === null || value === undefined) {
@@ -105,7 +112,6 @@ export async function fetchNotesByTask(taskId, options = {}) {
         throw new Error('Task ID is required');
     }
 
-    const { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');
     const result = await fetchTaskNotesAPI(taskId, options);
     const notes = Array.isArray(result?.notes) ? result.notes : Array.isArray(result) ? result : [];
     const pagination = result?.pagination || null;
@@ -128,7 +134,6 @@ export async function fetchNotesByCustomer(customerId, options = {}) {
         throw new Error('Customer ID is required');
     }
 
-    const { fetchNotesByCustomer: fetchCustomerNotesAPI } = await import('../api/notes');
     const result = await fetchCustomerNotesAPI(customerId, options);
     const notes = Array.isArray(result?.notes) ? result.notes : Array.isArray(result) ? result : [];
     const pagination = result?.pagination || null;

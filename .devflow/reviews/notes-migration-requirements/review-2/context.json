@@ -1,199 +1,403 @@
 {
   "metadata": {
-    "workflowStarted": "2026-01-16T19:40:26.089Z",
+    "workflowStarted": "2026-01-24T22:15:44.977Z",
     "featureSlug": "notes-migration-requirements",
     "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
     "iteration": 2,
     "featureName": "Notes Migration Requirements",
     "mode": "autonomous",
-    "sessionId": "062902f9-b841-4bbe-ab38-83320cf99138",
-    "processId": 1768592426089,
-    "lastUpdated": "2026-01-16T19:46:47.884Z"
+    "sessionId": "fcca832d-64ec-42e1-bdf9-0986a6c5c57e",
+    "processId": null,
+    "lastUpdated": "2026-01-24T22:37:39.163Z"
+  },
+  "GenerateWorkflowsNode": {
+    "timestamp": "2026-01-24T22:32:42.338Z",
+    "output": {
+      "success": true,
+      "workflowsGenerated": true,
+      "gapTasksCreated": 1,
+      "alignmentScore": 50
+    }
   },
   "PrepareContextNode": {
-    "timestamp": "2026-01-16T19:40:26.333Z",
+    "timestamp": "2026-01-24T22:32:48.681Z",
     "output": {
-      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Create requirements/notes directory structure (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a new documentation scaffold under 'requirements/notes' by creating the directory and adding placeholder templates for migration planning and requirements capture. Key files added include 'requirements/notes/README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md'. Templates were standardized with '[TO BE DOCUMENTED]' placeholders, example patterns from the Teams migration, and reminders for code references, while explicitly following the Backend Change Protocol to document requirements without changing backend infrastructure.\n\n---\n\n### Document current notes implementation (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive documentation of the existing notes feature by analyzing the FileMaker layout and the full frontend stack (API, services, hooks, and UI), including detailed end-to-end data flows and current CRUD coverage. Added the writeup to 'requirements/notes/current-implementation.md' (574 lines), referencing key files such as 'src/api/notes.js', 'src/api/projects.js', 'src/api/tasks.js', 'src/services/noteService.js', 'src/hooks/useNote.js', 'src/hooks/useProject.js', 'src/hooks/useTask.js', 'src/components/projects/ProjectNotesTab.jsx', and 'src/components/tasks/TaskList.jsx'. Captured important decisions and findings, notably the inconsistent note data shape between project notes (raw FileMaker fieldData) and task notes (processed content), plus limitations like missing update delete, no pagination, and an unused 'type' field. Verified the project build succeeds and updated task status and timestamps accordingly.\n\n---\n\n### Analyze notes UI behavior and user flows (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nDocumented the existing notes UI behavior and end-to-end user flows by adding a large new 'UI Behavior and User Flows' section to 'requirements/notes/current-implementation.md', covering creation workflows for project and task notes, display/sorting patterns, validation rules, state management, refresh behavior, error UX, accessibility, modal behavior, and explicitly noting that edit/delete are not implemented. The documentation references the current implementation across key files including 'src/components/projects/ProjectNotesTab.jsx', 'src/components/tasks/TaskList.jsx', 'src/components/global/TextInput.jsx', 'src/hooks/useNote.js', 'src/hooks/useTask.js', 'src/services/noteService.js', and 'src/services/taskService.js', with line-level callouts. Important decisions/findings captured include the project vs task notes data-format inconsistency, differing sorting responsibility (backend vs service layer), and that metadata is intentionally hidden from the UI. The task status and timestamp were updated and the build was verified to compile successfully.\n\n---\n\n### Map FileMaker devNotes schema to Supabase (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive FileMaker devNotes to Supabase data model mapping documentation by fully replacing the placeholder template in 'requirements/notes/data-model-mapping.md' with detailed schema, field mappings, migration transformations, constraints, indexes, triggers, and RLS guidance, including references to existing code such as 'src/api/fileMaker.js', 'src/api/notes.js', 'src/api/projects.js', and 'src/api/tasks.js'. Updated 'tasks.json' to mark 'TSK0004' as completed after confirming the build succeeded. Key decisions documented include using a single 'notes' table with nullable parent foreign keys plus a check constraint to enforce exactly one parent, deriving 'organization_id' from the parent entity for multi-tenancy, and applying cascade deletes and partial indexes for performance.\n\n---\n\n### Define backend API contracts for notes (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented complete backend API contract documentation for the notes feature by replacing placeholder content in 'requirements/notes/api-contracts.md' with a full 722-line spec covering 5 REST endpoints, request and response schemas, validation rules, error catalog, and Supabase RLS and realtime access patterns based on existing backend documentation conventions. Updated 'tasks.json' to mark 'TSK0005' as completed and verified the project still builds successfully. Key decisions documented include HMAC-SHA256 auth for the backend API vs JWT for Supabase access, enforcing exactly one parent entity with organization scoping, offset pagination (default 50 max 200), hard deletes, and immutable parent assignment after creation.\n\n---\n\n### Design authorization and RLS policies (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive notes authorization and RLS design documentation by adding 'requirements/notes/authorization.md', detailing auth methods (HMAC backend vs JWT direct), proposed SQL helper functions for parent-entity access inheritance, and full SELECT, INSERT, UPDATE, DELETE policy specifications with org scoping via JWT 'user_metadata.organization_id'. Key decisions captured include a simple equal-permissions model (no initial RBAC), backend API using the service role with app-level org checks, frontend using the anon key under RLS, and cascade deletion to prevent orphaned notes. Verified the project still compiles, then marked the task complete and updated the 'updated_at' timestamp in 'tasks.json'.\n\n---\n\n### Create migration and backfill plan (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive Notes migration and backfill plan from FileMaker to Supabase, covering export, ID and user mapping, transformation pipeline, bulk load strategy, validation, rollback, and a recommended big bang cutover timeline. Key work landed in 'requirements/notes/migration-plan.md' (filling the prior placeholder with a full template-aligned plan and appendices including scripts and checks) and 'tasks.json' (marking TSK0007 as DONE and updating the session timestamp). Important decisions documented include using the service role key to bypass RLS during bulk operations, batching inserts at 500 records with rate limiting and retries, deriving organization strictly from the parent entity, and mapping unknown creators to a migration user with an orphaned-note tolerance under 5%. Build verification was run after updates to confirm everything still compiles successfully.\n\n---\n\n### Define acceptance criteria and test cases (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive acceptance criteria and test cases for the notes migration, covering CRUD parity with FileMaker, migration validation, security/authorization, performance, accessibility, and deployment/rollback scenarios. Added a new requirements document at 'requirements/notes/acceptance-criteria.md' (~1,836 lines) with detailed checkpoints, categorized test cases, SQL validation queries, and explicit MVP limitations (eg no edit/delete UI, offset pagination, no initial full-text search). Updated 'tasks.json' to mark TSK0008 as done with implementation notes, and verified the project build succeeds after the documentation-only changes.\n\n---\n\n### Write requirements README overview (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive overview README to replace the placeholder at 'requirements/notes/README.md', consolidating the Notes migration requirements into a single hub with navigation links, feature and architecture summaries, key decisions, dependencies, risks, testing strategy, open backend questions, timeline, and ownership details. Updated 'tasks.json' to mark 'TSK0009' complete and refreshed the 'updated_at' timestamp. Verified the build compiles successfully after the documentation and task-tracking changes, ensuring cross-references and code pointers are consistent.\n\n---\n\n### Review and validate requirements completeness (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nCompleted a comprehensive review and validation of the Notes migration requirements across 7 documentation files including 'README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md', confirming the package is approved and implementation-ready with 5 non-blocking open design questions noted. Added the consolidated review report at '.devflow/tasks/notes-migration-requirements/REQUIREMENTS_REVIEW.md' capturing document-by-document findings, code reference checks, consistency validation, and schema and security assessments. Updated 'tasks.json' to mark 'TSK0010' complete and set 'review_status' to 'approved', then re-verified the build passes after the change.\n\n---\n\n## Project Documentation\n\n",
+      "tasksContext": "## Feature Tasks Being Reviewed\n\n### Create requirements/notes directory structure (TSK0001)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a new documentation scaffold under 'requirements/notes' by creating the directory and adding placeholder templates for migration planning and requirements capture. Key files added include 'requirements/notes/README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md'. Templates were standardized with '[TO BE DOCUMENTED]' placeholders, example patterns from the Teams migration, and reminders for code references, while explicitly following the Backend Change Protocol to document requirements without changing backend infrastructure.\n\n---\n\n### Document current notes implementation (TSK0002)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive documentation of the existing notes feature by analyzing the FileMaker layout and the full frontend stack (API, services, hooks, and UI), including detailed end-to-end data flows and current CRUD coverage. Added the writeup to 'requirements/notes/current-implementation.md' (574 lines), referencing key files such as 'src/api/notes.js', 'src/api/projects.js', 'src/api/tasks.js', 'src/services/noteService.js', 'src/hooks/useNote.js', 'src/hooks/useProject.js', 'src/hooks/useTask.js', 'src/components/projects/ProjectNotesTab.jsx', and 'src/components/tasks/TaskList.jsx'. Captured important decisions and findings, notably the inconsistent note data shape between project notes (raw FileMaker fieldData) and task notes (processed content), plus limitations like missing update delete, no pagination, and an unused 'type' field. Verified the project build succeeds and updated task status and timestamps accordingly.\n\n---\n\n### Analyze notes UI behavior and user flows (TSK0003)\n**Status:** done\n\n**Implementation Notes:**\nDocumented the existing notes UI behavior and end-to-end user flows by adding a large new 'UI Behavior and User Flows' section to 'requirements/notes/current-implementation.md', covering creation workflows for project and task notes, display/sorting patterns, validation rules, state management, refresh behavior, error UX, accessibility, modal behavior, and explicitly noting that edit/delete are not implemented. The documentation references the current implementation across key files including 'src/components/projects/ProjectNotesTab.jsx', 'src/components/tasks/TaskList.jsx', 'src/components/global/TextInput.jsx', 'src/hooks/useNote.js', 'src/hooks/useTask.js', 'src/services/noteService.js', and 'src/services/taskService.js', with line-level callouts. Important decisions/findings captured include the project vs task notes data-format inconsistency, differing sorting responsibility (backend vs service layer), and that metadata is intentionally hidden from the UI. The task status and timestamp were updated and the build was verified to compile successfully.\n\n---\n\n### Map FileMaker devNotes schema to Supabase (TSK0004)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive FileMaker devNotes to Supabase data model mapping documentation by fully replacing the placeholder template in 'requirements/notes/data-model-mapping.md' with detailed schema, field mappings, migration transformations, constraints, indexes, triggers, and RLS guidance, including references to existing code such as 'src/api/fileMaker.js', 'src/api/notes.js', 'src/api/projects.js', and 'src/api/tasks.js'. Updated 'tasks.json' to mark 'TSK0004' as completed after confirming the build succeeded. Key decisions documented include using a single 'notes' table with nullable parent foreign keys plus a check constraint to enforce exactly one parent, deriving 'organization_id' from the parent entity for multi-tenancy, and applying cascade deletes and partial indexes for performance.\n\n---\n\n### Define backend API contracts for notes (TSK0005)\n**Status:** done\n\n**Implementation Notes:**\nImplemented complete backend API contract documentation for the notes feature by replacing placeholder content in 'requirements/notes/api-contracts.md' with a full 722-line spec covering 5 REST endpoints, request and response schemas, validation rules, error catalog, and Supabase RLS and realtime access patterns based on existing backend documentation conventions. Updated 'tasks.json' to mark 'TSK0005' as completed and verified the project still builds successfully. Key decisions documented include HMAC-SHA256 auth for the backend API vs JWT for Supabase access, enforcing exactly one parent entity with organization scoping, offset pagination (default 50 max 200), hard deletes, and immutable parent assignment after creation.\n\n---\n\n### Design authorization and RLS policies (TSK0006)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive notes authorization and RLS design documentation by adding 'requirements/notes/authorization.md', detailing auth methods (HMAC backend vs JWT direct), proposed SQL helper functions for parent-entity access inheritance, and full SELECT, INSERT, UPDATE, DELETE policy specifications with org scoping via JWT 'user_metadata.organization_id'. Key decisions captured include a simple equal-permissions model (no initial RBAC), backend API using the service role with app-level org checks, frontend using the anon key under RLS, and cascade deletion to prevent orphaned notes. Verified the project still compiles, then marked the task complete and updated the 'updated_at' timestamp in 'tasks.json'.\n\n---\n\n### Create migration and backfill plan (TSK0007)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive Notes migration and backfill plan from FileMaker to Supabase, covering export, ID and user mapping, transformation pipeline, bulk load strategy, validation, rollback, and a recommended big bang cutover timeline. Key work landed in 'requirements/notes/migration-plan.md' (filling the prior placeholder with a full template-aligned plan and appendices including scripts and checks) and 'tasks.json' (marking TSK0007 as DONE and updating the session timestamp). Important decisions documented include using the service role key to bypass RLS during bulk operations, batching inserts at 500 records with rate limiting and retries, deriving organization strictly from the parent entity, and mapping unknown creators to a migration user with an orphaned-note tolerance under 5%. Build verification was run after updates to confirm everything still compiles successfully.\n\n---\n\n### Define acceptance criteria and test cases (TSK0008)\n**Status:** done\n\n**Implementation Notes:**\nImplemented comprehensive acceptance criteria and test cases for the notes migration, covering CRUD parity with FileMaker, migration validation, security/authorization, performance, accessibility, and deployment/rollback scenarios. Added a new requirements document at 'requirements/notes/acceptance-criteria.md' (~1,836 lines) with detailed checkpoints, categorized test cases, SQL validation queries, and explicit MVP limitations (eg no edit/delete UI, offset pagination, no initial full-text search). Updated 'tasks.json' to mark TSK0008 as done with implementation notes, and verified the project build succeeds after the documentation-only changes.\n\n---\n\n### Write requirements README overview (TSK0009)\n**Status:** done\n\n**Implementation Notes:**\nImplemented a comprehensive overview README to replace the placeholder at 'requirements/notes/README.md', consolidating the Notes migration requirements into a single hub with navigation links, feature and architecture summaries, key decisions, dependencies, risks, testing strategy, open backend questions, timeline, and ownership details. Updated 'tasks.json' to mark 'TSK0009' complete and refreshed the 'updated_at' timestamp. Verified the build compiles successfully after the documentation and task-tracking changes, ensuring cross-references and code pointers are consistent.\n\n---\n\n### Review and validate requirements completeness (TSK0010)\n**Status:** done\n\n**Implementation Notes:**\nCompleted a comprehensive review and validation of the Notes migration requirements across 7 documentation files including 'README.md', 'current-implementation.md', 'data-model-mapping.md', 'api-contracts.md', 'authorization.md', 'migration-plan.md', and 'acceptance-criteria.md', confirming the package is approved and implementation-ready with 5 non-blocking open design questions noted. Added the consolidated review report at '.devflow/tasks/notes-migration-requirements/REQUIREMENTS_REVIEW.md' capturing document-by-document findings, code reference checks, consistency validation, and schema and security assessments. Updated 'tasks.json' to mark 'TSK0010' complete and set 'review_status' to 'approved', then re-verified the build passes after the change.\n\n---\n\n### [REVIEW] Missing retry logic despite documented requirement (TASK011)\n**Status:** done\n\n**Role in System:** Remediate review finding COD-001 from iteration 6\n\n**Requirements:**\n- The bulk insert implementation in load-notes-to-supabase.js does not include the retry logic with exponential backoff that is explicitly documented in the requirements (section 'Bulk Insert Approach' states '3 retry attempts per failed batch' and 'Exponential backoff: 2^attempt seconds'). The current implementation logs failures but continues processing without retrying failed batches.\n- \n- **Recommendation:** Implement retry logic with exponential backoff as documented. Wrap the batch insert in a retry function that attempts up to 3 times with delays of 2, 4, and 8 seconds between attempts.\n\n**Implementation Notes:**\nImplemented missing retry logic with exponential backoff for the notes bulk insert flow by adding a reusable retryWithBackoff helper and wrapping Supabase batch inserts in scripts/load-notes-to-supabase.js, using 3 retries with 2s, 4s, and 8s delays plus batch processing (500 per batch) and improved error logging. Updated requirements/notes/migration-plan.md to reflect the implemented script and explicitly document the retry strategy and related operational details (batching, rate limiting, logging). Verified the script with node --check and confirmed the build still succeeds, then marked the related work item complete in tasks.json with an updated timestamp.\n\n---\n\n### [REVIEW] Potential null pointer in buildUserMapping (TASK012)\n**Status:** done\n\n**Role in System:** Remediate review finding COD-002 from iteration 6\n\n**Requirements:**\n- The buildUserMapping function (lines 248-262) assumes that supabase.auth.admin.listUsers() returns a 'users' property containing a 'users' array (accessed as users.users). If the API returns null or the structure is different, this will cause a runtime error when calling forEach on undefined.\n- \n- **Recommendation:** Add null check: if (!users || !users.users) { throw new Error('Failed to retrieve user list'); } before accessing users.users\n\n**Implementation Notes:**\nImplemented a guard against a potential null pointer in the documented buildUserMapping logic by validating that users exists, users.users exists, and users.users is an array before calling forEach, based on Supabase auth.admin.listUsers() returning { data: { users: [...] }, error } and the risk of data being null. Updated 'requirements/notes/migration-plan.md' (around lines 248-267) to include the explicit response-structure check and a clear thrown error message for invalid API responses. Marked TASK012 complete in '.devflow/tasks/notes-migration-requirements/tasks.json' with status, timestamp, and implementation notes, and verified compilation via 'npm run build'.\n\n---\n\n### [REVIEW] Missing error handling in detectParentEntity (TASK013)\n**Status:** done\n\n**Role in System:** Remediate review finding COD-003 from iteration 6\n\n**Requirements:**\n- The detectParentEntity function (lines 176-237) does not handle Supabase query errors. If any of the three database queries fail, the error is silently ignored and the function continues, potentially treating database errors as 'entity not found' scenarios.\n- \n- **Recommendation:** Destructure the error from each query and check it: const { data: project, error: projectError } = await supabase... if (projectError) { throw new Error(`Failed to query projects: ${projectError.message}`); }\n\n**Implementation Notes:**\nImplemented proper Supabase error handling in the documented 'detectParentEntity' function within 'requirements/notes/migration-plan.md' by destructuring and checking 'error' for each of the three lookups (projects, tasks, customers) and throwing descriptive errors when queries fail. Confirmed these thrown errors align with the existing try-catch around the call site (around line 721), ensuring failures are captured and routed to 'invalidNotes' instead of being misinterpreted as 'entity not found'. Ran 'npm run build' to verify no regressions (noting existing unrelated warnings) and updated 'tasks.json' to mark the task as done with a refreshed timestamp.\n\n---\n\n### [REVIEW] Service role key exposure risk in migration scripts (TASK014)\n**Status:** done\n\n**Role in System:** Remediate review finding SEC-001 from iteration 6\n\n**Requirements:**\n- The migration scripts (transform-notes.js and load-notes-to-supabase.js) use process.env.SUPABASE_SERVICE_ROLE_KEY which bypasses ALL Row-Level Security policies. If these scripts are accidentally deployed to a frontend environment or committed with hardcoded values, attackers could gain unrestricted database access across all organizations. The documentation doesn't warn about the critical security implications or provide safeguards against accidental exposure.\n- \n- **Recommendation:** Add explicit security warnings in the migration documentation: 1) These scripts MUST ONLY run in secure backend environments, NEVER in frontend/browser contexts. 2) Add environment validation: if (typeof window !== 'undefined') { throw new Error('Migration scripts cannot run in browser'); } 3) Document that service role key should be rotated after migration. 4) Add .gitignore verification for migration-data/ directory containing sensitive outputs. 5) Consider using Supabase database webhooks or backend API to perform migration instead of client-side scripts.\n\n**Implementation Notes:**\nImplemented security hardening for migration scripts to mitigate Supabase service role key exposure, including browser-execution guards, stronger key validation messaging, and prominent warnings in script headers. Added comprehensive guidance in 'docs/MIGRATION_SCRIPTS_SECURITY.md' and propagated security requirements, checklists, and incident response steps across 'scripts/README.md', 'requirements/notes/migration-plan.md' (including a pre-cutover checklist), and 'CLAUDE.md'. Updated '.gitignore' to exclude migration data and output artifacts to prevent accidental commits, and verified the project still builds successfully. Key decision: treat the service role key as strictly server-only, documenting mandatory key rotation and response procedures if exposure occurs.\n\n---\n\n### [REVIEW] Missing error handling wrapper pattern (TASK015)\n**Status:** done\n\n**Role in System:** Remediate review finding ARC-001 from iteration 6\n\n**Requirements:**\n- The proposed API layer in api-contracts.md (lines 608-651) uses raw dataService.request() calls without the withErrorHandling wrapper that is standard across the codebase. The existing customer API implementation (src/api/customers.js) consistently wraps all API calls with withErrorHandling() for centralized error handling, logging, and error code normalization. The notes documentation proposes a simpler pattern without this wrapper.\n- \n- **Recommendation:** Update api-contracts.md to follow the established error handling pattern: 1) Import withErrorHandling, checkOrganizationScope, and getAuthenticationContext from the appropriate modules. 2) Wrap all API functions with withErrorHandling(). 3) Add organization scope checks with checkOrganizationScope(). 4) Include function name and parameters in error context. 5) Add data normalization function similar to normalizeCustomerData(). Example should match the pattern in src/api/customers.js lines 42-73, 81-93, 101-113.\n\n**Implementation Notes:**\nUpdated requirements/notes/api-contracts.md to follow the established error handling pattern from src/api/customers.js by replacing the simplified API examples (lines 604-651) with comprehensive implementations that include: 1) Proper imports of withErrorHandling, checkOrganizationScope, getAuthenticationContext, NoteError, and NoteErrorCodes from error handling modules. 2) normalizeNoteData() function for data normalization (id/__ID mapping). 3) All API functions (fetchProjectNotes, fetchTaskNotes, fetchCustomerNotes, createNote, updateNote, deleteNote) wrapped with withErrorHandling() including function name and context parameters. 4) Organization scope validation via checkOrganizationScope() in every function. 5) Input validation with descriptive NoteError throws. 6) Semantic dataService methods (get, post, patch, delete) instead of raw request() calls. 7) Comprehensive JSDoc documentation. Added detailed Error Handling Module section documenting the required src/errors/noteErrors.js module with NoteErrorCodes enumeration, NoteError class, withErrorHandling wrapper, checkOrganizationScope validator, parseHttpError normalizer, and user-friendly error messages, referencing src/errors/customerErrors.js (lines 1-400) as the implementation pattern. Verified build compiles successfully with no new errors.\n\n---\n\n### [REVIEW] Inconsistent HTTP method pattern with dataService (TASK016)\n**Status:** done\n\n**Role in System:** Remediate review finding ARC-002 from iteration 6\n\n**Requirements:**\n- The proposed API uses dataService.request() with explicit method parameter (lines 617, 633, 641, 649) instead of the semantic dataService.get(), dataService.post(), dataService.put(), dataService.patch(), dataService.delete() methods that are standard across the codebase. The customer API (src/api/customers.js:71, 90, 110, 129, 148, 167) consistently uses semantic methods. Using .request() is more verbose and doesn't follow the established pattern.\n- \n- **Recommendation:** Update all API examples in api-contracts.md (lines 608-651) to use semantic dataService methods: dataService.get() for fetches, dataService.post() for creates, dataService.patch() for updates, dataService.delete() for deletes. This improves code readability and consistency with existing patterns. The dataService methods handle JSON stringification and content-type headers automatically, so body: JSON.stringify() can be removed.\n\n**Implementation Notes:**\nUpdated the Notes API contracts documentation to consistently use semantic dataService HTTP methods (get, post, patch, delete) in all examples, aligning with the established pattern verified in 'src/api/customers.js'. The main change was in 'requirements/notes/api-contracts.md', where the remaining reference to 'dataService.request()' (in the HMAC authentication comment section) was revised to reflect the semantic methods and to note that manual 'JSON.stringify()' is unnecessary. Task tracking was updated by marking TASK016 as done and adding completion notes and timestamp in '.devflow/tasks/notes-migration-requirements/tasks.json'. A successful build was used as confirmation that the documentation-only changes did not introduce issues.\n\n---\n\n### [REVIEW] Missing organization scope validation (TASK017)\n**Status:** done\n\n**Role in System:** Remediate review finding ARC-003 from iteration 6\n\n**Requirements:**\n- The proposed API layer does not include organization scope validation via checkOrganizationScope() before making backend requests. Every customer API function (src/api/customers.js:47, 88, 108, 127, 146, 165) validates that the user has organization context before proceeding. This is a critical security check that ensures users cannot make requests without proper organization assignment. The notes documentation omits this pattern entirely.\n- \n- **Recommendation:** Add organization scope validation to all API functions in the documentation: 1) Import getAuthenticationContext and checkOrganizationScope. 2) Call const auth = getAuthenticationContext() at the start of each function. 3) Call checkOrganizationScope({ authentication: auth }, 'functionName') before any API request. 4) Document this pattern in api-contracts.md as a mandatory security requirement. 5) Reference the customer implementation as the pattern to follow.\n\n**Implementation Notes:**\nImplemented mandatory organization scope validation across the notes API by adding checkOrganizationScope() to the missing fetch, update, and delete methods in 'src/api/notes.js', bringing all six exported functions in line with the established customer API security pattern. Updated 'requirements/notes/api-contracts.md' to add a dedicated 'Organization Scope Validation' section and reinforced the requirement in the Frontend Integration guidance with consistent examples. Verified the build succeeded, confirmed there were no notes tests to adjust, and updated task tracking in 'tasks.json' including the task timestamp.\n\n---\n\n### [REVIEW] Missing Error Handling Module (noteErrors.js) Required by Documentation (TASK018)\n**Status:** done\n\n**Role in System:** Remediate review finding COM-001 from iteration 8\n\n**Requirements:**\n- The api-contracts.md documentation (lines 651-658, 692-699) explicitly requires importing error handling functions from '../errors/noteErrors.js' including withErrorHandling, checkOrganizationScope, NoteErrorCodes, and NoteError. However, this module does not exist in the codebase. The directory /Users/marcusswift/javascript/clarityCrmFrontend/src/errors/ exists with customerErrors.js and index.js, but noteErrors.js is missing. The current implementation in src/api/notes.js (lines 9-13) includes a local checkOrganizationScope function instead of importing from the documented error module. This creates a discrepancy between the requirements documentation and the actual implementation pattern established by the customer API.\n- \n- **Recommendation:** Create src/errors/noteErrors.js following the pattern documented in api-contracts.md and matching the established pattern from src/errors/customerErrors.js. The module should export: NoteErrorCodes (enumeration of error codes), NoteError (custom error class), withErrorHandling (wrapper function for API calls), checkOrganizationScope (organization validation function), and parseHttpError (error normalization function). Then update src/api/notes.js to import and use these functions instead of the local checkOrganizationScope implementation. This ensures consistency with the documented pattern and matches the established error handling architecture used by the customer API (referenced in api-contracts.md lines 640-800 as the implementation pattern to follow).\n\n---\n\n### [REVIEW] Missing error handling wrapper (withErrorHandling) in API layer (TASK019)\n**Status:** done\n\n**Role in System:** Remediate review finding COD-001 from iteration 8\n\n**Requirements:**\n- The src/api/notes.js file does not use the withErrorHandling wrapper pattern that is standard across the codebase. All API functions (createNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, updateNote, deleteNote) directly call dataService methods without wrapping them in withErrorHandling(). This is inconsistent with the established pattern in src/api/customers.js where ALL API calls are wrapped with withErrorHandling() for centralized error handling, logging, and error code normalization. The documentation (requirements/notes/api-contracts.md) explicitly requires this pattern but the implementation does not follow it.\n- \n- **Recommendation:** Wrap all API functions in src/api/notes.js with withErrorHandling() following the pattern from src/api/customers.js. Import withErrorHandling from the error handling module (once noteErrors.js is created as identified in the compliance review). This ensures consistent error handling, logging, and error code normalization across all API operations.\n\n---\n\n### [REVIEW] Missing data normalization function in API layer (TASK020)\n**Status:** done\n\n**Role in System:** Remediate review finding COD-002 from iteration 8\n\n**Requirements:**\n- The src/api/notes.js file does not include a normalizeNoteData() function to handle backend response normalization (e.g., mapping __ID to id fields). The customer API (src/api/customers.js) includes normalizeCustomerData() for this purpose. The documentation in requirements/notes/api-contracts.md explicitly requires this normalization pattern. Without it, inconsistencies may occur if the backend returns data with different field naming conventions.\n- \n- **Recommendation:** Add a normalizeNoteData() function to src/api/notes.js following the pattern from normalizeCustomerData() in src/api/customers.js. Apply this normalization to all API responses before returning them to ensure consistent data shape across the application.\n\n---\n\n### [REVIEW] Missing input sanitization for note content allows potential XSS attacks (TASK021)\n**Status:** done\n\n**Role in System:** Remediate review finding SEC-001 from iteration 8\n\n**Requirements:**\n- In src/api/notes.js (lines 60-61) and src/services/noteService.js (lines 38-39), note content is accepted directly from user input and passed to the backend without any sanitization or validation beyond trim(). The note content is stored in the database and later rendered in the UI (src/components/projects/ProjectNotesTab.jsx line 182). While React provides default XSS protection through JSX, if the note content is ever rendered using dangerouslySetInnerHTML or innerHTML in the future, or if it's included in email templates or PDFs without proper escaping, it could enable stored XSS attacks. Attack vector: User creates note with content like '<script>alert(document.cookie)</script>' or '<img src=x onerror=alert(1)>' which gets stored in the database. If rendering method changes or content is used in email/PDF generation, the script executes.\n- \n- **Recommendation:** Implement server-side input sanitization: 1) Add a sanitization function that removes or escapes HTML tags and JavaScript from note content before sending to backend. 2) Consider using DOMPurify library for robust HTML sanitization if rich text is needed, or strip all HTML if plain text only. 3) Add backend validation that rejects notes containing script tags or suspicious patterns. 4) Document in requirements that notes are plain text only and HTML rendering is not supported. 5) Add Content Security Policy headers to prevent inline script execution as defense-in-depth.\n\n---\n\n### [REVIEW] Missing withErrorHandling wrapper violates established API layer pattern (TASK022)\n**Status:** done\n\n**Role in System:** Remediate review finding ARC-001 from iteration 8\n\n**Requirements:**\n- The src/api/notes.js implementation does not use the withErrorHandling() wrapper pattern that is mandatory across the entire codebase. All API functions in src/api/customers.js (lines 42-149) wrap every function with withErrorHandling() for centralized error handling, logging, and error code normalization. The notes API layer directly returns raw async functions without this wrapper. This architectural inconsistency means notes operations lack: 1) Centralized error logging with context, 2) Automatic error code normalization, 3) User-friendly error message generation, 4) Consistent error structure across the application. The documentation (requirements/notes/api-contracts.md lines 640-800) explicitly requires this pattern but the implementation violates it.\n- \n- **Recommendation:** Refactor all API functions in src/api/notes.js to follow the established pattern: 1) Create src/errors/noteErrors.js with NoteErrorCodes, NoteError class, and withErrorHandling wrapper (following src/errors/customerErrors.js pattern). 2) Wrap ALL API functions (createNote, fetchNotesByProject, fetchNotesByTask, fetchNotesByCustomer, updateNote, deleteNote) with withErrorHandling(async () => { ... }, 'functionName', context). 3) Use NoteError for all thrown errors with appropriate error codes. This ensures architectural consistency and provides the same error handling quality as other features.\n\n---\n\n### [REVIEW] Missing data normalization layer violates service architecture pattern (TASK023)\n**Status:** done\n\n**Role in System:** Remediate review finding ARC-002 from iteration 8\n\n**Requirements:**\n- The src/api/notes.js lacks a normalizeNoteData() function at the API layer, violating the established architecture. Every API module in the codebase implements normalization: src/api/customers.js has normalizeCustomerData() (lines 13-28), and the customer service layer has transformBackendToFileMaker() (customerService.js lines 99+). The notes implementation partially compensates with transformBackendNote() in the service layer (noteService.js lines 154-178), but this violates separation of concerns - the API layer should normalize backend responses to a consistent shape, and the service layer should transform to domain models. This architectural inconsistency creates confusion about where data transformation belongs and makes the code harder to maintain.\n- \n- **Recommendation:** Add normalizeNoteData() function to src/api/notes.js following the established pattern: 1) Place function at top of file (lines 15-30), 2) Handle both single objects and arrays, 3) Normalize id/__ID fields for consistency, 4) Apply normalization to ALL API function return values before returning, 5) Keep transformBackendNote() in service layer for domain-specific transformations (snake_case to camelCase, fieldData wrapper). This maintains proper separation: API layer normalizes structure, service layer transforms to domain model.\n\n---\n\n### [REVIEW] Inconsistent error handling approach violates hook architecture pattern (TASK024)\n**Status:** done\n\n**Role in System:** Remediate review finding ARC-003 from iteration 8\n\n**Requirements:**\n- The src/hooks/useNote.js implements basic try-catch error handling with console.error (lines 99-106) instead of following the established pattern in src/hooks/useCustomer.js which uses setErrorWithFormatting() helper (lines 60-69), formatErrorForUI() transformation, and CustomerError type checking. The customer hook maintains both raw error state and formatted error state for UI display. The notes hook lacks: 1) Formatted error state for user-friendly messages, 2) Error formatting helper function, 3) NoteError-specific error handling, 4) Structured error logging with context. This architectural inconsistency means notes errors provide worse UX than customer errors.\n- \n- **Recommendation:** Refactor src/hooks/useNote.js to match the established error handling pattern: 1) Add formattedError state alongside error state, 2) Create setErrorWithFormatting() helper that calls formatErrorForUI() from src/errors/noteErrors.js, 3) Replace all setError() calls with setErrorWithFormatting(), 4) Enhance console.error to log structured data (raw error, formatted, stack), 5) Use formattedError.message for showError() calls. Import formatErrorForUI and parseValidationError from noteErrors module once created.\n\n---\n\n### [REVIEW] Service layer bypasses API layer with dynamic imports violating architecture (TASK025)\n**Status:** done\n\n**Role in System:** Remediate review finding ARC-004 from iteration 8\n\n**Requirements:**\n- In src/services/noteService.js lines 86 and 104, fetchNotesByTask() and fetchNotesByCustomer() use dynamic imports to lazy-load API functions. This violates the established architecture where service functions import API functions statically at the top of the file (see src/services/customerService.js uses static imports, src/hooks/useCustomer.js lines 1-9 shows proper static imports). Dynamic imports should only be used for code-splitting large modules, not for simple API function imports. This pattern adds unnecessary complexity, makes dependencies unclear, and can cause performance issues by loading modules multiple times.\n- \n- **Recommendation:** Replace dynamic imports with static imports at top of src/services/noteService.js: 1) Add to line 1: import { createNote, fetchProjectNotes, fetchNotesByTask as fetchTaskNotesAPI, fetchNotesByCustomer as fetchCustomerNotesAPI, deleteNote, updateNote } from '../api/notes'; 2) Remove await import() statements from lines 86 and 104, 3) Use the imported functions directly. This aligns with established architecture, improves performance, and makes dependencies explicit.\n\n---\n\n### [REVIEW] Missing pagination state management pattern in hook architecture (TASK026)\n**Status:** done\n\n**Role in System:** Remediate review finding ARC-005 from iteration 8\n\n**Requirements:**\n- The src/hooks/useNote.js implements custom per-entity pagination state (lines 12, 22-47) using a paginationByEntity object, diverging from the established pattern in src/hooks/useCustomer.js which uses a simple pagination state object (lines 42-47). While the notes approach is more sophisticated (supporting multiple entities), it violates the architectural principle of consistency. The customer hook demonstrates the standard pattern: single pagination object, setPagination for updates, simple structure. The notes pagination also lacks the stats calculation pattern seen in useCustomer (lines 72-76) and useTeam (lines 40-45).\n- \n- **Recommendation:** While the per-entity pagination is a valid architectural decision for notes (which can belong to multiple parent entities), document this deviation clearly: 1) Add JSDoc comment explaining why notes require per-entity pagination vs. single pagination state, 2) Consider extracting pagination logic to a reusable usePagination() custom hook if this pattern is needed elsewhere, 3) Standardize field naming (hasMore vs has_more) to match customer pattern, 4) Add stats calculation like other hooks if notes have aggregate statistics worth tracking.\n\n---\n\n### [GAP] Alignment check failed: Timed out after 600000ms (TASK027)\n**Status:** pending\n\n**Role in System:** Address workflow-vision alignment gap (auto-generated from workflow analysis)\n\n**Requirements:**\n- Alignment check failed: Timed out after 600000ms\n- Manual review recommended\n\n---\n\n## Project Documentation\n\n",
       "projectType": "unknown",
-      "taskCount": 10,
+      "taskCount": 27,
       "notesGenerated": 0,
-      "contextLoadTimeMs": 243
+      "contextLoadTimeMs": 6335
     }
   },
   "ComplianceCheckNode": {
-    "timestamp": "2026-01-16T19:40:54.975Z",
+    "timestamp": "2026-01-24T22:34:00.575Z",
     "output": {
-      "findings": [],
+      "findings": [
+        {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "minor",
+          "title": "Build warnings about missing proposal exports (unrelated to Notes feature)",
+          "description": "The build process shows warnings about missing exports in proposalService.js (createProposalDeliverables and createProposalConcepts not exported by src/api/proposals.js), but this is unrelated to the Notes migration requirements and does not impact compliance with the documented tasks.",
+          "file_paths": [
+            "src/services/proposalService.js",
+            "src/api/proposals.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "This is outside the scope of Notes migration requirements and does not affect compliance. These warnings can be addressed in a separate task."
+        },
+        {
+          "id": "COM-002",
+          "category": "plan_compliance",
+          "severity": "info",
+          "title": "TASK027 remains pending due to timeout",
+          "description": "Task TASK027 '[GAP] Alignment check failed: Timed out after 600000ms' has status 'pending' and requires manual review. This appears to be an auto-generated workflow alignment check that timed out rather than a functional implementation issue.",
+          "file_paths": [],
+          "code_snippet": null,
+          "recommendation": "This is a workflow timeout issue rather than an implementation compliance gap. Manual review may be needed to determine if there are any remaining workflow-vision alignment issues, but all functional requirements appear to be implemented."
+        }
+      ],
       "tasks_reviewed": 0,
       "compliant_tasks": 0
     }
   },
   "CodeSoundnessNode": {
-    "timestamp": "2026-01-16T19:42:12.716Z",
+    "timestamp": "2026-01-24T22:35:06.998Z",
     "output": {
       "findings": [
         {
           "id": "COD-001",
           "category": "code_soundness",
           "severity": "major",
-          "title": "Missing error handling in async parent entity detection",
-          "description": "The `detectParentEntity()` function in migration-plan.md (lines 175-237) performs multiple async Supabase queries without proper error handling. If any query fails (network issues, auth problems, etc.), the function will throw an unhandled exception that could crash the entire migration process mid-stream.",
+          "title": "Inconsistent dynamic imports violate architecture pattern",
+          "description": "In src/services/noteService.js lines 108 and 131, fetchNotesByTask() and fetchNotesByCustomer() use dynamic imports (await import('../api/notes')) while the file has static imports at the top for other API functions. This creates architectural inconsistency and can cause performance issues by loading modules multiple times. Dynamic imports should only be used for code-splitting large modules, not for simple API function imports.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/services/noteService.js"
           ],
-          "code_snippet": "async function detectParentEntity(fkId, supabase) {\n  const { data: project } = await supabase\n    .from('projects')\n    .select('id, organization_id')\n    .eq('id', fkId)\n    .maybeSingle();\n  // No error handling if query fails",
-          "recommendation": "Wrap each Supabase query in try-catch blocks and handle errors gracefully. Consider returning a specific error state that can be retried or logged. Example:\n\ntry {\n  const { data: project, error } = await supabase.from('projects')...\n  if (error) throw error;\n  if (project) return { entity_type: 'project', ... };\n} catch (error) {\n  console.error(`Failed to query projects for fkId ${fkId}:`, error);\n  return { entity_type: 'query_failed', error: error.message, fkId };\n}"
+          "code_snippet": "const { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');\nconst { fetchNotesByCustomer: fetchCustomerNotesAPI } = await import('../api/notes');",
+          "recommendation": "Replace dynamic imports with static imports at the top of the file: import { fetchNotesByTask as fetchTaskNotesAPI, fetchNotesByCustomer as fetchCustomerNotesAPI } from '../api/notes'; This aligns with established architecture and improves performance."
         },
         {
           "id": "COD-002",
           "category": "code_soundness",
           "severity": "major",
-          "title": "No retry logic for failed Supabase queries in transformation",
-          "description": "The transformation script (lines 587-722) performs database lookups for every note to detect parent entities. With potentially thousands of notes, network failures or rate limiting could cause the entire transformation to fail. The script only catches errors at the note level but doesn't implement retry logic for transient failures.",
+          "title": "Missing input validation for note content length",
+          "description": "The sanitizeNoteContent function in src/services/noteService.js (lines 3-16) strips HTML tags but doesn't validate content length limits. Backend APIs typically have content length restrictions, and without validation, users could submit extremely long content that might be rejected by the backend or cause performance issues.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/services/noteService.js"
           ],
-          "code_snippet": "for (const fmNote of exportData.notes) {\n  try {\n    const parentInfo = await detectParentEntity(fmNote._fkID, supabase);\n    // No retry on transient failures\n  } catch (error) {\n    invalidNotes.push({ reason: error.message, fmNote });\n  }\n}",
-          "recommendation": "Implement exponential backoff retry logic for database queries. Add a retry helper function:\n\nasync function withRetry(fn, maxRetries = 3) {\n  for (let i = 0; i < maxRetries; i++) {\n    try {\n      return await fn();\n    } catch (error) {\n      if (i === maxRetries - 1) throw error;\n      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));\n    }\n  }\n}\n\nThen use: const parentInfo = await withRetry(() => detectParentEntity(fmNote._fkID, supabase));"
+          "code_snippet": "function sanitizeNoteContent(value) {\n    if (value === null || value === undefined) {\n        return '';\n    }\n    const input = String(value);\n    // No length validation\n    return input.replace(/<[^>]*>/g, '');\n}",
+          "recommendation": "Add content length validation to prevent extremely long notes. Add a check like: if (sanitized.length > MAX_NOTE_LENGTH) { throw new Error('Note content exceeds maximum length'); } where MAX_NOTE_LENGTH is a reasonable limit (e.g., 10,000 characters)."
         },
         {
           "id": "COD-003",
           "category": "code_soundness",
           "severity": "major",
-          "title": "Potential memory exhaustion from loading entire dataset",
-          "description": "The transformation script (line 596) loads the entire export file into memory: `JSON.parse(fs.readFileSync('migration-data/notes-export.json'))`. For large datasets (10,000+ notes), this could cause memory issues. The script then processes all notes in a single loop without streaming.",
+          "title": "Potential memory leak in pagination state management",
+          "description": "The useNote hook maintains pagination state in paginationByEntity object (line 13) which grows indefinitely as users navigate between different entities. The pagination state is never cleaned up when entities are no longer accessed, which could lead to memory leaks in long-running sessions with many entities.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/hooks/useNote.js"
           ],
-          "code_snippet": "const exportData = JSON.parse(fs.readFileSync('migration-data/notes-export.json'));\n// Entire dataset in memory\nfor (const fmNote of exportData.notes) {\n  // Process all notes\n}",
-          "recommendation": "Use streaming JSON parsing for large datasets. Consider using a library like 'stream-json' or process in chunks:\n\nconst stream = fs.createReadStream('migration-data/notes-export.json');\nconst parser = JSONStream.parse('notes.*');\nstream.pipe(parser);\n\nfor await (const fmNote of parser) {\n  // Process one note at a time\n}\n\nAlternatively, if files are <100MB, current approach is acceptable but add a memory check and warning."
+          "code_snippet": "const [paginationByEntity, setPaginationByEntity] = useState({});\n// Pagination state grows indefinitely without cleanup\nconst updatePagination = useCallback((entityType, entityId, updates) => {\n    const key = `${entityType}-${entityId}`;\n    setPaginationByEntity(prev => ({\n        ...prev,\n        [key]: { ...prev[key], ...updates }\n    }));\n}, []);",
+          "recommendation": "Implement pagination state cleanup by adding a method to remove pagination state for entities that are no longer active, or implement an LRU (Least Recently Used) cache with a maximum size limit to prevent unbounded memory growth."
         },
         {
           "id": "COD-004",
           "category": "code_soundness",
-          "severity": "moderate",
-          "title": "Race condition in batch insert with sequential processing",
-          "description": "The load script (lines 728-799) processes batches sequentially with only a 1-second delay between batches, but doesn't verify that each batch completed successfully before proceeding. If a batch insert is still processing when the next batch starts, this could cause constraint violations or data corruption.",
+          "severity": "minor",
+          "title": "Redundant endpoint hardcoding in update/delete operations",
+          "description": "In src/api/notes.js, the updateNote (line 295) and deleteNote (line 321) functions hardcode the endpoint to '/projects/notes/{noteId}' regardless of which parent entity the note belongs to. While this might work if the backend supports this pattern, it's inconsistent with the create operation which uses entity-specific endpoints.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/api/notes.js"
           ],
-          "code_snippet": "const { data, error } = await supabase\n  .from('notes')\n  .insert(batch);\n\nif (error) {\n  // Logged but continues to next batch\n  failedBatches.push({ batchIndex: i, batch, error: error.message });\n}\n\n// Rate limiting - pause between batches\nif (i < batches.length - 1) {\n  await new Promise(resolve => setTimeout(resolve, 1000));\n}",
-          "recommendation": "Add explicit verification that the insert completed before proceeding. The 'await' should handle this, but add verification:\n\nconst { data, error } = await supabase.from('notes').insert(batch);\n\nif (error) {\n  console.error(`Batch ${i + 1} failed:`, error);\n  // Stop processing on critical errors\n  if (error.code === 'PGRST116' || error.code === '23505') {\n    throw new Error(`Critical error in batch ${i + 1}: ${error.message}`);\n  }\n  failedBatches.push({ batchIndex: i, batch, error });\n} else {\n  // Verify data was inserted\n  console.log(`  ✅ Batch ${i + 1} inserted ${data?.length || batch.length} records`);\n}"
+          "code_snippet": "// Always uses /projects/notes/ regardless of parent entity\nconst response = await dataService.patch(`/projects/notes/${noteId}`, payload);\n// Should potentially use entity-specific endpoints like create operation",
+          "recommendation": "Verify with backend documentation whether update/delete operations should use entity-specific endpoints like '/tasks/notes/{id}' and '/customers/notes/{id}' for consistency with create operations, or document why the unified '/projects/notes/{id}' endpoint is used."
         },
         {
           "id": "COD-005",
           "category": "code_soundness",
-          "severity": "moderate",
-          "title": "Missing null checks for environment variables",
-          "description": "The transformation script (lines 598-609) uses environment variables without verifying they exist. If SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or MIGRATION_USER_ID are missing, the script will fail with cryptic errors rather than clear validation messages.",
-          "file_paths": [
-            "requirements/notes/migration-plan.md"
-          ],
-          "code_snippet": "const supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY\n);\n\nconst migrationUserId = process.env.MIGRATION_USER_ID ||\n  emailToUUID.get('migration@claritybusinesssolutions.ca');",
-          "recommendation": "Add environment variable validation at the start of each script:\n\nfunction validateEnvironment() {\n  const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];\n  const missing = required.filter(key => !process.env[key]);\n  \n  if (missing.length > 0) {\n    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);\n  }\n  \n  if (!process.env.MIGRATION_USER_ID) {\n    console.warn('MIGRATION_USER_ID not set - will use fallback email lookup');\n  }\n}\n\nvalidateEnvironment();"
-        },
-        {
-          "id": "COD-006",
-          "category": "code_soundness",
-          "severity": "moderate",
-          "title": "Insufficient validation of user mapping result",
-          "description": "The `buildUserMapping()` function (lines 248-262) doesn't validate that any users were found or handle the case where the auth.admin.listUsers() returns an empty list. It also doesn't check if the migration user exists.",
-          "file_paths": [
-            "requirements/notes/migration-plan.md"
-          ],
-          "code_snippet": "async function buildUserMapping(supabase) {\n  const { data: users, error } = await supabase.auth.admin.listUsers();\n\n  if (error) {\n    throw new Error(`Failed to fetch users: ${error.message}`);\n  }\n\n  const emailToUUID = new Map();\n  users.users.forEach(user => {\n    emailToUUID.set(user.email.toLowerCase(), user.id);\n  });\n\n  console.log(`Built user mapping for ${emailToUUID.size} users`);\n  return emailToUUID;\n}",
-          "recommendation": "Add validation for empty user list and verify migration user exists:\n\nif (error) {\n  throw new Error(`Failed to fetch users: ${error.message}`);\n}\n\nif (!users || !users.users || users.users.length === 0) {\n  throw new Error('No users found in auth.users - cannot map creators');\n}\n\nconst emailToUUID = new Map();\nusers.users.forEach(user => {\n  if (!user.email) {\n    console.warn(`User ${user.id} has no email - skipping`);\n    return;\n  }\n  emailToUUID.set(user.email.toLowerCase(), user.id);\n});\n\n// Verify migration user exists\nconst migrationEmail = 'migration@claritybusinesssolutions.ca';\nif (!emailToUUID.has(migrationEmail)) {\n  throw new Error(`Migration user ${migrationEmail} not found - create before running migration`);\n}\n\nconsole.log(`Built user mapping for ${emailToUUID.size} users`);\nreturn emailToUUID;"
-        },
-        {
-          "id": "COD-007",
-          "category": "code_soundness",
           "severity": "minor",
-          "title": "Inefficient sequential parent entity lookups",
-          "description": "The `detectParentEntity()` function (lines 175-237) checks projects, then tasks, then customers sequentially for every note. This results in 3N database queries in the worst case (where N = number of notes). For large datasets, this is very slow.",
+          "title": "Inconsistent field naming between hasMore and has_more in pagination",
+          "description": "The useNote hook normalizes pagination field naming inconsistently in line 181, checking both 'has_more' and 'hasMore' from backend responses. This suggests uncertainty about the backend response format and could lead to incorrect pagination state if the backend changes its response format.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/hooks/useNote.js"
           ],
-          "code_snippet": "async function detectParentEntity(fkId, supabase) {\n  // Check projects first\n  const { data: project } = await supabase.from('projects')...\n  if (project) return {...};\n  \n  // Check tasks\n  const { data: task } = await supabase.from('tasks')...\n  if (task) return {...};\n  \n  // Check customers\n  const { data: customer } = await supabase.from('customers')...\n}",
-          "recommendation": "Optimize by:\n1. Pre-loading all parent entity IDs into Maps before transformation loop\n2. Or use Promise.all to check all three tables in parallel:\n\nconst [projectResult, taskResult, customerResult] = await Promise.all([\n  supabase.from('projects').select('id, organization_id').eq('id', fkId).maybeSingle(),\n  supabase.from('tasks').select('id, project_id, projects!inner(organization_id)').eq('id', fkId).maybeSingle(),\n  supabase.from('customers').select('id, organization_id').eq('id', fkId).maybeSingle()\n]);\n\nif (projectResult.data) return { entity_type: 'project', ... };\nif (taskResult.data) return { entity_type: 'task', ... };\nif (customerResult.data) return { entity_type: 'customer', ... };\n\nThis reduces 3N queries to N queries with 3 parallel lookups each."
-        },
-        {
-          "id": "COD-008",
-          "category": "code_soundness",
-          "severity": "minor",
-          "title": "Export validation doesn't check for file write permissions",
-          "description": "The export script (lines 42-106) creates directories and writes files without checking if the filesystem is writable or has sufficient space. If the disk is full or directory creation fails, the script will crash mid-export.",
-          "file_paths": [
-            "requirements/notes/migration-plan.md"
-          ],
-          "code_snippet": "const exportPath = 'migration-data/notes-export.json';\nfs.mkdirSync('migration-data', { recursive: true });\nfs.writeFileSync(exportPath, JSON.stringify(exportData, null, 2));",
-          "recommendation": "Add filesystem validation before export:\n\ntry {\n  const dir = 'migration-data';\n  fs.mkdirSync(dir, { recursive: true });\n  \n  // Check write permissions\n  const testFile = path.join(dir, '.write-test');\n  fs.writeFileSync(testFile, 'test');\n  fs.unlinkSync(testFile);\n  \n  // Check disk space (if needed)\n  const stats = fs.statSync(dir);\n  \n  fs.writeFileSync(exportPath, JSON.stringify(exportData, null, 2));\n} catch (error) {\n  throw new Error(`Failed to write export file: ${error.message}`);\n}"
+          "code_snippet": "const resolvedHasMore = pagination?.has_more ?? pagination?.hasMore ?? (notes.length >= resolvedLimit);",
+          "recommendation": "Standardize on one field naming convention (preferably snake_case 'has_more' to match backend patterns) and ensure the backend response format is consistent. Add proper backend response documentation to avoid this ambiguity."
         }
       ],
       "files_reviewed": 0,
-      "issues_found": 8
+      "issues_found": 5
     }
   },
   "SecurityCheckNode": {
-    "timestamp": "2026-01-16T19:44:29.006Z",
+    "timestamp": "2026-01-24T22:36:12.641Z",
     "output": {
-      "findings": [],
+      "findings": [
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "major",
+          "title": "Missing input validation for note content length allows potential DoS attacks",
+          "description": "The note content validation in src/api/notes.js (lines 122, 289) and src/services/noteService.js (lines 47, 164, 168) only checks if content exists but does not validate content length. An attacker could submit extremely large note content (potentially megabytes of text) which could: 1) Exhaust backend storage and memory resources, 2) Cause database performance degradation, 3) Lead to denial of service for other users, 4) Potentially crash the application or database. The sanitizeNoteContent function strips HTML but doesn't limit content size.",
+          "file_paths": [
+            "src/api/notes.js",
+            "src/services/noteService.js"
+          ],
+          "code_snippet": "const payload = {\n    note: data.content || data.note,  // No length validation\n    type: data.type || 'general',\n    // ...\n};\n\n// sanitizeNoteContent only strips HTML, no length check\nconst sanitizedContent = sanitizeNoteContent(noteContent).trim();",
+          "recommendation": "Add content length validation before sending to backend. Define a maximum note length (e.g., 10,000 characters) and validate in both API and service layers: if (content.length > MAX_NOTE_LENGTH) { throw new NoteError('Note content exceeds maximum length', NoteErrorCodes.INVALID_NOTE_DATA); }"
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "major",
+          "title": "Missing pagination parameter validation allows potential NoSQL injection",
+          "description": "The pagination parameters (limit and offset) in fetch functions (lines 171-172, 204-205, 237-238) are passed directly from user input to the backend without validation. An attacker could pass non-numeric values, negative numbers, or extremely large values which could: 1) Cause backend query errors or crashes, 2) Be used for injection attacks if backend doesn't properly sanitize, 3) Lead to resource exhaustion by requesting massive result sets, 4) Bypass intended pagination limits. Current code: queryParams.limit = options.limit without validation.",
+          "file_paths": [
+            "src/api/notes.js"
+          ],
+          "code_snippet": "const queryParams = {};\nif (options.limit) queryParams.limit = options.limit;  // No validation\nif (options.offset) queryParams.offset = options.offset;  // No validation\nconst response = await dataService.get(`/projects/${projectId}/notes`, { params: queryParams });",
+          "recommendation": "Add strict validation for pagination parameters: 1) Validate limit is a positive integer between 1 and maximum allowed (e.g., 200), 2) Validate offset is non-negative integer, 3) Sanitize parameters before passing to backend: if (options.limit && (!Number.isInteger(options.limit) || options.limit < 1 || options.limit > MAX_LIMIT)) { throw new NoteError('Invalid limit parameter'); }"
+        },
+        {
+          "id": "SEC-003",
+          "category": "security",
+          "severity": "major",
+          "title": "Service role key exposure in migration script could grant unrestricted database access",
+          "description": "The migration script scripts/load-notes-to-supabase.js (line 67) uses the SUPABASE_SERVICE_ROLE_KEY environment variable which bypasses ALL Row-Level Security policies. While the script includes browser detection guards (lines 15-20), there are still risks: 1) If the script is accidentally deployed to a frontend environment, the service role key could be exposed in client bundles, 2) The key grants unrestricted access to the entire Supabase database across all organizations, 3) No additional validation of the environment beyond browser detection, 4) Key rotation requirements are documented but not enforced programmatically.",
+          "file_paths": [
+            "scripts/load-notes-to-supabase.js"
+          ],
+          "code_snippet": "// SECURITY: This client has unrestricted access - use only in backend\nconst supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY  // Bypasses all RLS policies\n);",
+          "recommendation": "Enhance security measures: 1) Add additional environment validation (check NODE_ENV !== 'production' or require specific migration environment flag), 2) Implement automatic key rotation after migration completion, 3) Add script execution logging and monitoring, 4) Consider using time-limited service tokens instead of permanent service role key, 5) Implement IP allowlisting for migration script execution."
+        },
+        {
+          "id": "SEC-004",
+          "category": "security",
+          "severity": "minor",
+          "title": "Inconsistent error message sanitization may leak sensitive information",
+          "description": "Error handling in src/hooks/useNote.js (lines 101, 199, 247, 280) extracts error messages from backend responses using err.response?.data?.message without sanitizing. If the backend returns detailed error messages containing sensitive information (database schema details, internal paths, etc.), this information could be exposed to users through the UI via showError() calls. While not a direct vulnerability, it could aid attackers in reconnaissance.",
+          "file_paths": [
+            "src/hooks/useNote.js"
+          ],
+          "code_snippet": "const errorMessage = err.response?.data?.message || err.message || 'Error creating note';\nsetError(errorMessage);\nshowError(errorMessage);  // Potentially shows backend error details to user",
+          "recommendation": "Implement error message sanitization: 1) Create a whitelist of safe error messages, 2) Strip sensitive information from backend error messages, 3) Use generic error messages for production while logging detailed errors server-side, 4) Consider using error codes instead of raw messages for user-facing errors."
+        },
+        {
+          "id": "SEC-005",
+          "category": "security",
+          "severity": "minor",
+          "title": "Missing rate limiting protection for note creation API",
+          "description": "The note creation functions in src/api/notes.js and src/services/noteService.js do not implement any client-side rate limiting protection. While backend rate limiting should exist, an attacker could potentially: 1) Rapidly create many notes to flood the database, 2) Overwhelm the backend API with creation requests, 3) Cause resource exhaustion for legitimate users. The current implementation allows unlimited rapid-fire note creation attempts.",
+          "file_paths": [
+            "src/api/notes.js",
+            "src/services/noteService.js"
+          ],
+          "code_snippet": "export async function createNote(data) {\n    return withNoteErrorHandling(async () => {\n        // No rate limiting checks\n        const response = await dataService.post(endpoint, payload);\n        return normalizeNoteData(response.data || response);\n    }, 'createNote', { data });\n}",
+          "recommendation": "Implement client-side rate limiting: 1) Add a simple rate limiter that tracks recent note creation attempts per user/session, 2) Implement exponential backoff for rapid consecutive requests, 3) Add user-friendly messaging about rate limits, 4) Consider implementing debouncing for user interface note creation actions."
+        }
+      ],
       "files_reviewed": 0,
-      "vulnerabilities_found": 0
+      "vulnerabilities_found": 5
     }
   },
   "ArchitectureCheckNode": {
-    "timestamp": "2026-01-16T19:46:47.880Z",
+    "timestamp": "2026-01-24T22:37:39.139Z",
     "output": {
-      "findings": [],
+      "findings": [
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing formatErrorForUI function export violates error handling architecture pattern",
+          "description": "The src/errors/noteErrors.js module is missing the formatErrorForUI function that is standard across all error handling modules. The customer error module (src/errors/customerErrors.js) exports formatErrorForUI which is used by useCustomer hook for formatted error state management. The notes implementation lacks this critical function, preventing the useNote hook from following the established error formatting pattern. This architectural inconsistency means notes error handling provides inferior user experience compared to other features.",
+          "file_paths": [
+            "src/errors/noteErrors.js",
+            "src/hooks/useNote.js"
+          ],
+          "code_snippet": "// src/errors/index.js - Note exports missing formatErrorForUI\nexport {\n    NoteError,\n    NoteErrorCodes,\n    parseHttpError as parseNoteHttpError,\n    checkOrganizationScope as checkNoteOrganizationScope,\n    withErrorHandling as withNoteErrorHandling\n    // Missing: formatErrorForUI\n} from './noteErrors';\n\n// src/hooks/useNote.js - Uses basic error handling instead of formatted\nconst errorMessage = err.response?.data?.message || err.message || 'Error creating note';\nsetError(errorMessage);  // Should use setErrorWithFormatting pattern",
+          "recommendation": "Add formatErrorForUI function to src/errors/noteErrors.js following the customer pattern: 1) Implement formatErrorForUI that converts NoteError instances to user-friendly messages, 2) Export it from noteErrors module and index.js, 3) Update useNote hook to use setErrorWithFormatting pattern like useCustomer, 4) Add formattedError state alongside error state for consistent UI error display."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Service layer imports bypass static dependency pattern",
+          "description": "The src/services/noteService.js violates the established static import pattern used throughout the codebase. Lines 108 and 131 use dynamic imports (await import('../api/notes')) for fetchNotesByTask and fetchNotesByCustomer, while other service files like customerService.js use static imports at the top. This architectural inconsistency creates: 1) Unclear dependency graphs, 2) Potential module loading issues, 3) Performance implications from repeated imports, 4) Violation of established service layer patterns.",
+          "file_paths": [
+            "src/services/noteService.js"
+          ],
+          "code_snippet": "// INCONSISTENT: Dynamic imports in noteService.js\nconst { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');\nconst { fetchNotesByCustomer: fetchCustomerNotesAPI } = await import('../api/notes');\n\n// EXPECTED: Static imports like other services\n// Should be at top of file:\n// import { fetchNotesByTask, fetchNotesByCustomer } from '../api/notes';",
+          "recommendation": "Replace dynamic imports with static imports at the top of src/services/noteService.js: 1) Add static import: import { createNote, fetchProjectNotes, fetchNotesByTask as fetchTaskNotesAPI, fetchNotesByCustomer as fetchCustomerNotesAPI, deleteNote, updateNote } from '../api/notes', 2) Remove await import() statements, 3) Use imported functions directly. This aligns with established architecture patterns seen in customerService.js and other services."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Hook error handling pattern deviation violates established architecture",
+          "description": "The src/hooks/useNote.js implements basic error handling with console.error instead of the established setErrorWithFormatting pattern used in src/hooks/useCustomer.js. The customer hook demonstrates the standard architecture: formattedError state, setErrorWithFormatting helper, and structured error logging. The notes hook lacks: 1) Formatted error state for UI display, 2) Error formatting helper function, 3) Structured error logging with context, 4) NoteError-specific type checking. This creates architectural inconsistency and worse UX for notes operations.",
+          "file_paths": [
+            "src/hooks/useNote.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// INCONSISTENT: useNote.js basic error handling\nconst errorMessage = err.response?.data?.message || err.message || 'Error creating note';\nsetError(errorMessage);\nshowError(errorMessage);\nconsole.error('[useNote] handleNoteCreate error:', err);\n\n// EXPECTED: useCustomer.js formatted error pattern\nconst setErrorWithFormatting = useCallback((err) => {\n    const formatted = formatErrorForUI(err);\n    setError(formatted.message);\n    setFormattedError(formatted);\n    console.error('[useCustomer] Error:', { raw: err, formatted, stack: err?.stack });\n}, []);",
+          "recommendation": "Refactor src/hooks/useNote.js to match the established error handling pattern: 1) Add formattedError state alongside error state, 2) Create setErrorWithFormatting helper that calls formatErrorForUI from noteErrors, 3) Replace setError calls with setErrorWithFormatting, 4) Enhance console.error to log structured data (raw error, formatted, stack), 5) Import formatErrorForUI and parseValidationError from noteErrors module."
+        },
+        {
+          "id": "ARC-004",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Pagination field naming inconsistency violates established conventions",
+          "description": "The src/hooks/useNote.js uses inconsistent field naming for pagination state. Line 28 uses 'hasMore' while line 181 checks both 'has_more' and 'hasMore' from backend responses. The established pattern in src/hooks/useCustomer.js consistently uses 'has_more' (snake_case) for pagination fields, matching backend API conventions. This inconsistency could lead to pagination bugs and violates the principle of consistent naming conventions.",
+          "file_paths": [
+            "src/hooks/useNote.js"
+          ],
+          "code_snippet": "// INCONSISTENT: Mixed naming in useNote.js\nreturn paginationByEntity[key] || {\n    limit: 50,\n    offset: 0,\n    hasMore: false,  // camelCase\n    total: 0\n};\n\n// Later in same file:\nconst resolvedHasMore = pagination?.has_more ?? pagination?.hasMore ?? (notes.length >= resolvedLimit);\n\n// EXPECTED: Consistent snake_case like useCustomer.js\nhas_more: false  // Should match backend convention",
+          "recommendation": "Standardize pagination field naming to match established backend conventions: 1) Use 'has_more' consistently throughout useNote.js, 2) Remove the fallback checks for 'hasMore' since backend should return consistent field names, 3) Update pagination default object to use 'has_more' instead of 'hasMore', 4) Document backend pagination response format to prevent future inconsistencies."
+        },
+        {
+          "id": "ARC-005",
+          "category": "architectural_fit",
+          "severity": "minor",
+          "title": "Missing hook cleanup and lifecycle management violates established patterns",
+          "description": "The src/hooks/useNote.js lacks the cleanup and lifecycle management patterns established in src/hooks/useCustomer.js. The customer hook implements: useRef for mounted state tracking, useEffect for cleanup, and proper component unmounting handling. The notes hook could accumulate memory through unbounded pagination state and lacks defensive programming patterns for component lifecycle management.",
+          "file_paths": [
+            "src/hooks/useNote.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// MISSING: useNote.js lacks lifecycle management\n// No useRef for mounted state, no cleanup patterns\n\n// EXPECTED: useCustomer.js lifecycle pattern\nconst isMountedRef = useRef(true);\nconst paginationRef = useRef(pagination);\n\nuseEffect(() => {\n    paginationRef.current = pagination;\n}, [pagination]);\n\n// Component cleanup patterns\nconst clearSearchTimeout = useCallback(() => { /* cleanup */ }, []);",
+          "recommendation": "Add lifecycle management to src/hooks/useNote.js following the customer pattern: 1) Add isMountedRef for component state tracking, 2) Implement useEffect cleanup for pagination state, 3) Add defensive checks before state updates, 4) Consider implementing pagination cleanup for memory management, 5) Add proper cleanup callbacks for long-running operations."
+        }
+      ],
       "patterns_reviewed": 0,
-      "violations_found": 0
+      "violations_found": 5
     }
   },
   "JudgeNode": {
-    "timestamp": "2026-01-16T19:46:47.884Z",
+    "timestamp": "2026-01-24T22:37:39.141Z",
     "output": {
-      "total_findings": 8,
+      "total_findings": 17,
       "kept_findings": [
         {
           "id": "COD-001",
           "category": "code_soundness",
           "severity": "major",
-          "title": "Missing error handling in async parent entity detection",
-          "description": "The `detectParentEntity()` function in migration-plan.md (lines 175-237) performs multiple async Supabase queries without proper error handling. If any query fails (network issues, auth problems, etc.), the function will throw an unhandled exception that could crash the entire migration process mid-stream.",
+          "title": "Inconsistent dynamic imports violate architecture pattern",
+          "description": "In src/services/noteService.js lines 108 and 131, fetchNotesByTask() and fetchNotesByCustomer() use dynamic imports (await import('../api/notes')) while the file has static imports at the top for other API functions. This creates architectural inconsistency and can cause performance issues by loading modules multiple times. Dynamic imports should only be used for code-splitting large modules, not for simple API function imports.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/services/noteService.js"
           ],
-          "code_snippet": "async function detectParentEntity(fkId, supabase) {\n  const { data: project } = await supabase\n    .from('projects')\n    .select('id, organization_id')\n    .eq('id', fkId)\n    .maybeSingle();\n  // No error handling if query fails",
-          "recommendation": "Wrap each Supabase query in try-catch blocks and handle errors gracefully. Consider returning a specific error state that can be retried or logged. Example:\n\ntry {\n  const { data: project, error } = await supabase.from('projects')...\n  if (error) throw error;\n  if (project) return { entity_type: 'project', ... };\n} catch (error) {\n  console.error(`Failed to query projects for fkId ${fkId}:`, error);\n  return { entity_type: 'query_failed', error: error.message, fkId };\n}"
+          "code_snippet": "const { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');\nconst { fetchNotesByCustomer: fetchCustomerNotesAPI } = await import('../api/notes');",
+          "recommendation": "Replace dynamic imports with static imports at the top of the file: import { fetchNotesByTask as fetchTaskNotesAPI, fetchNotesByCustomer as fetchCustomerNotesAPI } from '../api/notes'; This aligns with established architecture and improves performance."
         },
         {
           "id": "COD-002",
           "category": "code_soundness",
           "severity": "major",
-          "title": "No retry logic for failed Supabase queries in transformation",
-          "description": "The transformation script (lines 587-722) performs database lookups for every note to detect parent entities. With potentially thousands of notes, network failures or rate limiting could cause the entire transformation to fail. The script only catches errors at the note level but doesn't implement retry logic for transient failures.",
+          "title": "Missing input validation for note content length",
+          "description": "The sanitizeNoteContent function in src/services/noteService.js (lines 3-16) strips HTML tags but doesn't validate content length limits. Backend APIs typically have content length restrictions, and without validation, users could submit extremely long content that might be rejected by the backend or cause performance issues.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/services/noteService.js"
           ],
-          "code_snippet": "for (const fmNote of exportData.notes) {\n  try {\n    const parentInfo = await detectParentEntity(fmNote._fkID, supabase);\n    // No retry on transient failures\n  } catch (error) {\n    invalidNotes.push({ reason: error.message, fmNote });\n  }\n}",
-          "recommendation": "Implement exponential backoff retry logic for database queries. Add a retry helper function:\n\nasync function withRetry(fn, maxRetries = 3) {\n  for (let i = 0; i < maxRetries; i++) {\n    try {\n      return await fn();\n    } catch (error) {\n      if (i === maxRetries - 1) throw error;\n      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));\n    }\n  }\n}\n\nThen use: const parentInfo = await withRetry(() => detectParentEntity(fmNote._fkID, supabase));"
+          "code_snippet": "function sanitizeNoteContent(value) {\n    if (value === null || value === undefined) {\n        return '';\n    }\n    const input = String(value);\n    // No length validation\n    return input.replace(/<[^>]*>/g, '');\n}",
+          "recommendation": "Add content length validation to prevent extremely long notes. Add a check like: if (sanitized.length > MAX_NOTE_LENGTH) { throw new Error('Note content exceeds maximum length'); } where MAX_NOTE_LENGTH is a reasonable limit (e.g., 10,000 characters)."
         },
         {
           "id": "COD-003",
           "category": "code_soundness",
           "severity": "major",
-          "title": "Potential memory exhaustion from loading entire dataset",
-          "description": "The transformation script (line 596) loads the entire export file into memory: `JSON.parse(fs.readFileSync('migration-data/notes-export.json'))`. For large datasets (10,000+ notes), this could cause memory issues. The script then processes all notes in a single loop without streaming.",
+          "title": "Potential memory leak in pagination state management",
+          "description": "The useNote hook maintains pagination state in paginationByEntity object (line 13) which grows indefinitely as users navigate between different entities. The pagination state is never cleaned up when entities are no longer accessed, which could lead to memory leaks in long-running sessions with many entities.",
           "file_paths": [
-            "requirements/notes/migration-plan.md"
+            "src/hooks/useNote.js"
           ],
-          "code_snippet": "const exportData = JSON.parse(fs.readFileSync('migration-data/notes-export.json'));\n// Entire dataset in memory\nfor (const fmNote of exportData.notes) {\n  // Process all notes\n}",
-          "recommendation": "Use streaming JSON parsing for large datasets. Consider using a library like 'stream-json' or process in chunks:\n\nconst stream = fs.createReadStream('migration-data/notes-export.json');\nconst parser = JSONStream.parse('notes.*');\nstream.pipe(parser);\n\nfor await (const fmNote of parser) {\n  // Process one note at a time\n}\n\nAlternatively, if files are <100MB, current approach is acceptable but add a memory check and warning."
+          "code_snippet": "const [paginationByEntity, setPaginationByEntity] = useState({});\n// Pagination state grows indefinitely without cleanup\nconst updatePagination = useCallback((entityType, entityId, updates) => {\n    const key = `${entityType}-${entityId}`;\n    setPaginationByEntity(prev => ({\n        ...prev,\n        [key]: { ...prev[key], ...updates }\n    }));\n}, []);",
+          "recommendation": "Implement pagination state cleanup by adding a method to remove pagination state for entities that are no longer active, or implement an LRU (Least Recently Used) cache with a maximum size limit to prevent unbounded memory growth."
+        },
+        {
+          "id": "SEC-001",
+          "category": "security",
+          "severity": "major",
+          "title": "Missing input validation for note content length allows potential DoS attacks",
+          "description": "The note content validation in src/api/notes.js (lines 122, 289) and src/services/noteService.js (lines 47, 164, 168) only checks if content exists but does not validate content length. An attacker could submit extremely large note content (potentially megabytes of text) which could: 1) Exhaust backend storage and memory resources, 2) Cause database performance degradation, 3) Lead to denial of service for other users, 4) Potentially crash the application or database. The sanitizeNoteContent function strips HTML but doesn't limit content size.",
+          "file_paths": [
+            "src/api/notes.js",
+            "src/services/noteService.js"
+          ],
+          "code_snippet": "const payload = {\n    note: data.content || data.note,  // No length validation\n    type: data.type || 'general',\n    // ...\n};\n\n// sanitizeNoteContent only strips HTML, no length check\nconst sanitizedContent = sanitizeNoteContent(noteContent).trim();",
+          "recommendation": "Add content length validation before sending to backend. Define a maximum note length (e.g., 10,000 characters) and validate in both API and service layers: if (content.length > MAX_NOTE_LENGTH) { throw new NoteError('Note content exceeds maximum length', NoteErrorCodes.INVALID_NOTE_DATA); }"
+        },
+        {
+          "id": "SEC-002",
+          "category": "security",
+          "severity": "major",
+          "title": "Missing pagination parameter validation allows potential NoSQL injection",
+          "description": "The pagination parameters (limit and offset) in fetch functions (lines 171-172, 204-205, 237-238) are passed directly from user input to the backend without validation. An attacker could pass non-numeric values, negative numbers, or extremely large values which could: 1) Cause backend query errors or crashes, 2) Be used for injection attacks if backend doesn't properly sanitize, 3) Lead to resource exhaustion by requesting massive result sets, 4) Bypass intended pagination limits. Current code: queryParams.limit = options.limit without validation.",
+          "file_paths": [
+            "src/api/notes.js"
+          ],
+          "code_snippet": "const queryParams = {};\nif (options.limit) queryParams.limit = options.limit;  // No validation\nif (options.offset) queryParams.offset = options.offset;  // No validation\nconst response = await dataService.get(`/projects/${projectId}/notes`, { params: queryParams });",
+          "recommendation": "Add strict validation for pagination parameters: 1) Validate limit is a positive integer between 1 and maximum allowed (e.g., 200), 2) Validate offset is non-negative integer, 3) Sanitize parameters before passing to backend: if (options.limit && (!Number.isInteger(options.limit) || options.limit < 1 || options.limit > MAX_LIMIT)) { throw new NoteError('Invalid limit parameter'); }"
+        },
+        {
+          "id": "SEC-003",
+          "category": "security",
+          "severity": "major",
+          "title": "Service role key exposure in migration script could grant unrestricted database access",
+          "description": "The migration script scripts/load-notes-to-supabase.js (line 67) uses the SUPABASE_SERVICE_ROLE_KEY environment variable which bypasses ALL Row-Level Security policies. While the script includes browser detection guards (lines 15-20), there are still risks: 1) If the script is accidentally deployed to a frontend environment, the service role key could be exposed in client bundles, 2) The key grants unrestricted access to the entire Supabase database across all organizations, 3) No additional validation of the environment beyond browser detection, 4) Key rotation requirements are documented but not enforced programmatically.",
+          "file_paths": [
+            "scripts/load-notes-to-supabase.js"
+          ],
+          "code_snippet": "// SECURITY: This client has unrestricted access - use only in backend\nconst supabase = createClient(\n  process.env.SUPABASE_URL,\n  process.env.SUPABASE_SERVICE_ROLE_KEY  // Bypasses all RLS policies\n);",
+          "recommendation": "Enhance security measures: 1) Add additional environment validation (check NODE_ENV !== 'production' or require specific migration environment flag), 2) Implement automatic key rotation after migration completion, 3) Add script execution logging and monitoring, 4) Consider using time-limited service tokens instead of permanent service role key, 5) Implement IP allowlisting for migration script execution."
+        },
+        {
+          "id": "ARC-001",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing formatErrorForUI function export violates error handling architecture pattern",
+          "description": "The src/errors/noteErrors.js module is missing the formatErrorForUI function that is standard across all error handling modules. The customer error module (src/errors/customerErrors.js) exports formatErrorForUI which is used by useCustomer hook for formatted error state management. The notes implementation lacks this critical function, preventing the useNote hook from following the established error formatting pattern. This architectural inconsistency means notes error handling provides inferior user experience compared to other features.",
+          "file_paths": [
+            "src/errors/noteErrors.js",
+            "src/hooks/useNote.js"
+          ],
+          "code_snippet": "// src/errors/index.js - Note exports missing formatErrorForUI\nexport {\n    NoteError,\n    NoteErrorCodes,\n    parseHttpError as parseNoteHttpError,\n    checkOrganizationScope as checkNoteOrganizationScope,\n    withErrorHandling as withNoteErrorHandling\n    // Missing: formatErrorForUI\n} from './noteErrors';\n\n// src/hooks/useNote.js - Uses basic error handling instead of formatted\nconst errorMessage = err.response?.data?.message || err.message || 'Error creating note';\nsetError(errorMessage);  // Should use setErrorWithFormatting pattern",
+          "recommendation": "Add formatErrorForUI function to src/errors/noteErrors.js following the customer pattern: 1) Implement formatErrorForUI that converts NoteError instances to user-friendly messages, 2) Export it from noteErrors module and index.js, 3) Update useNote hook to use setErrorWithFormatting pattern like useCustomer, 4) Add formattedError state alongside error state for consistent UI error display."
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Service layer imports bypass static dependency pattern",
+          "description": "The src/services/noteService.js violates the established static import pattern used throughout the codebase. Lines 108 and 131 use dynamic imports (await import('../api/notes')) for fetchNotesByTask and fetchNotesByCustomer, while other service files like customerService.js use static imports at the top. This architectural inconsistency creates: 1) Unclear dependency graphs, 2) Potential module loading issues, 3) Performance implications from repeated imports, 4) Violation of established service layer patterns.",
+          "file_paths": [
+            "src/services/noteService.js"
+          ],
+          "code_snippet": "// INCONSISTENT: Dynamic imports in noteService.js\nconst { fetchNotesByTask: fetchTaskNotesAPI } = await import('../api/notes');\nconst { fetchNotesByCustomer: fetchCustomerNotesAPI } = await import('../api/notes');\n\n// EXPECTED: Static imports like other services\n// Should be at top of file:\n// import { fetchNotesByTask, fetchNotesByCustomer } from '../api/notes';",
+          "recommendation": "Replace dynamic imports with static imports at the top of src/services/noteService.js: 1) Add static import: import { createNote, fetchProjectNotes, fetchNotesByTask as fetchTaskNotesAPI, fetchNotesByCustomer as fetchCustomerNotesAPI, deleteNote, updateNote } from '../api/notes', 2) Remove await import() statements, 3) Use imported functions directly. This aligns with established architecture patterns seen in customerService.js and other services."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Hook error handling pattern deviation violates established architecture",
+          "description": "The src/hooks/useNote.js implements basic error handling with console.error instead of the established setErrorWithFormatting pattern used in src/hooks/useCustomer.js. The customer hook demonstrates the standard architecture: formattedError state, setErrorWithFormatting helper, and structured error logging. The notes hook lacks: 1) Formatted error state for UI display, 2) Error formatting helper function, 3) Structured error logging with context, 4) NoteError-specific type checking. This creates architectural inconsistency and worse UX for notes operations.",
+          "file_paths": [
+            "src/hooks/useNote.js",
+            "src/hooks/useCustomer.js"
+          ],
+          "code_snippet": "// INCONSISTENT: useNote.js basic error handling\nconst errorMessage = err.response?.data?.message || err.message || 'Error creating note';\nsetError(errorMessage);\nshowError(errorMessage);\nconsole.error('[useNote] handleNoteCreate error:', err);\n\n// EXPECTED: useCustomer.js formatted error pattern\nconst setErrorWithFormatting = useCallback((err) => {\n    const formatted = formatErrorForUI(err);\n    setError(formatted.message);\n    setFormattedError(formatted);\n    console.error('[useCustomer] Error:', { raw: err, formatted, stack: err?.stack });\n}, []);",
+          "recommendation": "Refactor src/hooks/useNote.js to match the established error handling pattern: 1) Add formattedError state alongside error state, 2) Create setErrorWithFormatting helper that calls formatErrorForUI from noteErrors, 3) Replace setError calls with setErrorWithFormatting, 4) Enhance console.error to log structured data (raw error, formatted, stack), 5) Import formatErrorForUI and parseValidationError from noteErrors module."
         }
       ],
       "dropped_findings": [
-        "COD-007",
-        "COD-008"
+        "COM-001",
+        "COD-004",
+        "COD-005",
+        "SEC-004",
+        "SEC-005",
+        "ARC-004",
+        "ARC-005"
       ],
       "merged_findings": [],
       "decisions": [
@@ -213,17 +417,91 @@
           "reason": "major severity - requires remediation"
         },
         {
-          "finding_id": "COD-007",
+          "finding_id": "SEC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "SEC-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-001",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-002",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "ARC-003",
+          "action": "keep",
+          "reason": "major severity - requires remediation"
+        },
+        {
+          "finding_id": "COM-001",
           "action": "drop",
           "reason": "minor severity - below threshold"
         },
         {
-          "finding_id": "COD-008",
+          "finding_id": "COD-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "COD-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "SEC-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "SEC-005",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-004",
+          "action": "drop",
+          "reason": "minor severity - below threshold"
+        },
+        {
+          "finding_id": "ARC-005",
           "action": "drop",
           "reason": "minor severity - below threshold"
         }
       ],
-      "summary": "Judge phase complete: 8 findings reviewed, 3 kept (critical/major), 2 dropped (minor/suggestion), 0 merged (duplicates)"
+      "summary": "Judge phase complete: 17 findings reviewed, 9 kept (critical/major), 7 dropped (minor/suggestion), 0 merged (duplicates)"
+    }
+  },
+  "FinalizeNode": {
+    "timestamp": "2026-01-24T22:37:39.163Z",
+    "output": {
+      "review_status": "blocked",
+      "tasks_created": [
+        "TASK028",
+        "TASK029",
+        "TASK030",
+        "TASK031",
+        "TASK032",
+        "TASK033",
+        "TASK034",
+        "TASK035",
+        "TASK036"
+      ],
+      "summary": "Found 9 issue(s) requiring remediation - created 9 task(s)",
+      "findings_count": 9
     }
   }
 }

