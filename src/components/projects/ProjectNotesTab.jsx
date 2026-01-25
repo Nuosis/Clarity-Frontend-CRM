@@ -17,6 +17,7 @@ function ProjectNotesTab({ project, darkMode }) {
     handleFetchNotes,
     getPagination,
     updatePagination,
+    clearPagination,
     loading: noteLoading
   } = useNote();
   const { loadProjectDetails } = useProject();
@@ -37,6 +38,13 @@ function ProjectNotesTab({ project, darkMode }) {
       });
     }
   }, [project.id, project.notes, getPagination, updatePagination]);
+
+  // Cleanup pagination state when component unmounts or project changes
+  React.useEffect(() => {
+    return () => {
+      clearPagination('project', project.id);
+    };
+  }, [project.id, clearPagination]);
 
   // Load more notes handler
   const handleLoadMore = async () => {

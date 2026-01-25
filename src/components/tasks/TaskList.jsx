@@ -639,6 +639,7 @@ function TaskList({
         handleFetchNotes,
         getPagination,
         updatePagination,
+        clearPagination,
         loading: noteLoading
     } = useNote();
 
@@ -667,6 +668,15 @@ function TaskList({
             });
         }
     }, [taskNotes, selectedTask, getPagination, updatePagination]);
+
+    // Cleanup pagination state when selected task changes
+    React.useEffect(() => {
+        return () => {
+            if (selectedTask?.id) {
+                clearPagination('task', selectedTask.id);
+            }
+        };
+    }, [selectedTask?.id, clearPagination]);
 
     // Memoized handlers
     const handleLoadMoreNotes = useCallback(async (taskId) => {

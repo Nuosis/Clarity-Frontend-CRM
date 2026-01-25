@@ -48,6 +48,28 @@ export function useNote() {
     }, []);
 
     /**
+     * Clear pagination state for a specific entity
+     * Call this when unmounting or when entity is no longer needed
+     * @param {string} entityType - 'project', 'task', or 'customer'
+     * @param {string} entityId - Entity ID
+     */
+    const clearPagination = useCallback((entityType, entityId) => {
+        const key = `${entityType}-${entityId}`;
+        setPaginationByEntity(prev => {
+            const { [key]: _, ...rest } = prev;
+            return rest;
+        });
+    }, []);
+
+    /**
+     * Clear all pagination state
+     * Useful for cleanup or when logging out
+     */
+    const clearAllPagination = useCallback(() => {
+        setPaginationByEntity({});
+    }, []);
+
+    /**
      * Create a new note via backend API
      *
      * Supports both signatures for backward compatibility:
@@ -296,6 +318,8 @@ export function useNote() {
         handleNoteDelete,
         getPagination,
         updatePagination,
+        clearPagination,
+        clearAllPagination,
         clearError: () => setError(null)
     };
 }
