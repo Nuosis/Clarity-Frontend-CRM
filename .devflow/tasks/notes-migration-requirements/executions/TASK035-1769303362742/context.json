@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "workflowStarted": "2026-01-25T01:09:22.742Z",
+    "featureSlug": "notes-migration-requirements",
+    "taskId": "TASK035",
+    "projectPath": "/Users/marcusswift/javascript/clarityCrmFrontend",
+    "title": "[REVIEW] Service layer imports bypass static dependency pattern",
+    "sessionId": "55acb8de-43bd-43c7-9f7f-651058630c24",
+    "processId": null,
+    "lastUpdated": "2026-01-25T01:11:46.187Z"
+  },
+  "PreflightNode": {
+    "timestamp": "2026-01-25T01:09:22.744Z",
+    "output": {
+      "passed": true,
+      "dependenciesMet": true,
+      "preflightResults": null,
+      "repairAttempts": 0,
+      "repairSucceeded": false
+    }
+  },
+  "ExecuteTaskNode": {
+    "timestamp": "2026-01-25T01:11:46.187Z",
+    "output": {
+      "success": true,
+      "sessionId": "55acb8de-43bd-43c7-9f7f-651058630c24",
+      "processId": 6585,
+      "summary": "Task execution completed with exit code 0",
+      "implementationNotes": "Task execution completed. Check logs for details.\n\nFinal output:\n\n### Files Modified:\n1. **src/services/salesService.js** (3 violations fixed)\n   - Added static imports for `processProjectValue` from `./projectService`\n   - Added static import for `processFinancialData` from `./billableHoursService`\n   - Removed 3 dynamic `await import()` statements (lines 939, 989, 1246-1247)\n\n2. **src/services/dualWriteService.js** (3 violations fixed)\n   - Added static imports for `createSale` from `./salesService`\n   - Added static import for `fetchFinancialRecordByRecordId` from `../api/financialRecords`\n   - Added static import for `stopTaskTimerAPI` from `../api/tasks`\n   - Removed 3 dynamic `await import()` statements (lines 238, 273, 345)\n\n### Changes Summary:\n- **Total violations fixed:** 6 dynamic imports replaced with static imports\n- **Pattern enforced:** All service layer dependencies now use static imports at the top of files\n- **Build verification:** ✅ Build completed successfully with no errors\n- **No remaining violations:** Verified via grep - no dynamic imports remain in service layer\n\nAll service layer files now follow the static dependency pattern, improving code maintainability, enabling better tree-shaking, and making dependencies explicit and analyzable at build time."
+    }
+  }
+}

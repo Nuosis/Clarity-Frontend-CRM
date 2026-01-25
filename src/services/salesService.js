@@ -13,6 +13,8 @@ import {
   fetchQuarterlyRecords,
   fetchYearlyRecords
 } from '../api/financialRecords';
+import { processProjectValue } from './projectService';
+import { processFinancialData } from './billableHoursService';
 
 /**
  * Transforms financial records from the financialRecords API to sales format
@@ -933,11 +935,6 @@ export async function createSalesFromProjectValue(project, organizationId) {
       };
     }
 
-    // Import the processProjectValue function from projectService
-    // Note: In a real implementation, you would import this at the top of the file
-    // For this example, we'll assume the function is available
-    const { processProjectValue } = await import('./projectService');
-    
     // Process the project to determine what sales entries to create
     const { salesToCreate } = processProjectValue(project);
     
@@ -985,8 +982,7 @@ export async function createSalesFromUnbilledFinancials(organizationId) {
       };
     }
 
-    // Import processFinancialData to transform the records
-    const { processFinancialData } = await import('./billableHoursService');
+    // Transform the records using processFinancialData
     const financialRecords = processFinancialData(result);
 
     if (!financialRecords || financialRecords.length === 0) {
@@ -1241,10 +1237,6 @@ export async function createSaleFromFinancialRecord(financialId, organizationId)
     if (!organizationId) {
       throw new Error('Organization ID is required');
     }
-
-    // Import required functions
-    const { fetchFinancialRecords } = await import('../api/financialRecords');
-    const { processFinancialData } = await import('./billableHoursService');
 
     // Fetch the specific financial record
     const result = await fetchFinancialRecords('unpaid', null, null);

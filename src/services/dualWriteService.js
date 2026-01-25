@@ -43,7 +43,9 @@
  * DO NOT USE THIS SERVICE FOR NEW CODE.
  * Refer to CLAUDE.md for current architecture patterns.
  */
-import { createSaleFromFinancialRecord } from './salesService';
+import { createSaleFromFinancialRecord, createSale } from './salesService';
+import { fetchFinancialRecordByRecordId } from '../api/financialRecords';
+import { stopTaskTimerAPI } from '../api/tasks';
 
 /**
  * Configuration for dual-write operations
@@ -235,7 +237,6 @@ async function handleTimerStartSupabaseOperation(fileMakerResult, organizationId
     };
 
     // Create the sales record directly in Supabase
-    const { createSale } = await import('./salesService');
     const result = await createSale(salesData, organizationId);
     
     console.log('[DualWrite] Timer start Supabase record created:', result);
@@ -270,7 +271,6 @@ async function handleTimerStopSupabaseOperation(fileMakerResult, organizationId)
       financialId = fileMakerResult.response.data[0].fieldData.__ID;
     } else if (fileMakerResult.response?.recordId) {
       // If we have recordId, we need to fetch the financial record to get the __ID
-      const { fetchFinancialRecordByRecordId } = await import('../api/financialRecords');
       try {
         const financialRecord = await fetchFinancialRecordByRecordId(fileMakerResult.response.recordId);
         if (financialRecord?.response?.data?.[0]?.fieldData?.__ID) {
@@ -342,8 +342,7 @@ async function attemptRollback(operationType, fileMakerResult) {
  */
 export async function stopTimerWithDualWrite(params, organizationId = null) {
   console.warn('[DualWrite] DEPRECATION WARNING: stopTimerWithDualWrite() is deprecated. Use stopTaskTimer() from src/api/tasks.js instead.');
-  const { stopTaskTimerAPI } = await import('../api/tasks');
-  
+
   // Get organization ID from params or global state
   const orgId = organizationId || (window.state?.user?.supabaseOrgID);
   
