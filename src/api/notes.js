@@ -6,6 +6,7 @@ import {
     NoteErrorCodes
 } from '../errors';
 import { validateUUID } from '../utils/validation';
+import { FIELD_LIMITS } from '../utils/inputSanitization';
 
 /**
  * Normalize note data from backend API
@@ -117,9 +118,31 @@ export async function createNote(data) {
         const auth = getAuthenticationContext();
         checkNoteOrganizationScope({ authentication: auth }, 'createNote');
 
+        // Validate note content length
+        const noteContent = data.content || data.note;
+        if (!noteContent) {
+            throw new NoteError(
+                'Note content is required',
+                NoteErrorCodes.REQUIRED_FIELD_MISSING,
+                { field: 'note' }
+            );
+        }
+
+        if (noteContent.length > FIELD_LIMITS.NOTE_CONTENT) {
+            throw new NoteError(
+                `Note content exceeds maximum length of ${FIELD_LIMITS.NOTE_CONTENT} characters`,
+                NoteErrorCodes.CONTENT_TOO_LONG,
+                {
+                    field: 'note',
+                    maxLength: FIELD_LIMITS.NOTE_CONTENT,
+                    actualLength: noteContent.length
+                }
+            );
+        }
+
         // Build payload matching database schema
         const payload = {
-            note: data.content || data.note,
+            note: noteContent,
             type: data.type || 'general',
             project_id: projectId || null,
             customer_id: customerId || null,
@@ -286,7 +309,22 @@ export async function updateNote(noteId, data) {
         // Backend API: PATCH /projects/notes/{note_id}
         const payload = {};
         if (data.note || data.content) {
-            payload.note = data.content || data.note;
+            const noteContent = data.content || data.note;
+
+            // Validate note content length
+            if (noteContent.length > FIELD_LIMITS.NOTE_CONTENT) {
+                throw new NoteError(
+                    `Note content exceeds maximum length of ${FIELD_LIMITS.NOTE_CONTENT} characters`,
+                    NoteErrorCodes.CONTENT_TOO_LONG,
+                    {
+                        field: 'note',
+                        maxLength: FIELD_LIMITS.NOTE_CONTENT,
+                        actualLength: noteContent.length
+                    }
+                );
+            }
+
+            payload.note = noteContent;
         }
         if (data.type) {
             payload.type = data.type;

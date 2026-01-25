@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useNote } from '../../hooks/useNote';
 import { useProject } from '../../hooks/useProject';
 import TextInput from '../global/TextInput';
+import { FIELD_LIMITS } from '../../utils/inputSanitization';
 
 function ProjectNotesTab({ project, darkMode }) {
   const [showNewNoteInput, setShowNewNoteInput] = useState(false);
@@ -113,6 +114,7 @@ function ProjectNotesTab({ project, darkMode }) {
             title="Add Note"
             placeholder="Enter your note..."
             submitLabel="Create"
+            maxLength={FIELD_LIMITS.NOTE_CONTENT}
             onSubmit={async (noteContent) => {
               try {
                 // Use project.id - hook handles environment detection
@@ -153,6 +155,7 @@ function ProjectNotesTab({ project, darkMode }) {
                     <textarea
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
+                      maxLength={FIELD_LIMITS.NOTE_CONTENT}
                       className={`
                         w-full p-2 rounded border resize-none
                         ${darkMode
@@ -162,6 +165,9 @@ function ProjectNotesTab({ project, darkMode }) {
                       rows={4}
                       disabled={noteLoading}
                     />
+                    <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {editContent.length} / {FIELD_LIMITS.NOTE_CONTENT} characters
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleSaveEdit(noteId)}

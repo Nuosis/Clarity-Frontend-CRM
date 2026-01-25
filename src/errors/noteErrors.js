@@ -35,6 +35,7 @@ export const NoteErrorCodes = {
     INVALID_NOTE_DATA: 'NOTE_INVALID_DATA',
     REQUIRED_FIELD_MISSING: 'NOTE_REQUIRED_FIELD_MISSING',
     MISSING_REQUIRED_FIELD: 'NOTE_REQUIRED_FIELD_MISSING',
+    CONTENT_TOO_LONG: 'NOTE_CONTENT_TOO_LONG',
 
     // Backend API specific
     BACKEND_API_ERROR: 'NOTE_BACKEND_API_ERROR',
@@ -86,6 +87,7 @@ function getUserFriendlyMessage(code, originalMessage, details) {
         [NoteErrorCodes.NOT_FOUND]: `Note ${details.noteId || ''} not found.`,
         [NoteErrorCodes.INVALID_NOTE_DATA]: 'Invalid note data provided.',
         [NoteErrorCodes.REQUIRED_FIELD_MISSING]: `Required field missing: ${details.field || 'unknown'}`,
+        [NoteErrorCodes.CONTENT_TOO_LONG]: `Note content is too long. Maximum ${details.maxLength || 50000} characters allowed.`,
 
         // Backend API specific
         [NoteErrorCodes.BACKEND_API_ERROR]: 'Backend API error occurred.',
@@ -291,6 +293,9 @@ function normalizeValidationErrors(responseData) {
 function getValidationErrorCode(validationErrors) {
     if (validationErrors.some(error => String(error).includes('required') || String(error).includes('missing'))) {
         return NoteErrorCodes.REQUIRED_FIELD_MISSING;
+    }
+    if (validationErrors.some(error => String(error).includes('too long') || String(error).includes('maximum') || String(error).includes('max length'))) {
+        return NoteErrorCodes.CONTENT_TOO_LONG;
     }
     return NoteErrorCodes.INVALID_NOTE_DATA;
 }

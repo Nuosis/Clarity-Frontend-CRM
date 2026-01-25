@@ -6,6 +6,7 @@ import {
     deleteNote,
     updateNote
 } from '../api/notes';
+import { FIELD_LIMITS } from '../utils/inputSanitization';
 
 function sanitizeNoteContent(value) {
     if (value === null || value === undefined) {
@@ -55,6 +56,13 @@ export async function createNewNote(entityTypeOrId, entityIdOrContent, noteConte
 
     if (!entityId || !sanitizedContent) {
         throw new Error('Entity ID and note content are required');
+    }
+
+    // Validate content length
+    if (sanitizedContent.length > FIELD_LIMITS.NOTE_CONTENT) {
+        throw new Error(
+            `Note content exceeds maximum length of ${FIELD_LIMITS.NOTE_CONTENT} characters (current: ${sanitizedContent.length})`
+        );
     }
 
     // Build payload based on entity type
@@ -167,10 +175,24 @@ export async function updateNoteById(noteId, data) {
 
     if (data.content !== undefined) {
         sanitizedData.content = sanitizeNoteContent(data.content).trim();
+
+        // Validate content length
+        if (sanitizedData.content.length > FIELD_LIMITS.NOTE_CONTENT) {
+            throw new Error(
+                `Note content exceeds maximum length of ${FIELD_LIMITS.NOTE_CONTENT} characters (current: ${sanitizedData.content.length})`
+            );
+        }
     }
 
     if (data.note !== undefined) {
         sanitizedData.note = sanitizeNoteContent(data.note).trim();
+
+        // Validate content length
+        if (sanitizedData.note.length > FIELD_LIMITS.NOTE_CONTENT) {
+            throw new Error(
+                `Note content exceeds maximum length of ${FIELD_LIMITS.NOTE_CONTENT} characters (current: ${sanitizedData.note.length})`
+            );
+        }
     }
 
     if ((data.content !== undefined || data.note !== undefined) && !sanitizedData.content && !sanitizedData.note) {
