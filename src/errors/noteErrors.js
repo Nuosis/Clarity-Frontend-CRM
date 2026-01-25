@@ -279,6 +279,89 @@ export async function withErrorHandling(operation, operationName, context = {}) 
     }
 }
 
+/**
+ * Format error for display in UI
+ * @param {Error} error - Error object
+ * @returns {Object} Formatted error for UI
+ */
+export function formatErrorForUI(error) {
+    if (error instanceof NoteError) {
+        return {
+            title: getErrorTitle(error.code),
+            message: error.userFriendlyMessage,
+            details: error.details,
+            code: error.code,
+            timestamp: error.timestamp,
+            canRetry: isRetryable(error.code),
+            severity: getErrorSeverity(error.code)
+        };
+    }
+
+    return {
+        title: 'Error',
+        message: error.message || 'An unexpected error occurred',
+        details: {},
+        code: 'UNKNOWN_ERROR',
+        timestamp: new Date().toISOString(),
+        canRetry: true,
+        severity: 'error'
+    };
+}
+
+/**
+ * Get error title based on code
+ * @param {string} code - Error code
+ * @returns {string} Error title
+ */
+function getErrorTitle(code) {
+    if (code.includes('AUTH')) return 'Authentication Error';
+    if (code.includes('PERMISSION')) return 'Permission Denied';
+    if (code.includes('NETWORK') || code.includes('TIMEOUT') || code.includes('CONNECTION')) {
+        return 'Connection Error';
+    }
+    if (code.includes('VALIDATION') || code.includes('INVALID')) return 'Validation Error';
+    if (code.includes('NOT_FOUND')) return 'Not Found';
+    return 'Error';
+}
+
+/**
+ * Check if error is retryable
+ * @param {string} code - Error code
+ * @returns {boolean} True if operation can be retried
+ */
+function isRetryable(code) {
+    const retryableCodes = [
+        NoteErrorCodes.NETWORK_ERROR,
+        NoteErrorCodes.TIMEOUT_ERROR,
+        NoteErrorCodes.CONNECTION_ERROR,
+        NoteErrorCodes.SERVICE_UNAVAILABLE
+    ];
+
+    return retryableCodes.includes(code);
+}
+
+/**
+ * Get error severity level
+ * @param {string} code - Error code
+ * @returns {string} Severity level: 'error' | 'warning' | 'info'
+ */
+function getErrorSeverity(code) {
+    const warningSeverity = [
+        NoteErrorCodes.NOT_FOUND
+    ];
+
+    const errorSeverity = [
+        NoteErrorCodes.AUTH_FAILED,
+        NoteErrorCodes.PERMISSION_DENIED,
+        NoteErrorCodes.SERVICE_UNAVAILABLE
+    ];
+
+    if (warningSeverity.includes(code)) return 'warning';
+    if (errorSeverity.includes(code)) return 'error';
+
+    return 'error'; // Default severity
+}
+
 function normalizeValidationErrors(responseData) {
     const validationErrors = responseData.errors || responseData.detail || [];
     if (Array.isArray(validationErrors)) {

@@ -19,7 +19,8 @@ export {
     NoteErrorCodes,
     parseHttpError as parseNoteHttpError,
     checkOrganizationScope as checkNoteOrganizationScope,
-    withErrorHandling as withNoteErrorHandling
+    withErrorHandling as withNoteErrorHandling,
+    formatErrorForUI as formatNoteErrorForUI
 } from './noteErrors';
 
 export {
