@@ -132,6 +132,32 @@ const ConfirmationCheckbox = styled.div`
   }
 `
 
+const CustomerFields = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  text-align: left;
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: ${props => props.theme?.colors?.text?.primary || '#212529'};
+    margin-bottom: 6px;
+  }
+
+  input {
+    width: 100%;
+    border: 1px solid ${props => props.theme?.colors?.border || '#dee2e6'};
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 15px;
+    color: ${props => props.theme?.colors?.text?.primary || '#212529'};
+    background: ${props => props.theme?.colors?.background?.primary || '#ffffff'};
+  }
+`
+
 const TermsText = styled.div`
   font-size: 12px;
   color: ${props => props.theme?.colors?.text?.secondary || '#6c757d'};
@@ -194,16 +220,21 @@ const ProposalApproval = ({
   formatCurrency 
 }) => {
   const [isConfirmed, setIsConfirmed] = useState(false)
+  const [customerName, setCustomerName] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
   
   const handleConfirmationChange = useCallback((event) => {
     setIsConfirmed(event.target.checked)
   }, [])
   
   const handleApprove = useCallback(() => {
-    if (isConfirmed && !isApproving) {
-      onApprove()
+    if (isConfirmed && !isApproving && customerName.trim() && customerEmail.trim()) {
+      onApprove({
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim()
+      })
     }
-  }, [isConfirmed, isApproving, onApprove])
+  }, [isConfirmed, isApproving, onApprove, customerName, customerEmail])
   
   const depositAmount = totalPrice * 0.5
   const remainingAmount = totalPrice - depositAmount
@@ -270,6 +301,31 @@ const ProposalApproval = ({
           <li>You will receive a detailed Memorandum of Agreement after approval</li>
         </ul>
       </TermsText>
+
+      <CustomerFields>
+        <div>
+          <label htmlFor="proposal-customer-name">Your name</label>
+          <input
+            id="proposal-customer-name"
+            type="text"
+            value={customerName}
+            onChange={(event) => setCustomerName(event.target.value)}
+            disabled={isApproving}
+            autoComplete="name"
+          />
+        </div>
+        <div>
+          <label htmlFor="proposal-customer-email">Email for receipt</label>
+          <input
+            id="proposal-customer-email"
+            type="email"
+            value={customerEmail}
+            onChange={(event) => setCustomerEmail(event.target.value)}
+            disabled={isApproving}
+            autoComplete="email"
+          />
+        </div>
+      </CustomerFields>
       
       <ConfirmationCheckbox>
         <input
@@ -287,7 +343,7 @@ const ProposalApproval = ({
       
       <ApprovalButton
         onClick={handleApprove}
-        disabled={!isConfirmed || isApproving}
+        disabled={!isConfirmed || isApproving || !customerName.trim() || !customerEmail.trim()}
         aria-label={isApproving ? 'Processing approval...' : 'Approve proposal'}
       >
         {isApproving ? (
@@ -296,7 +352,7 @@ const ProposalApproval = ({
             Processing...
           </LoadingSpinner>
         ) : (
-          `Approve Proposal - ${formatCurrency(totalPrice)}`
+          `Accept & Pay Deposit - ${formatCurrency(depositAmount)}`
         )}
       </ApprovalButton>
       

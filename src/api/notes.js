@@ -151,17 +151,9 @@ export async function createNote(data) {
             // created_by set by backend from JWT token
         };
 
-        // Use appropriate endpoint based on parent entity
-        let endpoint;
-        if (projectId) {
-            endpoint = `/projects/${projectId}/notes`;
-        } else if (taskId) {
-            endpoint = `/tasks/${taskId}/notes`;
-        } else if (customerId) {
-            endpoint = `/customers/${customerId}/notes`;
-        }
-
-        const response = await dataService.post(endpoint, payload);
+        // Use generic /api/notes endpoint (supports all entity types via request body)
+        // Backend routes based on project_id, task_id, or customer_id in payload
+        const response = await dataService.post('/api/notes', payload);
         return normalizeNoteData(response.data || response);
     }, 'createNote', { data });
 }
@@ -189,12 +181,12 @@ export async function fetchNotesByProject(projectId, options = {}) {
         const auth = getAuthenticationContext();
         checkNoteOrganizationScope({ authentication: auth }, 'fetchNotesByProject');
 
-        // Backend API: GET /projects/{project_id}/notes
-        const queryParams = {};
+        // Backend API: GET /api/notes?project_id={uuid}
+        const queryParams = { project_id: projectId };
         if (options.limit) queryParams.limit = options.limit;
         if (options.offset) queryParams.offset = options.offset;
 
-        const response = await dataService.get(`/projects/${projectId}/notes`, { params: queryParams });
+        const response = await dataService.get('/api/notes', { params: queryParams });
         return normalizeNoteListResponse(response);
     }, 'fetchNotesByProject', { projectId, options });
 }
@@ -222,12 +214,12 @@ export async function fetchNotesByTask(taskId, options = {}) {
         const auth = getAuthenticationContext();
         checkNoteOrganizationScope({ authentication: auth }, 'fetchNotesByTask');
 
-        // Backend API: GET /tasks/{task_id}/notes
-        const queryParams = {};
+        // Backend API: GET /api/notes?task_id={uuid}
+        const queryParams = { task_id: taskId };
         if (options.limit) queryParams.limit = options.limit;
         if (options.offset) queryParams.offset = options.offset;
 
-        const response = await dataService.get(`/tasks/${taskId}/notes`, { params: queryParams });
+        const response = await dataService.get('/api/notes', { params: queryParams });
         return normalizeNoteListResponse(response);
     }, 'fetchNotesByTask', { taskId, options });
 }
@@ -255,12 +247,12 @@ export async function fetchNotesByCustomer(customerId, options = {}) {
         const auth = getAuthenticationContext();
         checkNoteOrganizationScope({ authentication: auth }, 'fetchNotesByCustomer');
 
-        // Backend API: GET /customers/{customer_id}/notes
-        const queryParams = {};
+        // Backend API: GET /api/notes?customer_id={uuid}
+        const queryParams = { customer_id: customerId };
         if (options.limit) queryParams.limit = options.limit;
         if (options.offset) queryParams.offset = options.offset;
 
-        const response = await dataService.get(`/customers/${customerId}/notes`, { params: queryParams });
+        const response = await dataService.get('/api/notes', { params: queryParams });
         return normalizeNoteListResponse(response);
     }, 'fetchNotesByCustomer', { customerId, options });
 }
@@ -330,7 +322,8 @@ export async function updateNote(noteId, data) {
             payload.type = data.type;
         }
 
-        const response = await dataService.patch(`/projects/notes/${noteId}`, payload);
+        // Backend API: PATCH /api/notes/{note_id}
+        const response = await dataService.patch(`/api/notes/${noteId}`, payload);
         return normalizeNoteData(response.data || response);
     }, 'updateNote', { noteId, data });
 }
@@ -355,8 +348,8 @@ export async function deleteNote(noteId) {
         const auth = getAuthenticationContext();
         checkNoteOrganizationScope({ authentication: auth }, 'deleteNote');
 
-        // Backend API: DELETE /projects/notes/{note_id}
-        const response = await dataService.delete(`/projects/notes/${noteId}`);
+        // Backend API: DELETE /api/notes/{note_id}
+        const response = await dataService.delete(`/api/notes/${noteId}`);
         return response.data || response;
     }, 'deleteNote', { noteId });
 }

@@ -202,6 +202,91 @@ export async function fetchProposalByToken(token) {
 }
 
 /**
+ * Claim or resume a public customer proposal session.
+ * @param {string} token - Email magic-link token
+ * @returns {Promise<Object>} Proposal session result
+ */
+export async function claimPublicProposalSession(token) {
+  try {
+    const response = await axios({
+      method: 'POST',
+      url: `${backendConfig.baseUrl}/webhook/proposals/session/${encodeURIComponent(token)}`,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      withCredentials: true
+    })
+
+    return {
+      success: true,
+      data: response.data.selected_proposal,
+      session: {
+        claimed: response.data.claimed,
+        expiresAt: response.data.expires_at
+      }
+    }
+  } catch (error) {
+    let errorMessage = 'Failed to open proposal'
+    if (error.response?.status === 423) {
+      errorMessage = 'This proposal link has already been claimed. Request a fresh proposal link.'
+    } else if (error.response?.status === 410) {
+      errorMessage = 'This proposal link has expired.'
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
+    return {
+      success: false,
+      error: errorMessage
+    }
+  }
+}
+
+/**
+ * Accept selected public proposal lines and create a hosted Stripe Checkout deposit.
+ * @param {Object} acceptanceData - Acceptance payload
+ * @returns {Promise<Object>} Acceptance and checkout data
+ */
+export async function acceptPublicProposal(acceptanceData) {
+  try {
+    const response = await axios({
+      method: 'POST',
+      url: `${backendConfig.baseUrl}/webhook/proposals/accept`,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      withCredentials: true,
+      data: {
+        selected_deliverables: acceptanceData.selectedDeliverables,
+        customer_name: acceptanceData.customerName,
+        customer_email: acceptanceData.customerEmail,
+        deposit_percent: acceptanceData.depositPercent || 50,
+        currency: acceptanceData.currency || 'cad'
+      }
+    })
+
+    return {
+      success: true,
+      data: response.data
+    }
+  } catch (error) {
+    let errorMessage = 'Failed to accept proposal'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
+    return {
+      success: false,
+      error: errorMessage
+    }
+  }
+}
+
+/**
  * Fetch proposals for a project
  * @param {string} projectId - Project ID
  * @returns {Promise<Object>} Proposals list

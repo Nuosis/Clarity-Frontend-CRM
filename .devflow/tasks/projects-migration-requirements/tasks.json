@@ -6,18 +6,7 @@
     "slug": "projects-migration-requirements",
     "description": "Document the complete Projects feature migration from FileMaker to Supabase with all related entities and business logic",
     "review_status": "passed",
-    "review_iteration": 3,
-    "last_review": {
-      "feature_slug": "projects-migration-requirements",
-      "reviewed_at": "2026-01-11T14:03:49.068Z",
-      "status": "passed",
-      "iteration": 3,
-      "mode": "autonomous",
-      "findings": [],
-      "tasks_created": [],
-      "summary": "No critical or major issues found",
-      "log_path": "/Users/marcusswift/javascript/clarityCrmFrontend/.devflow/logs/review-unified-projects-migration-requirements-3-2026-01-11T14-03-49-069Z.jsonl"
-    }
+    "review_iteration": 0
   },
   "standing_constraints": [
     "Follow the 7-file standardized documentation template structure",
@@ -46,7 +35,7 @@
     {
       "id": "TSK0002",
       "title": "Document current implementation",
-      "description": "Create requirements/projects/current-implementation.md documenting: frontend call graph from UI \u2192 hooks \u2192 services \u2192 API, all relevant files (components, hooks, services, API), FileMaker layouts used, data flow diagrams, and current state management patterns",
+      "description": "Create requirements/projects/current-implementation.md documenting: frontend call graph from UI → hooks → services → API, all relevant files (components, hooks, services, API), FileMaker layouts used, data flow diagrams, and current state management patterns",
       "status": "done",
       "priority": "high",
       "executionPid": null,
@@ -58,7 +47,7 @@
     {
       "id": "TSK0003",
       "title": "Map core Projects data model",
-      "description": "In requirements/projects/data-model-mapping.md, document FileMaker devProjects layout fields \u2192 Supabase projects table mapping. Include: field types, constraints, status enum values, pricing fields (f_fixedPrice, f_subscription, value), date fields, team/customer relationships, and UUID vs recordId handling",
+      "description": "In requirements/projects/data-model-mapping.md, document FileMaker devProjects layout fields → Supabase projects table mapping. Include: field types, constraints, status enum values, pricing fields (f_fixedPrice, f_subscription, value), date fields, team/customer relationships, and UUID vs recordId handling",
       "status": "done",
       "priority": "high",
       "executionPid": null,
@@ -70,7 +59,7 @@
     {
       "id": "TSK0004",
       "title": "Map Project Objectives data model",
-      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjectives layout \u2192 Supabase project_objectives table mapping. Include: objective text, status, order, completed flag, project_id foreign key, and relationship to objective steps",
+      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjectives layout → Supabase project_objectives table mapping. Include: objective text, status, order, completed flag, project_id foreign key, and relationship to objective steps",
       "status": "done",
       "priority": "high",
       "completedAt": "2026-01-10T20:35:00.000Z",
@@ -84,7 +73,7 @@
     {
       "id": "TSK0005",
       "title": "Map Objective Steps data model",
-      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjSteps layout \u2192 Supabase project_objective_steps table mapping. Include: step text, order, completed flag, objective_id foreign key, and nested relationship structure",
+      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectObjSteps layout → Supabase project_objective_steps table mapping. Include: step text, order, completed flag, objective_id foreign key, and nested relationship structure",
       "status": "done",
       "priority": "medium",
       "completedAt": "2026-01-10T20:45:00.000Z",
@@ -98,7 +87,7 @@
     {
       "id": "TSK0006",
       "title": "Map Project Images data model",
-      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectImages layout \u2192 Supabase project_images table mapping. Include: image URL, title, description, project_id foreign key, and any storage considerations",
+      "description": "In requirements/projects/data-model-mapping.md, add FileMaker devProjectImages layout → Supabase project_images table mapping. Include: image URL, title, description, project_id foreign key, and any storage considerations",
       "status": "done",
       "priority": "medium",
       "completedAt": "2026-01-10T21:00:00.000Z",
@@ -262,7 +251,7 @@
     {
       "id": "TSK0018",
       "title": "Create migration plan for projects",
-      "description": "Create requirements/projects/migration-plan.md documenting: data backfill approach for devProjects \u2192 projects table, UUID preservation strategy, recordId handling, relationship integrity checks, and cutover plan",
+      "description": "Create requirements/projects/migration-plan.md documenting: data backfill approach for devProjects → projects table, UUID preservation strategy, recordId handling, relationship integrity checks, and cutover plan",
       "status": "done",
       "priority": "high",
       "completedAt": "2026-01-10T20:45:00.000Z",

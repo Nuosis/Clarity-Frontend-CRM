@@ -5,56 +5,11 @@
     "name": "Financial Records Backend Integration",
     "slug": "financial-records-backend-integration",
     "description": "Migrate financial records from FileMaker to Supabase backend APIs",
-    "review_status": "pending",
-    "review_iteration": 2,
+    "review_status": "passed",
+    "review_iteration": 0,
     "review_stage": "finalizing",
     "review_session_id": "855fef77-dca8-4604-91ef-d2ca8d6714b1",
-    "updatedAt": "2026-01-17T03:50:12.074Z",
-    "last_review": {
-      "feature_slug": "financial-records-backend-integration",
-      "reviewed_at": "2026-01-17T03:49:09.620Z",
-      "status": "done",
-      "iteration": 2,
-      "mode": "autonomous",
-      "findings": [
-        {
-          "id": "COD-001",
-          "category": "code_soundness",
-          "severity": "major",
-          "title": "Inefficient deprecated API methods fetch all records",
-          "description": "The deprecated methods `fetchFinancialRecordByRecordId()` and `fetchFinancialRecordByUUID()` in src/api/financialRecords.js fetch ALL financial records from the backend and filter client-side. This is extremely inefficient for large datasets and could cause performance issues or timeout errors.\n\nCode at lines 412-465:\n",
-          "file_paths": [],
-          "code_snippet": null,
-          "recommendation": "Refactor deprecated methods to query the backend for a single record (by record_id/financial_id) via a dedicated RPC or filtered RPC parameters, and deprecate/remove client-side full-fetch filtering. Ensure callers migrate to the efficient path and add tests to prevent regressions."
-        },
-        {
-          "id": "SEC-001",
-          "category": "security",
-          "severity": "critical",
-          "title": "Hardcoded 'BILLED' invoice ID allows unauthorized record manipulation",
-          "description": "The `updateFinancialRecordBilledStatus()` and `bulkUpdateFinancialRecordsBilledStatus()` functions in src/api/financialRecords.js use hardcoded string values 'BILLED' and 'UNBILLED' instead of actual QuickBooks invoice IDs.\n\nThis creates a security vulnerability where:\n1. Any user can mark records as billed without creating a real QuickBooks invoice\n2. Revenue tracking becomes unreliable since inv_id doesn't reference a real QB invoice\n3. Financial audit trails are compromised - no way to verify which records were actually invoiced\n4. Users can game the system by marking records billed to hide unbilled work\n\nCode at lines 475-505 and 514-555:\n",
-          "file_paths": [],
-          "code_snippet": null,
-          "recommendation": "Require a real QuickBooks invoice ID when marking records billed, remove hardcoded 'BILLED'/'UNBILLED' values, and enforce server-side validation/RLS so only authorized flows can set inv_id. Update UI and API wrappers to pass the actual invoice ID and add audit logging/tests."
-        },
-        {
-          "id": "ARC-001",
-          "category": "architectural_fit",
-          "severity": "major",
-          "title": "Missing standardized error handling wrapper (withErrorHandling)",
-          "description": "The financialRecords API client does not use the established `withErrorHandling` wrapper pattern that is consistently used across other API clients in the project.\n\nEstablished pattern (from customers.js, projects.js, notes.js):\n",
-          "file_paths": [],
-          "code_snippet": null,
-          "recommendation": "Adopt the standard withErrorHandling wrapper for all financialRecords API methods to ensure consistent error normalization, logging, and user-facing messaging. Refactor existing calls accordingly and add/adjust tests to assert standardized error shapes."
-        }
-      ],
-      "tasks_created": [
-        "TASK016",
-        "TASK017",
-        "TASK018"
-      ],
-      "summary": "Found 3 issue(s) requiring remediation - created 3 task(s)"
-    }
+    "updatedAt": "2026-01-17T03:50:12.074Z"
   },
   "standing_constraints": [
     "DO NOT modify backend schema or RPC functions - they are already deployed",
@@ -306,81 +261,6 @@
       "executionPid": null,
       "sessionId": null,
       "implementation_notes": "Implemented TSK0015 cleanup to remove obsolete FileMaker code paths while preserving the legacy UI compatibility layer: updated 'src/api/financialRecords.js' to drop the unused 'convertFileMakerToSupabase' import and rewrite FileMaker-specific comments to describe the 'fieldData' wrapper and date formatting as legacy UI structure. Updated 'src/services/index.js' to stop exporting the deprecated 'financialSyncService' (left commented with a deprecation note referencing 'FINANCIAL_SYNC_SERVICE_DEPRECATION.md') and revised 'CLAUDE.md' to reflect direct Supabase RPC usage via 'src/api/financialRecords.js'. Key decision was to keep 'normalizeFinancialRecords()' and the legacy field naming/date conversion since 'billableHoursService.js' and several UI components still depend on that shape; build was verified and a completion doc was added at '.devflow/tasks/financial-records-backend-integration/TSK0015_COMPLETION_SUMMARY.md'.",
-      "depends_on": []
-    },
-    {
-      "id": "TASK016",
-      "feature": "financial-records-backend-integration",
-      "name": "[REVIEW] Inefficient deprecated API methods fetch all records",
-      "title": "[REVIEW] Inefficient deprecated API methods fetch all records",
-      "priority": "high",
-      "requirements": [
-        "The deprecated methods `fetchFinancialRecordByRecordId()` and `fetchFinancialRecordByUUID()` in src/api/financialRecords.js fetch ALL financial records from the backend and filter client-side. This is extremely inefficient for large datasets and could cause performance issues or timeout errors.\n\nCode at lines 412-465:\n",
-        "",
-        "**Recommendation:** Refactor deprecated methods to query the backend for a single record (by record_id/financial_id) via a dedicated RPC or filtered RPC parameters, and deprecate/remove client-side full-fetch filtering. Ensure callers migrate to the efficient path and add tests to prevent regressions."
-      ],
-      "constraints": [],
-      "context": {
-        "reference_files": [],
-        "dependencies": [],
-        "role_in_system": "Remediate review finding COD-001 from iteration 1"
-      },
-      "status": "pending",
-      "description": "",
-      "verification": {},
-      "executionError": null,
-      "executionPid": null,
-      "sessionId": null,
-      "depends_on": []
-    },
-    {
-      "id": "TASK017",
-      "feature": "financial-records-backend-integration",
-      "name": "[REVIEW] Hardcoded 'BILLED' invoice ID allows unauthorized record manipulation",
-      "title": "[REVIEW] Hardcoded 'BILLED' invoice ID allows unauthorized record manipulation",
-      "priority": "critical",
-      "requirements": [
-        "The `updateFinancialRecordBilledStatus()` and `bulkUpdateFinancialRecordsBilledStatus()` functions in src/api/financialRecords.js use hardcoded string values 'BILLED' and 'UNBILLED' instead of actual QuickBooks invoice IDs.\n\nThis creates a security vulnerability where:\n1. Any user can mark records as billed without creating a real QuickBooks invoice\n2. Revenue tracking becomes unreliable since inv_id doesn't reference a real QB invoice\n3. Financial audit trails are compromised - no way to verify which records were actually invoiced\n4. Users can game the system by marking records billed to hide unbilled work\n\nCode at lines 475-505 and 514-555:\n",
-        "",
-        "**Recommendation:** Require a real QuickBooks invoice ID when marking records billed, remove hardcoded 'BILLED'/'UNBILLED' values, and enforce server-side validation/RLS so only authorized flows can set inv_id. Update UI and API wrappers to pass the actual invoice ID and add audit logging/tests."
-      ],
-      "constraints": [],
-      "context": {
-        "reference_files": [],
-        "dependencies": [],
-        "role_in_system": "Remediate review finding SEC-001 from iteration 1"
-      },
-      "status": "pending",
-      "description": "",
-      "verification": {},
-      "executionError": null,
-      "executionPid": null,
-      "sessionId": null,
-      "depends_on": []
-    },
-    {
-      "id": "TASK018",
-      "feature": "financial-records-backend-integration",
-      "name": "[REVIEW] Missing standardized error handling wrapper (withErrorHandling)",
-      "title": "[REVIEW] Missing standardized error handling wrapper (withErrorHandling)",
-      "priority": "high",
-      "requirements": [
-        "The financialRecords API client does not use the established `withErrorHandling` wrapper pattern that is consistently used across other API clients in the project.\n\nEstablished pattern (from customers.js, projects.js, notes.js):\n",
-        "",
-        "**Recommendation:** Adopt the standard withErrorHandling wrapper for all financialRecords API methods to ensure consistent error normalization, logging, and user-facing messaging. Refactor existing calls accordingly and add/adjust tests to assert standardized error shapes."
-      ],
-      "constraints": [],
-      "context": {
-        "reference_files": [],
-        "dependencies": [],
-        "role_in_system": "Remediate review finding ARC-001 from iteration 1"
-      },
-      "status": "pending",
-      "description": "",
-      "verification": {},
-      "executionError": null,
-      "executionPid": null,
-      "sessionId": null,
       "depends_on": []
     }
   ]

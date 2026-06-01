@@ -44,7 +44,7 @@ export class ProposalEmailService {
    * @returns {string} HTML email content
    */
   static generateProposalEmailContent(proposal) {
-    const proposalUrl = `${window.location.origin}/proposal/${proposal.access_token}`
+    const proposalUrl = `${window.location.origin}/proposal/view/${proposal.access_token}`
     
     return createHtmlEmailTemplate({
       title: `Project Proposal: ${proposal.title}`,
@@ -220,7 +220,7 @@ export class ProposalEmailService {
    * @returns {string} HTML email content
    */
   static generateReminderContent(proposal, daysUntilExpiry) {
-    const proposalUrl = `${window.location.origin}/proposal/${proposal.access_token}`
+    const proposalUrl = `${window.location.origin}/proposal/view/${proposal.access_token}`
     
     return createHtmlEmailTemplate({
       title: `Reminder: ${proposal.title}`,

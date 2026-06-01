@@ -403,7 +403,7 @@ DeliverableSelector.propTypes = {
       title: PropTypes.string.isRequired,
       description: PropTypes.string,
       price: PropTypes.number.isRequired,
-      type: PropTypes.oneOf(['fixed', 'hourly']).isRequired,
+      type: PropTypes.oneOf(['fixed', 'hourly', 'subscription']).isRequired,
       estimated_hours: PropTypes.number,
       is_selected: PropTypes.bool,
       is_required: PropTypes.bool,

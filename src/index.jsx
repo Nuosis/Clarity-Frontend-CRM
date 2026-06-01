@@ -5,6 +5,7 @@ import Sidebar from './components/layout/Sidebar';
 import MainContent from './components/MainContent';
 import ErrorBoundary from './components/ErrorBoundary';
 import SignIn from './components/auth/SignIn';
+import ProposalViewer from './components/proposals/ProposalViewer';
 import { useTheme } from './components/layout/AppLayout';
 import { useCustomer, useProject, useTask, useProducts, useSales } from './hooks';
 import { TeamProvider, useTeamContext } from './context/TeamContext';
@@ -21,6 +22,8 @@ const MemoizedSidebar = React.memo(Sidebar);
 function AppContent() {
     const { darkMode } = useTheme();
     const appState = useAppState();
+
+    const isPublicProposalRoute = window.location.pathname.startsWith('/proposal/view/');
 
     const {
         setLoading,
@@ -414,6 +417,14 @@ function AppContent() {
         handleCustomerPageChange,
         handleCustomerLimitChange
     ]);
+
+    if (isPublicProposalRoute) {
+        return (
+            <ErrorBoundary>
+                <ProposalViewer />
+            </ErrorBoundary>
+        );
+    }
 
     // Show SignIn component if not authenticated
     if (!appState.authentication.isAuthenticated) {

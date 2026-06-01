@@ -6,18 +6,7 @@
     "slug": "customers-migration-requirements",
     "description": "Document requirements for migrating Customers feature from FileMaker to Supabase",
     "review_status": "passed",
-    "review_iteration": 1,
-    "last_review": {
-      "feature_slug": "customers-migration-requirements",
-      "reviewed_at": "2026-01-11T13:22:52.061Z",
-      "status": "passed",
-      "iteration": 1,
-      "mode": "autonomous",
-      "findings": [],
-      "tasks_created": [],
-      "summary": "No critical or major issues found",
-      "log_path": "/Users/marcusswift/javascript/clarityCrmFrontend/.devflow/logs/review-unified-customers-migration-requirements-1-2026-01-11T13-22-52-061Z.jsonl"
-    }
+    "review_iteration": 0
   },
   "standing_constraints": [
     "Follow Backend Change Protocol - no direct database modifications",
@@ -121,7 +110,7 @@
     {
       "id": "TSK0007",
       "title": "Analyze dual-write patterns",
-      "description": "Review dualWriteService.js and useSupabaseCustomer.js to understand current FileMaker\u2192Supabase synchronization behavior",
+      "description": "Review dualWriteService.js and useSupabaseCustomer.js to understand current FileMaker→Supabase synchronization behavior",
       "status": "done",
       "priority": "medium",
       "dependencies": [

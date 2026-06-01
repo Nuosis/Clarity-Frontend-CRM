@@ -1,97 +1,19 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import * as proposalsAPI from '../../api/proposals'
 
-// Mock API function - will be replaced with actual API integration
-const mockFetchProposalByToken = async (token) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  
-  // Mock proposal data
+const normalizeProposal = (proposal) => {
+  if (!proposal) return proposal
   return {
-    id: 'prop-123',
-    title: 'Website Redesign Proposal',
-    description: 'Complete redesign of your company website with modern UI/UX',
-    status: 'sent',
-    access_token: token,
-    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    request_summary: {
-      overview: 'This project involves a complete redesign of your existing website to improve user experience, modernize the visual design, and enhance mobile responsiveness.',
-      objectives: [
-        'Improve user engagement and conversion rates',
-        'Modernize visual design and branding',
-        'Enhance mobile responsiveness',
-        'Optimize for search engines'
-      ],
-      timeline: '6-8 weeks',
-      budget: 15000
-    },
-    concepts: [
-      {
-        id: 'concept-1',
-        title: 'Homepage Wireframe',
-        description: 'Initial wireframe showing the new homepage layout and structure',
-        type: 'wireframe',
-        url: 'https://via.placeholder.com/800x600/007bff/ffffff?text=Homepage+Wireframe',
-        thumbnailUrl: 'https://via.placeholder.com/400x300/007bff/ffffff?text=Homepage+Wireframe',
-        order: 0
-      },
-      {
-        id: 'concept-2',
-        title: 'Design Mockups',
-        description: 'High-fidelity mockups showing the final visual design',
-        type: 'mockup',
-        url: 'https://via.placeholder.com/800x600/28a745/ffffff?text=Design+Mockups',
-        thumbnailUrl: 'https://via.placeholder.com/400x300/28a745/ffffff?text=Design+Mockups',
-        order: 1
-      }
-    ],
-    deliverables: [
-      {
-        id: 'deliv-1',
-        title: 'Homepage Design & Development',
-        description: 'Complete design and development of the new homepage',
-        price: 5000,
-        type: 'fixed',
-        estimated_hours: null,
-        is_selected: true,
-        is_required: true,
-        order: 0
-      },
-      {
-        id: 'deliv-2',
-        title: 'About & Services Pages',
-        description: 'Design and development of about and services pages',
-        price: 3000,
-        type: 'fixed',
-        estimated_hours: null,
-        is_selected: true,
-        is_required: false,
-        order: 1
-      },
-      {
-        id: 'deliv-3',
-        title: 'Contact & Blog Pages',
-        description: 'Design and development of contact and blog pages',
-        price: 2500,
-        type: 'fixed',
-        estimated_hours: null,
-        is_selected: false,
-        is_required: false,
-        order: 2
-      },
-      {
-        id: 'deliv-4',
-        title: 'SEO Optimization',
-        description: 'Search engine optimization for all pages',
-        price: 1500,
-        type: 'fixed',
-        estimated_hours: null,
-        is_selected: true,
-        is_required: false,
-        order: 3
-      }
-    ],
-    total_price: 12000,
-    selected_price: 9500
+    ...proposal,
+    total_price: Number(proposal.total_price || 0),
+    selected_price: proposal.selected_price == null ? null : Number(proposal.selected_price),
+    deliverables: (proposal.deliverables || []).map((deliverable) => ({
+      ...deliverable,
+      price: Number(deliverable.price || 0),
+      order: deliverable.sort_order ?? deliverable.order ?? 0,
+      estimated_hours: deliverable.estimated_time ?? deliverable.estimated_hours ?? null,
+      type: deliverable.type || 'fixed'
+    }))
   }
 }
 
@@ -100,8 +22,11 @@ export const fetchProposalByToken = createAsyncThunk(
   'proposalViewer/fetchByToken',
   async (token, { rejectWithValue }) => {
     try {
-      const proposal = await mockFetchProposalByToken(token)
-      return proposal
+      const result = await proposalsAPI.claimPublicProposalSession(token)
+      if (!result.success) {
+        return rejectWithValue(result.error)
+      }
+      return normalizeProposal(result.data)
     } catch (error) {
       return rejectWithValue(error.message || 'Failed to fetch proposal')
     }
@@ -110,20 +35,19 @@ export const fetchProposalByToken = createAsyncThunk(
 
 export const approveProposal = createAsyncThunk(
   'proposalViewer/approve',
-  async ({ proposalId, selectedDeliverables, totalPrice }, { rejectWithValue }) => {
+  async ({ selectedDeliverables, customerName, customerEmail }, { rejectWithValue }) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Mock approval process
-      console.log('Approving proposal:', { proposalId, selectedDeliverables, totalPrice })
-      
-      return {
-        proposalId,
+      const result = await proposalsAPI.acceptPublicProposal({
         selectedDeliverables,
-        totalPrice,
-        approvedAt: new Date().toISOString()
+        customerName,
+        customerEmail,
+        depositPercent: 50,
+        currency: 'cad'
+      })
+      if (!result.success) {
+        return rejectWithValue(result.error)
       }
+      return result.data
     } catch (error) {
       return rejectWithValue(error.message || 'Failed to approve proposal')
     }
@@ -147,12 +71,14 @@ const proposalViewerSlice = createSlice({
     
     // Error states
     error: null,
-    approvalError: null
+    approvalError: null,
+    checkoutUrl: null
   },
   reducers: {
     clearError: (state) => {
       state.error = null
       state.approvalError = null
+      state.checkoutUrl = null
     },
     
     toggleDeliverable: (state, action) => {
@@ -184,6 +110,7 @@ const proposalViewerSlice = createSlice({
       state.totalPrice = 0
       state.error = null
       state.approvalError = null
+      state.checkoutUrl = null
     }
   },
   extraReducers: (builder) => {
@@ -219,10 +146,9 @@ const proposalViewerSlice = createSlice({
       })
       .addCase(approveProposal.fulfilled, (state, action) => {
         state.approving = false
-        if (state.proposal) {
-          state.proposal.status = 'approved'
-          state.proposal.approved_at = action.payload.approvedAt
-          state.proposal.selected_price = action.payload.totalPrice
+        state.checkoutUrl = action.payload.checkout_url || null
+        if (action.payload.selected_proposal) {
+          state.proposal = normalizeProposal(action.payload.selected_proposal)
         }
       })
       .addCase(approveProposal.rejected, (state, action) => {
@@ -243,6 +169,7 @@ export const selectViewerLoading = (state) => state.proposalViewer.loading
 export const selectViewerApproving = (state) => state.proposalViewer.approving
 export const selectViewerError = (state) => state.proposalViewer.error
 export const selectApprovalError = (state) => state.proposalViewer.approvalError
+export const selectCheckoutUrl = (state) => state.proposalViewer.checkoutUrl
 
 // Reducer
 export default proposalViewerSlice.reducer

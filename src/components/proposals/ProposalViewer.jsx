@@ -1,5 +1,4 @@
 import { useEffect, useCallback, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { useDispatch, useSelector } from 'react-redux'
@@ -14,7 +13,8 @@ import {
   selectViewerLoading,
   selectViewerApproving,
   selectViewerError,
-  selectApprovalError
+  selectApprovalError,
+  selectCheckoutUrl
 } from '../../store/slices/proposalViewerSlice'
 import ConceptGallery from './ConceptGallery'
 import DeliverableSelector from './DeliverableSelector'
@@ -194,11 +194,13 @@ const StatusBadge = styled.div`
  * @param {string} props.token - Proposal access token (optional, can come from URL)
  */
 const ProposalViewer = ({ token: propToken }) => {
-  const { token: urlToken } = useParams()
-  const navigate = useNavigate()
   const dispatch = useDispatch()
   
   // Use token from props or URL params
+  const urlToken = useMemo(() => {
+    const match = window.location.pathname.match(/\/proposal\/view\/([^/?#]+)/)
+    return match ? decodeURIComponent(match[1]) : null
+  }, [])
   const token = propToken || urlToken
   
   const proposal = useSelector(selectViewerProposal)
@@ -208,15 +210,22 @@ const ProposalViewer = ({ token: propToken }) => {
   const approving = useSelector(selectViewerApproving)
   const error = useSelector(selectViewerError)
   const approvalError = useSelector(selectApprovalError)
+  const checkoutUrl = useSelector(selectCheckoutUrl)
   
   // Load proposal on mount or token change
   useEffect(() => {
     if (token) {
       dispatch(fetchProposalByToken(token))
     } else {
-      navigate('/404')
+      dispatch(clearError())
     }
-  }, [dispatch, token, navigate])
+  }, [dispatch, token])
+
+  useEffect(() => {
+    if (checkoutUrl) {
+      window.location.assign(checkoutUrl)
+    }
+  }, [checkoutUrl])
   
   // Clear errors on unmount
   useEffect(() => {
@@ -229,21 +238,21 @@ const ProposalViewer = ({ token: propToken }) => {
     dispatch(toggleDeliverable(deliverableId))
   }, [dispatch])
   
-  const handleApproval = useCallback(() => {
+  const handleApproval = useCallback(({ customerName, customerEmail }) => {
     if (proposal && selectedDeliverables.length > 0) {
       dispatch(approveProposal({
-        proposalId: proposal.id,
         selectedDeliverables,
-        totalPrice
+        customerName,
+        customerEmail
       }))
     }
-  }, [dispatch, proposal, selectedDeliverables, totalPrice])
+  }, [dispatch, proposal, selectedDeliverables])
   
   // Format currency
   const formatCurrency = useCallback((amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'CAD'
     }).format(amount)
   }, [])
   
