@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
 import { createProposalDeliverable, updateProposalDeliverable, deleteProposalDeliverable } from '../../api/proposalExtended';
+import { useAppState } from '../../context/AppStateContext';
 
 const Container = styled.div`
   background: ${props => props.theme.colors.background.secondary};
@@ -263,6 +264,17 @@ const Footer = styled.div`
   border-top: 2px solid ${props => props.theme.colors.border};
 `;
 
+const ProductPicker = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+`;
+
+const ProductSelect = styled(Select)`
+  min-width: 240px;
+`;
+
 const AddButton = styled.button`
   background: ${props => props.theme.colors.primary};
   color: white;
@@ -326,6 +338,43 @@ const EmptyIcon = styled.div`
   opacity: 0.5;
 `;
 
+function productSnapshot(product) {
+  const metadata = product.product_metadata || product.metadata || {};
+  return {
+    product_id: product.id,
+    name: product.name,
+    description: product.description || '',
+    price: Number(product.price || 0),
+    is_subscription: Boolean(product.is_subscription),
+    subscription_frequency: product.subscription_frequency || null,
+    included_units: Number(product.included_units || 0),
+    unit_type: product.unit_type || null,
+    overage_rate: product.overage_rate ?? null,
+    is_one_time: Boolean(product.is_one_time),
+    product_metadata: metadata
+  };
+}
+
+function deliverableFromProduct(product, order) {
+  const snapshot = productSnapshot(product);
+  const billingInterval = snapshot.subscription_frequency || 'monthly';
+
+  return {
+    id: crypto.randomUUID(),
+    product_id: product.id,
+    product_snapshot: snapshot,
+    title: product.name,
+    description: product.description || '',
+    price: snapshot.price,
+    type: snapshot.is_subscription ? 'subscription' : 'fixed',
+    estimated_time: 0,
+    billing_interval: billingInterval,
+    subscription_duration_months: null,
+    is_required: false,
+    order
+  };
+}
+
 /**
  * DeliverablesTab Component
  * Manages proposal deliverables with support for fixed, hourly, and subscription types
@@ -337,7 +386,9 @@ const EmptyIcon = styled.div`
  * @param {string} props.proposalId - Proposal ID (required for database operations)
  */
 const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) => {
+  const { products = [] } = useAppState();
   const [saving, setSaving] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState('');
   const updateTimeouts = useRef({});
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [expandedCards, setExpandedCards] = useState({});
@@ -365,6 +416,8 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
       if (field === 'title') updateData.title = value;
       if (field === 'description') updateData.description = value;
       if (field === 'price') updateData.price = value;
+      if (field === 'product_id') updateData.product_id = value;
+      if (field === 'product_snapshot') updateData.product_snapshot = value;
       if (field === 'type') updateData.type = value;
       if (field === 'estimated_time') updateData.estimated_time = value;
       if (field === 'billing_interval') updateData.billing_interval = value;
@@ -403,6 +456,60 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
     }
   }, [deliverables, onChange, proposalId]);
 
+  const addProductDeliverable = useCallback(async () => {
+    const product = products.find(item => item.id === selectedProductId);
+    if (!product) return;
+
+    const newDeliverable = deliverableFromProduct(product, deliverables.length);
+    setSelectedProductId('');
+
+    if (!proposalId) {
+      onChange([...deliverables, newDeliverable]);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Store both the live catalog reference and a snapshot. The product_id is
+      // what provisioning needs; the snapshot preserves what the customer saw.
+      const result = await createProposalDeliverable({
+        proposal_id: proposalId,
+        product_id: newDeliverable.product_id,
+        product_snapshot: newDeliverable.product_snapshot,
+        title: newDeliverable.title,
+        description: newDeliverable.description,
+        price: newDeliverable.price,
+        type: newDeliverable.type,
+        estimated_time: newDeliverable.estimated_time,
+        billing_interval: newDeliverable.billing_interval,
+        subscription_duration_months: newDeliverable.subscription_duration_months,
+        is_required: newDeliverable.is_required,
+        sort_order: deliverables.length
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to add product deliverable');
+      }
+
+      onChange([
+        ...deliverables,
+        {
+          ...newDeliverable,
+          dbId: result.data.id,
+          id: result.data.id,
+          product_id: result.data.product_id || newDeliverable.product_id,
+          product_snapshot: result.data.product_snapshot || newDeliverable.product_snapshot,
+          order: result.data.sort_order || deliverables.length
+        }
+      ]);
+    } catch (error) {
+      console.error('[DeliverablesTab] Error creating product deliverable:', error);
+      alert('Failed to add product deliverable. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }, [deliverables, onChange, products, proposalId, selectedProductId]);
+
   const addDeliverable = useCallback(async () => {
     console.log('[DeliverablesTab] addDeliverable called, proposalId:', proposalId);
 
@@ -413,6 +520,8 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
         ...deliverables,
         {
           id: crypto.randomUUID(),
+          product_id: null,
+          product_snapshot: {},
           title: 'New Deliverable',
           description: '',
           price: 0,
@@ -432,6 +541,8 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
       // Create deliverable in database immediately
       const deliverableData = {
         proposal_id: proposalId,
+        product_id: null,
+        product_snapshot: {},
         title: 'New Deliverable',
         description: '',
         price: 0,
@@ -453,6 +564,8 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
           dbId: result.data.id, // Database ID for updates
           title: result.data.title || '',
           description: result.data.description || '',
+          product_id: result.data.product_id || null,
+          product_snapshot: result.data.product_snapshot || {},
           price: parseFloat(result.data.price) || 0, // Convert string to number
           type: result.data.type || 'fixed',
           estimated_time: parseInt(result.data.estimated_time) || 0, // Convert to integer
@@ -588,6 +701,7 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
                       {deliverable.title || 'Untitled Deliverable'}
                     </CollapsedTitle>
                     <CollapsedMeta>
+                      {deliverable.product_id && <span>Product</span>}
                       <TypeBadge type={deliverable.type}>
                         {deliverable.type || 'fixed'}
                       </TypeBadge>
@@ -636,7 +750,13 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
                   rows={2}
                 />
 
-                <MetaRow>
+            <MetaRow>
+              {deliverable.product_id && (
+                <InputGroup>
+                  <Label>Product:</Label>
+                  <span>{deliverable.product_snapshot?.name || deliverable.title}</span>
+                </InputGroup>
+              )}
               <InputGroup>
                 <Label>Type:</Label>
                 <Select
@@ -707,9 +827,27 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
         })}
       </DeliverablesList>
       <Footer>
-        <AddButton onClick={addDeliverable} disabled={saving}>
-          {saving ? 'Adding...' : '+ Add Deliverable'}
-        </AddButton>
+        <ProductPicker>
+          <AddButton onClick={addDeliverable} disabled={saving}>
+            {saving ? 'Adding...' : '+ Add Deliverable'}
+          </AddButton>
+          <ProductSelect
+            value={selectedProductId}
+            onChange={(event) => setSelectedProductId(event.target.value)}
+            disabled={saving}
+          >
+            <option value="">Select catalog product</option>
+            {products.map(product => (
+              <option key={product.id} value={product.id}>
+                {product.name} - ${Number(product.price || 0).toFixed(2)}
+                {product.is_subscription && product.subscription_frequency ? `/${product.subscription_frequency}` : ''}
+              </option>
+            ))}
+          </ProductSelect>
+          <AddButton onClick={addProductDeliverable} disabled={saving || !selectedProductId}>
+            + Add Product
+          </AddButton>
+        </ProductPicker>
 
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {deliverables.length > 0 && (
@@ -736,6 +874,8 @@ DeliverablesTab.propTypes = {
       title: PropTypes.string,
       description: PropTypes.string,
       price: PropTypes.number,
+      product_id: PropTypes.string,
+      product_snapshot: PropTypes.object,
       type: PropTypes.oneOf(['fixed', 'hourly', 'subscription']),
       estimated_time: PropTypes.number,
       billing_interval: PropTypes.oneOf(['weekly', 'monthly', 'quarterly', 'yearly']),

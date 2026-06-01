@@ -154,6 +154,8 @@ const ProposalTabs = ({
                 dbId: deliverable.id,
                 title: deliverable.title || '',
                 description: deliverable.description || '',
+                product_id: deliverable.product_id || null,
+                product_snapshot: deliverable.product_snapshot || {},
                 price: parseFloat(deliverable.price) || 0,
                 type: deliverable.type || 'fixed',
                 estimated_time: parseInt(deliverable.estimated_time) || 0,
