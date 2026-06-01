@@ -370,6 +370,7 @@ function deliverableFromProduct(product, order) {
     estimated_time: 0,
     billing_interval: billingInterval,
     subscription_duration_months: null,
+    selection_group: '',
     is_required: false,
     order
   };
@@ -421,6 +422,7 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
       if (field === 'type') updateData.type = value;
       if (field === 'estimated_time') updateData.estimated_time = value;
       if (field === 'billing_interval') updateData.billing_interval = value;
+      if (field === 'selection_group') updateData.selection_group = value || null;
       if (field === 'is_required') updateData.is_required = value;
       if (field === 'subscription_duration_months') updateData.subscription_duration_months = value;
 
@@ -483,6 +485,7 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
         estimated_time: newDeliverable.estimated_time,
         billing_interval: newDeliverable.billing_interval,
         subscription_duration_months: newDeliverable.subscription_duration_months,
+        selection_group: newDeliverable.selection_group || null,
         is_required: newDeliverable.is_required,
         sort_order: deliverables.length
       });
@@ -529,6 +532,7 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
           estimated_time: 0,
           billing_interval: 'monthly',
           subscription_duration_months: null,
+          selection_group: '',
           is_required: false,
           order: deliverables.length
         }
@@ -549,6 +553,7 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
         type: 'fixed',
         estimated_time: 0,
         billing_interval: 'monthly',
+        selection_group: null,
         is_required: false,
         sort_order: deliverables.length
       };
@@ -571,6 +576,7 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
           estimated_time: parseInt(result.data.estimated_time) || 0, // Convert to integer
           billing_interval: result.data.billing_interval || 'monthly',
           subscription_duration_months: result.data.subscription_duration_months ? parseInt(result.data.subscription_duration_months) : null,
+          selection_group: result.data.selection_group || '',
           is_required: result.data.is_required || false,
           order: result.data.sort_order || deliverables.length
         };
@@ -773,6 +779,16 @@ const DeliverablesTab = ({ deliverables = [], onChange, onCancel, proposalId }) 
               </InputGroup>
 
               <InputGroup>
+                <Label>Option group:</Label>
+                <Input
+                  type="text"
+                  value={deliverable.selection_group || ''}
+                  onChange={(e) => handleDeliverableChange(index, 'selection_group', e.target.value)}
+                  placeholder="e.g. movement-product-choice"
+                />
+              </InputGroup>
+
+              <InputGroup>
                 <Label>Price:</Label>
                 <SmallInput
                   type="number"
@@ -880,6 +896,7 @@ DeliverablesTab.propTypes = {
       estimated_time: PropTypes.number,
       billing_interval: PropTypes.oneOf(['weekly', 'monthly', 'quarterly', 'yearly']),
       subscription_duration_months: PropTypes.number,
+      selection_group: PropTypes.string,
       is_required: PropTypes.bool,
       order: PropTypes.number
     })

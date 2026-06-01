@@ -161,6 +161,7 @@ const ProposalTabs = ({
                 estimated_time: parseInt(deliverable.estimated_time) || 0,
                 billing_interval: deliverable.billing_interval || 'monthly',
                 subscription_duration_months: deliverable.subscription_duration_months ? parseInt(deliverable.subscription_duration_months) : null,
+                selection_group: deliverable.selection_group || '',
                 is_required: deliverable.is_required || false,
                 order: deliverable.sort_order || 0
               }))
